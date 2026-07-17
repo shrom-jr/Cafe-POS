@@ -28,7 +28,7 @@ const HR = () => (
 );
 
 const Row = ({ label, value }: { label: string; value: string }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 1 }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 1, fontWeight: 700 }}>
     <span>{label}</span>
     <span>{value}</span>
   </div>
@@ -78,7 +78,23 @@ const ThermalReceiptLayout = ({
   }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method]);
 
   return (
-    <>
+    <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff' }}>
+      {/* Heavy Print Matrix Override Stylesheet */}
+      <style>{`
+        @media print {
+          *, html, body, div, span, strong, td, th {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            font-weight: 800 !important;
+            background-color: #ffffff !important;
+            text-shadow: none !important;
+          }
+          img {
+            filter: brightness(0) !important;
+          }
+        }
+      `}</style>
+
       <div style={{ textAlign: 'center', marginBottom: 6 }}>
         {cafeLogo && (
           <img
@@ -107,7 +123,7 @@ const ThermalReceiptLayout = ({
 
       <HR />
 
-      <div style={{ fontSize: 11, marginBottom: 5 }}>
+      <div style={{ fontSize: 11, marginBottom: 5, fontWeight: 700 }}>
         <div><strong>Payment:</strong> {method}</div>
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
@@ -122,7 +138,7 @@ const ThermalReceiptLayout = ({
           gridTemplateColumns: '18px 1fr 28px 44px 48px',
           gap: 2,
           fontSize: 10,
-          fontWeight: 700,
+          fontWeight: 800,
           paddingBottom: 3,
           borderBottom: '1px solid #000',
           marginBottom: 2,
@@ -143,8 +159,9 @@ const ThermalReceiptLayout = ({
             gridTemplateColumns: '18px 1fr 28px 44px 48px',
             gap: 2,
             fontSize: 10,
+            fontWeight: 700,
             paddingBottom: 2,
-            borderBottom: '1px dashed #ccc',
+            borderBottom: '1px dashed #000000',
             marginBottom: 2,
           }}
         >
@@ -185,23 +202,23 @@ const ThermalReceiptLayout = ({
 
       <HR />
 
-      <div style={{ fontSize: 10, marginBottom: 2 }}>
+      <div style={{ fontSize: 10, marginBottom: 2, fontWeight: 700 }}>
         In word: {numberToWords(Math.round(total))}
       </div>
 
       <HR />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
         <span>Cashier: {cafeName}</span>
         <span>Time: {timeStr}</span>
       </div>
 
       <HR />
 
-      <div style={{ textAlign: 'center', fontSize: 11 }}>
+      <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700 }}>
         {billFooter || 'Thank you for visiting!'}
       </div>
-    </>
+    </div>
   );
 };
 
