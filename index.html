@@ -17,6 +17,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Café POS" />
 
+    <style>
+    @media print {
+      body, html, #root, * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        text-shadow: none !important;
+        background: transparent !important;
+        font-weight: 800 !important;
+      }
+      img, svg {
+        filter: brightness(0) invert(0) !important;
+      }
+    }
+  </style>
   </head>
 
   <body>
