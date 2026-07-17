@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { db } from '@/storage/db';
 import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StockMovement, TablePayment } from '@/types/pos';
 import { normalizeToBase } from '@/utils/units';
+import { useInventoryStore } from '@/store/useInventoryStore';
 
 db.seed();
 
@@ -300,7 +301,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   sendToKitchen: (orderId) => {
-    get().deductStockForOrder(orderId);
+    // Deduct inventory via new inventory store (alcohol, beverage, cigarette mappings)
+    const order = get().orders.find((o) => o.id === orderId);
+    if (order) {
+      const unsentItems = order.items
+        .filter((i) => !i.sentToKitchen && i.status !== 'paid')
+        .map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, name: i.name }));
+      if (unsentItems.length > 0) {
+        useInventoryStore.getState().deductInventoryForSale(unsentItems);
+      }
+    }
     set((state) => {
       const orders = state.orders.map((o) =>
         o.id === orderId

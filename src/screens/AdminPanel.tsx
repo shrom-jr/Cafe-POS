@@ -109,7 +109,7 @@ const AdminPanel = () => {
     { id: 'payments',  label: 'Payments',        icon: <CreditCard size={15} />, subtitle: 'Configure payment methods' },
     { id: 'bill',      label: 'Company Profile', icon: <Receipt size={15} />,    subtitle: 'Business info and receipt settings' },
     { id: 'reports',   label: 'Reports',         icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
-    { id: 'inventory', label: 'Inventory',       icon: <Package size={15} />,    subtitle: 'Ingredients, recipes and stock levels' },
+    { id: 'inventory', label: 'Inventory',       icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
     { id: 'backup',    label: 'Backup',          icon: <FileDown size={15} />,   subtitle: 'Export, restore or reset data' },
   ];
 

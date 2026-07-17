@@ -1,0 +1,639 @@
+MASTER TASK — REBUILD INVENTORY INTO A REAL BAR / CAFE STOCK MANAGEMENT SYSTEM
+
+IMPORTANT — READ BEFORE WRITING ANY CODE
+
+This task is ONLY for the Inventory module.
+
+STRICTLY DO NOT MODIFY:
+
+- POS ordering flow
+- Table management
+- Order screen
+- Kitchen workflow
+- Payment flow
+- Review screen
+- Dashboard
+- Reports outside Inventory
+- Mobile Portrait layouts
+- Mobile Landscape layouts
+- Desktop layouts outside Inventory
+- Menu Management
+- Existing UI components unrelated to Inventory
+
+Only modify:
+
+Admin → Inventory
+
+You may create new store logic, database models, utility functions and Inventory UI components if required.
+
+Do NOT refactor unrelated files.
+
+Do NOT redesign unrelated screens.
+
+--------------------------------------------------
+
+BUSINESS REQUIREMENT
+
+This inventory system is for a cafe/bar.
+
+We DO NOT want recipe-based inventory.
+
+We DO NOT want ingredient inventory.
+
+We DO NOT want milk tracking.
+
+We DO NOT want coffee bean tracking.
+
+We DO NOT want kitchen ingredient deduction.
+
+Food and coffee products are managed manually through POS.
+
+Inventory should focus only on products that are commonly stolen, wasted, or require stock monitoring.
+
+--------------------------------------------------
+
+REMOVE COMPLETELY
+
+Remove the concept of:
+
+- Ingredients
+- Recipes
+- Recipe Costs
+- Ingredient Consumption
+- Ingredient-Based Inventory
+
+Do not replace them with another recipe system.
+
+--------------------------------------------------
+
+INVENTORY WILL HAVE ONLY 4 SECTIONS
+
+1. Alcohol
+2. Soft Drinks & Packaged Beverages
+3. Cigarettes
+4. Grocery Purchase Ledger
+
+--------------------------------------------------
+SECTION 1 — ALCOHOL
+--------------------------------------------------
+
+Examples:
+
+- Red Label
+- Black Label
+- Chivas
+- Jack Daniels
+- Vodka
+- Rum
+- Wine
+- Beer
+
+Inventory should track actual stock.
+
+Alcohol inventory must be stored internally in ml.
+
+Example:
+
+Product:
+Red Label
+
+Bottle Size:
+750ml
+
+Manager Purchases:
+12 Bottles
+
+System Automatically Stores:
+
+12 × 750
+
+=
+
+9000ml
+
+Current Stock:
+9000ml
+
+--------------------------------------------------
+POS DEDUCTION
+--------------------------------------------------
+
+Menu Items may be:
+
+Red Label 30ml
+Red Label 60ml
+Red Label 90ml
+Red Label 180ml
+Red Label Full Bottle
+
+Inventory Deduction:
+
+30ml sale
+→ -30ml
+
+60ml sale
+→ -60ml
+
+90ml sale
+→ -90ml
+
+180ml sale
+→ -180ml
+
+Full Bottle sale
+→ -750ml
+
+Stock updates automatically.
+
+--------------------------------------------------
+SECTION 2 — SOFT DRINKS & PACKAGED BEVERAGES
+--------------------------------------------------
+
+Examples:
+
+Pepsi
+Coke
+Sprite
+Fanta
+Mineral Water
+Red Bull
+
+Inventory should track actual stock.
+
+Purchases may come as:
+
+Piece
+Pack
+Carton
+Case
+
+Manager defines conversion.
+
+Example:
+
+Pepsi
+
+1 Carton
+=
+24 Bottles
+
+Manager purchases:
+
+5 Cartons
+
+System Automatically Converts:
+
+5 × 24
+
+=
+
+120 Bottles
+
+Current Stock:
+
+120 Bottles
+
+--------------------------------------------------
+POS DEDUCTION
+--------------------------------------------------
+
+Customer orders:
+
+Pepsi
+
+Inventory:
+
+120
+↓
+
+119
+
+Automatic deduction.
+
+--------------------------------------------------
+SECTION 3 — CIGARETTES
+--------------------------------------------------
+
+Inventory should always store stock in STICKS.
+
+Purchases may come as:
+
+Packet
+Carton
+
+Manager defines:
+
+Sticks Per Packet
+
+Example:
+
+Surya
+
+1 Packet
+=
+20 Sticks
+
+Manager purchases:
+
+10 Packets
+
+System Stores:
+
+200 Sticks
+
+--------------------------------------------------
+POS DEDUCTION
+--------------------------------------------------
+
+Menu Items:
+
+Surya Stick
+Surya Packet
+
+Deduction:
+
+Single Stick
+→ -1
+
+Packet
+→ -20
+
+Both deduct from the same inventory pool.
+
+--------------------------------------------------
+SECTION 4 — GROCERY PURCHASE LEDGER
+--------------------------------------------------
+
+Examples:
+
+Potato
+Rice
+Chicken
+Onion
+Oil
+Vegetables
+Sugar
+
+IMPORTANT:
+
+This is NOT live inventory.
+
+No stock deduction.
+
+No recipe linkage.
+
+No kitchen deduction.
+
+No POS deduction.
+
+--------------------------------------------------
+PURPOSE
+--------------------------------------------------
+
+Track expenses only.
+
+Manager records purchases.
+
+Example:
+
+Potato
+
+20kg
+
+Rs.2000
+
+Date
+
+Save.
+
+Next week:
+
+Potato
+
+15kg
+
+Rs.1500
+
+Save.
+
+Keep every purchase permanently.
+
+--------------------------------------------------
+SHOW
+--------------------------------------------------
+
+Total Purchased
+
+Total Spending
+
+Average Purchase Cost
+
+Monthly Purchases
+
+Purchase History
+
+Supplier History
+
+--------------------------------------------------
+INVENTORY SIDEBAR
+--------------------------------------------------
+
+Replace current inventory navigation with:
+
+Overview
+
+Alcohol
+
+Beverages
+
+Cigarettes
+
+Groceries
+
+Purchases
+
+Stock Movements
+
+--------------------------------------------------
+OVERVIEW DASHBOARD
+--------------------------------------------------
+
+Professional summary cards:
+
+Total Inventory Value
+
+Alcohol Stock Value
+
+Beverage Stock Value
+
+Cigarette Stock Value
+
+Today's Purchases
+
+Low Stock Products
+
+Recent Purchases
+
+Recent Stock Movements
+
+--------------------------------------------------
+PRODUCT MASTER
+--------------------------------------------------
+
+Alcohol Product Fields:
+
+Name
+
+Brand
+
+Bottle Size
+
+Minimum Stock
+
+Status
+
+--------------------------------------------------
+
+Beverage Product Fields:
+
+Name
+
+Pieces Per Pack
+
+Pieces Per Carton
+
+Minimum Stock
+
+Status
+
+--------------------------------------------------
+
+Cigarette Product Fields:
+
+Name
+
+Sticks Per Packet
+
+Packets Per Carton
+
+Minimum Stock
+
+Status
+
+--------------------------------------------------
+PURCHASE WORKFLOW
+--------------------------------------------------
+
+Manager clicks:
+
+Add Purchase
+
+Select Product
+
+Enter:
+
+Supplier
+
+Invoice Number
+
+Purchase Unit
+
+Purchase Quantity
+
+Cost
+
+Date
+
+System automatically converts stock.
+
+Movement automatically logged.
+
+--------------------------------------------------
+LOW STOCK ALERTS
+--------------------------------------------------
+
+Every Alcohol
+
+Every Beverage
+
+Every Cigarette
+
+must support:
+
+Minimum Stock
+
+When stock falls below minimum:
+
+- Show warning badge
+- Highlight row
+- Show in Overview dashboard
+
+--------------------------------------------------
+STOCK MOVEMENTS
+--------------------------------------------------
+
+Keep permanent logs.
+
+Movement Types:
+
+Purchase
+
+Sale
+
+Adjustment
+
+Waste
+
+Correction
+
+Each movement stores:
+
+Date
+
+Time
+
+Product
+
+Quantity
+
+Unit
+
+Type
+
+Reference
+
+Reason
+
+User
+
+Never delete movement history.
+
+--------------------------------------------------
+MANUAL ADJUSTMENTS
+--------------------------------------------------
+
+Manager can:
+
+Increase Stock
+
+Decrease Stock
+
+Reason is mandatory.
+
+Every adjustment creates a movement log.
+
+--------------------------------------------------
+POS INTEGRATION
+--------------------------------------------------
+
+POS UI must remain unchanged.
+
+Waiters continue using POS exactly as before.
+
+Inventory reacts automatically after sales.
+
+Automatic deductions apply ONLY to:
+
+Alcohol
+
+Soft Drinks
+
+Cigarettes
+
+Groceries are ignored.
+
+--------------------------------------------------
+MENU ITEM MAPPING
+--------------------------------------------------
+
+Allow inventory products to be linked to menu items.
+
+Examples:
+
+Pepsi
+→ Pepsi
+
+Red Label
+→ Red Label 30ml
+→ Red Label 60ml
+→ Red Label 90ml
+→ Red Label Full Bottle
+
+Surya
+→ Surya Stick
+→ Surya Packet
+
+Each mapping stores deduction quantity.
+
+--------------------------------------------------
+REPORTS
+--------------------------------------------------
+
+Inventory reports should include:
+
+Daily Consumption
+
+Weekly Consumption
+
+Monthly Consumption
+
+Purchase Summary
+
+Inventory Valuation
+
+Low Stock Report
+
+Most Sold Products
+
+Most Purchased Products
+
+--------------------------------------------------
+DATA SAFETY
+--------------------------------------------------
+
+Do not delete existing inventory data automatically.
+
+If migration is needed:
+
+Create a safe migration.
+
+No data loss.
+
+--------------------------------------------------
+UI REQUIREMENTS
+--------------------------------------------------
+
+Use existing Admin theme.
+
+Professional.
+
+Clean.
+
+ERP-style.
+
+Minimal.
+
+No fancy gradients.
+
+No flashy animations.
+
+Consistent spacing.
+
+Fast workflow.
+
+Optimized for desktop and tablet.
+
+--------------------------------------------------
+FINAL REQUIREMENT
+--------------------------------------------------
+
+Before coding:
+
+1. Analyze current Inventory implementation.
+2. Reuse existing store patterns where possible.
+3. Replace only Inventory logic.
+4. Do not break POS.
+5. Do not touch unrelated pages.
+6. Preserve all existing functionality outside Inventory.
+
+Build this as a production-grade inventory system for a cafe, bar, lounge, and restaurant.

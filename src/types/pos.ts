@@ -115,6 +115,81 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
+// ── NEW INVENTORY TYPES ──────────────────────────────────────────────────────
+
+export type InvProductType = 'alcohol' | 'beverage' | 'cigarette';
+export type InvMovementType = 'Purchase' | 'Sale' | 'Adjustment' | 'Waste' | 'Correction';
+
+export interface AlcoholProduct {
+  id: string;
+  name: string;
+  brand?: string;
+  bottleSizeMl: number;       // e.g. 750
+  currentStockMl: number;     // always stored in ml
+  minStockMl: number;         // alert threshold in ml
+  costPerBottle?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface BeverageProduct {
+  id: string;
+  name: string;
+  piecesPerPack?: number;     // e.g. 6 (optional pack size)
+  piecesPerCarton: number;    // e.g. 24
+  currentStock: number;       // in pieces
+  minStock: number;           // threshold in pieces
+  costPerPiece?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface CigaretteProduct {
+  id: string;
+  name: string;
+  sticksPerPacket: number;    // e.g. 20
+  packetsPerCarton?: number;  // e.g. 10
+  currentSticks: number;
+  minSticks: number;
+  costPerStick?: number;
+  status: 'active' | 'inactive';
+}
+
+export interface GroceryPurchase {
+  id: string;
+  item: string;
+  qty: number;
+  unit: string;               // kg, g, L, pcs, dozen, etc.
+  cost: number;
+  supplier?: string;
+  invoiceNo?: string;
+  date: string;               // ISO date string YYYY-MM-DD
+  note?: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  productType: InvProductType;
+  productId: string;
+  productName: string;
+  quantity: number;           // positive = stock in, negative = stock out (base unit)
+  unit: string;               // ml / pcs / sticks
+  type: InvMovementType;
+  reference?: string;         // invoice # or order name
+  reason?: string;
+  supplier?: string;
+  notes?: string;             // human-readable purchase details, e.g. "12 bottles × 750ml"
+  timestamp: number;
+}
+
+export interface InvMenuMapping {
+  id: string;
+  menuItemId: string;
+  productType: InvProductType;
+  productId: string;
+  deductQty: number;          // ml for alcohol, pieces for beverage, sticks for cigarette
+}
+
+// ── SETTINGS (unchanged) ─────────────────────────────────────────────────────
+
 export interface Settings {
   cafeName: string;
   cafeLogo?: string;
