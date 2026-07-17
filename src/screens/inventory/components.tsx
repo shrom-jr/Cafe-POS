@@ -120,7 +120,7 @@ export const MappingsSection = ({ productType, products, unit }: MappingsSection
         <div>
           <h3 className="text-sm font-semibold text-foreground">POS Menu Item Mappings</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Link menu items to auto-deduct stock on sale
+            Link each menu item to an inventory product and set exactly how much stock to deduct per sale. Selling prices are set independently in the menu and are not affected here.
           </p>
         </div>
         {!showForm && (
@@ -152,9 +152,12 @@ export const MappingsSection = ({ productType, products, unit }: MappingsSection
             <div>
               <label className={LABEL}>Deduct per sale ({unit})</label>
               <input className={INPUT} type="number" min="0.01" step="any"
-                placeholder={unit === 'ml' ? 'e.g. 30' : '1'}
+                placeholder={unit === 'ml' ? 'e.g. 90' : '1'}
                 value={form.deductQty}
                 onChange={(e) => setForm((p) => ({ ...p, deductQty: e.target.value }))} />
+              {unit === 'ml' && (
+                <p className="text-xs text-muted-foreground/60 mt-1">ml deducted from stock per sale — does not affect selling price</p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
@@ -174,7 +177,7 @@ export const MappingsSection = ({ productType, products, unit }: MappingsSection
             <tr className="border-b border-white/[0.06] text-left">
               <th className="pb-2 text-xs font-medium text-muted-foreground">Product</th>
               <th className="pb-2 text-xs font-medium text-muted-foreground">Menu Item</th>
-              <th className="pb-2 text-xs font-medium text-muted-foreground text-right">Per Sale</th>
+              <th className="pb-2 text-xs font-medium text-muted-foreground text-right">Deducted per Sale</th>
               <th className="pb-2 w-10"></th>
             </tr>
           </thead>

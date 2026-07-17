@@ -123,7 +123,6 @@ export type InvMovementType = 'Purchase' | 'Sale' | 'Adjustment' | 'Waste' | 'Co
 export interface AlcoholProduct {
   id: string;
   name: string;
-  brand?: string;
   bottleSizeMl: number;       // e.g. 750
   currentStockMl: number;     // always stored in ml
   minStockMl: number;         // alert threshold in ml
