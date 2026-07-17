@@ -1,0 +1,32 @@
+Master Logic & UI Refactor: Cleaning Up Alcohol Fields & POS Mapping
+We need to modify the Alcohol inventory section (AlcoholSection.tsx and its state store logic) to match the actual operational workflow of the bar. Please implement the following exact changes:
+
+1. Remove the Redundant "Brand" Field
+The Change: Completely remove the "Brand" field from the Add/Edit form, the product database/state schema, and the main product display table.
+
+The Reason: "Product Name" already includes the brand (e.g., "Ruslan Vodka"). Having a separate column is redundant and leaves an ugly blank dash (—) in the table.
+
+2. Add the Missing "Current Bottles" Input Field
+The Change: Insert a new required input field in the form called "Current Stock (bottles)".
+
+The Logic: When creating or editing a product, the manager must be able to input how many physical bottles they have on hand. The system should automatically take this number, multiply it by the "Bottle Size (ml)", and save the total value into the system's internal milliliter tracking state (currentStockMl).
+
+3. Update the Final Form Field Architecture
+The updated form for adding/editing an Alcohol product must display only these fields, arranged cleanly:
+
+Product Name (e.g., Ruslan Vodka)
+
+Bottle Size (ml) (e.g., 750)
+
+Current Stock (bottles) (e.g., 10 -> which dynamically displays text below showing = 7,500 ml total stock)
+
+Min Stock Alert (bottles) (e.g., 3 -> which dynamically displays text below showing = 2,250 ml alert threshold)
+
+Cost per Bottle (optional) (e.g., 2000)
+
+Status (Active/Inactive Dropdown)
+
+4. Clarify the POS Menu Item Mapping Logic
+Make sure the POS Menu Item Mappings section allows the manager to link a specific Inventory Product (tracked in ml) to any existing POS Menu Item.
+
+Remember that POS Menu Items have their own independent, custom Selling Prices set in the retail menu. The inventory system does not alter or dictate the selling price. The mapping interface should purely link the menu item to an inventory item and define the exact Deduction Quantity per sale (e.g., Selecting the menu item "Ruslan Vodka 90ml" and setting it to automatically deduct exactly 90 ml from the "Ruslan Vodka" inventory pool upon checkout).
