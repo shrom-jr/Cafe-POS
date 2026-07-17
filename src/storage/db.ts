@@ -32,36 +32,58 @@ const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
 }));
 
 const defaultCategories: Category[] = [
-  { id: 'cat-hot', name: 'Hot Drinks', order: 1 },
-  { id: 'cat-cold', name: 'Cold Drinks', order: 2 },
-  { id: 'cat-pastry', name: 'Pastries', order: 3 },
-  { id: 'cat-snack', name: 'Snacks', order: 4 },
+  { id: 'cat-hot',    name: 'Hot Drinks',              order: 1 },
+  { id: 'cat-cold',   name: 'Cold Drinks',             order: 2 },
+  { id: 'cat-pastry', name: 'Pastries',                order: 3 },
+  { id: 'cat-snack',  name: 'Snacks',                  order: 4 },
+  { id: 'cat-alc',    name: 'Alcohol',                 order: 5 },
+  { id: 'cat-nonalc', name: 'Non-Alcoholic Beverages', order: 6 },
 ];
 
 const defaultMenuItems: MenuItem[] = [
-  { id: 'mi-1', categoryId: 'cat-hot', name: 'Espresso', price: 150 },
-  { id: 'mi-2', categoryId: 'cat-hot', name: 'Americano', price: 180 },
-  { id: 'mi-3', categoryId: 'cat-hot', name: 'Cappuccino', price: 250 },
-  { id: 'mi-4', categoryId: 'cat-hot', name: 'Latte', price: 280 },
-  { id: 'mi-5', categoryId: 'cat-hot', name: 'Mocha', price: 300 },
-  { id: 'mi-6', categoryId: 'cat-hot', name: 'Hot Chocolate', price: 220 },
-  { id: 'mi-7', categoryId: 'cat-hot', name: 'Macchiato', price: 200 },
-  { id: 'mi-8', categoryId: 'cat-cold', name: 'Iced Latte', price: 300 },
-  { id: 'mi-9', categoryId: 'cat-cold', name: 'Iced Americano', price: 220 },
-  { id: 'mi-10', categoryId: 'cat-cold', name: 'Cold Brew', price: 280 },
-  { id: 'mi-11', categoryId: 'cat-cold', name: 'Mango Smoothie', price: 350 },
-  { id: 'mi-12', categoryId: 'cat-cold', name: 'Berry Smoothie', price: 350 },
-  { id: 'mi-13', categoryId: 'cat-cold', name: 'Iced Mocha', price: 320 },
-  { id: 'mi-14', categoryId: 'cat-pastry', name: 'Croissant', price: 180 },
-  { id: 'mi-15', categoryId: 'cat-pastry', name: 'Chocolate Muffin', price: 200 },
-  { id: 'mi-16', categoryId: 'cat-pastry', name: 'Blueberry Scone', price: 220 },
-  { id: 'mi-17', categoryId: 'cat-pastry', name: 'Cinnamon Roll', price: 250 },
-  { id: 'mi-18', categoryId: 'cat-pastry', name: 'Bagel', price: 160 },
-  { id: 'mi-19', categoryId: 'cat-snack', name: 'Club Sandwich', price: 350 },
-  { id: 'mi-20', categoryId: 'cat-snack', name: 'Caesar Salad', price: 400 },
-  { id: 'mi-21', categoryId: 'cat-snack', name: 'French Fries', price: 200 },
-  { id: 'mi-22', categoryId: 'cat-snack', name: 'Garlic Bread', price: 180 },
-  { id: 'mi-23', categoryId: 'cat-snack', name: 'Panini', price: 320 },
+  { id: 'mi-1',  categoryId: 'cat-hot',    name: 'Espresso',            price: 150 },
+  { id: 'mi-2',  categoryId: 'cat-hot',    name: 'Americano',           price: 180 },
+  { id: 'mi-3',  categoryId: 'cat-hot',    name: 'Cappuccino',          price: 250 },
+  { id: 'mi-4',  categoryId: 'cat-hot',    name: 'Latte',               price: 280 },
+  { id: 'mi-5',  categoryId: 'cat-hot',    name: 'Mocha',               price: 300 },
+  { id: 'mi-6',  categoryId: 'cat-hot',    name: 'Hot Chocolate',       price: 220 },
+  { id: 'mi-7',  categoryId: 'cat-hot',    name: 'Macchiato',           price: 200 },
+  { id: 'mi-8',  categoryId: 'cat-cold',   name: 'Iced Latte',          price: 300 },
+  { id: 'mi-9',  categoryId: 'cat-cold',   name: 'Iced Americano',      price: 220 },
+  { id: 'mi-10', categoryId: 'cat-cold',   name: 'Cold Brew',           price: 280 },
+  { id: 'mi-11', categoryId: 'cat-cold',   name: 'Mango Smoothie',      price: 350 },
+  { id: 'mi-12', categoryId: 'cat-cold',   name: 'Berry Smoothie',      price: 350 },
+  { id: 'mi-13', categoryId: 'cat-cold',   name: 'Iced Mocha',          price: 320 },
+  { id: 'mi-14', categoryId: 'cat-pastry', name: 'Croissant',           price: 180 },
+  { id: 'mi-15', categoryId: 'cat-pastry', name: 'Chocolate Muffin',    price: 200 },
+  { id: 'mi-16', categoryId: 'cat-pastry', name: 'Blueberry Scone',     price: 220 },
+  { id: 'mi-17', categoryId: 'cat-pastry', name: 'Cinnamon Roll',       price: 250 },
+  { id: 'mi-18', categoryId: 'cat-pastry', name: 'Bagel',               price: 160 },
+  { id: 'mi-19', categoryId: 'cat-snack',  name: 'Club Sandwich',       price: 350 },
+  { id: 'mi-20', categoryId: 'cat-snack',  name: 'Caesar Salad',        price: 400 },
+  { id: 'mi-21', categoryId: 'cat-snack',  name: 'French Fries',        price: 200 },
+  { id: 'mi-22', categoryId: 'cat-snack',  name: 'Garlic Bread',        price: 180 },
+  { id: 'mi-23', categoryId: 'cat-snack',  name: 'Panini',              price: 320 },
+  // Alcohol
+  { id: 'mi-alc-1',  categoryId: 'cat-alc', name: 'Beer (330ml)',       price: 250 },
+  { id: 'mi-alc-2',  categoryId: 'cat-alc', name: 'Beer (650ml)',       price: 400 },
+  { id: 'mi-alc-3',  categoryId: 'cat-alc', name: 'Vodka Shot (30ml)',  price: 200 },
+  { id: 'mi-alc-4',  categoryId: 'cat-alc', name: 'Rum Shot (30ml)',    price: 200 },
+  { id: 'mi-alc-5',  categoryId: 'cat-alc', name: 'Whisky Shot (30ml)', price: 300 },
+  { id: 'mi-alc-6',  categoryId: 'cat-alc', name: 'Vodka Large (60ml)', price: 450 },
+  { id: 'mi-alc-7',  categoryId: 'cat-alc', name: 'Rum Large (60ml)',   price: 450 },
+  { id: 'mi-alc-8',  categoryId: 'cat-alc', name: 'Whisky Large (60ml)',price: 550 },
+  { id: 'mi-alc-9',  categoryId: 'cat-alc', name: 'Wine (Glass)',       price: 400 },
+  // Non-Alcoholic Beverages
+  { id: 'mi-na-1',  categoryId: 'cat-nonalc', name: 'Pepsi',            price: 100 },
+  { id: 'mi-na-2',  categoryId: 'cat-nonalc', name: 'Coca-Cola',        price: 100 },
+  { id: 'mi-na-3',  categoryId: 'cat-nonalc', name: 'Sprite',           price: 100 },
+  { id: 'mi-na-4',  categoryId: 'cat-nonalc', name: '7Up',              price: 100 },
+  { id: 'mi-na-5',  categoryId: 'cat-nonalc', name: 'Fanta',            price: 100 },
+  { id: 'mi-na-6',  categoryId: 'cat-nonalc', name: 'Mineral Water',    price:  60 },
+  { id: 'mi-na-7',  categoryId: 'cat-nonalc', name: 'Soda Water',       price:  80 },
+  { id: 'mi-na-8',  categoryId: 'cat-nonalc', name: 'Red Bull',         price: 250 },
+  { id: 'mi-na-9',  categoryId: 'cat-nonalc', name: 'Tonic Water',      price: 150 },
 ];
 
 const defaultSettings: Settings = {
@@ -210,6 +232,36 @@ export const db = {
       set(KEYS.payments, []);
       set(KEYS.settings, defaultSettings);
       localStorage.setItem('pos_initialized', 'true');
+    } else {
+      // Migration: add new categories/items for existing installs
+      const cats: Category[] = get(KEYS.categories, []);
+      const items: MenuItem[] = get(KEYS.menuItems, []);
+      let catsChanged  = false;
+      let itemsChanged = false;
+
+      const newCats: Category[] = [
+        { id: 'cat-alc',    name: 'Alcohol',                 order: 5 },
+        { id: 'cat-nonalc', name: 'Non-Alcoholic Beverages', order: 6 },
+      ];
+      for (const nc of newCats) {
+        if (!cats.find((c) => c.id === nc.id)) {
+          cats.push(nc);
+          catsChanged = true;
+        }
+      }
+
+      const newItems = defaultMenuItems.filter(
+        (mi) => mi.categoryId === 'cat-alc' || mi.categoryId === 'cat-nonalc'
+      );
+      for (const ni of newItems) {
+        if (!items.find((i) => i.id === ni.id)) {
+          items.push(ni);
+          itemsChanged = true;
+        }
+      }
+
+      if (catsChanged)  set(KEYS.categories, cats);
+      if (itemsChanged) set(KEYS.menuItems, items);
     }
   },
 
