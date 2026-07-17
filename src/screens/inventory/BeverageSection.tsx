@@ -9,46 +9,70 @@ import { LowStockBanner, LowBadge, StatusBadge, MappingsSection } from './compon
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, ShoppingCart, SlidersHorizontal, Save, X } from 'lucide-react';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtBevStock(pieces: number, piecesPerCarton: number) {
+  const crates = Math.floor(pieces / piecesPerCarton);
+  const rem    = pieces % piecesPerCarton;
+  if (crates === 0) return `${rem} pcs`;
+  if (rem === 0)    return `${crates} crates / ${pieces} pcs`;
+  return `${crates} crates + ${rem} pcs (${pieces} total)`;
+}
+
 // ── Product Form ──────────────────────────────────────────────────────────────
 const EMPTY_PF = {
-  name: '', piecesPerPack: '', piecesPerCarton: '24', minStock: '12', costPerPiece: '',
-  status: 'active' as 'active' | 'inactive',
+  name: '', piecesPerCarton: '24', currentStock: '', minStock: '2',
+  costPerCarton: '', status: 'active' as 'active' | 'inactive',
 };
 
 const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; onClose: () => void }) => {
   const addBeverage    = useInventoryStore((s) => s.addBeverage);
   const updateBeverage = useInventoryStore((s) => s.updateBeverage);
 
-  const [form, setForm] = useState(() => editProduct ? {
-    name: editProduct.name, status: editProduct.status,
-    piecesPerPack: editProduct.piecesPerPack !== undefined ? String(editProduct.piecesPerPack) : '',
-    piecesPerCarton: String(editProduct.piecesPerCarton),
-    minStock: String(editProduct.minStock),
-    costPerPiece: editProduct.costPerPiece !== undefined ? String(editProduct.costPerPiece) : '',
-  } : EMPTY_PF);
+  const [form, setForm] = useState(() => {
+    if (editProduct) {
+      const ppc      = editProduct.piecesPerCarton;
+      const crates   = ppc > 0 ? String(Math.floor(editProduct.currentStock / ppc)) : '0';
+      const minCrates = ppc > 0 ? String(Math.round(editProduct.minStock / ppc)) : '0';
+      return {
+        name: editProduct.name,
+        status: editProduct.status,
+        piecesPerCarton: String(ppc),
+        currentStock: crates,
+        minStock: minCrates,
+        costPerCarton: editProduct.costPerCarton !== undefined ? String(editProduct.costPerCarton) : '',
+      };
+    }
+    return EMPTY_PF;
+  });
 
   const f = (k: keyof typeof EMPTY_PF) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
+  const ppc        = parseFloat(form.piecesPerCarton);
+  const cratesVal  = parseFloat(form.currentStock);
+  const totalPieces = (!isNaN(ppc) && ppc > 0 && !isNaN(cratesVal) && cratesVal >= 0)
+    ? Math.round(cratesVal) * Math.round(ppc)
+    : null;
+
   const handleSave = () => {
     if (!form.name.trim()) return toast.error('Name is required');
-    const ppc  = parseFloat(form.piecesPerCarton);
-    const min  = parseFloat(form.minStock);
     if (isNaN(ppc) || ppc <= 0) return toast.error('Pieces per carton must be > 0');
-    if (isNaN(min) || min < 0)  return toast.error('Min stock must be 0 or more');
-    const pack = form.piecesPerPack !== '' ? parseFloat(form.piecesPerPack) : undefined;
-    if (pack !== undefined && (isNaN(pack) || pack <= 0)) return toast.error('Pieces per pack must be > 0');
-    const cpu = form.costPerPiece !== '' ? parseFloat(form.costPerPiece) : undefined;
-    if (cpu !== undefined && (isNaN(cpu) || cpu < 0)) return toast.error('Invalid cost per piece');
+    const cs = parseFloat(form.currentStock);
+    if (isNaN(cs) || cs < 0) return toast.error('Current stock is required (0 or more)');
+    const min = parseFloat(form.minStock);
+    if (isNaN(min) || min < 0) return toast.error('Min stock must be 0 or more');
+    const cpc = form.costPerCarton !== '' ? parseFloat(form.costPerCarton) : undefined;
+    if (cpc !== undefined && (isNaN(cpc) || cpc < 0)) return toast.error('Invalid cost per carton');
 
+    const ppcR = Math.round(ppc);
     const data: Omit<BeverageProduct, 'id'> = {
-      name: form.name.trim(), status: form.status,
-      piecesPerPack: pack ? Math.round(pack) : undefined,
-      piecesPerCarton: Math.round(ppc),
-      currentStock: editProduct?.currentStock ?? 0,
-      minStock: Math.round(min),
-      costPerPiece: cpu,
+      name: form.name.trim(),
+      status: form.status,
+      piecesPerCarton: ppcR,
+      currentStock: Math.round(cs) * ppcR,
+      minStock: Math.round(min) * ppcR,
+      costPerCarton: cpc,
     };
     if (editProduct) { updateBeverage(editProduct.id, data); toast.success('Product updated'); }
     else             { addBeverage(data); toast.success('Product added'); }
@@ -66,20 +90,23 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; 
           <input className={INPUT} placeholder="e.g. Pepsi" value={form.name} onChange={f('name')} />
         </div>
         <div>
-          <label className={LABEL}>Pieces per Pack (optional)</label>
-          <input className={INPUT} type="number" min="1" step="1" placeholder="e.g. 6" value={form.piecesPerPack} onChange={f('piecesPerPack')} />
-        </div>
-        <div>
-          <label className={LABEL}>Pieces per Carton *</label>
+          <label className={LABEL}>Pieces per Carton/Crate *</label>
           <input className={INPUT} type="number" min="1" step="1" placeholder="24" value={form.piecesPerCarton} onChange={f('piecesPerCarton')} />
         </div>
         <div>
-          <label className={LABEL}>Min Stock Alert (pieces) *</label>
-          <input className={INPUT} type="number" min="0" step="1" placeholder="12" value={form.minStock} onChange={f('minStock')} />
+          <label className={LABEL}>Current Stock (cartons/crates) *</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="e.g. 5" value={form.currentStock} onChange={f('currentStock')} />
+          {totalPieces !== null && (
+            <p className="text-xs text-emerald-400/80 mt-1">= {totalPieces.toLocaleString()} total pieces</p>
+          )}
         </div>
         <div>
-          <label className={LABEL}>Cost per Piece (optional)</label>
-          <input className={INPUT} type="number" min="0" step="any" placeholder="e.g. 50" value={form.costPerPiece} onChange={f('costPerPiece')} />
+          <label className={LABEL}>Min Stock Alert (cartons/crates) *</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="2" value={form.minStock} onChange={f('minStock')} />
+        </div>
+        <div>
+          <label className={LABEL}>Cost per Carton/Crate (optional)</label>
+          <input className={INPUT} type="number" min="0" step="any" placeholder="e.g. 1200" value={form.costPerCarton} onChange={f('costPerCarton')} />
         </div>
         <div>
           <label className={LABEL}>Status</label>
@@ -98,7 +125,7 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; 
 };
 
 // ── Purchase Form ─────────────────────────────────────────────────────────────
-const EMPTY_BUY = { purchaseUnit: 'carton' as 'piece' | 'pack' | 'carton', qty: '', supplier: '', invoiceNo: '' };
+const EMPTY_BUY = { purchaseUnit: 'carton' as 'piece' | 'carton', qty: '', supplier: '', invoiceNo: '' };
 
 const PurchaseForm = ({ product, onClose }: { product: BeverageProduct; onClose: () => void }) => {
   const purchaseBeverage = useInventoryStore((s) => s.purchaseBeverage);
@@ -107,15 +134,12 @@ const PurchaseForm = ({ product, onClose }: { product: BeverageProduct; onClose:
   const qty = parseFloat(form.qty);
   const addPieces = useMemo(() => {
     if (isNaN(qty) || qty <= 0) return null;
-    if (form.purchaseUnit === 'piece')  return qty;
-    if (form.purchaseUnit === 'pack')   return product.piecesPerPack ? qty * product.piecesPerPack : null;
+    if (form.purchaseUnit === 'piece') return qty;
     return qty * product.piecesPerCarton;
   }, [qty, form.purchaseUnit, product]);
 
   const handleSave = () => {
     if (isNaN(qty) || qty <= 0) return toast.error('Enter a valid quantity');
-    if (form.purchaseUnit === 'pack' && !product.piecesPerPack)
-      return toast.error('This product has no pack size configured. Edit the product first.');
     purchaseBeverage({
       productId: product.id, purchaseUnit: form.purchaseUnit, qty,
       supplier: form.supplier.trim() || undefined,
@@ -129,7 +153,7 @@ const PurchaseForm = ({ product, onClose }: { product: BeverageProduct; onClose:
     <div className={`${CARD} border-blue-500/20 bg-blue-500/[0.03]`}>
       <h3 className="text-sm font-semibold text-foreground mb-1">Purchase Stock — {product.name}</h3>
       <p className="text-xs text-muted-foreground mb-4">
-        Pack: {product.piecesPerPack ?? 'N/A'} pcs · Carton: {product.piecesPerCarton} pcs
+        Carton: {product.piecesPerCarton} pcs
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
@@ -137,7 +161,6 @@ const PurchaseForm = ({ product, onClose }: { product: BeverageProduct; onClose:
           <select className={SELECT} value={form.purchaseUnit}
             onChange={(e) => setForm((p) => ({ ...p, purchaseUnit: e.target.value as typeof form.purchaseUnit }))}>
             <option value="piece">Piece</option>
-            {product.piecesPerPack && <option value="pack">Pack ({product.piecesPerPack} pcs)</option>}
             <option value="carton">Carton ({product.piecesPerCarton} pcs)</option>
           </select>
         </div>
@@ -198,8 +221,13 @@ const AdjustForm = ({ product, onClose }: { product: BeverageProduct; onClose: (
         </div>
         <div>
           <label className={LABEL}>Pieces</label>
-          <input className={INPUT} type="number" min="1" step="1" placeholder="e.g. 12" value={pieces}
+          <input className={INPUT} type="number" min="1" step="1" placeholder="e.g. 24" value={pieces}
             onChange={(e) => setPieces(e.target.value)} autoFocus />
+          {!isNaN(parseFloat(pieces)) && product.piecesPerCarton > 0 && (
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              = {(parseFloat(pieces) / product.piecesPerCarton).toFixed(1)} crates
+            </p>
+          )}
         </div>
         <div>
           <label className={LABEL}>Type</label>
@@ -274,8 +302,8 @@ export const BeverageSection = () => {
             <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  <th className={TH}>Product</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Pack / Carton</th>
+                  <th className={TH}>Product Name</th>
+                  <th className={`${TH} hidden sm:table-cell`}>Pcs / Carton</th>
                   <th className={TH}>Current Stock</th>
                   <th className={`${TH} hidden md:table-cell`}>Min Stock</th>
                   <th className={`${TH} hidden sm:table-cell`}>Status</th>
@@ -285,6 +313,7 @@ export const BeverageSection = () => {
               <tbody>
                 {sorted.map((p) => {
                   const isLow = p.currentStock <= p.minStock && p.status === 'active';
+                  const minCrates = Math.round(p.minStock / p.piecesPerCarton);
                   return (
                     <tr key={p.id}
                       className={`border-b border-white/[0.04] last:border-0 ${isLow ? 'bg-red-500/[0.03]' : ''}`}>
@@ -294,15 +323,15 @@ export const BeverageSection = () => {
                           {isLow && <LowBadge />}
                         </div>
                       </td>
-                      <td className={`${TD} hidden sm:table-cell text-muted-foreground text-xs`}>
-                        {p.piecesPerPack ? `${p.piecesPerPack} pcs/pack` : '—'} · {p.piecesPerCarton} pcs/carton
-                      </td>
+                      <td className={`${TD} hidden sm:table-cell text-muted-foreground`}>{p.piecesPerCarton}</td>
                       <td className={TD}>
                         <span className={`font-semibold font-mono ${isLow ? 'text-red-400' : 'text-foreground'}`}>
-                          {p.currentStock.toLocaleString()} pcs
+                          {fmtBevStock(p.currentStock, p.piecesPerCarton)}
                         </span>
                       </td>
-                      <td className={`${TD} hidden md:table-cell text-muted-foreground`}>{p.minStock} pcs</td>
+                      <td className={`${TD} hidden md:table-cell text-muted-foreground`}>
+                        {minCrates} crates
+                      </td>
                       <td className={`${TD} hidden sm:table-cell`}><StatusBadge status={p.status} /></td>
                       <td className={TD}>
                         <div className="flex items-center gap-0.5 justify-end">

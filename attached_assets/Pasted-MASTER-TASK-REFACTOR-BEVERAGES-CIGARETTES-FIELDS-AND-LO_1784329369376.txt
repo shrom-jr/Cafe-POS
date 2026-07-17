@@ -1,0 +1,33 @@
+MASTER TASK — REFACTOR BEVERAGES & CIGARETTES FIELDS AND LOGIC
+
+We need to completely rewrite the input forms, local state schemas, and rendering tables for both the Beverages (`BeverageSection.tsx`) and Cigarettes (`CigaretteSection.tsx`) components. The system currently features redundant calculations and is completely missing fields to enter initial/current stock counts. 
+
+Please modify the component code, local mock state engines, and display columns to match the following real-world specifications:
+
+### 1. THE BEVERAGES MODULE OVERHAUL (`BeverageSection.tsx`)
+- REMOVE: "Pieces per Pack (optional)" and "Cost per Piece (optional)" fields entirely from the UI, data schemas, and tables. 
+- ADD MISSING INPUT: A required "Current Stock (cartons/crates)" numerical input field.
+- REFACTOR FIELDS: The Add/Edit Beverage form must cleanly present exactly these fields:
+  1. Product Name (e.g., Pepsi)
+  2. Pieces per Carton/Crate (e.g., 24)
+  3. Current Stock (cartons/crates) -> Automatically display an interactive text hint below showing the calculated piece breakdown (e.g., "= 120 total pieces").
+  4. Min Stock Alert (cartons/crates) -> Automatically calculate the alert threshold in pieces behind the scenes.
+  5. Cost per Carton/Crate (optional)
+  6. Status (Active/Inactive)
+- STATE & TABLE LOGIC: When saved, store the current inventory internally as pieces (Cartons × Pieces per Carton). Update the display table columns to reflect: Product Name, Pieces per Carton, Current Stock (rendered as "X crates / Y pcs"), Min Stock, and Status.
+
+### 2. THE CIGARETTES MODULE OVERHAUL (`CigaretteSection.tsx`)
+- REMOVE: "Packets per Carton (optional)" and "Cost per Stick (optional)" fields entirely from the UI, data schemas, and tables. Change "Brand / Product Name" to simply "Product Name".
+- ADD MISSING INPUT: A required "Current Stock (packets)" numerical input field.
+- REFACTOR FIELDS: The Add/Edit Cigarette form must cleanly present exactly these fields:
+  1. Product Name (e.g., Surya)
+  2. Sticks per Packet (e.g., 20)
+  3. Current Stock (packets) -> Automatically display an interactive text hint below showing the calculated loose stick breakdown (e.g., "= 200 total sticks").
+  4. Min Stock Alert (packets) -> Low stock warning should evaluate based on packets remaining rather than raw sticks.
+  5. Cost per Packet (optional)
+  6. Status (Active/Inactive)
+- STATE & TABLE LOGIC: Store cigarette stock balances internally as total loose sticks (Packets × Sticks per Packet). When a sale happens at the POS counter (e.g., selling 1 loose stick or 1 full packet), deduct the respective stick units from this single item pool. Update the display table columns to show: Product Name, Sticks per Packet, Current Stock (rendered as "X packets / Y sticks"), Min Stock Alert, and Status.
+
+CRITICAL ENVIRONMENT CONSTRAINT: Do not automatically commit or push any code changes to GitHub. Keep all modifications, refactors, and file updates strictly local to the Replit workspace. I will manually review the changes and handle the Git sync myself once the inventory module is fully verified.
+
+Ensure all component modifications seamlessly align with the dark accent theme, avoid crashing the app runtime, and preserve the existing POS ordering and sales checkout loops perfectly. Go!

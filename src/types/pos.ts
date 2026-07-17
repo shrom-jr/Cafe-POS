@@ -133,11 +133,10 @@ export interface AlcoholProduct {
 export interface BeverageProduct {
   id: string;
   name: string;
-  piecesPerPack?: number;     // e.g. 6 (optional pack size)
   piecesPerCarton: number;    // e.g. 24
-  currentStock: number;       // in pieces
-  minStock: number;           // threshold in pieces
-  costPerPiece?: number;
+  currentStock: number;       // stored in pieces internally
+  minStock: number;           // threshold in pieces internally
+  costPerCarton?: number;
   status: 'active' | 'inactive';
 }
 
@@ -145,10 +144,9 @@ export interface CigaretteProduct {
   id: string;
   name: string;
   sticksPerPacket: number;    // e.g. 20
-  packetsPerCarton?: number;  // e.g. 10
-  currentSticks: number;
-  minSticks: number;
-  costPerStick?: number;
+  currentSticks: number;      // stored as total sticks internally
+  minSticks: number;          // threshold in sticks internally
+  costPerPacket?: number;
   status: 'active' | 'inactive';
 }
 

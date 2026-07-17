@@ -52,7 +52,7 @@ interface InventoryState {
   deleteBeverage:  (id: string) => void;
   purchaseBeverage: (args: {
     productId: string;
-    purchaseUnit: 'piece' | 'pack' | 'carton';
+    purchaseUnit: 'piece' | 'carton';
     qty: number;
     supplier?: string; invoiceNo?: string; cost?: number;
   }) => void;
@@ -66,7 +66,7 @@ interface InventoryState {
   deleteCigarette:  (id: string) => void;
   purchaseCigarette: (args: {
     productId: string;
-    purchaseUnit: 'stick' | 'packet' | 'carton';
+    purchaseUnit: 'stick' | 'packet';
     qty: number;
     supplier?: string; invoiceNo?: string; cost?: number;
   }) => void;
@@ -201,11 +201,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return {};
     let addPieces = qty;
     let notes = `${qty} piece${qty !== 1 ? 's' : ''}`;
-    if (purchaseUnit === 'pack') {
-      if (!product.piecesPerPack) return {};
-      addPieces = qty * product.piecesPerPack;
-      notes = `${qty} pack${qty !== 1 ? 's' : ''} × ${product.piecesPerPack} pcs = ${addPieces} pcs`;
-    } else if (purchaseUnit === 'carton') {
+    if (purchaseUnit === 'carton') {
       addPieces = qty * product.piecesPerCarton;
       notes = `${qty} carton${qty !== 1 ? 's' : ''} × ${product.piecesPerCarton} pcs = ${addPieces} pcs`;
     }
@@ -287,10 +283,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (purchaseUnit === 'packet') {
       addSticks = qty * product.sticksPerPacket;
       notes = `${qty} packet${qty !== 1 ? 's' : ''} × ${product.sticksPerPacket} sticks = ${addSticks} sticks`;
-    } else if (purchaseUnit === 'carton') {
-      const ppc = product.packetsPerCarton ?? 10;
-      addSticks = qty * ppc * product.sticksPerPacket;
-      notes = `${qty} carton${qty !== 1 ? 's' : ''} × ${ppc} pkts × ${product.sticksPerPacket} sticks = ${addSticks} sticks`;
     }
     const products = s.cigaretteProducts.map((p) =>
       p.id === productId ? { ...p, currentSticks: p.currentSticks + addSticks } : p

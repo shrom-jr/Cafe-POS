@@ -26,10 +26,10 @@ export const OverviewSection = () => {
       return sum + (p.currentStockMl / p.bottleSizeMl) * p.costPerBottle;
     }, 0);
     const bevVal = beverages.reduce((sum, p) => {
-      return sum + (p.costPerPiece ? p.currentStock * p.costPerPiece : 0);
+      return sum + (p.costPerCarton ? (p.currentStock / p.piecesPerCarton) * p.costPerCarton : 0);
     }, 0);
     const cigVal = cigarettes.reduce((sum, p) => {
-      return sum + (p.costPerStick ? p.currentSticks * p.costPerStick : 0);
+      return sum + (p.costPerPacket ? (p.currentSticks / p.sticksPerPacket) * p.costPerPacket : 0);
     }, 0);
 
     // ── Low stock ───────────────────────────────────────────────────────

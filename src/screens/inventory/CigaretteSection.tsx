@@ -10,54 +10,70 @@ import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, ShoppingCart, SlidersHorizontal, Save, X } from 'lucide-react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmtSticks(sticks: number, sticksPerPacket: number) {
+function fmtCigStock(sticks: number, sticksPerPacket: number) {
   const pkts = Math.floor(sticks / sticksPerPacket);
   const rem  = sticks % sticksPerPacket;
   if (pkts === 0) return `${sticks} sticks`;
-  if (rem  === 0) return `${pkts} pkts (${sticks} sticks)`;
+  if (rem === 0)  return `${pkts} packets / ${sticks} sticks`;
   return `${pkts} pkts + ${rem} stk (${sticks} total)`;
 }
 
 // ── Product Form ──────────────────────────────────────────────────────────────
 const EMPTY_PF = {
-  name: '', sticksPerPacket: '20', packetsPerCarton: '10',
-  minSticks: '40', costPerStick: '', status: 'active' as 'active' | 'inactive',
+  name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '2',
+  costPerPacket: '', status: 'active' as 'active' | 'inactive',
 };
 
 const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct; onClose: () => void }) => {
   const addCigarette    = useInventoryStore((s) => s.addCigarette);
   const updateCigarette = useInventoryStore((s) => s.updateCigarette);
 
-  const [form, setForm] = useState(() => editProduct ? {
-    name: editProduct.name, status: editProduct.status,
-    sticksPerPacket:  String(editProduct.sticksPerPacket),
-    packetsPerCarton: editProduct.packetsPerCarton !== undefined ? String(editProduct.packetsPerCarton) : '',
-    minSticks:        String(editProduct.minSticks),
-    costPerStick:     editProduct.costPerStick !== undefined ? String(editProduct.costPerStick) : '',
-  } : EMPTY_PF);
+  const [form, setForm] = useState(() => {
+    if (editProduct) {
+      const spp = editProduct.sticksPerPacket;
+      const pkts    = spp > 0 ? String(Math.floor(editProduct.currentSticks / spp)) : '0';
+      const minPkts = spp > 0 ? String(Math.round(editProduct.minSticks / spp)) : '0';
+      return {
+        name: editProduct.name,
+        status: editProduct.status,
+        sticksPerPacket: String(spp),
+        currentPackets: pkts,
+        minPackets: minPkts,
+        costPerPacket: editProduct.costPerPacket !== undefined ? String(editProduct.costPerPacket) : '',
+      };
+    }
+    return EMPTY_PF;
+  });
 
   const f = (k: keyof typeof EMPTY_PF) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
+  const sppVal     = parseFloat(form.sticksPerPacket);
+  const pktsVal    = parseFloat(form.currentPackets);
+  const totalSticks = (!isNaN(sppVal) && sppVal > 0 && !isNaN(pktsVal) && pktsVal >= 0)
+    ? Math.round(pktsVal) * Math.round(sppVal)
+    : null;
+
   const handleSave = () => {
     if (!form.name.trim()) return toast.error('Name is required');
     const spp = parseFloat(form.sticksPerPacket);
-    const min = parseFloat(form.minSticks);
     if (isNaN(spp) || spp <= 0) return toast.error('Sticks per packet must be > 0');
-    if (isNaN(min) || min < 0)  return toast.error('Min stock must be 0 or more');
-    const ppc = form.packetsPerCarton !== '' ? parseFloat(form.packetsPerCarton) : undefined;
-    if (ppc !== undefined && (isNaN(ppc) || ppc <= 0)) return toast.error('Packets per carton must be > 0');
-    const cpu = form.costPerStick !== '' ? parseFloat(form.costPerStick) : undefined;
-    if (cpu !== undefined && (isNaN(cpu) || cpu < 0)) return toast.error('Invalid cost per stick');
+    const cp = parseFloat(form.currentPackets);
+    if (isNaN(cp) || cp < 0) return toast.error('Current stock is required (0 or more)');
+    const mp = parseFloat(form.minPackets);
+    if (isNaN(mp) || mp < 0) return toast.error('Min stock must be 0 or more');
+    const cpp = form.costPerPacket !== '' ? parseFloat(form.costPerPacket) : undefined;
+    if (cpp !== undefined && (isNaN(cpp) || cpp < 0)) return toast.error('Invalid cost per packet');
 
+    const sppR = Math.round(spp);
     const data: Omit<CigaretteProduct, 'id'> = {
-      name: form.name.trim(), status: form.status,
-      sticksPerPacket:  Math.round(spp),
-      packetsPerCarton: ppc ? Math.round(ppc) : undefined,
-      currentSticks: editProduct?.currentSticks ?? 0,
-      minSticks: Math.round(min),
-      costPerStick: cpu,
+      name: form.name.trim(),
+      status: form.status,
+      sticksPerPacket: sppR,
+      currentSticks: Math.round(cp) * sppR,
+      minSticks: Math.round(mp) * sppR,
+      costPerPacket: cpp,
     };
     if (editProduct) { updateCigarette(editProduct.id, data); toast.success('Product updated'); }
     else             { addCigarette(data); toast.success('Product added'); }
@@ -71,7 +87,7 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct;
       </h3>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 sm:col-span-1">
-          <label className={LABEL}>Brand / Product Name *</label>
+          <label className={LABEL}>Product Name *</label>
           <input className={INPUT} placeholder="e.g. Surya" value={form.name} onChange={f('name')} />
         </div>
         <div>
@@ -79,21 +95,19 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct;
           <input className={INPUT} type="number" min="1" step="1" placeholder="20" value={form.sticksPerPacket} onChange={f('sticksPerPacket')} />
         </div>
         <div>
-          <label className={LABEL}>Packets per Carton (optional)</label>
-          <input className={INPUT} type="number" min="1" step="1" placeholder="10" value={form.packetsPerCarton} onChange={f('packetsPerCarton')} />
-        </div>
-        <div>
-          <label className={LABEL}>Min Stock Alert (sticks) *</label>
-          <input className={INPUT} type="number" min="0" step="1" placeholder="40" value={form.minSticks} onChange={f('minSticks')} />
-          {!isNaN(parseFloat(form.minSticks)) && !isNaN(parseFloat(form.sticksPerPacket)) && (
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              = {(parseFloat(form.minSticks) / parseFloat(form.sticksPerPacket)).toFixed(1)} packets
-            </p>
+          <label className={LABEL}>Current Stock (packets) *</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="e.g. 10" value={form.currentPackets} onChange={f('currentPackets')} />
+          {totalSticks !== null && (
+            <p className="text-xs text-emerald-400/80 mt-1">= {totalSticks.toLocaleString()} total sticks</p>
           )}
         </div>
         <div>
-          <label className={LABEL}>Cost per Stick (optional)</label>
-          <input className={INPUT} type="number" min="0" step="any" placeholder="e.g. 20" value={form.costPerStick} onChange={f('costPerStick')} />
+          <label className={LABEL}>Min Stock Alert (packets) *</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="2" value={form.minPackets} onChange={f('minPackets')} />
+        </div>
+        <div>
+          <label className={LABEL}>Cost per Packet (optional)</label>
+          <input className={INPUT} type="number" min="0" step="any" placeholder="e.g. 200" value={form.costPerPacket} onChange={f('costPerPacket')} />
         </div>
         <div>
           <label className={LABEL}>Status</label>
@@ -114,7 +128,7 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct;
 // ── Purchase Form ─────────────────────────────────────────────────────────────
 const PurchaseForm = ({ product, onClose }: { product: CigaretteProduct; onClose: () => void }) => {
   const purchaseCigarette = useInventoryStore((s) => s.purchaseCigarette);
-  const [purchaseUnit, setPurchaseUnit] = useState<'stick' | 'packet' | 'carton'>('packet');
+  const [purchaseUnit, setPurchaseUnit] = useState<'stick' | 'packet'>('packet');
   const [qty,      setQty]      = useState('');
   const [supplier, setSupplier] = useState('');
   const [invoiceNo,setInvoiceNo]= useState('');
@@ -123,9 +137,7 @@ const PurchaseForm = ({ product, onClose }: { product: CigaretteProduct; onClose
     const q = parseFloat(qty);
     if (isNaN(q) || q <= 0) return null;
     if (purchaseUnit === 'stick')  return q;
-    if (purchaseUnit === 'packet') return q * product.sticksPerPacket;
-    const ppc = product.packetsPerCarton ?? 10;
-    return q * ppc * product.sticksPerPacket;
+    return q * product.sticksPerPacket;
   }, [qty, purchaseUnit, product]);
 
   const handleSave = () => {
@@ -140,7 +152,7 @@ const PurchaseForm = ({ product, onClose }: { product: CigaretteProduct; onClose
     <div className={`${CARD} border-blue-500/20 bg-blue-500/[0.03]`}>
       <h3 className="text-sm font-semibold text-foreground mb-1">Purchase Stock — {product.name}</h3>
       <p className="text-xs text-muted-foreground mb-4">
-        {product.sticksPerPacket} sticks/pkt · {product.packetsPerCarton ? `${product.packetsPerCarton} pkts/carton` : 'carton size N/A'}
+        {product.sticksPerPacket} sticks/packet
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
@@ -148,7 +160,6 @@ const PurchaseForm = ({ product, onClose }: { product: CigaretteProduct; onClose
           <select className={SELECT} value={purchaseUnit} onChange={(e) => setPurchaseUnit(e.target.value as typeof purchaseUnit)}>
             <option value="stick">Stick</option>
             <option value="packet">Packet ({product.sticksPerPacket} sticks)</option>
-            {product.packetsPerCarton && <option value="carton">Carton ({product.packetsPerCarton} pkts)</option>}
           </select>
         </div>
         <div>
@@ -208,7 +219,7 @@ const AdjustForm = ({ product, onClose }: { product: CigaretteProduct; onClose: 
           <label className={LABEL}>Sticks</label>
           <input className={INPUT} type="number" min="1" step="1" placeholder="20" value={sticks}
             onChange={(e) => setSticks(e.target.value)} autoFocus />
-          {!isNaN(parseFloat(sticks)) && (
+          {!isNaN(parseFloat(sticks)) && product.sticksPerPacket > 0 && (
             <p className="text-xs text-muted-foreground/60 mt-1">
               = {(parseFloat(sticks) / product.sticksPerPacket).toFixed(1)} packets
             </p>
@@ -287,10 +298,10 @@ export const CigaretteSection = () => {
             <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  <th className={TH}>Brand</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Sticks/Pkt</th>
+                  <th className={TH}>Product Name</th>
+                  <th className={`${TH} hidden sm:table-cell`}>Sticks/Packet</th>
                   <th className={TH}>Current Stock</th>
-                  <th className={`${TH} hidden md:table-cell`}>Min Stock</th>
+                  <th className={`${TH} hidden md:table-cell`}>Min Stock Alert</th>
                   <th className={`${TH} hidden sm:table-cell`}>Status</th>
                   <th className={TH}></th>
                 </tr>
@@ -298,6 +309,7 @@ export const CigaretteSection = () => {
               <tbody>
                 {sorted.map((p) => {
                   const isLow = p.currentSticks <= p.minSticks && p.status === 'active';
+                  const minPkts = Math.round(p.minSticks / p.sticksPerPacket);
                   return (
                     <tr key={p.id}
                       className={`border-b border-white/[0.04] last:border-0 ${isLow ? 'bg-red-500/[0.03]' : ''}`}>
@@ -310,11 +322,11 @@ export const CigaretteSection = () => {
                       <td className={`${TD} hidden sm:table-cell text-muted-foreground`}>{p.sticksPerPacket}</td>
                       <td className={TD}>
                         <p className={`font-semibold font-mono ${isLow ? 'text-red-400' : 'text-foreground'}`}>
-                          {fmtSticks(p.currentSticks, p.sticksPerPacket)}
+                          {fmtCigStock(p.currentSticks, p.sticksPerPacket)}
                         </p>
                       </td>
                       <td className={`${TD} hidden md:table-cell text-muted-foreground`}>
-                        {fmtSticks(p.minSticks, p.sticksPerPacket)}
+                        {minPkts} packets
                       </td>
                       <td className={`${TD} hidden sm:table-cell`}><StatusBadge status={p.status} /></td>
                       <td className={TD}>
