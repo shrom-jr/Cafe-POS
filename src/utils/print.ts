@@ -10,7 +10,7 @@ export function isReceiptTextReady(): boolean {
 }
 
 export function triggerPrint(_mode: 'receipt' | 'invoice') {
-  console.log('PRINT VERSION: TEXT_V2');
+  console.log('PRINT VERSION: TEXT_V2_DARK');
 
   if (!_receiptText) {
     console.warn('triggerPrint: no receipt text available yet');
@@ -28,24 +28,36 @@ export function triggerPrint(_mode: 'receipt' | 'invoice') {
   <meta charset="utf-8">
   <title>Receipt</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
     body {
       font-family: 'Courier New', Courier, monospace;
       font-size: 11pt;
-      line-height: 1.45;
-      color: #000000;
-      background: #ffffff;
+      line-height: 1.4;
+      color: #000000 !important;
+      background: #ffffff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      -webkit-font-smoothing: none !important;
+      -moz-osx-font-smoothing: none !important;
     }
     pre {
       white-space: pre;
       font-family: inherit;
       font-size: inherit;
       line-height: inherit;
-      color: #000000;
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.5px;
     }
-    @page { margin: 4mm; size: auto; }
+    @page { 
+      margin: 4mm; 
+      size: auto; 
+    }
   </style>
 </head>
 <body><pre>${safe}</pre></body>
