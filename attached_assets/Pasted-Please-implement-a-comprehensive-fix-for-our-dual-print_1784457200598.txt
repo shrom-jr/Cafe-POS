@@ -1,0 +1,23 @@
+Please implement a comprehensive fix for our dual-printer engine across `src/utils/printEngine.ts`, `OrderScreen.tsx`, and `ReviewScreen.tsx`. We have run physical tests on the Pantum PD-80BW printers and identified a few specific formatting and logic bugs that need to be resolved immediately without breaking the existing core states.
+
+Apply the following modifications cleanly:
+
+### 1. FIX RIGHT-SIDE CLIPPING (Line Width & Margins)
+- The current 42-character monospace grid is too wide for the physical paper, cutting off the dates (e.g., "19/07/20") and the last digit of prices (e.g., "200" becomes "20C").
+- Reduce the maximum text layout calculation grid down to 38 characters (or 40 characters max width) to create a safe printable area buffer.
+- Inject a strict print stylesheet directly into the print popup window header to override default browser margins and layout clipping:
+  `@page { margin: 0; } body { margin: 0.3cm; font-family: monospace; font-size: 11px; line-height: 1.2; }`
+- Adjust all right-aligned column calculation methods (for Rate, Amt, and Totals) to align cleanly within this new character limit.
+
+### 2. IMPLEMENT OPERATIONAL FOOD FILTER FOR KITCHEN KOT
+- The kitchen wall printer must strictly print food items only. It is currently leaking bar/counter items like Vodka, Rum, and Beer.
+- In the KITCHEN_KOT layout loop, implement an array filter on the ordered items before generating the receipt string.
+- ALLOW only items belonging to the following categories: 'Snacks' and 'Pastries'.
+- EXCLUDE and completely strip out items belonging to: 'Alcohol', 'Hot Drinks', 'Cold Drinks', and 'Non-Alcoholic Beverages'.
+- If a user triggers "Send to Kitchen" for a cart containing ONLY excluded drink/bar items, gracefully bypass the print popup entirely and show a brief toast/notification: "No kitchen items to print."
+
+### 3. FIX KITCHEN KOT QUANTITIES & PAX DISPLAY
+- Inside the KITCHEN_KOT item loop, modify the output formatting so that item quantities are explicitly clear for the kitchen staff. Prepend the quantity format to the item string, for example: "1 x French Fries" or "2 x Garlic Bread".
+- Locate the "Pax:" header on the KITCHEN_KOT ticket template. Ensure that the active guest count variable (Pax selector value from the frontend state) is correctly passed into the print job payload and rendered clearly next to the label instead of printing blank.
+
+Review the character alignment math across all three templates (KITCHEN_KOT, PRE_BILL, TAX_INVOICE) to make sure columns stay perfectly aligned under the narrower margin rules.

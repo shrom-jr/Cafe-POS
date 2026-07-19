@@ -64,9 +64,11 @@ export type PrintJob =
   | { type: 'PRE_BILL';    data: PreBillData }
   | { type: 'TAX_INVOICE'; data: TaxInvoiceData };
 
-// ── Text-layout helpers (80 mm ≈ 42 chars) ───────────────────────────────────
+// ── Text-layout helpers (80 mm ≈ 38 chars safe printable area) ───────────────
+// W=38 leaves a comfortable margin buffer so right-edge content (dates, prices)
+// is not clipped by the Pantum PD-80BW's physical paper guides.
 
-const W = 42;
+const W = 38;
 
 function hr(char = '-'): string { return char.repeat(W); }
 
@@ -103,8 +105,9 @@ function wrapText(text: string, width: number): string[] {
   return lines;
 }
 
-// ── Column widths for the item table ─────────────────────────────────────────
-const C_SN = 3; const C_ITEM = 16; const C_QTY = 5; const C_RATE = 8; const C_AMT = 8;
+// ── Column widths for the item table (must sum to W = 38) ────────────────────
+// SN(3) + Item(14) + Qty(4) + Rate(8) + Amt(9) = 38
+const C_SN = 3; const C_ITEM = 14; const C_QTY = 4; const C_RATE = 8; const C_AMT = 9;
 
 function itemRow(sn: string | number, name: string, qty: string | number, rate: string, amt: string): string {
   return (
@@ -118,6 +121,7 @@ function itemRow(sn: string | number, name: string, qty: string | number, rate: 
 
 // ── KITCHEN_KOT builder ───────────────────────────────────────────────────────
 // Strips ALL financial data — prints only what the kitchen needs.
+// Items are pre-filtered to food-only categories by the caller (OrderScreen).
 
 function buildKOTText(data: KOTData): string {
   const lines: string[] = [];
@@ -133,11 +137,15 @@ function buildKOTText(data: KOTData): string {
   push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
   push(formatLine(`Date:  ${dateStr}`, timeStr));
   push(hr('-'));
-  push(ljust('ITEM', W - 5) + rjust('QTY', 5));
+  // "Qty x Item" header — matches the "2 x Garlic Bread" row format below
+  push(ljust('QTY', 5) + 'ITEM');
   push(hr('-'));
 
   for (const item of data.items) {
-    push(ljust(item.name.slice(0, W - 6), W - 5) + rjust(item.quantity, 5));
+    // Format: "  2 x French Fries" — qty right-justified in 4 chars, then " x name"
+    const qtyPart = rjust(item.quantity, 4);
+    const label = `${qtyPart} x ${item.name}`;
+    push(label.slice(0, W));
   }
 
   push(hr('-'));
@@ -257,11 +265,16 @@ function openPrintPopup(text: string): void {
   <meta charset="utf-8">
   <title>Print</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Physical paper: Pantum PD-80BW 80 mm roll.
+       margin:0 on @page removes browser chrome margins;
+       body margin 0.3cm is the safe inner printable inset. */
+    @page { margin: 0; size: 80mm auto; }
+    * { box-sizing: border-box; }
     body {
+      margin: 0.3cm;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 11pt;
-      line-height: 1.4;
+      font-size: 11px;
+      line-height: 1.2;
       color: #000000 !important;
       background: #ffffff !important;
       -webkit-print-color-adjust: exact;
@@ -276,11 +289,10 @@ function openPrintPopup(text: string): void {
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       font-weight: 900 !important;
-      letter-spacing: 0.5px;
     }
     @media print {
-      @page { margin: 4mm; size: 80mm auto; }
-      /* Hide everything except the receipt pre block */
+      @page { margin: 0; size: 80mm auto; }
+      body { margin: 0.3cm; }
       body > *:not(pre) { display: none !important; }
     }
   </style>
