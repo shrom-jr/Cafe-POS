@@ -1,0 +1,1 @@
+- [Print Engine Architecture](print-engine.md) — unified firePrintJob() replaces triggerPrint/portal polling; ThermalReceiptLayout kept only for AdminPanel ReceiptPreview

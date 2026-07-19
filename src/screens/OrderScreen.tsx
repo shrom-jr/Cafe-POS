@@ -10,6 +10,7 @@ import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
 import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft } from 'lucide-react';
 import { playClick } from '@/utils/sounds';
+import { firePrintJob } from '@/utils/printEngine';
 
 const formatTime = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -42,6 +43,7 @@ const OrderScreen = () => {
   const categories = usePOSStore((s) => s.categories);
   const menuItems = usePOSStore((s) => s.menuItems);
   const payments = usePOSStore((s) => s.payments);
+  const settings = usePOSStore((s) => s.settings);
 
   const table = tables.find((t) => t.id === tableId);
   const [activeCat, setActiveCat] = useState(categories[0]?.id || '');
@@ -201,7 +203,27 @@ const OrderScreen = () => {
     setDrawerSentAt(ts);
     setNow(ts);
     setShowKitchenWarning(false);
+
+    // Snapshot unsent items BEFORE the store marks them as sent
+    const kotItems = order.items
+      .filter((i) => !i.sentToKitchen && i.status !== 'paid')
+      .map((i) => ({ name: i.name, quantity: i.quantity }));
+
     sendToKitchen(order.id);
+
+    // Fire KOT to kitchen printer — no financial data included
+    if (kotItems.length > 0) {
+      firePrintJob({
+        type: 'KITCHEN_KOT',
+        data: {
+          cafeName: settings.cafeName,
+          tableNumber: table.number,
+          pax: table.pax ?? 1,
+          timestamp: ts,
+          items: kotItems,
+        },
+      });
+    }
 
     const t1 = setTimeout(() => setDrawerSendPhase('sent'), SEND_DELAY);
     const t2 = setTimeout(() => setDrawerSendPhase('idle'), SEND_DELAY + SUCCESS_DURATION);

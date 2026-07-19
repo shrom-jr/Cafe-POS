@@ -1,0 +1,30 @@
+You are an expert UI/UX and frontend engineer. We are building a frontend-only Point of Sale (POS) system for "Café Brew" in Nepal. The application is completely frontend-driven (no backend/database yet) and relies on the browser's native window.print() execution to communicate with two local network Pantum PD-80BW 80mm thermal receipt printers.
+
+We need to implement a frontend-driven dual-printer layout switching engine using state management and CSS @media print overrides. Do not break any existing dashboard grids, table states, or payment workflows.
+
+### 1. Functional Requirements & Triggers
+Implement a state manager or conditional layout handler (`currentPrintJob`) that dynamically modifies the print payload template depending on the action taken in the UI:
+
+*   **Trigger A: "Send to Kitchen" Button Click**
+    *   Set print layout mode to: `KITCHEN_KOT`
+    *   Output Content: Table Number, Guest Count (Pax), Timestamp, and ordered items with quantities.
+    *   Constraint: Strips out ALL financial data (no individual rates, subtotals, VAT, or payment info).
+    *   Action: Automatically fire window.print() after rendering.
+
+*   **Trigger B: Pre-Bill Print (Add a "Print Bill" button to the cart/review screen)**
+    *   Set print layout mode to: `PRE_BILL`
+    *   Output Content: Standard 80mm layout displaying all items, individual rates, subtotals, a flat 13% VAT breakout, and final Total.
+    *   Constraint: Must clearly render a prominent header and faint watermark labeled: "PRE-BILL / FOR VERIFICATION ONLY".
+    *   Action: Fire window.print().
+
+*   **Trigger C: "Confirm Payment" Button Click**
+    *   Set print layout mode to: `TAX_INVOICE`
+    *   Output Content: Official receipt layout displaying "TAX INVOICE" header, sequential mock Bill ID (e.g., #1001), Table ID, dynamic payment channel notation (Cash, eSewa, Khalti, Fonepay), full itemization, 13% VAT, and a calculated text-to-words string representation of the total amount.
+    *   Action: Fire window.print().
+
+### 2. CSS Print Layout Rules (@media print)
+*   When a print job is active (`window.print()`), use CSS print queries to completely hide the primary POS navigation bar, active table layout grid, and sidebar order cart controls (`display: none !important`).
+*   Only expose the specific printing wrapper container that matches the current active print state (`KITCHEN_KOT`, `PRE_BILL`, or `TAX_INVOICE`).
+*   Ensure all layouts are explicitly formatted to match a clean, center-aligned, single-column 80mm thermal paper width with standard dotted receipt separators (`--------------------------`).
+
+Keep the JavaScript state objects highly structured and modular so they can easily handle integration with real API backend requests in a later phase. Update the existing codebase to reflect these features.

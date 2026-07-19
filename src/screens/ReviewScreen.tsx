@@ -1,19 +1,17 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { firePrintJob, type PrintJob } from '@/utils/printEngine';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { calcBill } from '@/utils/calcBill';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
-import { triggerPrint, isReceiptTextReady } from '@/utils/print';
 import { playSuccess } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ChevronLeft, ChevronDown, ChevronUp, Banknote, Smartphone,
   CheckCircle2, Home, X, Loader2, Printer, Check,
 } from 'lucide-react';
-import ThermalReceiptLayout from '@/components/ThermalReceiptLayout';
 import { OrderItem, TablePayment } from '@/types/pos';
 
 const PRESETS = [0, 5, 10, 15];
@@ -106,6 +104,7 @@ const ReviewScreen = () => {
   const [paidMethod, setPaidMethod] = useState('');
   const [reprinting, setReprinting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const lastPrintJobRef = useRef<PrintJob | null>(null);
   const confirmingRef = useRef(false);
   const [billDetailsOpen, setBillDetailsOpen] = useState(false);
 
@@ -136,6 +135,27 @@ const ReviewScreen = () => {
     setDiscountMode(mode);
     setDiscountInput('');
     setActivePreset(mode === 'percent' ? 0 : null);
+  };
+
+  // Trigger B: Print Pre-Bill (PRE_BILL layout) ─────────────────
+  const handlePrintPreBill = () => {
+    firePrintJob({
+      type: 'PRE_BILL',
+      data: {
+        cafeName:       settings.cafeName,
+        cafeAddress:    settings.cafeAddress,
+        cafePan:        settings.cafePan,
+        tableNumber,
+        timestamp:      Date.now(),
+        items:          unpaidItems.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        subtotal:       bill.subtotal,
+        discountAmount: bill.discountAmount,
+        vatEnabled:     bill.vatEnabled,
+        vatAmount:      bill.vatAmount,
+        vatRate:        bill.vatRate,
+        total:          bill.total,
+      },
+    });
   };
 
   // ── Payment helpers ───────────────────────────────────────────
@@ -250,6 +270,29 @@ const ReviewScreen = () => {
         )
       : true;
 
+    // Trigger C: TAX_INVOICE — build structured job immediately, no polling needed
+    const taxJob: PrintJob = {
+      type: 'TAX_INVOICE',
+      data: {
+        cafeName:       settings.cafeName,
+        cafeAddress:    settings.cafeAddress,
+        cafePan:        settings.cafePan,
+        billFooter:     settings.billFooter,
+        tableNumber,
+        billNumber:     bn,
+        timestamp:      now,
+        items:          payItems.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        subtotal:       payBill.subtotal,
+        discountAmount: payBill.discountAmount,
+        vatEnabled:     payBill.vatEnabled,
+        vatAmount:      payBill.vatAmount,
+        vatRate:        payBill.vatRate,
+        total:          payBill.total,
+        method:         resolvedMethod,
+      },
+    };
+    lastPrintJobRef.current = taxJob;
+
     playSuccess();
     setShowQRModal(false);
 
@@ -260,33 +303,13 @@ const ReviewScreen = () => {
       setPaidMethod(resolvedMethod);
       setPaid(true);
       if (tableId) resetTable(tableId);
-
-      if (payItems.length > 0) {
-        const attemptPrint = () => {
-          if (isReceiptTextReady()) {
-            triggerPrint('receipt');
-          } else {
-            setTimeout(attemptPrint, 50);
-          }
-        };
-        setTimeout(attemptPrint, 50);
-      }
+      if (payItems.length > 0) firePrintJob(taxJob);
     } else {
       setSelectedQty(new Map());
       confirmingRef.current = false;
       setConfirming(false);
       setPartialSuccess(true);
-
-      if (payItems.length > 0) {
-        const attemptPrint = () => {
-          if (isReceiptTextReady()) {
-            triggerPrint('receipt');
-          } else {
-            setTimeout(attemptPrint, 50);
-          }
-        };
-        setTimeout(attemptPrint, 50);
-      }
+      if (payItems.length > 0) firePrintJob(taxJob);
       setTimeout(() => setPartialSuccess(false), 2500);
     }
   };
@@ -307,44 +330,8 @@ const ReviewScreen = () => {
     );
   }
 
-  // ── Receipt portal ────────────────────────────────────────────
-  const receiptPortal = printSession
-    ? createPortal(
-        <div
-          id="print-receipt"
-          style={{
-            display: 'none',
-            fontFamily: "'Courier New', Courier, monospace",
-            fontSize: 12,
-            lineHeight: 1.5,
-            color: '#000',
-            background: '#fff',
-            padding: '6mm',
-            width: '80mm',
-          }}
-        >
-          <ThermalReceiptLayout
-            cafeName={settings.cafeName}
-            cafeLogo={settings.cafeLogo}
-            cafeAddress={settings.cafeAddress}
-            cafePan={settings.cafePan}
-            billFooter={settings.billFooter}
-            tableNumber={tableNumber}
-            billNumber={printSession.billNum}
-            createdAt={printSession.paidAt}
-            items={printSession.items}
-            subtotal={printSession.subtotal}
-            discountAmount={printSession.discountAmount}
-            vatEnabled={printSession.vatEnabled}
-            vatAmount={printSession.vatAmount}
-            vatRate={printSession.vatRate}
-            total={printSession.total}
-            method={printSession.paidMethod}
-          />
-        </div>,
-        document.body
-      )
-    : null;
+  // Receipt dispatched directly via firePrintJob — no DOM portal needed
+  const receiptPortal = null;
 
   // ── Success screen ────────────────────────────────────────────
   if (paid) {
@@ -355,7 +342,7 @@ const ReviewScreen = () => {
     const handleReprint = () => {
       if (reprinting) return;
       setReprinting(true);
-      triggerPrint('receipt');
+      if (lastPrintJobRef.current) firePrintJob(lastPrintJobRef.current);
       setTimeout(() => setReprinting(false), 1800);
     };
 
@@ -1077,6 +1064,21 @@ const ReviewScreen = () => {
                   </span>
                 </div>
 
+                {/* Trigger B: Print Pre-Bill (landscape) */}
+                <button
+                  onClick={handlePrintPreBill}
+                  data-testid="button-print-pre-bill"
+                  className="flex-shrink-0 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-[0.97]"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.42)',
+                  }}
+                >
+                  <Printer size={12} />
+                  Print Pre-Bill
+                </button>
+
                 {/* 2. PAYMENT METHODS — flex-1 so it fills available space; list scrolls if needed */}
                 <div
                   className="flex-1 min-h-0 flex flex-col rounded-xl px-3 pt-2 pb-2"
@@ -1274,6 +1276,20 @@ const ReviewScreen = () => {
                 {getItemsCard()}
                 <div className="flex-shrink-0 flex flex-col gap-1.5">
                   {getBillCard()}
+                  {/* Trigger B: Print Pre-Bill */}
+                  <button
+                    onClick={handlePrintPreBill}
+                    data-testid="button-print-pre-bill"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97]"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      color: 'rgba(255,255,255,0.48)',
+                    }}
+                  >
+                    <Printer size={13} />
+                    Print Pre-Bill
+                  </button>
                   {getPaymentCard()}
                 </div>
               </div>
@@ -1470,6 +1486,32 @@ const ReviewScreen = () => {
                           </p>
                         )}
                       </div>
+
+                      {/* Trigger B: Print Pre-Bill (tablet) */}
+                      <button
+                        onClick={handlePrintPreBill}
+                        data-testid="button-print-pre-bill"
+                        style={{
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '8px 16px',
+                          borderRadius: 12,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(255,255,255,0.42)',
+                          cursor: 'pointer',
+                          transition: 'all 0.1s ease',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        <Printer size={13} />
+                        Print Pre-Bill
+                      </button>
 
                       {/* ── Payment card ── */}
                       <div

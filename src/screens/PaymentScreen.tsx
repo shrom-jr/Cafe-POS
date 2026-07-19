@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { firePrintJob, type PrintJob } from '@/utils/printEngine';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useOrders } from '@/hooks/useOrders';
@@ -7,9 +7,7 @@ import { useTables } from '@/hooks/useTables';
 import { TopBar } from '@/components/ui/Navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Banknote, Smartphone, CheckCircle2, Home, X, Loader2, Printer } from 'lucide-react';
-import ThermalReceiptLayout from '@/components/ThermalReceiptLayout';
 import { resolvePaymentLabel } from '@/utils/format';
-import { triggerPrint } from '@/utils/print';
 import { OrderItem } from '@/types/pos';
 import { playSuccess } from '@/utils/sounds';
 
@@ -58,6 +56,7 @@ const PaymentScreen = () => {
   const [paidMethod, setPaidMethod] = useState<string>('');
   const [reprinting, setReprinting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const lastPrintJobRef = useRef<PrintJob | null>(null);
 
   const subtotal = rawState?.subtotal ?? 0;
   const discountAmount = rawState?.discountAmount ?? 0;
@@ -140,48 +139,33 @@ const PaymentScreen = () => {
     setShowQRModal(false);
     setPaid(true);
 
-    // Auto-print simple receipt
-    triggerPrint('receipt');
+    // Trigger C: TAX_INVOICE — build structured job and fire immediately
+    const printJob: PrintJob = {
+      type: 'TAX_INVOICE',
+      data: {
+        cafeName:       settings.cafeName,
+        cafeAddress:    settings.cafeAddress,
+        cafePan:        settings.cafePan,
+        billFooter:     settings.billFooter,
+        tableNumber:    snap.tableNumber,
+        billNumber:     bn,
+        timestamp:      now,
+        items:          snap.items.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        subtotal,
+        discountAmount,
+        vatEnabled,
+        vatAmount,
+        vatRate,
+        total:          finalTotal,
+        method:         resolvePaymentLabel(method, settings),
+      },
+    };
+    lastPrintJobRef.current = printJob;
+    firePrintJob(printJob);
   };
 
-  /* ── RECEIPT PORTAL (thermal receipt) ─────────────────────── */
-  const receiptPortal = paid
-    ? createPortal(
-        <div
-          id="print-receipt"
-          style={{
-            display: 'none',
-            fontFamily: "'Courier New', Courier, monospace",
-            fontSize: 12,
-            lineHeight: 1.5,
-            color: '#000',
-            background: '#fff',
-            padding: '6mm',
-            width: '80mm',
-          }}
-        >
-          <ThermalReceiptLayout
-            cafeName={settings.cafeName}
-            cafeLogo={settings.cafeLogo}
-            cafeAddress={settings.cafeAddress}
-            cafePan={settings.cafePan}
-            billFooter={settings.billFooter}
-            tableNumber={snap.tableNumber}
-            billNumber={billNum}
-            createdAt={paidAt || Date.now()}
-            items={snap.items}
-            subtotal={subtotal}
-            discountAmount={discountAmount}
-            vatEnabled={vatEnabled}
-            vatAmount={vatAmount}
-            vatRate={vatRate}
-            total={finalTotal}
-            method={paidMethod}
-          />
-        </div>,
-        document.body
-      )
-    : null;
+  // Receipt dispatched via firePrintJob — no DOM portal needed
+  const receiptPortal = null;
 
   /* ── SUCCESS SCREEN ──────────────────────────────────────── */
   if (paid) {
@@ -191,7 +175,7 @@ const PaymentScreen = () => {
     const handleReprint = () => {
       if (reprinting) return;
       setReprinting(true);
-      triggerPrint('receipt');
+      if (lastPrintJobRef.current) firePrintJob(lastPrintJobRef.current);
       setTimeout(() => setReprinting(false), 1800);
     };
 
