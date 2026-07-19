@@ -37,45 +37,45 @@ const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
 // sendToKitchen=false → bar/counter categories, counter printer only
 
 const defaultCategories: Category[] = [
-  // ── Beverages (counter only) ──────────────────────────────────────────────
-  { id: 'cat-hot-bev',        name: 'Hot Beverages',                  order:  1, sendToKitchen: false },
-  { id: 'cat-cold-bev',       name: 'Cold Beverages',                 order:  2, sendToKitchen: false },
-  // ── Food — Burgers, Soups, Sizzlers ───────────────────────────────────────
-  { id: 'cat-burger',         name: 'Burgers & Sandwiches',           order:  3, sendToKitchen: true  },
-  { id: 'cat-soup',           name: 'Soups',                          order:  4, sendToKitchen: true  },
-  { id: 'cat-sizzler',        name: 'Sizzlers',                       order:  5, sendToKitchen: true  },
-  // ── Food — Snacks ─────────────────────────────────────────────────────────
-  { id: 'cat-veg-snack',      name: 'Vegetarian Snacks',              order:  6, sendToKitchen: true  },
-  { id: 'cat-nonveg-snack',   name: 'Main Non-Veg Snacks',            order:  7, sendToKitchen: true  },
-  { id: 'cat-chhoila',        name: 'Chhoila',                        order:  8, sendToKitchen: true  },
-  // ── Food — Noodles & Dumplings ────────────────────────────────────────────
-  { id: 'cat-thukpa',         name: 'Thukpa',                         order:  9, sendToKitchen: true  },
-  { id: 'cat-chowmein',       name: 'Chowmein',                       order: 10, sendToKitchen: true  },
-  { id: 'cat-momo',           name: 'Momo Varieties',                 order: 11, sendToKitchen: true  },
-  { id: 'cat-fried-rice',     name: 'Fried Rice',                     order: 12, sendToKitchen: true  },
-  // ── Food — Mains ──────────────────────────────────────────────────────────
-  { id: 'cat-biryani',        name: 'Biryani',                        order: 13, sendToKitchen: true  },
-  { id: 'cat-curry',          name: 'Main Curries',                   order: 14, sendToKitchen: true  },
-  { id: 'cat-rice',           name: 'Rice Sides',                     order: 15, sendToKitchen: true  },
-  { id: 'cat-khana',          name: 'Traditional Dhido & Khana Sets', order: 16, sendToKitchen: true  },
-  // ── Food — International ──────────────────────────────────────────────────
-  { id: 'cat-pizza',          name: 'Pizza',                          order: 17, sendToKitchen: true  },
-  { id: 'cat-rolls',          name: 'Rolls',                          order: 18, sendToKitchen: true  },
-  { id: 'cat-chop-suey',      name: 'Chop Suey',                      order: 19, sendToKitchen: true  },
-  { id: 'cat-fish',           name: 'Fish Dishes',                    order: 20, sendToKitchen: true  },
-  // ── Food — Sekuwa & Sets ──────────────────────────────────────────────────
-  { id: 'cat-sekuwa',         name: 'Special Sekuwa',                 order: 21, sendToKitchen: true  },
-  { id: 'cat-sekuwa-combo',   name: 'Sekuwa Combo Sets',              order: 22, sendToKitchen: true  },
-  { id: 'cat-khaja',          name: 'Traditional Khaja Sets',         order: 23, sendToKitchen: true  },
-  { id: 'cat-platter',        name: 'Sharing Platters',               order: 24, sendToKitchen: true  },
-  // ── Bar / Counter ─────────────────────────────────────────────────────────
-  { id: 'cat-beer',           name: 'Beers',                          order: 25, sendToKitchen: false },
-  { id: 'cat-wine',           name: 'Wines',                          order: 26, sendToKitchen: false },
-  { id: 'cat-dom-spirit',     name: 'Domestic Spirits',               order: 27, sendToKitchen: false },
-  { id: 'cat-imp-spirit',     name: 'Imported Spirits',               order: 28, sendToKitchen: false },
-  { id: 'cat-hookah-reg',     name: 'Regular Hookah',                 order: 29, sendToKitchen: false },
-  { id: 'cat-hookah-cloud',   name: 'Cloud Hookah',                   order: 30, sendToKitchen: false },
-  { id: 'cat-cig',            name: 'Cigarettes (Per Stick)',          order: 31, sendToKitchen: false },
+  // ── Beverages — intermediate sub-groups (parentCategory: 'Beverages') ─────
+  { id: 'cat-bev-non-alc',  name: 'Non-Alcoholic',                 order:  1, sendToKitchen: false, parentCategory: 'Beverages' },
+  { id: 'cat-bev-alc',      name: 'Alcoholic',                     order:  2, sendToKitchen: false, parentCategory: 'Beverages' },
+  // ── Non-Alcoholic (parentCategory: 'Non-Alcoholic') ──────────────────────
+  { id: 'cat-hot-bev',      name: 'Hot Beverages',                 order:  3, sendToKitchen: false, parentCategory: 'Non-Alcoholic' },
+  { id: 'cat-cold-bev',     name: 'Cold Beverages',                order:  4, sendToKitchen: false, parentCategory: 'Non-Alcoholic' },
+  // ── Alcoholic (parentCategory: 'Alcoholic') ───────────────────────────────
+  { id: 'cat-beer',         name: 'Beers',                         order:  5, sendToKitchen: false, parentCategory: 'Alcoholic' },
+  { id: 'cat-wine',         name: 'Wines',                         order:  6, sendToKitchen: false, parentCategory: 'Alcoholic' },
+  { id: 'cat-dom-spirit',   name: 'Domestic Spirits',              order:  7, sendToKitchen: false, parentCategory: 'Alcoholic' },
+  { id: 'cat-imp-spirit',   name: 'Imported Spirits',              order:  8, sendToKitchen: false, parentCategory: 'Alcoholic' },
+  // ── Hukkah (parentCategory: 'Hukkah') ────────────────────────────────────
+  { id: 'cat-hookah-reg',   name: 'Regular Hookah',                order:  9, sendToKitchen: false, parentCategory: 'Hukkah' },
+  { id: 'cat-hookah-cloud', name: 'Cloud Hookah',                  order: 10, sendToKitchen: false, parentCategory: 'Hukkah' },
+  // ── Cigarettes (parentCategory: 'Cigarettes') ─────────────────────────────
+  { id: 'cat-cig',          name: 'Cigarettes (Per Stick)',         order: 11, sendToKitchen: false, parentCategory: 'Cigarettes' },
+  // ── Foods (parentCategory: 'Foods') — 22 kitchen categories ──────────────
+  { id: 'cat-burger',       name: 'Burgers & Sandwiches',          order: 12, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-soup',         name: 'Soups',                         order: 13, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sizzler',      name: 'Sizzlers',                      order: 14, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-veg-snack',    name: 'Vegetarian Snacks',             order: 15, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-nonveg-snack', name: 'Main Non-Veg Snacks',           order: 16, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chhoila',      name: 'Chhoila',                       order: 17, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-thukpa',       name: 'Thukpa',                        order: 18, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chowmein',     name: 'Chowmein',                      order: 19, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-momo',         name: 'Momo Varieties',                order: 20, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-fried-rice',   name: 'Fried Rice',                    order: 21, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-biryani',      name: 'Biryani',                       order: 22, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-curry',        name: 'Main Curries',                  order: 23, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-rice',         name: 'Rice Sides',                    order: 24, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-khana',        name: 'Traditional Dhido & Khana Sets',order: 25, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-pizza',        name: 'Pizza',                         order: 26, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-rolls',        name: 'Rolls',                         order: 27, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chop-suey',    name: 'Chop Suey',                     order: 28, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-fish',         name: 'Fish Dishes',                   order: 29, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sekuwa',       name: 'Special Sekuwa',                order: 30, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sekuwa-combo', name: 'Sekuwa Combo Sets',             order: 31, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-khaja',        name: 'Traditional Khaja Sets',        order: 32, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-platter',      name: 'Sharing Platters',              order: 33, sendToKitchen: true,  parentCategory: 'Foods' },
 ];
 
 const defaultMenuItems: MenuItem[] = [
@@ -509,7 +509,7 @@ function migrateIngredientUnits() {
 migrateIngredientUnits();
 
 /** Bump this string any time defaultCategories or defaultMenuItems change. */
-const MENU_VERSION = 'bamboo-v1';
+const MENU_VERSION = 'bamboo-v3';
 
 export const db = {
   getTables: (): CafeTable[] => get(KEYS.tables, defaultTables),

@@ -19,7 +19,7 @@ interface POSState {
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
 
-  addCategory: (name: string) => void;
+  addCategory: (name: string, parentCategory?: string) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 
@@ -131,9 +131,9 @@ export const usePOSStore = create<POSState>((set, get) => ({
     });
   },
 
-  addCategory: (name) => {
+  addCategory: (name, parentCategory) => {
     set((state) => {
-      const categories = [...state.categories, { id: crypto.randomUUID(), name, order: state.categories.length + 1, sendToKitchen: false }];
+      const categories = [...state.categories, { id: crypto.randomUUID(), name, order: state.categories.length + 1, sendToKitchen: false, parentCategory }];
       db.saveCategories(categories);
       return { categories };
     });

@@ -47,7 +47,11 @@ const OrderScreen = () => {
   const settings   = usePOSStore((s) => s.settings);
 
   const table = tables.find((t) => t.id === tableId);
-  const [activeCat, setActiveCat] = useState(categories[0]?.id || '');
+  const [activePillar, setActivePillar] = useState('Foods');
+  const [activeSubCat, setActiveSubCat] = useState(() => {
+    const first = categories.find((c) => c.parentCategory === 'Foods');
+    return first?.id || '';
+  });
   const [search, setSearch] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [drawerSendPhase, setDrawerSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -110,16 +114,33 @@ const OrderScreen = () => {
   }, [tableId, table, getActiveOrder, orders]);
 
 
+  // Sub-categories for the active pillar (direct children)
+  const subCategories = useMemo(
+    () => categories.filter((c) => c.parentCategory === activePillar),
+    [categories, activePillar],
+  );
+
+  // When the pillar changes, default to the first sub-category
+  useEffect(() => {
+    const first = categories.find((c) => c.parentCategory === activePillar);
+    setActiveSubCat(first?.id || '');
+  }, [activePillar, categories]);
+
   const filteredItems = useMemo(() => {
-    let items = menuItems;
     if (search.trim()) {
       const q = search.toLowerCase();
-      items = items.filter((i) => i.name.toLowerCase().includes(q));
-    } else {
-      items = items.filter((i) => i.categoryId === activeCat);
+      return menuItems.filter((i) => i.name.toLowerCase().includes(q));
     }
-    return items;
-  }, [menuItems, activeCat, search]);
+    const subCat = categories.find((c) => c.id === activeSubCat);
+    if (!subCat) return [];
+    // Check whether this sub-category is a group with children (e.g. Non-Alcoholic, Alcoholic)
+    const children = categories.filter((c) => c.parentCategory === subCat.name);
+    if (children.length > 0) {
+      const childIds = new Set(children.map((c) => c.id));
+      return menuItems.filter((i) => childIds.has(i.categoryId));
+    }
+    return menuItems.filter((i) => i.categoryId === activeSubCat);
+  }, [menuItems, categories, activeSubCat, search]);
 
   const orderQtyMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -379,30 +400,56 @@ const OrderScreen = () => {
             </div>
           </div>
 
-          {/* Category tabs — horizontal scroll on mobile, wrapping on tablet+ */}
+          {/* 4-pillar super-category tabs */}
           {!search && (
-            <div className="flex gap-2 p-3 border-b border-border no-scrollbar bg-card/40 flex-shrink-0 overflow-x-auto sm:overflow-x-visible sm:flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCat(cat.id)}
-                  data-testid={`button-category-${cat.id}`}
-                  className="px-4 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all active:scale-95"
-                  style={activeCat === cat.id ? {
-                    background: 'rgba(59,130,246,0.22)',
-                    color: 'rgba(255,255,255,0.95)',
-                    border: '1px solid rgba(59,130,246,0.35)',
-                    boxShadow: '0 2px 10px -2px rgba(59,130,246,0.3)',
-                  } : {
-                    background: 'rgba(15,23,42,0.6)',
-                    color: 'rgba(255,255,255,0.45)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="flex gap-1.5 px-3 pt-2.5 pb-2 border-b border-border flex-shrink-0" style={{ background: 'rgba(13,21,37,0.7)' }}>
+                {(['Foods', 'Beverages', 'Cigarettes', 'Hukkah'] as const).map((pillar) => (
+                  <button
+                    key={pillar}
+                    onClick={() => setActivePillar(pillar)}
+                    data-testid={`button-pillar-${pillar.toLowerCase()}`}
+                    className="flex-1 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all active:scale-95"
+                    style={activePillar === pillar ? {
+                      background: 'rgba(59,130,246,0.22)',
+                      color: 'rgba(255,255,255,0.95)',
+                      border: '1px solid rgba(59,130,246,0.35)',
+                      boxShadow: '0 2px 10px -2px rgba(59,130,246,0.3)',
+                    } : {
+                      background: 'rgba(15,23,42,0.55)',
+                      color: 'rgba(255,255,255,0.42)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    {pillar}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-category row — flex-nowrap, hidden scrollbar */}
+              <div className="flex flex-nowrap gap-2 px-3 py-2 border-b border-border no-scrollbar flex-shrink-0 overflow-x-auto" style={{ background: 'rgba(10,17,30,0.5)' }}>
+                {subCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveSubCat(cat.id)}
+                    data-testid={`button-category-${cat.id}`}
+                    className="px-4 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all active:scale-95"
+                    style={activeSubCat === cat.id ? {
+                      background: 'rgba(16,185,129,0.18)',
+                      color: 'rgba(52,211,153,0.95)',
+                      border: '1px solid rgba(16,185,129,0.32)',
+                      boxShadow: '0 2px 8px -2px rgba(16,185,129,0.22)',
+                    } : {
+                      background: 'rgba(15,23,42,0.4)',
+                      color: 'rgba(255,255,255,0.38)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           {/* Items grid — only this section scrolls */}

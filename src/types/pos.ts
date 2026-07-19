@@ -13,6 +13,9 @@ export interface Category {
   order: number;
   /** When true, items in this category are included on KOT tickets to the kitchen printer */
   sendToKitchen?: boolean;
+  /** One of the 4 super-category pillars (Foods / Beverages / Cigarettes / Hukkah),
+   *  or an intermediate group name (Non-Alcoholic / Alcoholic) for deep Beverages sub-groups */
+  parentCategory?: string;
 }
 
 export interface MenuItem {

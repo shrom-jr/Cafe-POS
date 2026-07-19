@@ -397,6 +397,8 @@ const ItemImageField = ({
 };
 
 // ── MENU MANAGEMENT ──────────────────────────────────────────────────────
+const PILLAR_OPTIONS = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
+
 const MenuSection = () => {
   const categories = usePOSStore((s) => s.categories);
   const menuItems = usePOSStore((s) => s.menuItems);
@@ -408,8 +410,10 @@ const MenuSection = () => {
   const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
 
   const [newCat, setNewCat] = useState('');
+  const [newCatParent, setNewCatParent] = useState('Foods');
   const [editCat, setEditCat] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
+  const [editCatParent, setEditCatParent] = useState('');
   const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
   const [showAddItem, setShowAddItem] = useState(false);
   const [itemName, setItemName] = useState('');
@@ -446,45 +450,65 @@ const MenuSection = () => {
   };
 
   return (
-    <div className="grid md:grid-cols-[220px_1fr] gap-5">
+    <div className="grid md:grid-cols-[280px_1fr] gap-5">
       {/* ── Left: Categories ── */}
       <div className="space-y-3 md:sticky md:top-0 md:self-start">
         <div className="bg-card rounded-2xl border border-border p-4">
           <h3 className="font-semibold text-foreground text-sm mb-3">Categories</h3>
-          <div className="flex gap-2 mb-3">
+          {/* Add new category */}
+          <div className="space-y-2 mb-3">
             <input
               value={newCat}
               onChange={(e) => setNewCat(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && newCat.trim()) { addCategory(newCat.trim()); setNewCat(''); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && newCat.trim()) { addCategory(newCat.trim(), newCatParent || undefined); setNewCat(''); } }}
               placeholder="New category name"
               data-testid="input-new-category"
-              className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent min-w-0"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
             />
-            <button
-              onClick={() => { if (newCat.trim()) { addCategory(newCat.trim()); setNewCat(''); } }}
-              data-testid="button-add-category"
-              className="px-3 py-2 rounded-lg bg-accent text-accent-foreground flex-shrink-0 hover:brightness-110 transition-all active:scale-95"
-            >
-              <Plus size={15} />
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={newCatParent}
+                onChange={(e) => setNewCatParent(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <button
+                onClick={() => { if (newCat.trim()) { addCategory(newCat.trim(), newCatParent || undefined); setNewCat(''); } }}
+                data-testid="button-add-category"
+                className="px-3 py-2 rounded-lg bg-accent text-accent-foreground flex-shrink-0 hover:brightness-110 transition-all active:scale-95"
+              >
+                <Plus size={15} />
+              </button>
+            </div>
           </div>
           <div className="space-y-1">
             {categories.map((c) => (
               <div key={c.id}>
                 {editCat === c.id ? (
-                  <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-secondary border border-accent/30">
+                  <div className="space-y-1.5 px-2 py-2 rounded-lg bg-secondary border border-accent/30">
                     <input
                       value={editCatName}
                       onChange={(e) => setEditCatName(e.target.value)}
-                      className="bg-transparent text-sm flex-1 focus:outline-none text-foreground"
+                      className="bg-transparent text-sm w-full focus:outline-none text-foreground"
                       autoFocus
                     />
-                    <button onClick={() => { updateCategory(c.id, { name: editCatName }); setEditCat(null); toast.success('Category updated'); }} className="text-success hover:opacity-80"><Save size={12} /></button>
-                    <button onClick={() => setEditCat(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={editCatParent}
+                        onChange={(e) => setEditCatParent(e.target.value)}
+                        className="flex-1 px-2 py-1 rounded bg-background border border-border text-foreground text-xs focus:outline-none"
+                      >
+                        <option value="">— no pillar —</option>
+                        {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <button onClick={() => { updateCategory(c.id, { name: editCatName, parentCategory: editCatParent || undefined }); setEditCat(null); toast.success('Category updated'); }} className="text-success hover:opacity-80"><Save size={12} /></button>
+                      <button onClick={() => setEditCat(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
+                    </div>
                   </div>
                 ) : (
                   <div
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all group ${
+                    className={`flex items-start justify-between px-3 py-2 rounded-xl cursor-pointer transition-all group ${
                       selectedCat === c.id
                         ? 'text-white'
                         : 'text-white/50 hover:text-white/80 hover:bg-white/5'
@@ -492,9 +516,14 @@ const MenuSection = () => {
                     style={selectedCat === c.id ? ACTIVE_STYLE : {}}
                     onClick={() => setSelectedCat(c.id)}
                   >
-                    <span className="text-sm font-medium flex-1 truncate mr-1">{c.name}</span>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {/* KOT toggle — always visible; orange = sends to kitchen printer */}
+                    <div className="flex-1 min-w-0 mr-1">
+                      <span className="text-sm font-medium break-words leading-snug">{c.name}</span>
+                      {c.parentCategory && (
+                        <span className="block text-[10px] mt-0.5 font-semibold" style={{ color: 'rgba(147,197,253,0.55)' }}>{c.parentCategory}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                      {/* KOT toggle */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -514,7 +543,7 @@ const MenuSection = () => {
                       {/* Edit / Delete — reveal on hover */}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); }}
+                          onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); setEditCatParent(c.parentCategory || ''); }}
                           className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
                         ><Edit3 size={11} /></button>
                         <button

@@ -1,0 +1,24 @@
+Please refactor our menu structure and POS UI to implement a clean, 4-pillar menu hierarchy. We are removing the previous lounge/counter grouping and using a streamlined structure.
+
+===============================================================
+PART 1: DATA HIERARCHY MIGRATION (Foods, Beverages, Cigarettes, Hukkah)
+===============================================================
+1. DATA MODEL UPDATE (src/types/pos.ts & src/storage/db.ts):
+   - Update the Category interface to include a `parentCategory` string property.
+   - Update the `seed()` function in `db.ts` under a new migration version (`bamboo-v3`) to map our categories into these 4 explicit Super-Categories:
+     * 'Foods' (sendToKitchen: true): Maps all 22 kitchen food categories.
+     * 'Beverages' (sendToKitchen: false): Consolidate/map the beverage items cleanly into two distinct sub-categories: "Non-Alcoholic" (Hot Beverages, Cold Beverages) and "Alcoholic" (Beers, Wines, Domestic Spirits, Imported Spirits).
+     * 'Cigarettes' (sendToKitchen: false): Maps Cigarettes (Per Stick).
+     * 'Hukkah' (sendToKitchen: false): Maps Regular Hookah and Cloud Hookah.
+
+===============================================================
+PART 2: UI LAYOUT & VISUAL CLEANUP
+===============================================================
+1. 4-PILLAR MENU NAVIGATION (src/screens/OrderScreen.tsx):
+   - At the top of the menu, render 4 premium, clear "Super-Category" Tabs: "Foods", "Beverages", "Cigarettes", and "Hukkah". Default to "Foods" active.
+   - Directly below these tabs, display the horizontal scrolling row showing ONLY the respective sub-categories for the active tab (e.g., clicking "Beverages" shows "Non-Alcoholic" and "Alcoholic").
+   - Ensure the sub-category row uses 'flex-nowrap overflow-x-auto' with scrollbars hidden for a clean look.
+
+2. CARD & LIST VISUAL REFINEMENT:
+   - Completely remove the large, dark blue single-letter placeholder boxes ('B', 'L', 'M') from all item cards across the application. Make the item name and price the clean typographic focus inside compact grid cards.
+   - Admin Panel (src/screens/AdminPanel.tsx): Expand the left-side category list width so long names like "Traditional Dhido & Khana Sets" display fully without cutting off into ellipses (...). Include a dropdown selector to assign a category to one of the 4 parent pillars.
