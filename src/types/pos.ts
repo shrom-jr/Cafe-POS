@@ -11,6 +11,8 @@ export interface Category {
   id: string;
   name: string;
   order: number;
+  /** When true, items in this category are included on KOT tickets to the kitchen printer */
+  sendToKitchen?: boolean;
 }
 
 export interface MenuItem {

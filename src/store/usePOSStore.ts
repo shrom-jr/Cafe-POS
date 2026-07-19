@@ -133,7 +133,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   addCategory: (name) => {
     set((state) => {
-      const categories = [...state.categories, { id: crypto.randomUUID(), name, order: state.categories.length + 1 }];
+      const categories = [...state.categories, { id: crypto.randomUUID(), name, order: state.categories.length + 1, sendToKitchen: false }];
       db.saveCategories(categories);
       return { categories };
     });

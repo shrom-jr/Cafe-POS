@@ -1,0 +1,63 @@
+I have uploaded our official menu file named `Bamboo Restaurant Menu.pdf` directly into the project root folder. 
+
+Please perform a complete two-part upgrade to our POS system:
+
+===============================================================
+PART 1: BUILD THE FUTURE-PROOF ROUTING ARCHITECTURE
+===============================================================
+1. DATA MODEL UPDATE:
+   - Update the Category model/state structure to include a new boolean property: `sendToKitchen` (defaults to false).
+
+2. ADMIN PANEL UI UPDATE (VISUAL TOGGLE):
+   - Open the Admin Panel / Menu Management screen.
+   - Add a highly visible, interactive UI Toggle Switch or Checkbox labeled "Send to Kitchen" directly next to where categories are listed, created, or edited. 
+   - Toggling this switch in the UI must immediately update that category's `sendToKitchen` boolean status in the database/state.
+
+3. PRINT ENGINE REFACTOR:
+   - Locate the printer filtering logic (likely in `src/screens/OrderScreen.tsx` or a custom printing utility like `printEngine`).
+   - Completely remove the hardcoded text-based checks (e.g., checking for the words 'snacks' or 'pastries').
+   - Replace it with dynamic logic: When generating a Kitchen KOT ticket, check the item's category. If the category's `sendToKitchen` property is TRUE, allow the item to print. If FALSE, exclude it from the kitchen ticket.
+
+===============================================================
+PART 2: PARSE THE PDF AND INITIALIZE THE MENU
+===============================================================
+Read and parse the contents of the uploaded `Bamboo Restaurant Menu.pdf` file to completely replace our temporary test/draft menu categories and items.
+
+When creating the new categories from the PDF, automatically set their initial `sendToKitchen` toggle states based on the following operational mapping:
+
+👉 SET "Send to Kitchen" TO ON (TRUE) FOR THESE FOOD CATEGORIES:
+- Burgers & Sandwiches
+- Soups
+- Sizzlers
+- Vegetarian Snacks
+- Main Non-Veg Snacks
+- Chhoila
+- Thukpa
+- Chowmein
+- Momo Varieties
+- Fried Rice
+- Biryani
+- Main Curries
+- Rice Sides
+- Traditional Dhido & Khana Sets
+- Pizza
+- Rolls
+- Chop Suey
+- Fish Dishes
+- Special Sekuwa
+- Sekuwa Combo Sets
+- Traditional Khaja Sets
+- Sharing Platters
+
+👉 LEAVE "Send to Kitchen" OFF (FALSE) FOR THESE BAR/COUNTER CATEGORIES:
+- Hot Beverages
+- Cold Beverages
+- Beers
+- Wines
+- Domestic Spirits
+- Imported Spirits
+- Regular Hookah
+- Cloud Hookah
+- Cigarettes (Per Stick)
+
+Ensure that all menu items are assigned to their respective categories with the exact prices parsed from the PDF document. Double check that any future categories created manually through the new Admin UI toggle will seamlessly work with the print engine.

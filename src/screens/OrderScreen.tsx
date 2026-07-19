@@ -210,16 +210,14 @@ const OrderScreen = () => {
       (i) => !i.sentToKitchen && i.status !== 'paid',
     );
 
-    // Kitchen food filter — Printer A only receives food items.
-    // ALLOW:   Snacks, Pastries
-    // EXCLUDE: Alcohol, Hot Drinks, Cold Drinks, Non-Alcoholic Beverages
-    const KITCHEN_ALLOW = ['snacks', 'pastries'];
+    // Kitchen food filter — driven by each category's sendToKitchen flag.
+    // Only items whose category has sendToKitchen === true are printed on the KOT.
     const kotItems = unsentOrderItems
       .filter((i) => {
         const menuItem = menuItems.find((m) => m.id === i.menuItemId);
         if (!menuItem) return false;
         const cat = categories.find((c) => c.id === menuItem.categoryId);
-        return cat ? KITCHEN_ALLOW.includes(cat.name.toLowerCase()) : false;
+        return cat?.sendToKitchen === true;
       })
       .map((i) => ({ name: i.name, quantity: i.quantity }));
 

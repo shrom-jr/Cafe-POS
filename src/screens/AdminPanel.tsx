@@ -492,16 +492,36 @@ const MenuSection = () => {
                     style={selectedCat === c.id ? ACTIVE_STYLE : {}}
                     onClick={() => setSelectedCat(c.id)}
                   >
-                    <span className="text-sm font-medium flex-1 truncate">{c.name}</span>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-sm font-medium flex-1 truncate mr-1">{c.name}</span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {/* KOT toggle — always visible; orange = sends to kitchen printer */}
                       <button
-                        onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); }}
-                        className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
-                      ><Edit3 size={11} /></button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteCategory(c.id); }}
-                        className="p-1 rounded hover:bg-danger/20 text-white/40 hover:text-danger"
-                      ><Trash2 size={11} /></button>
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateCategory(c.id, { sendToKitchen: !c.sendToKitchen });
+                        }}
+                        title={c.sendToKitchen ? 'KOT: ON — sends to kitchen' : 'KOT: OFF — counter/bar item'}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition-all"
+                        style={
+                          c.sendToKitchen
+                            ? { background: 'rgba(251,146,60,0.18)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.35)' }
+                            : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.08)' }
+                        }
+                      >
+                        {c.sendToKitchen ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+                        <span>KOT</span>
+                      </button>
+                      {/* Edit / Delete — reveal on hover */}
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); }}
+                          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
+                        ><Edit3 size={11} /></button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteCategory(c.id); }}
+                          className="p-1 rounded hover:bg-danger/20 text-white/40 hover:text-danger"
+                        ><Trash2 size={11} /></button>
+                      </div>
                     </div>
                   </div>
                 )}
