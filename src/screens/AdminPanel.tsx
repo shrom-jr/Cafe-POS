@@ -397,7 +397,9 @@ const ItemImageField = ({
 };
 
 // ── MENU MANAGEMENT ──────────────────────────────────────────────────────
-const PILLAR_OPTIONS = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
+import type { CategoryPillar } from '@/types/pos';
+
+const PILLAR_OPTIONS: CategoryPillar[] = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
 
 const MenuSection = () => {
   const categories = usePOSStore((s) => s.categories);
@@ -410,10 +412,10 @@ const MenuSection = () => {
   const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
 
   const [newCat, setNewCat] = useState('');
-  const [newCatParent, setNewCatParent] = useState('Foods');
+  const [newCatParent, setNewCatParent] = useState<CategoryPillar>('Foods');
   const [editCat, setEditCat] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
-  const [editCatParent, setEditCatParent] = useState('');
+  const [editCatParent, setEditCatParent] = useState<CategoryPillar | ''>('');
   const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
   const [showAddItem, setShowAddItem] = useState(false);
   const [itemName, setItemName] = useState('');
@@ -468,7 +470,7 @@ const MenuSection = () => {
             <div className="flex gap-2">
               <select
                 value={newCatParent}
-                onChange={(e) => setNewCatParent(e.target.value)}
+                onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
                 className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -496,7 +498,7 @@ const MenuSection = () => {
                     <div className="flex items-center gap-1.5">
                       <select
                         value={editCatParent}
-                        onChange={(e) => setEditCatParent(e.target.value)}
+                        onChange={(e) => setEditCatParent(e.target.value as CategoryPillar | '')}
                         className="flex-1 px-2 py-1 rounded bg-background border border-border text-foreground text-xs focus:outline-none"
                       >
                         <option value="">— no pillar —</option>
@@ -519,7 +521,9 @@ const MenuSection = () => {
                     <div className="flex-1 min-w-0 mr-1">
                       <span className="text-sm font-medium break-words leading-snug">{c.name}</span>
                       {c.parentCategory && (
-                        <span className="block text-[10px] mt-0.5 font-semibold" style={{ color: 'rgba(147,197,253,0.55)' }}>{c.parentCategory}</span>
+                        <span className="block text-[10px] mt-0.5 font-semibold" style={{ color: 'rgba(147,197,253,0.55)' }}>
+                          {c.subGroup ? `${c.parentCategory} • ${c.subGroup}` : c.parentCategory}
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">

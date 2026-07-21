@@ -19,7 +19,7 @@ interface POSState {
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
 
-  addCategory: (name: string, parentCategory?: string) => void;
+  addCategory: (name: string, parentCategory?: import('@/types/pos').CategoryPillar) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 

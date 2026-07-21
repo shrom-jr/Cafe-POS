@@ -131,14 +131,6 @@ const OrderScreen = () => {
       const q = search.toLowerCase();
       return menuItems.filter((i) => i.name.toLowerCase().includes(q));
     }
-    const subCat = categories.find((c) => c.id === activeSubCat);
-    if (!subCat) return [];
-    // Check whether this sub-category is a group with children (e.g. Non-Alcoholic, Alcoholic)
-    const children = categories.filter((c) => c.parentCategory === subCat.name);
-    if (children.length > 0) {
-      const childIds = new Set(children.map((c) => c.id));
-      return menuItems.filter((i) => childIds.has(i.categoryId));
-    }
     return menuItems.filter((i) => i.categoryId === activeSubCat);
   }, [menuItems, categories, activeSubCat, search]);
 

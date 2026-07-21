@@ -1,0 +1,28 @@
+Please fix the category hierarchy bug in db.ts and update the Admin Panel:
+
+===============================================================
+1. FIX DATA HIERARCHY IN db.ts (Migration version: bamboo-v4)
+===============================================================
+- DELETE 'Non-Alcoholic' and 'Alcoholic' from being standalone category objects in the categories array in db.ts. They are group labels, not categories, and should not exist as empty categories with 0 items.
+- Update the Category interface (src/types/pos.ts) to have:
+  * parentCategory: 'Foods' | 'Beverages' | 'Cigarettes' | 'Hukkah'
+  * subGroup?: 'Alcoholic' | 'Non-Alcoholic' (optional string used for Beverages)
+
+- Map the beverage categories directly under parentCategory: 'Beverages':
+  * 'Hot Beverages' -> parentCategory: 'Beverages', subGroup: 'Non-Alcoholic'
+  * 'Cold Beverages' -> parentCategory: 'Beverages', subGroup: 'Non-Alcoholic'
+  * 'Beers' -> parentCategory: 'Beverages', subGroup: 'Alcoholic'
+  * 'Wines' -> parentCategory: 'Beverages', subGroup: 'Alcoholic'
+  * 'Domestic Spirits' -> parentCategory: 'Beverages', subGroup: 'Alcoholic'
+  * 'Imported Spirits' -> parentCategory: 'Beverages', subGroup: 'Alcoholic'
+
+- Ensure all 22 food categories remain under parentCategory: 'Foods'.
+- Set Cigarettes under parentCategory: 'Cigarettes', and Hookah categories under parentCategory: 'Hukkah'.
+- Bump the seed migration version to 'bamboo-v4' so existing state auto-migrates cleanly on reload.
+
+===============================================================
+2. ADMIN PANEL UI FIX (src/screens/AdminPanel.tsx)
+===============================================================
+- Ensure the left category sidebar only renders real categories from the database (so 'Non-Alcoholic' and 'Alcoholic' will no longer appear as empty selectable rows).
+- Under each category name in the left list, display its parent pillar (and subGroup if present, e.g., "Beverages • Non-Alcoholic").
+- Ensure clicking any category in the list displays its actual menu items on the right side.

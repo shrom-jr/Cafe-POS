@@ -7,15 +7,19 @@ export interface CafeTable {
   pax?: number;
 }
 
+export type CategoryPillar = 'Foods' | 'Beverages' | 'Cigarettes' | 'Hukkah';
+export type BeverageSubGroup = 'Non-Alcoholic' | 'Alcoholic';
+
 export interface Category {
   id: string;
   name: string;
   order: number;
   /** When true, items in this category are included on KOT tickets to the kitchen printer */
   sendToKitchen?: boolean;
-  /** One of the 4 super-category pillars (Foods / Beverages / Cigarettes / Hukkah),
-   *  or an intermediate group name (Non-Alcoholic / Alcoholic) for deep Beverages sub-groups */
-  parentCategory?: string;
+  /** One of the 4 super-category pillars */
+  parentCategory?: CategoryPillar;
+  /** Only for Beverages — groups the category under Non-Alcoholic or Alcoholic */
+  subGroup?: BeverageSubGroup;
 }
 
 export interface MenuItem {

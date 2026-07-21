@@ -37,17 +37,13 @@ const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
 // sendToKitchen=false → bar/counter categories, counter printer only
 
 const defaultCategories: Category[] = [
-  // ── Beverages — intermediate sub-groups (parentCategory: 'Beverages') ─────
-  { id: 'cat-bev-non-alc',  name: 'Non-Alcoholic',                 order:  1, sendToKitchen: false, parentCategory: 'Beverages' },
-  { id: 'cat-bev-alc',      name: 'Alcoholic',                     order:  2, sendToKitchen: false, parentCategory: 'Beverages' },
-  // ── Non-Alcoholic (parentCategory: 'Non-Alcoholic') ──────────────────────
-  { id: 'cat-hot-bev',      name: 'Hot Beverages',                 order:  3, sendToKitchen: false, parentCategory: 'Non-Alcoholic' },
-  { id: 'cat-cold-bev',     name: 'Cold Beverages',                order:  4, sendToKitchen: false, parentCategory: 'Non-Alcoholic' },
-  // ── Alcoholic (parentCategory: 'Alcoholic') ───────────────────────────────
-  { id: 'cat-beer',         name: 'Beers',                         order:  5, sendToKitchen: false, parentCategory: 'Alcoholic' },
-  { id: 'cat-wine',         name: 'Wines',                         order:  6, sendToKitchen: false, parentCategory: 'Alcoholic' },
-  { id: 'cat-dom-spirit',   name: 'Domestic Spirits',              order:  7, sendToKitchen: false, parentCategory: 'Alcoholic' },
-  { id: 'cat-imp-spirit',   name: 'Imported Spirits',              order:  8, sendToKitchen: false, parentCategory: 'Alcoholic' },
+  // ── Beverages — all direct children of 'Beverages' pillar ─────────────────
+  { id: 'cat-hot-bev',      name: 'Hot Beverages',                 order:  1, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Non-Alcoholic' },
+  { id: 'cat-cold-bev',     name: 'Cold Beverages',                order:  2, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Non-Alcoholic' },
+  { id: 'cat-beer',         name: 'Beers',                         order:  3, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Alcoholic' },
+  { id: 'cat-wine',         name: 'Wines',                         order:  4, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Alcoholic' },
+  { id: 'cat-dom-spirit',   name: 'Domestic Spirits',              order:  5, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Alcoholic' },
+  { id: 'cat-imp-spirit',   name: 'Imported Spirits',              order:  6, sendToKitchen: false, parentCategory: 'Beverages', subGroup: 'Alcoholic' },
   // ── Hukkah (parentCategory: 'Hukkah') ────────────────────────────────────
   { id: 'cat-hookah-reg',   name: 'Regular Hookah',                order:  9, sendToKitchen: false, parentCategory: 'Hukkah' },
   { id: 'cat-hookah-cloud', name: 'Cloud Hookah',                  order: 10, sendToKitchen: false, parentCategory: 'Hukkah' },
@@ -509,7 +505,7 @@ function migrateIngredientUnits() {
 migrateIngredientUnits();
 
 /** Bump this string any time defaultCategories or defaultMenuItems change. */
-const MENU_VERSION = 'bamboo-v3';
+const MENU_VERSION = 'bamboo-v4';
 
 export const db = {
   getTables: (): CafeTable[] => get(KEYS.tables, defaultTables),
