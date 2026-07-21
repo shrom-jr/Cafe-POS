@@ -126,6 +126,18 @@ function itemRow(sn: string | number, name: string, qty: string | number, rate: 
   );
 }
 
+// Wraps long item names across continuation lines so nothing is truncated.
+function itemRowMultiline(sn: string | number, name: string, qty: string | number, rate: string, amt: string): string[] {
+  const nameLines = wrapText(name, C_ITEM);
+  const rows = [
+    ljust(String(sn), C_SN) + ljust(nameLines[0], C_ITEM) + rjust(qty, C_QTY) + rjust(rate, C_RATE) + rjust(amt, C_AMT),
+  ];
+  for (let i = 1; i < nameLines.length; i++) {
+    rows.push(' '.repeat(C_SN) + nameLines[i]);
+  }
+  return rows;
+}
+
 // ── KITCHEN_KOT builder ───────────────────────────────────────────────────────
 // Strips ALL financial data — prints only what the kitchen needs.
 // Items are pre-filtered to food-only categories by the caller (OrderScreen).
@@ -144,7 +156,7 @@ function buildKOTText(data: KOTData): string {
   push(hr('='));
   push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
   push(formatLine(`Date:  ${dateStr}`, timeStr));
-  if (data.serverName) push(`Server: ${data.serverName}`);
+  if (data.serverName) push(`Waiter: ${data.serverName}`);
   push(hr('-'));
   // "Qty x Item" header — matches the "2 x Garlic Bread" row format below
   push(ljust('QTY', 5) + 'ITEM');
@@ -228,14 +240,14 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(`Date:    ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table:   ${data.tableNumber}`);
-  if (data.serverName)  push(`Server:  ${data.serverName}`);
-  if (data.cashierName) push(`Cashier: ${data.cashierName}`);
+  if (data.serverName)  push(`Served By: ${data.serverName}`);
+  if (data.cashierName) push(`Cashier:   ${data.cashierName}`);
   push(hr('-'));
 
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
   push(hr('-'));
   data.items.forEach((item, idx) => {
-    push(itemRow(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)));
+    itemRowMultiline(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)).forEach(push);
   });
 
   push(hr('-'));
@@ -252,8 +264,6 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('-'));
   if (data.cashierName) {
     push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
-  } else {
-    push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
   }
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));

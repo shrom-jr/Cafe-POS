@@ -71,6 +71,18 @@ function itemRow(sn: string | number, name: string, qty: string | number, rate: 
   );
 }
 
+// Wraps long item names across continuation lines so nothing is truncated.
+function itemRowMultiline(sn: string | number, name: string, qty: string | number, rate: string, amt: string): string[] {
+  const nameLines = wrapText(name, C_ITEM);
+  const rows = [
+    ljust(String(sn), C_SN) + ljust(nameLines[0], C_ITEM) + rjust(qty, C_QTY) + rjust(rate, C_RATE) + rjust(amt, C_AMT),
+  ];
+  for (let i = 1; i < nameLines.length; i++) {
+    rows.push(' '.repeat(C_SN) + nameLines[i]);
+  }
+  return rows;
+}
+
 export interface ReceiptData {
   cafeName: string;
   cafeAddress?: string;
@@ -115,8 +127,8 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
-  if (data.serverName)  push(`Server:  ${data.serverName}`);
-  if (data.cashierName) push(`Cashier: ${data.cashierName}`);
+  if (data.serverName)  push(`Served By: ${data.serverName}`);
+  if (data.cashierName) push(`Cashier:   ${data.cashierName}`);
   push(hr('-'));
 
   // ── Item table header ─────────────────────────────────────────
@@ -125,13 +137,13 @@ export function buildReceiptText(data: ReceiptData): string {
 
   // ── Item rows ────────────────────────────────────────────────
   data.items.forEach((item, idx) => {
-    push(itemRow(
+    itemRowMultiline(
       idx + 1,
       item.name,
       item.quantity,
       item.price.toFixed(0),
       (item.price * item.quantity).toFixed(0),
-    ));
+    ).forEach(push);
   });
 
   // ── Totals ───────────────────────────────────────────────────
@@ -153,8 +165,6 @@ export function buildReceiptText(data: ReceiptData): string {
   push(hr('-'));
   if (data.cashierName) {
     push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
-  } else {
-    push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
   }
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));

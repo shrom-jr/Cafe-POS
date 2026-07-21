@@ -245,7 +245,7 @@ const OrderPanel = ({
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(139,92,246,0.14)', color: 'rgba(196,181,253,0.82)', border: '1px solid rgba(139,92,246,0.22)' }}
           >
-            Server: {serverName}
+            Served By: {serverName}
           </span>
         )}
         {itemCount > 0 && (

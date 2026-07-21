@@ -136,7 +136,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        {serverName && <div><strong>Server:</strong> {serverName}</div>}
+        {serverName && <div><strong>Served By:</strong> {serverName}</div>}
         {cashierName && <div><strong>Cashier:</strong> {cashierName}</div>}
       </div>
 
@@ -219,7 +219,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {cashierName || cafeName}</span>
+        {cashierName && <span>Cashier: {cashierName}</span>}
         <span>Time: {timeStr}</span>
       </div>
 
