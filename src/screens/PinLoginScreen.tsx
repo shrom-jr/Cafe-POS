@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { StaffUser, Role } from '@/types/staff';
@@ -28,16 +28,47 @@ const PinModal = ({
   const [pin, setPin] = useState('');
   const [shake, setShake] = useState(false);
   const [showError, setShowError] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Use a ref so the keydown handler always sees the latest pin/shake without
+  // re-attaching the listener on every keystroke.
+  const pinRef = useRef(pin);
+  const shakeRef = useRef(shake);
+  pinRef.current = pin;
+  shakeRef.current = shake;
 
   const colors = ROLE_COLORS[user.role];
 
-  const handleKey = (key: string) => {
-    if (shake) return;
-    const next = pin + key;
-    setPin(next);
+  const handleDigit = (digit: string) => {
+    if (shakeRef.current) return;
+    setPin((prev) => {
+      const next = prev + digit;
+      if (next.length === 4) {
+        const ok = login(user.id, next);
+        if (!ok) {
+          setShake(true);
+          setShowError(true);
+          setTimeout(() => {
+            setShake(false);
+            setPin('');
+            setTimeout(() => setShowError(false), 200);
+          }, 600);
+          return next; // show all 4 dots during shake
+        }
+        // On success, store sets currentUser → parent re-renders → modal disappears
+      }
+      return next;
+    });
+  };
 
-    if (next.length === 4) {
-      const ok = login(user.id, next);
+  const handleBackspace = () => {
+    if (!shakeRef.current) setPin((p) => p.slice(0, -1));
+  };
+
+  const handleSubmit = () => {
+    if (pinRef.current.length === 4) {
+      // Trigger login with current pin value
+      const ok = login(user.id, pinRef.current);
       if (!ok) {
         setShake(true);
         setShowError(true);
@@ -47,18 +78,52 @@ const PinModal = ({
           setTimeout(() => setShowError(false), 200);
         }, 600);
       }
-      // On success, the store updates currentUser → parent re-renders → modal disappears
     }
   };
 
-  const handleBackspace = () => {
-    if (!shake) setPin((p) => p.slice(0, -1));
-  };
+  // Auto-focus the container on open so keyboard input works immediately.
+  useEffect(() => {
+    containerRef.current?.focus();
+  }, []);
+
+  // Global keydown listener — runs alongside mouse/touch, does not replace them.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Digits: top-row keys (key '0'–'9') and Numpad (code 'Numpad0'–'Numpad9')
+      if (/^[0-9]$/.test(e.key) || /^Numpad[0-9]$/.test(e.code)) {
+        e.preventDefault();
+        const digit = e.key.length === 1 ? e.key : e.code.replace('Numpad', '');
+        if (pinRef.current.length < 4) handleDigit(digit);
+        return;
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // attach once; refs keep values fresh
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+      {/* tabIndex makes the container focusable so auto-focus works */}
       <div
-        className={`w-full max-w-xs rounded-2xl border p-6 space-y-5 transition-transform ${
+        ref={containerRef}
+        tabIndex={-1}
+        className={`w-full max-w-xs rounded-2xl border p-6 space-y-5 transition-transform outline-none ${
           shake ? 'animate-shake' : ''
         }`}
         style={{
@@ -106,7 +171,7 @@ const PinModal = ({
           Invalid PIN
         </p>
 
-        {/* Keypad */}
+        {/* Keypad — mouse clicks and touch taps work independently of keyboard */}
         <div className="grid grid-cols-3 gap-2.5">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((key, idx) => {
             if (!key) return <div key={idx} />;
@@ -114,7 +179,7 @@ const PinModal = ({
             return (
               <button
                 key={idx}
-                onClick={() => (isBack ? handleBackspace() : handleKey(key))}
+                onClick={() => (isBack ? handleBackspace() : pin.length < 4 && handleDigit(key))}
                 className="h-12 rounded-xl text-base font-bold transition-all active:scale-90 select-none"
                 style={{
                   background: isBack ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.09)',
