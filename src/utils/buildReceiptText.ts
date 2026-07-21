@@ -99,10 +99,12 @@ export interface ReceiptData {
   vatRate: number;
   total: number;
   method: string;
-  /** Name of the server/waiter who took the order */
+  /** Plain-string fallbacks (legacy) */
   serverName?: string;
-  /** Name of the cashier who processed payment */
   cashierName?: string;
+  /** Full attribution objects — preferred over plain strings */
+  takenBy?:     { id?: string; name: string; role?: string };
+  processedBy?: { id?: string; name: string; role?: string };
 }
 
 export function buildReceiptText(data: ReceiptData): string {
@@ -127,8 +129,9 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
-  push(`Served By: ${data.serverName  || 'N/A'}`);
-  push(`Cashier:   ${data.cashierName || 'N/A'}`);
+  const servedBy = data.takenBy?.name    || data.serverName  || 'N/A';
+  const cashier  = data.processedBy?.name || data.cashierName || 'N/A';
+  push(`Served By: ${servedBy}`);
   push(hr('-'));
 
   // ── Item table header ─────────────────────────────────────────
@@ -163,7 +166,7 @@ export function buildReceiptText(data: ReceiptData): string {
   // ── Footer ───────────────────────────────────────────────────
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  push(formatLine(`Cashier: ${data.cashierName || 'N/A'}`, `Time: ${timeStr}`));
+  push(formatLine(`Cashier: ${cashier}`, `Time: ${timeStr}`));
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));

@@ -42,6 +42,10 @@ export interface PreBillData {
   vatAmount:      number;
   vatRate:        number;
   total:          number;
+  /** Plain-string fallback (legacy) */
+  serverName?:    string;
+  /** Full attribution object — preferred over serverName */
+  takenBy?:       { id?: string; name: string; role?: string };
 }
 
 export interface TaxInvoiceData {
@@ -60,10 +64,12 @@ export interface TaxInvoiceData {
   vatRate:        number;
   total:          number;
   method:         string;
-  /** Name of the server/waiter who took the order */
+  /** Plain-string fallbacks (legacy) */
   serverName?:    string;
-  /** Name of the cashier who processed payment */
   cashierName?:   string;
+  /** Full attribution objects — preferred over plain strings */
+  takenBy?:       { id?: string; name: string; role?: string };
+  processedBy?:   { id?: string; name: string; role?: string };
 }
 
 export type PrintJob =
@@ -194,6 +200,8 @@ function buildPreBillText(data: PreBillData): string {
   push(center('PRE-BILL / FOR VERIFICATION ONLY'));
   push(hr('='));
   push(formatLine(`Table: ${data.tableNumber}`, `Date: ${dateStr}`));
+  const preBillServer = data.takenBy?.name || data.serverName;
+  if (preBillServer) push(`Served By: ${preBillServer}`);
   push(hr('-'));
 
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
@@ -236,12 +244,13 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   push(center('TAX INVOICE'));
   push(hr('='));
-  push(`Payment: ${data.method}`);
-  push(`Date:    ${dateStr}`);
-  push(`Bill No: #${data.billNumber}`);
-  push(`Table:   ${data.tableNumber}`);
-  push(`Served By: ${data.serverName  || 'N/A'}`);
-  push(`Cashier:   ${data.cashierName || 'N/A'}`);
+  const servedBy = data.takenBy?.name    || data.serverName  || 'N/A';
+  const cashier  = data.processedBy?.name || data.cashierName || 'N/A';
+  push(`Payment:   ${data.method}`);
+  push(`Date:      ${dateStr}`);
+  push(`Bill No:   #${data.billNumber}`);
+  push(`Table:     ${data.tableNumber}`);
+  push(`Served By: ${servedBy}`);
   push(hr('-'));
 
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
@@ -262,7 +271,7 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  push(formatLine(`Cashier: ${data.cashierName || 'N/A'}`, `Time: ${timeStr}`));
+  push(formatLine(`Cashier: ${cashier}`, `Time: ${timeStr}`));
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));

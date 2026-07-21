@@ -21,10 +21,12 @@ interface ThermalReceiptLayoutProps {
   vatRate: number;
   total: number;
   method: string;
-  /** Name of the server/waiter who took the order */
+  /** Plain-string fallbacks (legacy) */
   serverName?: string;
-  /** Name of the cashier who processed payment */
   cashierName?: string;
+  /** Full attribution objects — preferred over plain strings */
+  takenBy?:     { id?: string; name: string; role?: string };
+  processedBy?: { id?: string; name: string; role?: string };
 }
 
 const HR = () => (
@@ -57,6 +59,8 @@ const ThermalReceiptLayout = ({
   method,
   serverName,
   cashierName,
+  takenBy,
+  processedBy,
 }: ThermalReceiptLayoutProps) => {
   const taxableAmount = subtotal - discountAmount;
   const dateStr = format(createdAt, 'dd/MM/yyyy');
@@ -83,7 +87,7 @@ const ThermalReceiptLayout = ({
       serverName,
       cashierName,
     }));
-  }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName]);
+  }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName, takenBy, processedBy]);
 
   return (
     <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff' }}>
@@ -136,8 +140,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        <div><strong>Served By:</strong> {serverName || 'N/A'}</div>
-        <div><strong>Cashier:</strong> {cashierName || 'N/A'}</div>
+        <div><strong>Served By:</strong> {takenBy?.name || serverName || 'N/A'}</div>
       </div>
 
       <HR />
@@ -219,7 +222,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {cashierName || 'N/A'}</span>
+        <span>Cashier: {processedBy?.name || cashierName || 'N/A'}</span>
         <span>Time: {timeStr}</span>
       </div>
 

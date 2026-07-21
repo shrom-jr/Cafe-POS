@@ -168,6 +168,8 @@ const PaymentScreen = () => {
         method:         resolvePaymentLabel(method, settings),
         serverName:     snap.takenBy?.name,
         cashierName:    processedBy?.name,
+        takenBy:        snap.takenBy,
+        processedBy,
       },
     };
     lastPrintJobRef.current = printJob;

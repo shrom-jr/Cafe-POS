@@ -328,6 +328,8 @@ const BillHistory = () => {
             method={resolvePaymentLabel(selectedBill.method, settings)}
             serverName={selectedBill.takenBy?.name}
             cashierName={selectedBill.processedBy?.name}
+            takenBy={selectedBill.takenBy}
+            processedBy={selectedBill.processedBy}
           />
         </div>,
         document.body
