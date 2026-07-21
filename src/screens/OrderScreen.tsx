@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fmt } from '@/utils/format';
 import { SEND_DELAY, SUCCESS_DURATION, FLASH_DURATION, NOW_TICK_INTERVAL } from '@/utils/kitchenTimings';
 import { usePOSStore } from '@/store/usePOSStore';
+import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { TopBar } from '@/components/ui/Navigation';
@@ -46,6 +47,8 @@ const OrderScreen = () => {
   const menuItems = usePOSStore((s) => s.menuItems);
   const payments = usePOSStore((s) => s.payments);
   const settings   = usePOSStore((s) => s.settings);
+  const currentUser = useStaffStore((s) => s.currentUser);
+  const canPay = currentUser?.role !== 'WAITER';
   const pillars = usePOSStore((s) => s.pillars);
 
   const table = tables.find((t) => t.id === tableId);
@@ -495,6 +498,7 @@ const OrderScreen = () => {
               moveDisabled={freeTables.length === 0}
               pax={table.pax ?? 1}
               onPaxChange={handlePaxChange}
+              canPay={canPay}
             />
           </div>
         )}
@@ -785,7 +789,8 @@ const OrderScreen = () => {
 
               {/* Primary CTA — visual hierarchy by state */}
               {(() => {
-                const isProceed = kitchenStatus === 'placed' && !hasUnsentItems;
+                // WAITER role: "Proceed to Payment" is replaced by a disabled marker
+                const isProceed = canPay && kitchenStatus === 'placed' && !hasUnsentItems;
                 const isUpdate = kitchenStatus === 'placed' && hasUnsentItems;
                 const isBtnDisabled = !order || order.items.length === 0 || drawerSendPhase === 'sending';
                 const bg = drawerSendPhase === 'sent'

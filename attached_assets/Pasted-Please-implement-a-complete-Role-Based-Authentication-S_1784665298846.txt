@@ -1,0 +1,48 @@
+Please implement a complete Role-Based Authentication System with a Quick Staff PIN Grid Login and User Management in the Admin Panel:
+
+===============================================================
+1. USER MODELS & ROLES STATE
+===============================================================
+- Define 3 roles: 'WAITER', 'CASHIER', 'ADMIN'.
+- Store user profiles with fields: `{ id, name, role, pin, active: true }`.
+- Seed initial default users if none exist:
+  * Admin: Name "Admin Owner", Role "ADMIN", PIN "1234"
+  * Cashier: Name "Cashier Desk", Role "CASHIER", PIN "2222"
+  * Waiter: Name "Waiter Staff", Role "WAITER", PIN "3333"
+
+===============================================================
+2. PIN GRID LOGIN SCREEN (DEFAULT LANDING PAGE)
+===============================================================
+- If no user is logged in, hide all main screens/tabs and display a clean PIN Grid Login screen:
+  * Header: Restaurant Name + "Select Your Profile to Log In"
+  * Body: Cards displaying user names and role badges (e.g., "Rahul - Waiter").
+  * Clicking a profile opens a 4-digit PIN Keypad modal to authenticate.
+  * Incorrect PIN shows a subtle "Invalid PIN" shake effect.
+
+===============================================================
+3. ROLE-BASED ACCESS CONTROL (RBAC) & UI GUARDS
+===============================================================
+- Top Navigation Bar:
+  * Show current user name & role tag (e.g., "Logged in: Sita (Cashier)").
+  * Add a prominent `[ 🔒 Switch User ]` button to instantly log out to the PIN Grid screen.
+
+- Action Permissions by Role:
+  * WAITER:
+    - Can view Tables, add/remove order items, click "Send to Kitchen (KOT)".
+    - HIDE/DISABLE "Print Bill", "Checkout/Payment", and "Admin" tab completely.
+  * CASHIER:
+    - Can view Tables, add/remove order items, send KOTs.
+    - FULL access to "Print Bill", "Collect Payment / Complete Order", and order history.
+    - HIDE "Admin" tab.
+  * ADMIN:
+    - Unrestricted access to ALL features + "Admin" tab.
+
+===============================================================
+4. STAFF MANAGEMENT TAB (INSIDE ADMIN PANEL)
+===============================================================
+- In the Admin Panel sidebar, add a new tab: "Staff & Users".
+- Allow the Admin to:
+  * View list of all staff accounts with their names, roles, and PINs.
+  * Add New Staff: Modal with inputs for Name, Role dropdown (Waiter/Cashier/Admin), and 4-digit PIN.
+  * Edit / Delete existing staff profiles.
+  * Reset any staff member's PIN.

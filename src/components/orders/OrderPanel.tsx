@@ -25,6 +25,8 @@ interface OrderPanelProps {
   moveDisabled?: boolean;
   pax?: number;
   onPaxChange?: (pax: number) => void;
+  /** When false, "Proceed to Payment" is hidden (WAITER role). */
+  canPay?: boolean;
 }
 
 const BLUE_BTN = { background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.24)' };
@@ -50,6 +52,7 @@ const OrderPanel = ({
   moveDisabled = false,
   pax = 1,
   onPaxChange,
+  canPay = true,
 }: OrderPanelProps) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [sendPhase, setSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -93,7 +96,8 @@ const OrderPanel = ({
   const total = unpaidItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
-  const isProceedState = kitchenStatus === 'placed' && !hasUnsentItems;
+  // canPay=false (WAITER role) means the "Proceed to Payment" state is never reached
+  const isProceedState = canPay && kitchenStatus === 'placed' && !hasUnsentItems;
   const isUpdateState = kitchenStatus === 'placed' && hasUnsentItems;
 
   const statusLabel = kitchenStatus === 'draft' ? 'Draft' : hasUnsentItems ? 'Updated' : 'Sent';

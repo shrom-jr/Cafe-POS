@@ -9,10 +9,13 @@ import ReviewScreen from '@/screens/ReviewScreen';
 import PaymentScreen from '@/screens/PaymentScreen';
 import BillHistory from '@/screens/BillHistory';
 import AdminPanel from '@/screens/AdminPanel';
+import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
+import { useStaffStore } from '@/store/useStaffStore';
 
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
+  const currentUser = useStaffStore((s) => s.currentUser);
 
   useEffect(() => {
     const handler = () => setPrintBlocked(true);
@@ -31,18 +34,22 @@ const App = () => {
         </div>
       )}
 
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/" element={<TableOverview />} />
-          <Route path="/order/:tableId" element={<OrderScreen />} />
-          <Route path="/review/:tableId" element={<ReviewScreen />} />
-          {/* UNUSED ROUTE - DO NOT USE */}
-          <Route path="/payment/:tableId" element={<PaymentScreen />} />
-          <Route path="/history" element={<BillHistory />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      {!currentUser ? (
+        <PinLoginScreen />
+      ) : (
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            <Route path="/" element={<TableOverview />} />
+            <Route path="/order/:tableId" element={<OrderScreen />} />
+            <Route path="/review/:tableId" element={<ReviewScreen />} />
+            {/* UNUSED ROUTE - DO NOT USE */}
+            <Route path="/payment/:tableId" element={<PaymentScreen />} />
+            <Route path="/history" element={<BillHistory />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      )}
     </TooltipProvider>
   );
 };

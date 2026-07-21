@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import { usePOSStore } from '@/store/usePOSStore';
+import { useStaffStore } from '@/store/useStaffStore';
 import AppLayout from '@/components/ui/AppLayout';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import { InventorySection } from '@/screens/InventorySection';
+import StaffManagement from '@/screens/admin/StaffManagement';
 import { toast } from 'sonner';
 import {
   BarChart3, Coffee, CreditCard, Table2, TrendingUp, FileDown,
@@ -14,7 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory';
+type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -42,7 +44,9 @@ const PageHeader = ({
 );
 
 const AdminPanel = () => {
-  const [authenticated, setAuthenticated] = useState(false);
+  const currentUser = useStaffStore((s) => s.currentUser);
+  // ADMIN users are already authenticated via the PIN login screen
+  const [authenticated, setAuthenticated] = useState(currentUser?.role === 'ADMIN');
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -110,6 +114,7 @@ const AdminPanel = () => {
     { id: 'bill',      label: 'Company Profile', icon: <Receipt size={15} />,    subtitle: 'Business info and receipt settings' },
     { id: 'reports',   label: 'Reports',         icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
     { id: 'inventory', label: 'Inventory',       icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
+    { id: 'staff',     label: 'Staff & Users',   icon: <Users size={15} />,      subtitle: 'Manage staff accounts, roles, and PINs' },
     { id: 'backup',    label: 'Backup',          icon: <FileDown size={15} />,   subtitle: 'Export, restore or reset data' },
   ];
 
@@ -194,6 +199,7 @@ const AdminPanel = () => {
             {activeTab === 'bill'      && <BillDesignSection />}
             {activeTab === 'reports'   && <ReportsSection />}
             {activeTab === 'inventory' && <InventorySection />}
+            {activeTab === 'staff'     && <StaffManagement />}
             {activeTab === 'backup'    && <BackupSection />}
           </div>
         </div>
