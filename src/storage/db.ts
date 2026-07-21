@@ -10,7 +10,10 @@ const KEYS = {
   ingredients: 'pos_ingredients',
   recipes: 'pos_recipes',
   stockMovements: 'pos_stockMovements',
+  pillars: 'pos_pillars',
 };
+
+const defaultPillars: string[] = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
 
 function get<T>(key: string, fallback: T): T {
   try {
@@ -505,11 +508,14 @@ function migrateIngredientUnits() {
 migrateIngredientUnits();
 
 /** Bump this string any time defaultCategories or defaultMenuItems change. */
-const MENU_VERSION = 'bamboo-v4';
+const MENU_VERSION = 'bamboo-v5';
 
 export const db = {
   getTables: (): CafeTable[] => get(KEYS.tables, defaultTables),
   saveTables: (t: CafeTable[]) => set(KEYS.tables, t),
+
+  getPillars: (): string[] => get(KEYS.pillars, defaultPillars),
+  savePillars: (p: string[]) => set(KEYS.pillars, p),
 
   getCategories: (): Category[] => get(KEYS.categories, defaultCategories),
   saveCategories: (c: Category[]) => set(KEYS.categories, c),
@@ -564,6 +570,7 @@ export const db = {
     if (!localStorage.getItem('pos_initialized')) {
       // ── Fresh install ───────────────────────────────────────────────────
       set(KEYS.tables, defaultTables);
+      set(KEYS.pillars, defaultPillars);
       set(KEYS.categories, defaultCategories);
       set(KEYS.menuItems, defaultMenuItems);
       set(KEYS.orders, []);
@@ -575,7 +582,14 @@ export const db = {
       // ── Menu migration: replace categories + items, preserve all other data ──
       set(KEYS.categories, defaultCategories);
       set(KEYS.menuItems, defaultMenuItems);
+      // Seed pillars if not yet stored (upgrading from older version)
+      if (!localStorage.getItem(KEYS.pillars)) {
+        set(KEYS.pillars, defaultPillars);
+      }
       localStorage.setItem('pos_menu_version', MENU_VERSION);
+    } else if (!localStorage.getItem(KEYS.pillars)) {
+      // Existing install missing the pillars key — backfill silently
+      set(KEYS.pillars, defaultPillars);
     }
   },
 

@@ -7,7 +7,7 @@ export interface CafeTable {
   pax?: number;
 }
 
-export type CategoryPillar = 'Foods' | 'Beverages' | 'Cigarettes' | 'Hukkah';
+export type CategoryPillar = string;
 export type BeverageSubGroup = 'Non-Alcoholic' | 'Alcoholic';
 
 export interface Category {

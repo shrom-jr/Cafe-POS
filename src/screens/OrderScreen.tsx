@@ -45,11 +45,12 @@ const OrderScreen = () => {
   const menuItems = usePOSStore((s) => s.menuItems);
   const payments = usePOSStore((s) => s.payments);
   const settings   = usePOSStore((s) => s.settings);
+  const pillars = usePOSStore((s) => s.pillars);
 
   const table = tables.find((t) => t.id === tableId);
-  const [activePillar, setActivePillar] = useState('Foods');
+  const [activePillar, setActivePillar] = useState(() => pillars[0] ?? 'Foods');
   const [activeSubCat, setActiveSubCat] = useState(() => {
-    const first = categories.find((c) => c.parentCategory === 'Foods');
+    const first = categories.find((c) => c.parentCategory === (pillars[0] ?? 'Foods'));
     return first?.id || '';
   });
   const [search, setSearch] = useState('');
@@ -396,7 +397,7 @@ const OrderScreen = () => {
           {!search && (
             <>
               <div className="flex gap-1.5 px-3 pt-2.5 pb-2 border-b border-border flex-shrink-0" style={{ background: 'rgba(13,21,37,0.7)' }}>
-                {(['Foods', 'Beverages', 'Cigarettes', 'Hukkah'] as const).map((pillar) => (
+                {pillars.map((pillar) => (
                   <button
                     key={pillar}
                     onClick={() => setActivePillar(pillar)}

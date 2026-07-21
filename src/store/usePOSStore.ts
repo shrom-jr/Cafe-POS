@@ -8,6 +8,7 @@ db.seed();
 
 interface POSState {
   tables: CafeTable[];
+  pillars: string[];
   categories: Category[];
   menuItems: MenuItem[];
   orders: Order[];
@@ -18,6 +19,8 @@ interface POSState {
   updateTable: (id: string, updates: Partial<CafeTable>) => void;
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
+
+  addPillar: (name: string) => void;
 
   addCategory: (name: string, parentCategory?: import('@/types/pos').CategoryPillar) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
@@ -67,6 +70,7 @@ interface POSState {
 
 export const usePOSStore = create<POSState>((set, get) => ({
   tables: db.getTables(),
+  pillars: db.getPillars(),
   categories: db.getCategories(),
   menuItems: db.getMenuItems(),
   orders: (() => {
@@ -128,6 +132,15 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       db.saveOrders(orders);
       return { tables, orders };
+    });
+  },
+
+  addPillar: (name) => {
+    set((state) => {
+      if (state.pillars.includes(name)) return {};
+      const pillars = [...state.pillars, name];
+      db.savePillars(pillars);
+      return { pillars };
     });
   },
 
@@ -596,6 +609,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     db.importAll(json);
     set({
       tables: db.getTables(),
+      pillars: db.getPillars(),
       categories: db.getCategories(),
       menuItems: db.getMenuItems(),
       orders: db.getOrders(),
@@ -612,6 +626,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     db.seed();
     set({
       tables: db.getTables(),
+      pillars: db.getPillars(),
       categories: db.getCategories(),
       menuItems: db.getMenuItems(),
       orders: db.getOrders(),

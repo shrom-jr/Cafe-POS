@@ -397,11 +397,10 @@ const ItemImageField = ({
 };
 
 // ── MENU MANAGEMENT ──────────────────────────────────────────────────────
-import type { CategoryPillar } from '@/types/pos';
-
-const PILLAR_OPTIONS: CategoryPillar[] = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
 
 const MenuSection = () => {
+  const pillars = usePOSStore((s) => s.pillars);
+  const addPillar = usePOSStore((s) => s.addPillar);
   const categories = usePOSStore((s) => s.categories);
   const menuItems = usePOSStore((s) => s.menuItems);
   const addCategory = usePOSStore((s) => s.addCategory);
@@ -411,27 +410,47 @@ const MenuSection = () => {
   const updateMenuItem = usePOSStore((s) => s.updateMenuItem);
   const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
 
-  const [pillarFilter, setPillarFilter] = useState<CategoryPillar | 'All'>('All');
+  const [pillarFilter, setPillarFilter] = useState<string>('All');
   const [showAddCat, setShowAddCat] = useState(false);
+  const [addMode, setAddMode] = useState<'sub' | 'pillar'>('sub');
   const [newCat, setNewCat] = useState('');
-  const [newCatParent, setNewCatParent] = useState<CategoryPillar>('Foods');
+  const [newCatParent, setNewCatParent] = useState<string>(pillars[0] || 'Foods');
   const [editCat, setEditCat] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
-  const [editCatParent, setEditCatParent] = useState<CategoryPillar | ''>('');
+  const [editCatParent, setEditCatParent] = useState<string>('');
   const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
 
   const filteredCats = pillarFilter === 'All'
     ? categories
     : categories.filter((c) => c.parentCategory === pillarFilter);
 
-  const handleSetPillarFilter = (f: CategoryPillar | 'All') => {
+  const handleSetPillarFilter = (f: string) => {
     setPillarFilter(f);
-    if (f !== 'All') setNewCatParent(f as CategoryPillar);
+    if (f !== 'All') setNewCatParent(f);
     // Keep selection valid — if selected cat is no longer in view, pick first visible
     const inView = f === 'All' ? categories : categories.filter((c) => c.parentCategory === f);
     if (!inView.find((c) => c.id === selectedCat)) {
       setSelectedCat(inView[0]?.id || '');
     }
+  };
+
+  const handleAddPillar = () => {
+    if (!newCat.trim()) return;
+    const name = newCat.trim();
+    addPillar(name);
+    setPillarFilter(name);
+    setNewCatParent(name);
+    setNewCat('');
+    setShowAddCat(false);
+    toast.success(`Pillar "${name}" added`);
+  };
+
+  const handleAddSubCategory = () => {
+    if (!newCat.trim()) return;
+    addCategory(newCat.trim(), newCatParent);
+    setNewCat('');
+    setShowAddCat(false);
+    toast.success('Category added');
   };
   const [showAddItem, setShowAddItem] = useState(false);
   const [itemName, setItemName] = useState('');
@@ -497,39 +516,54 @@ const MenuSection = () => {
           {/* ── Inline add form (toggleable) ── */}
           {showAddCat && (
             <div className="mb-3 p-3 rounded-xl border border-accent/25 space-y-2" style={{ background: 'rgba(59,130,246,0.06)' }}>
+              {/* Mode toggle */}
+              <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                {(['sub', 'pillar'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => { setAddMode(mode); setNewCat(''); }}
+                    className="flex-1 py-1 rounded-md text-[11px] font-semibold transition-all"
+                    style={addMode === mode ? {
+                      background: 'rgba(59,130,246,0.35)',
+                      color: 'rgba(255,255,255,0.95)',
+                    } : {
+                      color: 'rgba(255,255,255,0.38)',
+                    }}
+                  >
+                    {mode === 'sub' ? 'Sub-Category' : 'Main Pillar'}
+                  </button>
+                ))}
+              </div>
+
               <input
+                key={addMode}
                 value={newCat}
                 onChange={(e) => setNewCat(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && newCat.trim()) {
-                    addCategory(newCat.trim(), newCatParent);
-                    setNewCat('');
-                    setShowAddCat(false);
+                    if (addMode === 'pillar') handleAddPillar();
+                    else handleAddSubCategory();
                   }
                   if (e.key === 'Escape') { setShowAddCat(false); setNewCat(''); }
                 }}
-                placeholder="Category name"
+                placeholder={addMode === 'pillar' ? 'New pillar name (e.g. Desserts)' : 'Sub-category name'}
                 autoFocus
                 data-testid="input-new-category"
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
               />
+
               <div className="flex gap-1.5">
-                <select
-                  value={newCatParent}
-                  onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
-                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-                >
-                  {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                {addMode === 'sub' && (
+                  <select
+                    value={newCatParent}
+                    onChange={(e) => setNewCatParent(e.target.value)}
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    {pillars.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                )}
                 <button
-                  onClick={() => {
-                    if (newCat.trim()) {
-                      addCategory(newCat.trim(), newCatParent);
-                      setNewCat('');
-                      setShowAddCat(false);
-                      toast.success('Category added');
-                    }
-                  }}
+                  onClick={addMode === 'pillar' ? handleAddPillar : handleAddSubCategory}
                   data-testid="button-add-category"
                   className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-xs font-semibold hover:brightness-110 transition-all active:scale-95"
                 >Add</button>
@@ -544,7 +578,7 @@ const MenuSection = () => {
 
           {/* ── Pillar filter tabs — single row, no wrap ── */}
           <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
-            {(['All', ...PILLAR_OPTIONS] as const).map((f) => (
+            {(['All', ...pillars]).map((f) => (
               <button
                 key={f}
                 onClick={() => handleSetPillarFilter(f)}
@@ -579,11 +613,11 @@ const MenuSection = () => {
                     <div className="flex items-center gap-1.5">
                       <select
                         value={editCatParent}
-                        onChange={(e) => setEditCatParent(e.target.value as CategoryPillar | '')}
+                        onChange={(e) => setEditCatParent(e.target.value)}
                         className="flex-1 px-2 py-1 rounded bg-background border border-border text-foreground text-xs focus:outline-none"
                       >
                         <option value="">— no pillar —</option>
-                        {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                        {pillars.map((p) => <option key={p} value={p}>{p}</option>)}
                       </select>
                       <button onClick={() => { updateCategory(c.id, { name: editCatName, parentCategory: editCatParent || undefined }); setEditCat(null); toast.success('Category updated'); }} className="text-success hover:opacity-80"><Save size={12} /></button>
                       <button onClick={() => setEditCat(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>

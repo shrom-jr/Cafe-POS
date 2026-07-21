@@ -1,1 +1,2 @@
 - [Print Engine Architecture](print-engine.md) — unified firePrintJob() replaces triggerPrint/portal polling; ThermalReceiptLayout kept only for AdminPanel ReceiptPreview
+- [Dynamic Pillars Architecture](dynamic-pillars.md) — pillars are a persisted string[] in store/db, not a hardcoded union; CategoryPillar = string
