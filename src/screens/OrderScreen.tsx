@@ -163,7 +163,8 @@ const OrderScreen = () => {
   };
 
   const handleAddItem = (item: typeof menuItems[0]) => {
-    const currentOrder = order || createOrder(tableId, table.number);
+    const takenBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.role } : undefined;
+    const currentOrder = order || createOrder(tableId, table.number, takenBy);
     addItemToOrder(currentOrder.id, item);
     playClick();
   };
@@ -259,6 +260,7 @@ const OrderScreen = () => {
           kotNumber,
           timestamp:   ts,
           items:       kotItems,
+          serverName:  order.takenBy?.name || currentUser?.name,
         },
       });
     }
@@ -499,6 +501,7 @@ const OrderScreen = () => {
               pax={table.pax ?? 1}
               onPaxChange={handlePaxChange}
               canPay={canPay}
+              serverName={order?.takenBy?.name}
             />
           </div>
         )}

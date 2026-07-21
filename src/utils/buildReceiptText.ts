@@ -87,6 +87,10 @@ export interface ReceiptData {
   vatRate: number;
   total: number;
   method: string;
+  /** Name of the server/waiter who took the order */
+  serverName?: string;
+  /** Name of the cashier who processed payment */
+  cashierName?: string;
 }
 
 export function buildReceiptText(data: ReceiptData): string {
@@ -111,6 +115,8 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
+  if (data.serverName)  push(`Server:  ${data.serverName}`);
+  if (data.cashierName) push(`Cashier: ${data.cashierName}`);
   push(hr('-'));
 
   // ── Item table header ─────────────────────────────────────────
@@ -145,7 +151,11 @@ export function buildReceiptText(data: ReceiptData): string {
   // ── Footer ───────────────────────────────────────────────────
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
+  if (data.cashierName) {
+    push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
+  } else {
+    push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
+  }
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));

@@ -21,6 +21,10 @@ interface ThermalReceiptLayoutProps {
   vatRate: number;
   total: number;
   method: string;
+  /** Name of the server/waiter who took the order */
+  serverName?: string;
+  /** Name of the cashier who processed payment */
+  cashierName?: string;
 }
 
 const HR = () => (
@@ -51,6 +55,8 @@ const ThermalReceiptLayout = ({
   vatRate,
   total,
   method,
+  serverName,
+  cashierName,
 }: ThermalReceiptLayoutProps) => {
   const taxableAmount = subtotal - discountAmount;
   const dateStr = format(createdAt, 'dd/MM/yyyy');
@@ -74,8 +80,10 @@ const ThermalReceiptLayout = ({
       vatRate,
       total,
       method,
+      serverName,
+      cashierName,
     }));
-  }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method]);
+  }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName]);
 
   return (
     <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff' }}>
@@ -128,6 +136,8 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
+        {serverName && <div><strong>Server:</strong> {serverName}</div>}
+        {cashierName && <div><strong>Cashier:</strong> {cashierName}</div>}
       </div>
 
       <HR />
@@ -209,7 +219,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {cafeName}</span>
+        <span>Cashier: {cashierName || cafeName}</span>
         <span>Time: {timeStr}</span>
       </div>
 

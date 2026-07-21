@@ -238,6 +238,36 @@ const BillHistory = () => {
                 billNumber={selectedBill.billNumber}
                 date={selectedBill.createdAt}
               />
+
+              {/* Staff attribution */}
+              {(selectedBill.takenBy || selectedBill.processedBy) && (
+                <div
+                  className="mt-3 rounded-xl px-4 py-3 space-y-1.5"
+                  style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' }}
+                >
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(196,181,253,0.6)' }}>
+                    Staff
+                  </p>
+                  {selectedBill.takenBy && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Order Taken By</span>
+                      <span className="text-xs font-semibold text-foreground">
+                        {selectedBill.takenBy.name}{' '}
+                        <span className="text-muted-foreground font-normal">({selectedBill.takenBy.role})</span>
+                      </span>
+                    </div>
+                  )}
+                  {selectedBill.processedBy && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Payment Processed By</span>
+                      <span className="text-xs font-semibold text-foreground">
+                        {selectedBill.processedBy.name}{' '}
+                        <span className="text-muted-foreground font-normal">({selectedBill.processedBy.role})</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer — always visible, pinned */}
@@ -296,6 +326,8 @@ const BillHistory = () => {
             vatRate={selectedBill.vatRate ?? 0.13}
             total={selectedBill.total}
             method={resolvePaymentLabel(selectedBill.method, settings)}
+            serverName={selectedBill.takenBy?.name}
+            cashierName={selectedBill.processedBy?.name}
           />
         </div>,
         document.body

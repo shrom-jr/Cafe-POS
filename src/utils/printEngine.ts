@@ -25,6 +25,8 @@ export interface KOTData {
   kotNumber:   number;
   timestamp:   number;
   items:       Array<{ name: string; quantity: number }>;
+  /** Name of the server/waiter who took the order */
+  serverName?: string;
 }
 
 export interface PreBillData {
@@ -58,6 +60,10 @@ export interface TaxInvoiceData {
   vatRate:        number;
   total:          number;
   method:         string;
+  /** Name of the server/waiter who took the order */
+  serverName?:    string;
+  /** Name of the cashier who processed payment */
+  cashierName?:   string;
 }
 
 export type PrintJob =
@@ -138,6 +144,7 @@ function buildKOTText(data: KOTData): string {
   push(hr('='));
   push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
   push(formatLine(`Date:  ${dateStr}`, timeStr));
+  if (data.serverName) push(`Server: ${data.serverName}`);
   push(hr('-'));
   // "Qty x Item" header — matches the "2 x Garlic Bread" row format below
   push(ljust('QTY', 5) + 'ITEM');
@@ -221,6 +228,8 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(`Date:    ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table:   ${data.tableNumber}`);
+  if (data.serverName)  push(`Server:  ${data.serverName}`);
+  if (data.cashierName) push(`Cashier: ${data.cashierName}`);
   push(hr('-'));
 
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
@@ -241,7 +250,11 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
+  if (data.cashierName) {
+    push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
+  } else {
+    push(formatLine(`Cashier: ${data.cafeName}`, `Time: ${timeStr}`));
+  }
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));

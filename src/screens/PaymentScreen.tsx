@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { firePrintJob, type PrintJob } from '@/utils/printEngine';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
+import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { TopBar } from '@/components/ui/Navigation';
@@ -21,6 +22,7 @@ const PaymentScreen = () => {
   const resetTable = usePOSStore((s) => s.resetTable);
   const getNextBillNumber = usePOSStore((s) => s.getNextBillNumber);
   const settings = usePOSStore((s) => s.settings);
+  const currentUser = useStaffStore((s) => s.currentUser);
 
   const rawState = location.state as {
     discountValue?: number;
@@ -37,16 +39,16 @@ const PaymentScreen = () => {
   const table = tables.find((t) => t.id === tableId);
   const order = tableId ? getActiveOrder(tableId) : undefined;
 
-  const orderSnapshot = useRef<{ id: string; items: OrderItem[]; tableNumber: number } | null>(null);
+  const orderSnapshot = useRef<{ id: string; items: OrderItem[]; tableNumber: number; takenBy?: { id: string; name: string; role: string } } | null>(null);
   useEffect(() => {
     if (order && !orderSnapshot.current) {
-      orderSnapshot.current = { id: order.id, items: [...order.items], tableNumber: order.tableNumber };
+      orderSnapshot.current = { id: order.id, items: [...order.items], tableNumber: order.tableNumber, takenBy: order.takenBy };
     }
   }, [order]);
 
   const snap =
     orderSnapshot.current ||
-    (order ? { id: order.id, items: order.items, tableNumber: order.tableNumber } : null);
+    (order ? { id: order.id, items: order.items, tableNumber: order.tableNumber, takenBy: order.takenBy } : null);
 
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -114,6 +116,10 @@ const PaymentScreen = () => {
     setPaidAt(now);
     setPaidMethod(resolvePaymentLabel(method, settings));
 
+    const processedBy = currentUser
+      ? { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+      : undefined;
+
     addPayment({
       orderId: snap.id,
       tableNumber: snap.tableNumber,
@@ -131,6 +137,8 @@ const PaymentScreen = () => {
       createdAt: now,
       cafeName: settings.cafeName,
       billNumber: bn,
+      takenBy: snap.takenBy,
+      processedBy,
     });
 
     updateOrderStatus(snap.id, 'paid');
@@ -158,6 +166,8 @@ const PaymentScreen = () => {
         vatRate,
         total:          finalTotal,
         method:         resolvePaymentLabel(method, settings),
+        serverName:     snap.takenBy?.name,
+        cashierName:    processedBy?.name,
       },
     };
     lastPrintJobRef.current = printJob;

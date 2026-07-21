@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db } from '@/storage/db';
-import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StockMovement, TablePayment } from '@/types/pos';
+import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StaffAttribution, StockMovement, TablePayment } from '@/types/pos';
 import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
 
@@ -33,7 +33,7 @@ interface POSState {
   deleteMenuItem: (id: string) => void;
 
   getActiveOrder: (tableId: string) => Order | undefined;
-  createOrder: (tableId: string, tableNumber: number) => Order;
+  createOrder: (tableId: string, tableNumber: number, takenBy?: StaffAttribution) => Order;
   addItemToOrder: (orderId: string, item: MenuItem) => void;
   updateItemQuantity: (orderId: string, menuItemId: string, delta: number) => void;
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
@@ -222,7 +222,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     );
   },
 
-  createOrder: (tableId, tableNumber) => {
+  createOrder: (tableId, tableNumber, takenBy) => {
     const existing = get().getActiveOrder(tableId);
     if (existing) return existing;
 
@@ -233,6 +233,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       items: [],
       status: 'active',
       createdAt: Date.now(),
+      ...(takenBy ? { takenBy } : {}),
     };
 
     set((state) => {

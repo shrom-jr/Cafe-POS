@@ -50,6 +50,12 @@ export interface TablePayment {
   billNumber: number;
 }
 
+export interface StaffAttribution {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface Order {
   id: string;
   tableId: string;
@@ -60,6 +66,8 @@ export interface Order {
   hasUnsentItems?: boolean;
   createdAt: number;
   tablePayments?: TablePayment[];
+  /** Staff member who created/took the order */
+  takenBy?: StaffAttribution;
 }
 
 export interface Payment {
@@ -80,6 +88,10 @@ export interface Payment {
   createdAt: number;
   cafeName: string;
   billNumber: number;
+  /** Staff member who took the original order */
+  takenBy?: StaffAttribution;
+  /** Staff member who processed the payment */
+  processedBy?: StaffAttribution;
 }
 
 export interface WalletConfig {

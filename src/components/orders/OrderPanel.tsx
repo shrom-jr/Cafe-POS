@@ -27,6 +27,8 @@ interface OrderPanelProps {
   onPaxChange?: (pax: number) => void;
   /** When false, "Proceed to Payment" is hidden (WAITER role). */
   canPay?: boolean;
+  /** Name of the staff member who took the order, for display. */
+  serverName?: string;
 }
 
 const BLUE_BTN = { background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.24)' };
@@ -53,6 +55,7 @@ const OrderPanel = ({
   pax = 1,
   onPaxChange,
   canPay = true,
+  serverName,
 }: OrderPanelProps) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [sendPhase, setSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -235,6 +238,14 @@ const OrderPanel = ({
             style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
           >
             {statusLabel}
+          </span>
+        )}
+        {serverName && (
+          <span
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(139,92,246,0.14)', color: 'rgba(196,181,253,0.82)', border: '1px solid rgba(139,92,246,0.22)' }}
+          >
+            Server: {serverName}
           </span>
         )}
         {itemCount > 0 && (
