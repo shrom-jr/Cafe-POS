@@ -532,16 +532,16 @@ const MenuSection = () => {
     const hasItems = hasCats && menuItems.some((i) => filteredCats.some((c) => c.id === i.categoryId));
     setConfirmModal({
       open: true,
-      title: `Delete "${pillarFilter}" Pillar`,
-      description: `This will permanently remove the "${pillarFilter}" pillar from your menu structure.`,
+      title: `Delete "${pillarFilter}" Category?`,
+      description: `Are you sure you want to remove "${pillarFilter}" from your menu?`,
       warning: hasCats
-        ? `This pillar contains ${filteredCats.length} sub-categor${filteredCats.length === 1 ? 'y' : 'ies'}${hasItems ? ' with active items' : ''}. Deleting it will unassign these categories.`
+        ? `This section contains active sub-categories${hasItems ? ' or items' : ''}. Deleting it will unassign them.`
         : undefined,
       onConfirm: () => {
         deletePillar(pillarFilter);
         setPillarFilter('All');
         closeModal();
-        toast.success(`Pillar "${pillarFilter}" deleted`);
+        toast.success(`"${pillarFilter}" removed`);
       },
     });
   };
@@ -646,7 +646,7 @@ const MenuSection = () => {
                   style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <Edit3 size={11} strokeWidth={2} />
-                  Rename Pillar
+                  Rename
                 </button>
                 <button
                   onClick={handleDeletePillar}
@@ -654,7 +654,7 @@ const MenuSection = () => {
                   style={{ background: 'rgba(239,68,68,0.07)', color: 'rgba(239,68,68,0.7)', border: '1px solid rgba(239,68,68,0.2)' }}
                 >
                   <Trash2 size={11} strokeWidth={2} />
-                  Delete Pillar
+                  Delete
                 </button>
               </div>
             )}
@@ -670,7 +670,7 @@ const MenuSection = () => {
                     if (e.key === 'Escape') setEditPillar(false);
                   }}
                   autoFocus
-                  placeholder="New pillar name"
+                  placeholder="New name"
                   className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-secondary border border-accent/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
                 />
                 <button
@@ -708,7 +708,7 @@ const MenuSection = () => {
                       color: 'rgba(255,255,255,0.38)',
                     }}
                   >
-                    {mode === 'sub' ? 'Sub-Category' : 'Main Pillar'}
+                    {mode === 'sub' ? 'Sub-Category' : 'Main Category'}
                   </button>
                 ))}
               </div>
@@ -862,20 +862,10 @@ const MenuSection = () => {
               </div>
             ))}
             {filteredCats.length === 0 && (
-              <div className="text-center py-4 space-y-2">
+              <div className="text-center py-4">
                 <p className="text-xs text-muted-foreground">
-                  {pillarFilter === 'All' ? 'No categories yet.' : `No ${pillarFilter} categories yet.`}
+                  {pillarFilter === 'All' ? 'No categories yet.' : `No categories in ${pillarFilter} yet.`}
                 </p>
-                {isDeletablePillar && (
-                  <button
-                    onClick={handleDeletePillar}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
-                    style={{ background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.65)', border: '1px solid rgba(239,68,68,0.18)' }}
-                  >
-                    <Trash2 size={11} strokeWidth={2} />
-                    Delete "{pillarFilter}" Pillar
-                  </button>
-                )}
               </div>
             )}
           </div>
