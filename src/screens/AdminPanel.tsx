@@ -614,51 +614,14 @@ const MenuSection = () => {
       <div className="space-y-3 md:sticky md:top-0 md:self-start">
         <div className="bg-card rounded-2xl border border-border p-4">
           {/* ── Header row ── */}
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-foreground text-sm">Categories</h3>
-            <div className="flex items-center gap-1.5">
-              {/* Pillar rename/delete — shown when a pillar tab is active */}
-              {isDeletablePillar && !editPillar && (
-                <>
-                  <button
-                    onClick={() => { setEditPillar(true); setEditPillarName(pillarFilter); }}
-                    className="p-1.5 rounded-lg transition-all hover:brightness-110"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}
-                    title={`Rename "${pillarFilter}" pillar`}
-                  >
-                    <Edit3 size={11} />
-                  </button>
-                  <button
-                    onClick={handleDeletePillar}
-                    className="p-1.5 rounded-lg transition-all hover:brightness-110"
-                    style={{ background: 'rgba(239,68,68,0.07)', color: 'rgba(239,68,68,0.6)', border: '1px solid rgba(239,68,68,0.18)' }}
-                    title={`Delete "${pillarFilter}" pillar`}
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </>
-              )}
-              {/* Inline pillar rename form */}
-              {isDeletablePillar && editPillar && (
-                <div className="flex items-center gap-1">
-                  <input
-                    value={editPillarName}
-                    onChange={(e) => setEditPillarName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleRenamePillar();
-                      if (e.key === 'Escape') setEditPillar(false);
-                    }}
-                    autoFocus
-                    className="w-28 px-2 py-1 rounded-lg bg-secondary border border-accent/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-                  />
-                  <button onClick={handleRenamePillar} className="p-1 rounded text-success hover:opacity-80"><Save size={12} /></button>
-                  <button onClick={() => setEditPillar(false)} className="p-1 rounded text-muted-foreground hover:text-foreground"><X size={12} /></button>
-                </div>
-              )}
+          <div className="mb-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-foreground text-sm">Categories</h3>
+              {/* + Add Category always visible */}
               <button
                 onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
                 data-testid="button-toggle-add-category"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
                 style={showAddCat ? {
                   background: 'rgba(59,130,246,0.22)',
                   color: 'rgba(147,197,253,0.95)',
@@ -670,9 +633,62 @@ const MenuSection = () => {
                 }}
               >
                 <Plus size={11} strokeWidth={2.5} />
-                Category
+                Add Category
               </button>
             </div>
+
+            {/* Pillar action row — only when a specific pillar tab is active */}
+            {isDeletablePillar && !editPillar && (
+              <div className="flex items-center gap-2 mt-2.5">
+                <button
+                  onClick={() => { setEditPillar(true); setEditPillarName(pillarFilter); }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 hover:brightness-110"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  <Edit3 size={11} strokeWidth={2} />
+                  Rename Pillar
+                </button>
+                <button
+                  onClick={handleDeletePillar}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 hover:brightness-110"
+                  style={{ background: 'rgba(239,68,68,0.07)', color: 'rgba(239,68,68,0.7)', border: '1px solid rgba(239,68,68,0.2)' }}
+                >
+                  <Trash2 size={11} strokeWidth={2} />
+                  Delete Pillar
+                </button>
+              </div>
+            )}
+
+            {/* Inline pillar rename form */}
+            {isDeletablePillar && editPillar && (
+              <div className="flex items-center gap-2 mt-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)' }}>
+                <input
+                  value={editPillarName}
+                  onChange={(e) => setEditPillarName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRenamePillar();
+                    if (e.key === 'Escape') setEditPillar(false);
+                  }}
+                  autoFocus
+                  placeholder="New pillar name"
+                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-secondary border border-accent/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+                <button
+                  onClick={handleRenamePillar}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 hover:brightness-110"
+                  style={{ background: 'rgba(34,197,94,0.15)', color: 'rgba(74,222,128,0.9)', border: '1px solid rgba(34,197,94,0.25)' }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditPillar(false)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ── Inline add form (toggleable) ── */}
@@ -828,7 +844,15 @@ const MenuSection = () => {
                           className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
                         ><Edit3 size={11} /></button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); deleteCategory(c.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmModal({
+                              open: true,
+                              title: `Delete "${c.name}"`,
+                              description: `This will permanently remove the "${c.name}" sub-category.`,
+                              onConfirm: () => { deleteCategory(c.id); closeModal(); toast.success('Category deleted'); },
+                            });
+                          }}
                           className="p-1 rounded hover:bg-danger/20 text-white/40 hover:text-danger"
                         ><Trash2 size={11} /></button>
                       </div>
@@ -937,7 +961,15 @@ const MenuSection = () => {
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => startEdit(item)} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"><Edit3 size={14} /></button>
-                      <button onClick={() => deleteMenuItem(item.id)} className="p-2 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-colors"><Trash2 size={14} /></button>
+                      <button
+                        onClick={() => setConfirmModal({
+                          open: true,
+                          title: `Delete "${item.name}"`,
+                          description: `This will permanently remove "${item.name}" from the menu.`,
+                          onConfirm: () => { deleteMenuItem(item.id); closeModal(); toast.success('Item deleted'); },
+                        })}
+                        className="p-2 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-colors"
+                      ><Trash2 size={14} /></button>
                     </div>
                   </div>
                 )}
