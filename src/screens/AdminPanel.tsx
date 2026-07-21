@@ -396,11 +396,91 @@ const ItemImageField = ({
   );
 };
 
+// ── CONFIRM MODAL ────────────────────────────────────────────────────────
+
+type ConfirmModalState = {
+  open: boolean;
+  title: string;
+  description: string;
+  warning?: string;
+  onConfirm: () => void;
+};
+
+const MODAL_CLOSED: ConfirmModalState = { open: false, title: '', description: '', onConfirm: () => {} };
+
+const ConfirmModal = ({ state, onCancel }: { state: ConfirmModalState; onCancel: () => void }) => {
+  if (!state.open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm mx-4 rounded-xl p-6 space-y-4 shadow-2xl"
+        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+          >
+            <Trash2 size={15} style={{ color: 'rgba(239,68,68,0.85)' }} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white text-sm">{state.title}</h3>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              {state.description}
+            </p>
+          </div>
+        </div>
+        {state.warning && (
+          <div
+            className="px-3 py-2.5 rounded-lg text-xs leading-relaxed"
+            style={{
+              background: 'rgba(251,146,60,0.08)',
+              border: '1px solid rgba(251,146,60,0.22)',
+              color: 'rgba(251,191,36,0.85)',
+            }}
+          >
+            ⚠ {state.warning}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-110"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              color: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={state.onConfirm}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all hover:brightness-110 active:scale-95"
+            style={{
+              background: 'rgba(239,68,68,0.15)',
+              color: 'rgba(239,68,68,0.95)',
+              border: '1px solid rgba(239,68,68,0.3)',
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── MENU MANAGEMENT ──────────────────────────────────────────────────────
 
 const MenuSection = () => {
   const pillars = usePOSStore((s) => s.pillars);
   const addPillar = usePOSStore((s) => s.addPillar);
+  const renamePillar = usePOSStore((s) => s.renamePillar);
   const deletePillar = usePOSStore((s) => s.deletePillar);
   const categories = usePOSStore((s) => s.categories);
   const menuItems = usePOSStore((s) => s.menuItems);
@@ -421,12 +501,23 @@ const MenuSection = () => {
   const [editCatParent, setEditCatParent] = useState<string>('');
   const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
 
+  // Pillar rename state
+  const [editPillar, setEditPillar] = useState(false);
+  const [editPillarName, setEditPillarName] = useState('');
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>(MODAL_CLOSED);
+  const closeModal = () => setConfirmModal(MODAL_CLOSED);
+
   const filteredCats = pillarFilter === 'All'
     ? categories
     : categories.filter((c) => c.parentCategory === pillarFilter);
 
+  const isDeletablePillar = pillarFilter !== 'All';
+
   const handleSetPillarFilter = (f: string) => {
     setPillarFilter(f);
+    setEditPillar(false);
     if (f !== 'All') setNewCatParent(f);
     // Keep selection valid — if selected cat is no longer in view, pick first visible
     const inView = f === 'All' ? categories : categories.filter((c) => c.parentCategory === f);
@@ -435,16 +526,33 @@ const MenuSection = () => {
     }
   };
 
-  const CORE_PILLARS = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
-  const isCustomPillar = pillarFilter !== 'All' && !CORE_PILLARS.includes(pillarFilter);
-
   const handleDeletePillar = () => {
-    if (!isCustomPillar) return;
-    if (window.confirm(`Are you sure you want to delete the "${pillarFilter}" pillar?`)) {
-      deletePillar(pillarFilter);
-      setPillarFilter('All');
-      toast.success(`Pillar "${pillarFilter}" deleted`);
-    }
+    if (!isDeletablePillar) return;
+    const hasCats = filteredCats.length > 0;
+    const hasItems = hasCats && menuItems.some((i) => filteredCats.some((c) => c.id === i.categoryId));
+    setConfirmModal({
+      open: true,
+      title: `Delete "${pillarFilter}" Pillar`,
+      description: `This will permanently remove the "${pillarFilter}" pillar from your menu structure.`,
+      warning: hasCats
+        ? `This pillar contains ${filteredCats.length} sub-categor${filteredCats.length === 1 ? 'y' : 'ies'}${hasItems ? ' with active items' : ''}. Deleting it will unassign these categories.`
+        : undefined,
+      onConfirm: () => {
+        deletePillar(pillarFilter);
+        setPillarFilter('All');
+        closeModal();
+        toast.success(`Pillar "${pillarFilter}" deleted`);
+      },
+    });
+  };
+
+  const handleRenamePillar = () => {
+    const name = editPillarName.trim();
+    if (!name || name === pillarFilter) { setEditPillar(false); return; }
+    renamePillar(pillarFilter, name);
+    setPillarFilter(name);
+    setEditPillar(false);
+    toast.success(`Pillar renamed to "${name}"`);
   };
 
   const handleAddPillar = () => {
@@ -500,6 +608,7 @@ const MenuSection = () => {
   };
 
   return (
+    <>
     <div className="grid md:grid-cols-[280px_1fr] gap-5">
       {/* ── Left: Categories ── */}
       <div className="space-y-3 md:sticky md:top-0 md:self-start">
@@ -508,16 +617,43 @@ const MenuSection = () => {
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-foreground text-sm">Categories</h3>
             <div className="flex items-center gap-1.5">
-              {isCustomPillar && filteredCats.length > 0 && (
-                <button
-                  onClick={handleDeletePillar}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
-                  style={{ background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', border: '1px solid rgba(239,68,68,0.2)' }}
-                  title={`Delete "${pillarFilter}" pillar`}
-                >
-                  <Trash2 size={11} strokeWidth={2} />
-                  Delete "{pillarFilter}"
-                </button>
+              {/* Pillar rename/delete — shown when a pillar tab is active */}
+              {isDeletablePillar && !editPillar && (
+                <>
+                  <button
+                    onClick={() => { setEditPillar(true); setEditPillarName(pillarFilter); }}
+                    className="p-1.5 rounded-lg transition-all hover:brightness-110"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    title={`Rename "${pillarFilter}" pillar`}
+                  >
+                    <Edit3 size={11} />
+                  </button>
+                  <button
+                    onClick={handleDeletePillar}
+                    className="p-1.5 rounded-lg transition-all hover:brightness-110"
+                    style={{ background: 'rgba(239,68,68,0.07)', color: 'rgba(239,68,68,0.6)', border: '1px solid rgba(239,68,68,0.18)' }}
+                    title={`Delete "${pillarFilter}" pillar`}
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </>
+              )}
+              {/* Inline pillar rename form */}
+              {isDeletablePillar && editPillar && (
+                <div className="flex items-center gap-1">
+                  <input
+                    value={editPillarName}
+                    onChange={(e) => setEditPillarName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRenamePillar();
+                      if (e.key === 'Escape') setEditPillar(false);
+                    }}
+                    autoFocus
+                    className="w-28 px-2 py-1 rounded-lg bg-secondary border border-accent/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                  <button onClick={handleRenamePillar} className="p-1 rounded text-success hover:opacity-80"><Save size={12} /></button>
+                  <button onClick={() => setEditPillar(false)} className="p-1 rounded text-muted-foreground hover:text-foreground"><X size={12} /></button>
+                </div>
               )}
               <button
                 onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
@@ -706,7 +842,7 @@ const MenuSection = () => {
                 <p className="text-xs text-muted-foreground">
                   {pillarFilter === 'All' ? 'No categories yet.' : `No ${pillarFilter} categories yet.`}
                 </p>
-                {isCustomPillar && (
+                {isDeletablePillar && (
                   <button
                     onClick={handleDeletePillar}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
@@ -818,6 +954,8 @@ const MenuSection = () => {
         </div>
       </div>
     </div>
+    <ConfirmModal state={confirmModal} onCancel={closeModal} />
+    </>
   );
 };
 
