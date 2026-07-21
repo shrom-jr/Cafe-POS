@@ -411,12 +411,27 @@ const MenuSection = () => {
   const updateMenuItem = usePOSStore((s) => s.updateMenuItem);
   const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
 
+  const [pillarFilter, setPillarFilter] = useState<CategoryPillar | 'All'>('All');
   const [newCat, setNewCat] = useState('');
   const [newCatParent, setNewCatParent] = useState<CategoryPillar>('Foods');
   const [editCat, setEditCat] = useState<string | null>(null);
   const [editCatName, setEditCatName] = useState('');
   const [editCatParent, setEditCatParent] = useState<CategoryPillar | ''>('');
   const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
+
+  const filteredCats = pillarFilter === 'All'
+    ? categories
+    : categories.filter((c) => c.parentCategory === pillarFilter);
+
+  const handleSetPillarFilter = (f: CategoryPillar | 'All') => {
+    setPillarFilter(f);
+    if (f !== 'All') setNewCatParent(f as CategoryPillar);
+    // Keep selection valid — if selected cat is no longer in view, pick first visible
+    const inView = f === 'All' ? categories : categories.filter((c) => c.parentCategory === f);
+    if (!inView.find((c) => c.id === selectedCat)) {
+      setSelectedCat(inView[0]?.id || '');
+    }
+  };
   const [showAddItem, setShowAddItem] = useState(false);
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
@@ -457,35 +472,32 @@ const MenuSection = () => {
       <div className="space-y-3 md:sticky md:top-0 md:self-start">
         <div className="bg-card rounded-2xl border border-border p-4">
           <h3 className="font-semibold text-foreground text-sm mb-3">Categories</h3>
-          {/* Add new category */}
-          <div className="space-y-2 mb-3">
-            <input
-              value={newCat}
-              onChange={(e) => setNewCat(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && newCat.trim()) { addCategory(newCat.trim(), newCatParent || undefined); setNewCat(''); } }}
-              placeholder="New category name"
-              data-testid="input-new-category"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-            <div className="flex gap-2">
-              <select
-                value={newCatParent}
-                onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
-                className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              >
-                {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
+
+          {/* ── Pillar filter tabs ── */}
+          <div className="flex flex-wrap gap-1 mb-3">
+            {(['All', ...PILLAR_OPTIONS] as const).map((f) => (
               <button
-                onClick={() => { if (newCat.trim()) { addCategory(newCat.trim(), newCatParent || undefined); setNewCat(''); } }}
-                data-testid="button-add-category"
-                className="px-3 py-2 rounded-lg bg-accent text-accent-foreground flex-shrink-0 hover:brightness-110 transition-all active:scale-95"
+                key={f}
+                onClick={() => handleSetPillarFilter(f)}
+                className="px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all"
+                style={pillarFilter === f ? {
+                  background: 'rgba(59,130,246,0.22)',
+                  color: 'rgba(255,255,255,0.9)',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                } : {
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.38)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
               >
-                <Plus size={15} />
+                {f}
               </button>
-            </div>
+            ))}
           </div>
-          <div className="space-y-1">
-            {categories.map((c) => (
+
+          {/* ── Category list ── */}
+          <div className="space-y-1 mb-4">
+            {filteredCats.map((c) => (
               <div key={c.id}>
                 {editCat === c.id ? (
                   <div className="space-y-1.5 px-2 py-2 rounded-lg bg-secondary border border-accent/30">
@@ -560,9 +572,52 @@ const MenuSection = () => {
                 )}
               </div>
             ))}
-            {categories.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">No categories yet.</p>
+            {filteredCats.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                {pillarFilter === 'All' ? 'No categories yet.' : `No ${pillarFilter} categories yet.`}
+              </p>
             )}
+          </div>
+        </div>
+
+        {/* ── Add New Category sub-card ── */}
+        <div className="bg-card rounded-2xl border border-border p-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Add New Category</p>
+          <div className="space-y-2">
+            <input
+              value={newCat}
+              onChange={(e) => setNewCat(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newCat.trim()) {
+                  addCategory(newCat.trim(), newCatParent);
+                  setNewCat('');
+                }
+              }}
+              placeholder="Category name"
+              data-testid="input-new-category"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <div className="flex gap-2">
+              <select
+                value={newCatParent}
+                onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
+                className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <button
+                onClick={() => {
+                  if (newCat.trim()) {
+                    addCategory(newCat.trim(), newCatParent);
+                    setNewCat('');
+                  }
+                }}
+                data-testid="button-add-category"
+                className="px-3 py-2 rounded-lg bg-accent text-accent-foreground flex-shrink-0 hover:brightness-110 transition-all active:scale-95"
+              >
+                <Plus size={15} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
