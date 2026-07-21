@@ -435,6 +435,8 @@ const defaultSettings: Settings = {
   },
   customWallets: [],
   billCounter: 1000,
+  kotCounter: 100,
+  resetKotDaily: false,
   vatEnabled: true,
   vatRate: 0.13,
   vatMode: 'excluded',

@@ -1317,6 +1317,8 @@ const BillDesignSection = () => {
   const [vatEnabled, setVatEnabled] = useState(settings.vatEnabled ?? true);
   const [billFooter, setBillFooter] = useState(settings.billFooter || 'Thank you for visiting!');
   const [billCounter, setBillCounter] = useState(String(settings.billCounter));
+  const [kotCounter, setKotCounter] = useState(String(settings.kotCounter ?? 100));
+  const [resetKotDaily, setResetKotDaily] = useState(settings.resetKotDaily ?? false);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1335,6 +1337,8 @@ const BillDesignSection = () => {
       vatEnabled,
       billFooter: billFooter || undefined,
       billCounter: Number(billCounter) || settings.billCounter,
+      kotCounter: Number(kotCounter) || settings.kotCounter,
+      resetKotDaily,
     });
     toast.success('Changes saved successfully');
   };
@@ -1429,6 +1433,22 @@ const BillDesignSection = () => {
           <label className="text-xs font-medium text-muted-foreground block mb-1.5">Current Bill Number</label>
           <input value={billCounter} onChange={(e) => setBillCounter(e.target.value)} type="number" className={inputCls} />
           <p className="text-xs text-muted-foreground mt-1.5">Next bill will be <span className="text-foreground font-medium">#{Number(billCounter) + 1}</span></p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Current KOT Number</label>
+          <input value={kotCounter} onChange={(e) => setKotCounter(e.target.value)} type="number" className={inputCls} />
+          <p className="text-xs text-muted-foreground mt-1.5">Next KOT will be <span className="text-foreground font-medium">#{Number(kotCounter) + 1}</span></p>
+        </div>
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+          <div>
+            <p className="text-sm font-medium text-foreground">Reset KOT Numbers Daily</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Automatically resets the KOT sequence back to 1 at the start of each day</p>
+          </div>
+          <button onClick={() => setResetKotDaily((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
+            {resetKotDaily
+              ? <ToggleRight size={36} className="text-accent" />
+              : <ToggleLeft size={36} className="text-muted-foreground" />}
+          </button>
         </div>
       </div>
 

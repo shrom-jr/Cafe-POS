@@ -22,6 +22,7 @@ export interface KOTData {
   cafeName:    string;
   tableNumber: number;
   pax:         number;
+  kotNumber:   number;
   timestamp:   number;
   items:       Array<{ name: string; quantity: number }>;
 }
@@ -133,6 +134,7 @@ function buildKOTText(data: KOTData): string {
   push(center(data.cafeName));
   push(hr('='));
   push(center('KITCHEN ORDER TICKET  (KOT)'));
+  push(center(`KOT #${data.kotNumber}`));
   push(hr('='));
   push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
   push(formatLine(`Date:  ${dateStr}`, timeStr));

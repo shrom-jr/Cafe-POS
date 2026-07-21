@@ -39,6 +39,7 @@ const OrderScreen = () => {
     removeItemFromOrder,
     clearOrder,
     sendToKitchen,
+    getNextKotNumber,
     orders,
   } = useOrders();
   const categories = usePOSStore((s) => s.categories);
@@ -243,6 +244,8 @@ const OrderScreen = () => {
         toast.info('No kitchen items to print.');
       }
     } else {
+      // Increment KOT counter and get the assigned number before printing
+      const kotNumber = getNextKotNumber();
       // Fire KOT to kitchen printer — no financial data included
       firePrintJob({
         type: 'KITCHEN_KOT',
@@ -250,6 +253,7 @@ const OrderScreen = () => {
           cafeName:    settings.cafeName,
           tableNumber: table.number,
           pax:         table.pax || 1,
+          kotNumber,
           timestamp:   ts,
           items:       kotItems,
         },

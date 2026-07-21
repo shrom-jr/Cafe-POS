@@ -214,6 +214,9 @@ export interface Settings {
   customWallets?: CustomWallet[];
   printerAddress?: string;
   billCounter: number;
+  kotCounter: number;
+  resetKotDaily: boolean;
+  kotLastResetDate?: string;
   vatEnabled: boolean;
   vatRate: number;
   vatMode: 'excluded' | 'included';

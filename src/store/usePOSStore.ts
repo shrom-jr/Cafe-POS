@@ -50,6 +50,7 @@ interface POSState {
 
   updateSettings: (updates: Partial<Settings>) => void;
   getNextBillNumber: () => number;
+  getNextKotNumber: () => number;
 
   ingredients: Ingredient[];
   recipes: Recipe[];
@@ -485,6 +486,25 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const next = get().settings.billCounter + 1;
     set((state) => {
       const settings = { ...state.settings, billCounter: next };
+      db.saveSettings(settings);
+      return { settings };
+    });
+    return next;
+  },
+
+  getNextKotNumber: () => {
+    const s = get().settings;
+    const todayStr = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    // If daily reset is enabled and we haven't reset today, reset counter to 0 first
+    const needsReset = s.resetKotDaily && s.kotLastResetDate !== todayStr;
+    const baseCounter = needsReset ? 0 : (s.kotCounter ?? 100);
+    const next = baseCounter + 1;
+    set((state) => {
+      const settings = {
+        ...state.settings,
+        kotCounter: next,
+        ...(needsReset ? { kotLastResetDate: todayStr } : {}),
+      };
       db.saveSettings(settings);
       return { settings };
     });
