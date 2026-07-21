@@ -120,6 +120,10 @@ const PaymentScreen = () => {
       ? { id: currentUser.id, name: currentUser.name, role: currentUser.role }
       : undefined;
 
+    // Cross-fallbacks: whoever processes payment covers a missing server, and vice-versa.
+    const resolvedTakenBy    = snap.takenBy  || processedBy;
+    const resolvedProcessedBy = processedBy  || snap.takenBy;
+
     addPayment({
       orderId: snap.id,
       tableNumber: snap.tableNumber,
@@ -137,8 +141,8 @@ const PaymentScreen = () => {
       createdAt: now,
       cafeName: settings.cafeName,
       billNumber: bn,
-      takenBy: snap.takenBy,
-      processedBy,
+      takenBy:    resolvedTakenBy,
+      processedBy: resolvedProcessedBy,
     });
 
     updateOrderStatus(snap.id, 'paid');
@@ -166,10 +170,10 @@ const PaymentScreen = () => {
         vatRate,
         total:          finalTotal,
         method:         resolvePaymentLabel(method, settings),
-        serverName:     snap.takenBy?.name,
-        cashierName:    processedBy?.name,
-        takenBy:        snap.takenBy,
-        processedBy,
+        serverName:     resolvedTakenBy?.name,
+        cashierName:    resolvedProcessedBy?.name,
+        takenBy:        resolvedTakenBy,
+        processedBy:    resolvedProcessedBy,
       },
     };
     lastPrintJobRef.current = printJob;

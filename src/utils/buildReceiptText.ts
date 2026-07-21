@@ -129,8 +129,8 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
-  const servedBy = data.takenBy?.name    || data.serverName  || 'N/A';
-  const cashier  = data.processedBy?.name || data.cashierName || 'N/A';
+  const servedBy = data.takenBy?.name     || data.serverName   || data.processedBy?.name || data.cashierName || 'Staff';
+  const cashier  = data.processedBy?.name || data.cashierName  || data.takenBy?.name    || data.serverName   || 'Cashier';
   push(`Served By: ${servedBy}`);
   push(hr('-'));
 

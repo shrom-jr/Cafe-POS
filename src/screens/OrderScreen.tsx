@@ -312,7 +312,8 @@ const OrderScreen = () => {
     if (!tablePayments.length) return;
 
     const lastPayment = tablePayments[0];
-    const currentOrder = order || createOrder(tableId, table.number);
+    const reorderTakenBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.role } : undefined;
+    const currentOrder = order || createOrder(tableId, table.number, reorderTakenBy);
 
     lastPayment.items.forEach((orderItem) => {
       const menuItem = menuItems.find((m) => m.id === orderItem.menuItemId);

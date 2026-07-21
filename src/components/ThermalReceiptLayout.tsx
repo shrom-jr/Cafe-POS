@@ -86,6 +86,8 @@ const ThermalReceiptLayout = ({
       method,
       serverName,
       cashierName,
+      takenBy,
+      processedBy,
     }));
   }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName, takenBy, processedBy]);
 
@@ -140,7 +142,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        <div><strong>Served By:</strong> {takenBy?.name || serverName || 'N/A'}</div>
+        <div><strong>Served By:</strong> {takenBy?.name || serverName || processedBy?.name || cashierName || 'Staff'}</div>
       </div>
 
       <HR />
@@ -222,7 +224,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {processedBy?.name || cashierName || 'N/A'}</span>
+        <span>Cashier: {processedBy?.name || cashierName || takenBy?.name || serverName || 'Cashier'}</span>
         <span>Time: {timeStr}</span>
       </div>
 

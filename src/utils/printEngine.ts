@@ -244,8 +244,8 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   push(center('TAX INVOICE'));
   push(hr('='));
-  const servedBy = data.takenBy?.name    || data.serverName  || 'N/A';
-  const cashier  = data.processedBy?.name || data.cashierName || 'N/A';
+  const servedBy = data.takenBy?.name     || data.serverName   || data.processedBy?.name || data.cashierName || 'Staff';
+  const cashier  = data.processedBy?.name || data.cashierName  || data.takenBy?.name    || data.serverName   || 'Cashier';
   push(`Payment:   ${data.method}`);
   push(`Date:      ${dateStr}`);
   push(`Bill No:   #${data.billNumber}`);
