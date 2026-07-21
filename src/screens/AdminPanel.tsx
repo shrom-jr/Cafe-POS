@@ -401,6 +401,7 @@ const ItemImageField = ({
 const MenuSection = () => {
   const pillars = usePOSStore((s) => s.pillars);
   const addPillar = usePOSStore((s) => s.addPillar);
+  const deletePillar = usePOSStore((s) => s.deletePillar);
   const categories = usePOSStore((s) => s.categories);
   const menuItems = usePOSStore((s) => s.menuItems);
   const addCategory = usePOSStore((s) => s.addCategory);
@@ -579,22 +580,47 @@ const MenuSection = () => {
           {/* ── Pillar filter tabs — single row, no wrap ── */}
           <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
             {(['All', ...pillars]).map((f) => (
-              <button
-                key={f}
-                onClick={() => handleSetPillarFilter(f)}
-                className="flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
-                style={pillarFilter === f ? {
-                  background: 'rgba(59,130,246,0.22)',
-                  color: 'rgba(255,255,255,0.9)',
-                  border: '1px solid rgba(59,130,246,0.35)',
-                } : {
-                  background: 'rgba(255,255,255,0.05)',
-                  color: 'rgba(255,255,255,0.38)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }}
-              >
-                {f}
-              </button>
+              <div key={f} className="flex-shrink-0 flex items-center" style={pillarFilter === f && f !== 'All' ? {
+                background: 'rgba(59,130,246,0.22)',
+                border: '1px solid rgba(59,130,246,0.35)',
+                borderRadius: '6px',
+              } : {}}>
+                <button
+                  onClick={() => handleSetPillarFilter(f)}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
+                  style={pillarFilter === f ? (f !== 'All' ? {
+                    color: 'rgba(255,255,255,0.9)',
+                    borderRadius: '6px 0 0 6px',
+                    paddingRight: '6px',
+                  } : {
+                    background: 'rgba(59,130,246,0.22)',
+                    color: 'rgba(255,255,255,0.9)',
+                    border: '1px solid rgba(59,130,246,0.35)',
+                  }) : {
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'rgba(255,255,255,0.38)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  {f}
+                </button>
+                {pillarFilter === f && f !== 'All' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Are you sure you want to delete the "${f}" pillar?`)) {
+                        deletePillar(f);
+                        setPillarFilter('All');
+                        toast.success(`Pillar "${f}" deleted`);
+                      }
+                    }}
+                    className="pr-2 pl-1 py-1 text-blue-300/60 hover:text-red-400 transition-colors"
+                    title={`Delete "${f}" pillar`}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
 

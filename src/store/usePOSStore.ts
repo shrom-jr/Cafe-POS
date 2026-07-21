@@ -21,6 +21,7 @@ interface POSState {
   resetTable: (id: string) => void;
 
   addPillar: (name: string) => void;
+  deletePillar: (name: string) => void;
 
   addCategory: (name: string, parentCategory?: import('@/types/pos').CategoryPillar) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
@@ -139,6 +140,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set((state) => {
       if (state.pillars.includes(name)) return {};
       const pillars = [...state.pillars, name];
+      db.savePillars(pillars);
+      return { pillars };
+    });
+  },
+
+  deletePillar: (name) => {
+    set((state) => {
+      const pillars = state.pillars.filter((p) => p !== name);
       db.savePillars(pillars);
       return { pillars };
     });
