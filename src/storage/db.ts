@@ -424,7 +424,7 @@ const defaultMenuItems: MenuItem[] = [
 ];
 
 const defaultSettings: Settings = {
-  cafeName: 'Café Brew',
+  cafeName: 'S Bamboo Cottage & Sekuwa Corner',
   adminPin: '1234',
   esewaId: '',
   esewaPhone: '',
