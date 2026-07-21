@@ -435,6 +435,18 @@ const MenuSection = () => {
     }
   };
 
+  const CORE_PILLARS = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
+  const isCustomPillar = pillarFilter !== 'All' && !CORE_PILLARS.includes(pillarFilter);
+
+  const handleDeletePillar = () => {
+    if (!isCustomPillar) return;
+    if (window.confirm(`Are you sure you want to delete the "${pillarFilter}" pillar?`)) {
+      deletePillar(pillarFilter);
+      setPillarFilter('All');
+      toast.success(`Pillar "${pillarFilter}" deleted`);
+    }
+  };
+
   const handleAddPillar = () => {
     if (!newCat.trim()) return;
     const name = newCat.trim();
@@ -495,23 +507,36 @@ const MenuSection = () => {
           {/* ── Header row ── */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-foreground text-sm">Categories</h3>
-            <button
-              onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
-              data-testid="button-toggle-add-category"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
-              style={showAddCat ? {
-                background: 'rgba(59,130,246,0.22)',
-                color: 'rgba(147,197,253,0.95)',
-                border: '1px solid rgba(59,130,246,0.35)',
-              } : {
-                background: 'rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.5)',
-                border: '1px solid rgba(255,255,255,0.09)',
-              }}
-            >
-              <Plus size={11} strokeWidth={2.5} />
-              Category
-            </button>
+            <div className="flex items-center gap-1.5">
+              {isCustomPillar && filteredCats.length > 0 && (
+                <button
+                  onClick={handleDeletePillar}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                  style={{ background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', border: '1px solid rgba(239,68,68,0.2)' }}
+                  title={`Delete "${pillarFilter}" pillar`}
+                >
+                  <Trash2 size={11} strokeWidth={2} />
+                  Delete "{pillarFilter}"
+                </button>
+              )}
+              <button
+                onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
+                data-testid="button-toggle-add-category"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                style={showAddCat ? {
+                  background: 'rgba(59,130,246,0.22)',
+                  color: 'rgba(147,197,253,0.95)',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                } : {
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.5)',
+                  border: '1px solid rgba(255,255,255,0.09)',
+                }}
+              >
+                <Plus size={11} strokeWidth={2.5} />
+                Category
+              </button>
+            </div>
           </div>
 
           {/* ── Inline add form (toggleable) ── */}
@@ -580,47 +605,22 @@ const MenuSection = () => {
           {/* ── Pillar filter tabs — single row, no wrap ── */}
           <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
             {(['All', ...pillars]).map((f) => (
-              <div key={f} className="flex-shrink-0 flex items-center" style={pillarFilter === f && f !== 'All' ? {
-                background: 'rgba(59,130,246,0.22)',
-                border: '1px solid rgba(59,130,246,0.35)',
-                borderRadius: '6px',
-              } : {}}>
-                <button
-                  onClick={() => handleSetPillarFilter(f)}
-                  className="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
-                  style={pillarFilter === f ? (f !== 'All' ? {
-                    color: 'rgba(255,255,255,0.9)',
-                    borderRadius: '6px 0 0 6px',
-                    paddingRight: '6px',
-                  } : {
-                    background: 'rgba(59,130,246,0.22)',
-                    color: 'rgba(255,255,255,0.9)',
-                    border: '1px solid rgba(59,130,246,0.35)',
-                  }) : {
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.38)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                  }}
-                >
-                  {f}
-                </button>
-                {pillarFilter === f && f !== 'All' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete the "${f}" pillar?`)) {
-                        deletePillar(f);
-                        setPillarFilter('All');
-                        toast.success(`Pillar "${f}" deleted`);
-                      }
-                    }}
-                    className="pr-2 pl-1 py-1 text-blue-300/60 hover:text-red-400 transition-colors"
-                    title={`Delete "${f}" pillar`}
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                )}
-              </div>
+              <button
+                key={f}
+                onClick={() => handleSetPillarFilter(f)}
+                className="flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
+                style={pillarFilter === f ? {
+                  background: 'rgba(59,130,246,0.22)',
+                  color: 'rgba(255,255,255,0.9)',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                } : {
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.38)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                {f}
+              </button>
             ))}
           </div>
 
@@ -702,9 +702,21 @@ const MenuSection = () => {
               </div>
             ))}
             {filteredCats.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                {pillarFilter === 'All' ? 'No categories yet.' : `No ${pillarFilter} categories yet.`}
-              </p>
+              <div className="text-center py-4 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {pillarFilter === 'All' ? 'No categories yet.' : `No ${pillarFilter} categories yet.`}
+                </p>
+                {isCustomPillar && (
+                  <button
+                    onClick={handleDeletePillar}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.65)', border: '1px solid rgba(239,68,68,0.18)' }}
+                  >
+                    <Trash2 size={11} strokeWidth={2} />
+                    Delete "{pillarFilter}" Pillar
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
