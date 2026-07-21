@@ -412,6 +412,7 @@ const MenuSection = () => {
   const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
 
   const [pillarFilter, setPillarFilter] = useState<CategoryPillar | 'All'>('All');
+  const [showAddCat, setShowAddCat] = useState(false);
   const [newCat, setNewCat] = useState('');
   const [newCatParent, setNewCatParent] = useState<CategoryPillar>('Foods');
   const [editCat, setEditCat] = useState<string | null>(null);
@@ -471,15 +472,83 @@ const MenuSection = () => {
       {/* ── Left: Categories ── */}
       <div className="space-y-3 md:sticky md:top-0 md:self-start">
         <div className="bg-card rounded-2xl border border-border p-4">
-          <h3 className="font-semibold text-foreground text-sm mb-3">Categories</h3>
+          {/* ── Header row ── */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-foreground text-sm">Categories</h3>
+            <button
+              onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
+              data-testid="button-toggle-add-category"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
+              style={showAddCat ? {
+                background: 'rgba(59,130,246,0.22)',
+                color: 'rgba(147,197,253,0.95)',
+                border: '1px solid rgba(59,130,246,0.35)',
+              } : {
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.09)',
+              }}
+            >
+              <Plus size={11} strokeWidth={2.5} />
+              Category
+            </button>
+          </div>
 
-          {/* ── Pillar filter tabs ── */}
-          <div className="flex flex-wrap gap-1 mb-3">
+          {/* ── Inline add form (toggleable) ── */}
+          {showAddCat && (
+            <div className="mb-3 p-3 rounded-xl border border-accent/25 space-y-2" style={{ background: 'rgba(59,130,246,0.06)' }}>
+              <input
+                value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newCat.trim()) {
+                    addCategory(newCat.trim(), newCatParent);
+                    setNewCat('');
+                    setShowAddCat(false);
+                  }
+                  if (e.key === 'Escape') { setShowAddCat(false); setNewCat(''); }
+                }}
+                placeholder="Category name"
+                autoFocus
+                data-testid="input-new-category"
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <div className="flex gap-1.5">
+                <select
+                  value={newCatParent}
+                  onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
+                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                >
+                  {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <button
+                  onClick={() => {
+                    if (newCat.trim()) {
+                      addCategory(newCat.trim(), newCatParent);
+                      setNewCat('');
+                      setShowAddCat(false);
+                      toast.success('Category added');
+                    }
+                  }}
+                  data-testid="button-add-category"
+                  className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-xs font-semibold hover:brightness-110 transition-all active:scale-95"
+                >Add</button>
+                <button
+                  onClick={() => { setShowAddCat(false); setNewCat(''); }}
+                  className="px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                ><X size={13} /></button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Pillar filter tabs — single row, no wrap ── */}
+          <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
             {(['All', ...PILLAR_OPTIONS] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => handleSetPillarFilter(f)}
-                className="px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all"
+                className="flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
                 style={pillarFilter === f ? {
                   background: 'rgba(59,130,246,0.22)',
                   color: 'rgba(255,255,255,0.9)',
@@ -580,46 +649,6 @@ const MenuSection = () => {
           </div>
         </div>
 
-        {/* ── Add New Category sub-card ── */}
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Add New Category</p>
-          <div className="space-y-2">
-            <input
-              value={newCat}
-              onChange={(e) => setNewCat(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newCat.trim()) {
-                  addCategory(newCat.trim(), newCatParent);
-                  setNewCat('');
-                }
-              }}
-              placeholder="Category name"
-              data-testid="input-new-category"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-            <div className="flex gap-2">
-              <select
-                value={newCatParent}
-                onChange={(e) => setNewCatParent(e.target.value as CategoryPillar)}
-                className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              >
-                {PILLAR_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <button
-                onClick={() => {
-                  if (newCat.trim()) {
-                    addCategory(newCat.trim(), newCatParent);
-                    setNewCat('');
-                  }
-                }}
-                data-testid="button-add-category"
-                className="px-3 py-2 rounded-lg bg-accent text-accent-foreground flex-shrink-0 hover:brightness-110 transition-all active:scale-95"
-              >
-                <Plus size={15} />
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ── Right: Menu Items ── */}
@@ -691,12 +720,8 @@ const MenuSection = () => {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3.5 px-4 py-3 bg-secondary/20 hover:bg-secondary/40 transition-colors group">
-                    {item.image ? (
+                    {item.image && (
                       <img src={item.image} alt={item.name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 text-accent font-bold text-base select-none">
-                        {item.name.charAt(0)}
-                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
