@@ -127,8 +127,8 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
-  if (data.serverName)  push(`Served By: ${data.serverName}`);
-  if (data.cashierName) push(`Cashier:   ${data.cashierName}`);
+  push(`Served By: ${data.serverName  || 'N/A'}`);
+  push(`Cashier:   ${data.cashierName || 'N/A'}`);
   push(hr('-'));
 
   // ── Item table header ─────────────────────────────────────────
@@ -163,9 +163,7 @@ export function buildReceiptText(data: ReceiptData): string {
   // ── Footer ───────────────────────────────────────────────────
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  if (data.cashierName) {
-    push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
-  }
+  push(formatLine(`Cashier: ${data.cashierName || 'N/A'}`, `Time: ${timeStr}`));
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));

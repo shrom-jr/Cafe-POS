@@ -156,7 +156,7 @@ function buildKOTText(data: KOTData): string {
   push(hr('='));
   push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
   push(formatLine(`Date:  ${dateStr}`, timeStr));
-  if (data.serverName) push(`Waiter: ${data.serverName}`);
+  push(`Taken By: ${data.serverName || 'N/A'}`);
   push(hr('-'));
   // "Qty x Item" header — matches the "2 x Garlic Bread" row format below
   push(ljust('QTY', 5) + 'ITEM');
@@ -199,7 +199,7 @@ function buildPreBillText(data: PreBillData): string {
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
   push(hr('-'));
   data.items.forEach((item, idx) => {
-    push(itemRow(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)));
+    itemRowMultiline(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)).forEach(push);
   });
 
   push(hr('-'));
@@ -240,8 +240,8 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(`Date:    ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table:   ${data.tableNumber}`);
-  if (data.serverName)  push(`Served By: ${data.serverName}`);
-  if (data.cashierName) push(`Cashier:   ${data.cashierName}`);
+  push(`Served By: ${data.serverName  || 'N/A'}`);
+  push(`Cashier:   ${data.cashierName || 'N/A'}`);
   push(hr('-'));
 
   push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
@@ -262,9 +262,7 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
   push(hr('-'));
-  if (data.cashierName) {
-    push(formatLine(`Cashier: ${data.cashierName}`, `Time: ${timeStr}`));
-  }
+  push(formatLine(`Cashier: ${data.cashierName || 'N/A'}`, `Time: ${timeStr}`));
   push(hr('='));
   push(center(data.billFooter || 'Thank you for visiting!'));
   push(hr('='));
