@@ -67,7 +67,7 @@ const TableOverview = () => {
   );
 
   return (
-    <AppLayout title={settings.cafeName || 'Café Brew'} headerRight={headerRight}>
+    <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'} headerRight={headerRight}>
       {/* Single scroll container — no nested scrollers */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 pb-20">
         {tables.length === 0 ? (
