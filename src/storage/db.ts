@@ -29,19 +29,19 @@ function set(key: string, val: unknown) {
 }
 
 const defaultTables: CafeTable[] = [
-  ...['1', '2', '3', '4'].map((number, index) => ({
+  ...['Table 1', 'Table 2', 'Table 3', 'Table 4'].map((number, index) => ({
     id: `table-ground-${index + 1}`,
     number,
     section: 'Ground Floor',
     status: 'free' as const,
   })),
-  ...['Cottage', 'H1', 'Cabin 1'].map((number, index) => ({
+  ...['Cabin 1', 'Cabin 2', 'Cabin 3', 'Cabin 4'].map((number, index) => ({
     id: `table-cabin-${index + 1}`,
     number,
     section: 'Cabins',
     status: 'free' as const,
   })),
-  ...['VIP 1', 'View 1', 'View 2'].map((number, index) => ({
+  ...['View 1', 'View 2', 'View 3', 'View 4'].map((number, index) => ({
     id: `table-view-${index + 1}`,
     number,
     section: '1st Floor',
