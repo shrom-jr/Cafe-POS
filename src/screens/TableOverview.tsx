@@ -42,11 +42,20 @@ const TableOverview = () => {
     active:    tables.filter((t) => t.status === 'occupied').length,
   }), [tables]);
   const sections = useMemo(() => {
-    const standard = ['Ground Floor', 'Cabins', '1st Floor'];
-    const custom = tables
-      .map((table) => table.section?.trim() || 'Ground Floor')
-      .filter((section) => !standard.includes(section));
-    return [...standard, ...Array.from(new Set(custom))];
+    const preferredOrder = ['Ground Floor', 'Cabins', '1st Floor'];
+    const uniqueSections = Array.from(new Set(
+      tables.map((table) => table.section?.trim() || 'Ground Floor')
+    ));
+    return uniqueSections.sort((a, b) => {
+      const aIndex = preferredOrder.indexOf(a);
+      const bIndex = preferredOrder.indexOf(b);
+      if (aIndex !== -1 || bIndex !== -1) {
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      }
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
   }, [tables]);
   const visibleTables = useMemo(() => (
     tables

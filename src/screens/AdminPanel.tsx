@@ -24,8 +24,6 @@ import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
-const TABLE_SECTIONS = ['Ground Floor', 'Cabins', '1st Floor'];
-
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -1011,6 +1009,9 @@ const TablesSection = () => {
   const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
   const editingTable = tables.find((table) => table.id === editingTableId);
   const deletingTable = tables.find((table) => table.id === deletingTableId);
+  const tableSections = Array.from(new Set(
+    tables.map((table) => table.section?.trim() || 'Ground Floor')
+  ));
   const hasDuplicateName = (name: string, excludedId?: string) =>
     tables.some((table) => table.id !== excludedId && tableNameKey(table.number) === tableNameKey(name));
 
@@ -1097,7 +1098,7 @@ const TablesSection = () => {
             className="w-44 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
           />
           <datalist id="table-section-options">
-            {TABLE_SECTIONS.map((section) => <option key={section} value={section} />)}
+            {tableSections.map((section) => <option key={section} value={section} />)}
           </datalist>
           <button
             onClick={submitTable}
@@ -1187,7 +1188,7 @@ const TablesSection = () => {
             className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           />
           <datalist id="edit-table-section-options">
-            {TABLE_SECTIONS.map((section) => <option key={section} value={section} />)}
+            {tableSections.map((section) => <option key={section} value={section} />)}
           </datalist>
           <DialogFooter>
             <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>

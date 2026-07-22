@@ -28,12 +28,26 @@ function set(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
-const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
-  id: `table-${i + 1}`,
-  number: String(i + 1),
-  section: 'Ground Floor',
-  status: 'free' as const,
-}));
+const defaultTables: CafeTable[] = [
+  ...['1', '2', '3', '4'].map((number, index) => ({
+    id: `table-ground-${index + 1}`,
+    number,
+    section: 'Ground Floor',
+    status: 'free' as const,
+  })),
+  ...['Cottage', 'H1', 'Cabin 1'].map((number, index) => ({
+    id: `table-cabin-${index + 1}`,
+    number,
+    section: 'Cabins',
+    status: 'free' as const,
+  })),
+  ...['VIP 1', 'View 1', 'View 2'].map((number, index) => ({
+    id: `table-view-${index + 1}`,
+    number,
+    section: '1st Floor',
+    status: 'free' as const,
+  })),
+];
 
 // ── Bamboo Restaurant Menu ────────────────────────────────────────────────────
 // Parsed from Bamboo Restaurant Menu.pdf — Kathmandu, Nepal
@@ -514,13 +528,20 @@ migrateIngredientUnits();
 const MENU_VERSION = 'bamboo-v5';
 
 export const db = {
-  getTables: (): CafeTable[] =>
-    get<CafeTable[]>(KEYS.tables, defaultTables).map((table) => ({
+  getTables: (): CafeTable[] => {
+    const stored = get<CafeTable[] | null>(KEYS.tables, null);
+    // An explicitly empty table collection is treated as an unconfigured
+    // install and receives the realistic starter layout.
+    const source = stored && stored.length > 0 ? stored : defaultTables;
+    const tables = source.map((table) => ({
       ...table,
-      // Migrate tables created before custom names were supported.
+      // Migrate tables created before custom names and sections were supported.
       number: String(table.number),
       section: table.section?.trim() || 'Ground Floor',
-    })),
+    }));
+    if (!stored || stored.length === 0) set(KEYS.tables, tables);
+    return tables;
+  },
   saveTables: (t: CafeTable[]) => set(KEYS.tables, t),
 
   getPillars: (): string[] => get(KEYS.pillars, defaultPillars),
