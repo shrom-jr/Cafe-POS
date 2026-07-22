@@ -19,6 +19,9 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
@@ -32,6 +35,9 @@ const ACTIVE_STYLE = {
   border: '1px solid rgba(59,130,246,0.28)',
   boxShadow: '0 0 18px -4px rgba(59,130,246,0.3)',
 };
+
+const TABLE_SECTION_DEFAULTS = ['Ground Floor', 'Cabins', '1st Floor'];
+const CREATE_SECTION_VALUE = '__create_new_section__';
 
 const PageHeader = ({
   title,
@@ -996,6 +1002,55 @@ const MenuSection = () => {
 };
 
 // ── TABLE MANAGEMENT ──────────────────────────────────────────────────────
+interface SectionSelectorProps {
+  value: string;
+  sections: string[];
+  onChange: (value: string) => void;
+  testId?: string;
+}
+
+const SectionSelector = ({ value, sections, onChange, testId }: SectionSelectorProps) => {
+  const isCreating = !value || !sections.includes(value);
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <Select
+        value={isCreating ? CREATE_SECTION_VALUE : value}
+        onValueChange={(nextValue) => {
+          if (nextValue === CREATE_SECTION_VALUE) {
+            onChange('');
+          } else {
+            onChange(nextValue);
+          }
+        }}
+      >
+        <SelectTrigger
+          data-testid={testId}
+          className="h-11 w-44 rounded-xl border-border bg-secondary text-sm text-foreground"
+        >
+          <SelectValue placeholder="Section / category" />
+        </SelectTrigger>
+        <SelectContent>
+          {sections.map((section) => (
+            <SelectItem key={section} value={section}>{section}</SelectItem>
+          ))}
+          <SelectItem value={CREATE_SECTION_VALUE}>+ Create New Section</SelectItem>
+        </SelectContent>
+      </Select>
+      {isCreating && (
+        <input
+          autoFocus
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="New section name"
+          aria-label="New section name"
+          className="h-11 min-w-[170px] flex-1 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      )}
+    </div>
+  );
+};
+
 const TablesSection = () => {
   const tables = usePOSStore((s) => s.tables);
   const addTable = usePOSStore((s) => s.addTable);
@@ -1003,15 +1058,17 @@ const TablesSection = () => {
   const deleteTable = usePOSStore((s) => s.deleteTable);
   const [newTableName, setNewTableName] = useState('');
   const [newTableSection, setNewTableSection] = useState('Ground Floor');
+  const [lastUsedSection, setLastUsedSection] = useState('Ground Floor');
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
   const [editTableName, setEditTableName] = useState('');
   const [editTableSection, setEditTableSection] = useState('Ground Floor');
   const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
   const editingTable = tables.find((table) => table.id === editingTableId);
   const deletingTable = tables.find((table) => table.id === deletingTableId);
-  const tableSections = Array.from(new Set(
-    tables.map((table) => table.section?.trim() || 'Ground Floor')
-  ));
+  const tableSections = Array.from(new Set([
+    ...TABLE_SECTION_DEFAULTS,
+    ...tables.map((table) => table.section?.trim() || 'Ground Floor'),
+  ]));
   const hasDuplicateName = (name: string, excludedId?: string) =>
     tables.some((table) => table.id !== excludedId && tableNameKey(table.number) === tableNameKey(name));
 
@@ -1022,9 +1079,11 @@ const TablesSection = () => {
       toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
       return;
     }
-    addTable(name, newTableSection);
+    const section = newTableSection.trim() || lastUsedSection || 'Ground Floor';
+    addTable(name, section);
     setNewTableName('');
-    setNewTableSection('Ground Floor');
+    setLastUsedSection(section);
+    setNewTableSection(section);
     toast.success(`${tableDisplayName(name)} added`);
   };
 
@@ -1089,17 +1148,15 @@ const TablesSection = () => {
             data-testid="input-table-name"
             className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
           />
-          <input
+          <SectionSelector
             value={newTableSection}
-            onChange={(e) => setNewTableSection(e.target.value)}
-            list="table-section-options"
-            placeholder="Section / category"
-            data-testid="input-table-section"
-            className="w-44 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
+            sections={tableSections}
+            onChange={(section) => {
+              setNewTableSection(section);
+              if (section) setLastUsedSection(section);
+            }}
+            testId="select-table-section"
           />
-          <datalist id="table-section-options">
-            {tableSections.map((section) => <option key={section} value={section} />)}
-          </datalist>
           <button
             onClick={submitTable}
             data-testid="button-add-table"
@@ -1180,16 +1237,12 @@ const TablesSection = () => {
             placeholder="Table name/number"
             className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           />
-          <input
+          <SectionSelector
             value={editTableSection}
-            onChange={(event) => setEditTableSection(event.target.value)}
-            list="edit-table-section-options"
-            placeholder="Section / category"
-            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            sections={tableSections}
+            onChange={setEditTableSection}
+            testId="select-edit-table-section"
           />
-          <datalist id="edit-table-section-options">
-            {tableSections.map((section) => <option key={section} value={section} />)}
-          </datalist>
           <DialogFooter>
             <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
             <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
