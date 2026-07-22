@@ -28,6 +28,12 @@ export interface MenuItem {
   name: string;
   price: number;
   image?: string;
+  /** Optional descriptive fields used by menu search and imported menu data. */
+  category?: string;
+  categoryName?: string;
+  subcategory?: string;
+  subcategoryName?: string;
+  description?: string;
 }
 
 export interface OrderItem {

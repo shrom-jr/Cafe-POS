@@ -13,6 +13,7 @@ import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft } from 'lucide
 import { playClick } from '@/utils/sounds';
 import { firePrintJob } from '@/utils/printEngine';
 import { getStaffName } from '@/utils/staffName';
+import { filterMenuItems } from '@/utils/menuFilter';
 import { toast } from 'sonner';
 
 const formatTime = (ts: number) =>
@@ -133,11 +134,7 @@ const OrderScreen = () => {
   }, [activePillar, categories]);
 
   const filteredItems = useMemo(() => {
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return menuItems.filter((i) => i.name.toLowerCase().includes(q));
-    }
-    return menuItems.filter((i) => i.categoryId === activeSubCat);
+    return filterMenuItems(menuItems, categories, activeSubCat, search);
   }, [menuItems, categories, activeSubCat, search]);
 
   const orderQtyMap = useMemo(() => {
