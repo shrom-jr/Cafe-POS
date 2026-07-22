@@ -480,21 +480,22 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   addPayment: (payment) => {
-    // Auto-fill processedBy (and takenBy when the order missed it) from active staff.
+    // The payment processor is the active staff member, but the order's
+    // original server attribution must remain intact.
     const { currentUser, users } = useStaffStore.getState();
     const activeUser = currentUser ?? users.find((u) => u.active);
     const autoAttrib: StaffAttribution | undefined = activeUser
       ? { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role }
       : undefined;
 
-    const enriched = {
-      ...payment,
-      processedBy: payment.processedBy ?? autoAttrib,
-      takenBy:     payment.takenBy     ?? autoAttrib,
-    };
-
     set((state) => {
-      const payments = [...state.payments, { ...enriched, id: crypto.randomUUID() }];
+      const originalOrder = state.orders.find((order) => order.id === payment.orderId);
+      const processedBy = payment.processedBy ?? autoAttrib;
+      const takenBy = originalOrder?.takenBy ?? payment.takenBy ?? processedBy;
+      const payments = [
+        ...state.payments,
+        { ...payment, processedBy, takenBy, id: crypto.randomUUID() },
+      ];
       db.savePayments(payments);
       return { payments };
     });

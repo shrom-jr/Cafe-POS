@@ -145,7 +145,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        <div><strong>Served By:</strong> {takenBy?.fullName || takenBy?.name || serverName || processedBy?.fullName || processedBy?.name || cashierName || liveStaff}</div>
+        <div><strong>Served By:</strong> {takenBy?.name || takenBy?.fullName || processedBy?.name || ''}</div>
       </div>
 
       <HR />
@@ -227,7 +227,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {processedBy?.fullName || processedBy?.name || cashierName || takenBy?.fullName || takenBy?.name || serverName || liveStaff}</span>
+        <span>Cashier: {processedBy?.name || processedBy?.fullName || liveStaff}</span>
         <span>Time: {timeStr}</span>
       </div>
 

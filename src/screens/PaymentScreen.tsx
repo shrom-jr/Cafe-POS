@@ -127,10 +127,10 @@ const PaymentScreen = () => {
       ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
       : undefined;
 
-    // Cross-fallbacks: if the order was created without a takenBy (e.g. quick-add
-    // before login), fill it from the cashier processing the payment, and vice-versa.
-    const resolvedTakenBy    = snap.takenBy  || processedBy;
-    const resolvedProcessedBy = processedBy  || snap.takenBy;
+    // Keep the original server attribution from order creation. The store
+    // applies the final missing-attribution fallback for legacy orders.
+    const resolvedTakenBy = snap.takenBy;
+    const resolvedProcessedBy = processedBy;
 
     addPayment({
       orderId: snap.id,

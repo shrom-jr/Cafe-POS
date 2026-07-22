@@ -2,10 +2,12 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { firePrintJob, type PrintJob } from '@/utils/printEngine';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
+import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { calcBill } from '@/utils/calcBill';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
+import { getStaffName } from '@/utils/staffName';
 import { playSuccess } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -195,6 +197,11 @@ const ReviewScreen = () => {
     const payItems = isSplit ? splitSelectedItems : unpaidItems;
     const payBill = isSplit ? splitBill : bill;
     const resolvedMethod = resolvePaymentLabel(method, settings);
+    const liveUser = useStaffStore.getState().currentUser;
+    const processedBy = liveUser
+      ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
+      : undefined;
+    const takenBy = order?.takenBy;
 
     const bn = getNextBillNumber();
     const now = Date.now();
@@ -216,6 +223,8 @@ const ReviewScreen = () => {
       createdAt: now,
       cafeName: settings.cafeName,
       billNumber: bn,
+      takenBy,
+      processedBy,
     });
 
     // Build payItemIds — split item in store when only a partial quantity is being paid
@@ -289,6 +298,8 @@ const ReviewScreen = () => {
         vatRate:        payBill.vatRate,
         total:          payBill.total,
         method:         resolvedMethod,
+        takenBy,
+        processedBy,
       },
     };
     lastPrintJobRef.current = taxJob;
