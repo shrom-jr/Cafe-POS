@@ -127,9 +127,10 @@ const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
         )}
       </div>
 
-      {/* Table number */}
+      {/* Table name */}
       <span
-        className="text-5xl font-black tracking-tight leading-none"
+        title={tableDisplayName(table.number)}
+        className="block w-full min-w-0 truncate text-center text-xl sm:text-2xl font-bold tracking-tight leading-tight"
         style={{ color: cfg.numberColor, textShadow: cfg.numberShadow }}
       >
         {tableDisplayName(table.number)}
@@ -137,7 +138,7 @@ const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
 
       {/* Status badge */}
       <span
-        className="mt-1.5 text-[10px] font-semibold px-2.5 py-0.5 rounded-full"
+        className="mt-2 text-[10px] font-semibold leading-none px-2.5 py-1 rounded-full"
         style={{ background: cfg.labelBg, color: cfg.labelColor }}
       >
         {cfg.label}
@@ -145,11 +146,11 @@ const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
 
       {/* Active/Billing details */}
       {isActive && (
-        <div className="mt-2 flex flex-col items-center gap-0.5 w-full">
-          <span className="text-[15px] font-bold leading-tight" style={{ color: cfg.paxColor }}>
+        <div className="mt-2.5 flex w-full flex-col items-center gap-1">
+          <span className="text-sm font-bold leading-tight" style={{ color: cfg.paxColor }}>
             {table.pax ?? 1} pax
           </span>
-          <span className="text-[10px] font-medium tabular-nums" style={{ color: cfg.metaColor }}>
+          <span className="max-w-full truncate text-[10px] font-medium leading-tight tabular-nums" style={{ color: cfg.metaColor }}>
             {itemCount} item{itemCount !== 1 ? 's' : ''}{timer ? ` · ${timer}` : ''}
           </span>
         </div>
