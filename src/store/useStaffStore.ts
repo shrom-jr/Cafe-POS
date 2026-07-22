@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { StaffUser } from '@/types/staff';
 
-const STAFF_KEY   = 'pos_staff_users';
-const SESSION_KEY = 'pos_current_user_id';
+const STAFF_KEY        = 'pos_staff_users';
+const SESSION_KEY      = 'pos_current_user_id';
+const SESSION_USER_KEY = 'pos_current_user';   // full object — survives HMR & refresh
 
 const DEFAULT_USERS: StaffUser[] = [
   { id: 'staff-admin',   name: 'Admin Owner',   role: 'ADMIN',   pin: '1234', active: true },
@@ -14,7 +15,6 @@ function loadUsers(): StaffUser[] {
   try {
     const d = localStorage.getItem(STAFF_KEY);
     const parsed: StaffUser[] = d ? JSON.parse(d) : DEFAULT_USERS;
-    // Ensure default users are always present (never wiped)
     if (!parsed.length) return DEFAULT_USERS;
     return parsed;
   } catch { return DEFAULT_USERS; }
@@ -24,13 +24,32 @@ function saveUsers(users: StaffUser[]) {
   localStorage.setItem(STAFF_KEY, JSON.stringify(users));
 }
 
-function loadCurrentUserId(): string | null {
-  return localStorage.getItem(SESSION_KEY);
+/** Rehydrate the logged-in user. Validates against the live users list so a
+ *  deleted/deactivated account is never returned. */
+function loadCurrentUser(users: StaffUser[]): StaffUser | null {
+  try {
+    // Prefer the full serialised object (written on every login)
+    const raw = localStorage.getItem(SESSION_USER_KEY);
+    if (raw) {
+      const cached = JSON.parse(raw) as StaffUser;
+      const live = users.find((u) => u.id === cached.id && u.active);
+      if (live) return live;       // return live data (may have been updated)
+    }
+    // Fallback: ID-only key written by older builds
+    const id = localStorage.getItem(SESSION_KEY);
+    if (id) return users.find((u) => u.id === id && u.active) ?? null;
+  } catch { /* ignore */ }
+  return null;
 }
 
-function saveCurrentUserId(id: string | null) {
-  if (id) localStorage.setItem(SESSION_KEY, id);
-  else localStorage.removeItem(SESSION_KEY);
+function saveCurrentUser(user: StaffUser | null) {
+  if (user) {
+    localStorage.setItem(SESSION_KEY, user.id);
+    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_USER_KEY);
+  }
 }
 
 interface StaffState {
@@ -48,10 +67,7 @@ interface StaffState {
 
 export const useStaffStore = create<StaffState>((set, get) => {
   const users = loadUsers();
-  const currentUserId = loadCurrentUserId();
-  const currentUser = currentUserId
-    ? (users.find((u) => u.id === currentUserId && u.active) ?? null)
-    : null;
+  const currentUser = loadCurrentUser(users);
 
   return {
     users,
@@ -60,13 +76,13 @@ export const useStaffStore = create<StaffState>((set, get) => {
     login: (userId, pin) => {
       const user = get().users.find((u) => u.id === userId && u.active);
       if (!user || user.pin !== pin) return false;
-      saveCurrentUserId(userId);
+      saveCurrentUser(user);
       set({ currentUser: user });
       return true;
     },
 
     logout: () => {
-      saveCurrentUserId(null);
+      saveCurrentUser(null);
       set({ currentUser: null });
     },
 
@@ -81,13 +97,18 @@ export const useStaffStore = create<StaffState>((set, get) => {
       const users = get().users.map((u) => (u.id === id ? { ...u, ...updates } : u));
       saveUsers(users);
       const cu = get().currentUser;
-      set({ users, currentUser: cu?.id === id ? { ...cu, ...updates } as StaffUser : cu });
+      const nextCu = cu?.id === id ? { ...cu, ...updates } as StaffUser : cu;
+      // Keep session storage in sync if the logged-in user was edited
+      if (nextCu && nextCu.id === id) saveCurrentUser(nextCu);
+      set({ users, currentUser: nextCu });
     },
 
     deleteUser: (id) => {
       const users = get().users.filter((u) => u.id !== id);
       saveUsers(users);
-      set({ users });
+      const wasLoggedIn = get().currentUser?.id === id;
+      if (wasLoggedIn) saveCurrentUser(null);
+      set({ users, currentUser: wasLoggedIn ? null : get().currentUser });
     },
   };
 });

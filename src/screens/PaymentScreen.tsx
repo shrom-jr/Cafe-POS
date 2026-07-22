@@ -23,6 +23,8 @@ const PaymentScreen = () => {
   const resetTable = usePOSStore((s) => s.resetTable);
   const getNextBillNumber = usePOSStore((s) => s.getNextBillNumber);
   const settings = usePOSStore((s) => s.settings);
+  // Subscribed for reactivity; we also read .getState() inside the handler to
+  // guarantee freshness at the exact moment payment is confirmed.
   const currentUser = useStaffStore((s) => s.currentUser);
 
   const rawState = location.state as {
@@ -117,11 +119,16 @@ const PaymentScreen = () => {
     setPaidAt(now);
     setPaidMethod(resolvePaymentLabel(method, settings));
 
-    const processedBy = currentUser
-      ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role }
+    // Always read fresh from store state — the subscribed hook value can be one
+    // render behind if the user just logged in during this payment flow.
+    const liveUser = useStaffStore.getState().currentUser;
+
+    const processedBy = liveUser
+      ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
       : undefined;
 
-    // Cross-fallbacks: whoever processes payment covers a missing server, and vice-versa.
+    // Cross-fallbacks: if the order was created without a takenBy (e.g. quick-add
+    // before login), fill it from the cashier processing the payment, and vice-versa.
     const resolvedTakenBy    = snap.takenBy  || processedBy;
     const resolvedProcessedBy = processedBy  || snap.takenBy;
 
@@ -178,7 +185,7 @@ const PaymentScreen = () => {
       },
     };
     lastPrintJobRef.current = printJob;
-    console.log('PRINT STAFF DATA:', { takenBy: resolvedTakenBy, processedBy: resolvedProcessedBy, currentUser });
+    console.log('PRINT STAFF DATA:', { takenBy: resolvedTakenBy, processedBy: resolvedProcessedBy, liveUser });
     firePrintJob(printJob);
   };
 

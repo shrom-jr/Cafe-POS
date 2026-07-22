@@ -41,24 +41,26 @@ const PinModal = ({
 
   const handleDigit = (digit: string) => {
     if (shakeRef.current) return;
-    setPin((prev) => {
-      const next = prev + digit;
-      if (next.length === 4) {
-        const ok = login(user.id, next);
-        if (!ok) {
-          setShake(true);
-          setShowError(true);
-          setTimeout(() => {
-            setShake(false);
-            setPin('');
-            setTimeout(() => setShowError(false), 200);
-          }, 600);
-          return next; // show all 4 dots during shake
-        }
-        // On success, store sets currentUser → parent re-renders → modal disappears
+    // Read from ref so this is safe to call from a stale keydown closure too.
+    const current = pinRef.current;
+    if (current.length >= 4) return;
+    const next = current + digit;
+    // Update pin display first — NOT inside the setter so we never call login()
+    // during a React state-update cycle (avoids the render-phase setState warning).
+    setPin(next);
+    if (next.length === 4) {
+      const ok = login(user.id, next);
+      if (!ok) {
+        setShake(true);
+        setShowError(true);
+        setTimeout(() => {
+          setShake(false);
+          setPin('');
+          setTimeout(() => setShowError(false), 200);
+        }, 600);
       }
-      return next;
-    });
+      // On success, store sets currentUser → App re-renders → modal disappears.
+    }
   };
 
   const handleBackspace = () => {
