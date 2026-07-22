@@ -1002,264 +1002,426 @@ const MenuSection = () => {
 };
 
 // ── TABLE MANAGEMENT ──────────────────────────────────────────────────────
-interface SectionSelectorProps {
-  value: string;
-  sections: string[];
-  onChange: (value: string) => void;
-  testId?: string;
+
+/** Build an ordered, deduplicated area list from defaults + live table sections. */
+function buildAreaList(tables: { section?: string }[], extras: string[] = []): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const name of [...TABLE_SECTION_DEFAULTS, ...extras, ...tables.map((t) => t.section?.trim() || 'Ground Floor')]) {
+    const key = name.trim();
+    if (key && !seen.has(key)) { seen.add(key); result.push(key); }
+  }
+  return result;
 }
 
-const SectionSelector = ({ value, sections, onChange, testId }: SectionSelectorProps) => {
-  const isCreating = !value || !sections.includes(value);
-
-  return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <Select
-        value={isCreating ? CREATE_SECTION_VALUE : value}
-        onValueChange={(nextValue) => {
-          if (nextValue === CREATE_SECTION_VALUE) {
-            onChange('');
-          } else {
-            onChange(nextValue);
-          }
-        }}
-      >
-        <SelectTrigger
-          data-testid={testId}
-          className="h-11 w-44 rounded-xl border-border bg-secondary text-sm text-foreground"
-        >
-          <SelectValue placeholder="Section / category" />
-        </SelectTrigger>
-        <SelectContent>
-          {sections.map((section) => (
-            <SelectItem key={section} value={section}>{section}</SelectItem>
-          ))}
-          <SelectItem value={CREATE_SECTION_VALUE}>+ Create New Section</SelectItem>
-        </SelectContent>
-      </Select>
-      {isCreating && (
-        <input
-          autoFocus
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="New section name"
-          aria-label="New section name"
-          className="h-11 min-w-[170px] flex-1 rounded-xl border border-border bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-        />
-      )}
-    </div>
-  );
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  free:    { label: 'Free',     color: 'text-green-400', bg: 'bg-green-500/12 border-green-500/25' },
+  active:  { label: 'Occupied', color: 'text-blue-400',  bg: 'bg-blue-500/12  border-blue-500/25' },
+  billing: { label: 'Billing',  color: 'text-amber-400', bg: 'bg-amber-500/12 border-amber-500/25' },
 };
 
 const TablesSection = () => {
-  const tables = usePOSStore((s) => s.tables);
-  const addTable = usePOSStore((s) => s.addTable);
+  const tables     = usePOSStore((s) => s.tables);
+  const addTable   = usePOSStore((s) => s.addTable);
   const updateTable = usePOSStore((s) => s.updateTable);
   const deleteTable = usePOSStore((s) => s.deleteTable);
-  const [newTableName, setNewTableName] = useState('');
-  const [newTableSection, setNewTableSection] = useState('Ground Floor');
-  const [lastUsedSection, setLastUsedSection] = useState('Ground Floor');
-  const [editingTableId, setEditingTableId] = useState<string | null>(null);
-  const [editTableName, setEditTableName] = useState('');
-  const [editTableSection, setEditTableSection] = useState('Ground Floor');
-  const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
-  const editingTable = tables.find((table) => table.id === editingTableId);
-  const deletingTable = tables.find((table) => table.id === deletingTableId);
-  const tableSections = Array.from(new Set([
-    ...TABLE_SECTION_DEFAULTS,
-    ...tables.map((table) => table.section?.trim() || 'Ground Floor'),
-  ]));
-  const hasDuplicateName = (name: string, excludedId?: string) =>
-    tables.some((table) => table.id !== excludedId && tableNameKey(table.number) === tableNameKey(name));
 
-  const submitTable = () => {
-    const name = newTableName.trim();
+  // Extra area names that have been created but may not yet contain tables
+  const [extraAreas, setExtraAreas]   = useState<string[]>([]);
+  // Per-area inline "add table" input values
+  const [inlineNames, setInlineNames] = useState<Record<string, string>>({});
+
+  // ── Area modals ──────────────────────────────
+  const [addAreaOpen, setAddAreaOpen]     = useState(false);
+  const [addAreaName, setAddAreaName]     = useState('');
+  const [renamingArea, setRenamingArea]   = useState<string | null>(null);
+  const [renameAreaVal, setRenameAreaVal] = useState('');
+  const [deletingArea,  setDeletingArea]  = useState<string | null>(null);
+
+  // ── Table modals ─────────────────────────────
+  const [editingTableId,  setEditingTableId]  = useState<string | null>(null);
+  const [editTableName,   setEditTableName]   = useState('');
+  const [editTableSection,setEditTableSection]= useState('');
+  const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
+
+  const editingTable  = tables.find((t) => t.id === editingTableId);
+  const deletingTable = tables.find((t) => t.id === deletingTableId);
+
+  const areas = buildAreaList(tables, extraAreas);
+
+  const hasDuplicateName = (name: string, excludedId?: string) =>
+    tables.some((t) => t.id !== excludedId && tableNameKey(t.number) === tableNameKey(name));
+
+  // ── Area helpers ────────────────────────────
+  const submitAddArea = () => {
+    const name = addAreaName.trim();
+    if (!name) return;
+    if (areas.some((a) => a.toLowerCase() === name.toLowerCase())) {
+      toast.error(`An area named "${name}" already exists.`);
+      return;
+    }
+    setExtraAreas((prev) => [...prev, name]);
+    setAddAreaName('');
+    setAddAreaOpen(false);
+    toast.success(`Area "${name}" added`);
+  };
+
+  const submitRenameArea = () => {
+    if (!renamingArea) return;
+    const next = renameAreaVal.trim();
+    if (!next) return;
+    if (areas.some((a) => a !== renamingArea && a.toLowerCase() === next.toLowerCase())) {
+      toast.error(`An area named "${next}" already exists.`);
+      return;
+    }
+    // Update all tables that belong to the renamed area
+    tables
+      .filter((t) => (t.section?.trim() || 'Ground Floor') === renamingArea)
+      .forEach((t) => updateTable(t.id, { section: next }));
+    // Update extraAreas list if present
+    setExtraAreas((prev) => prev.map((a) => (a === renamingArea ? next : a)));
+    // Transfer inline input state
+    setInlineNames((prev) => {
+      const copy = { ...prev };
+      if (renamingArea in copy) { copy[next] = copy[renamingArea]; delete copy[renamingArea]; }
+      return copy;
+    });
+    toast.success(`Area renamed to "${next}"`);
+    setRenamingArea(null);
+  };
+
+  const tablesInArea = (area: string) =>
+    tables.filter((t) => (t.section?.trim() || 'Ground Floor') === area);
+
+  const requestDeleteArea = (area: string) => {
+    if (tablesInArea(area).length > 0) {
+      toast.error('Remove all tables in this area before deleting it.');
+      return;
+    }
+    setDeletingArea(area);
+  };
+
+  const confirmDeleteArea = () => {
+    if (!deletingArea) return;
+    setExtraAreas((prev) => prev.filter((a) => a !== deletingArea));
+    // also remove from inline state
+    setInlineNames((prev) => { const c = { ...prev }; delete c[deletingArea]; return c; });
+    toast.success(`Area "${deletingArea}" deleted`);
+    setDeletingArea(null);
+  };
+
+  // ── Table helpers ────────────────────────────
+  const submitInlineTable = (area: string) => {
+    const name = (inlineNames[area] ?? '').trim();
     if (!name) return;
     if (hasDuplicateName(name)) {
       toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
       return;
     }
-    const section = newTableSection.trim() || lastUsedSection || 'Ground Floor';
-    addTable(name, section);
-    setNewTableName('');
-    setLastUsedSection(section);
-    setNewTableSection(section);
-    toast.success(`${tableDisplayName(name)} added`);
+    addTable(name, area);
+    setInlineNames((prev) => ({ ...prev, [area]: '' }));
+    toast.success(`${tableDisplayName(name)} added to ${area}`);
   };
 
-  const openEdit = (table: typeof tables[number]) => {
-    if (table.status !== 'free') {
-      toast.error('Cannot edit or delete a table with an active order.');
-      return;
-    }
-    setEditingTableId(table.id);
-    setEditTableName(table.number);
-    setEditTableSection(table.section || 'Ground Floor');
+  const openEdit = (t: typeof tables[number]) => {
+    if (t.status !== 'free') { toast.error('Cannot edit a table with an active order.'); return; }
+    setEditingTableId(t.id);
+    setEditTableName(t.number);
+    setEditTableSection(t.section?.trim() || 'Ground Floor');
   };
 
   const saveEdit = () => {
     if (!editingTable) return;
     const name = editTableName.trim();
-    if (!name) {
-      toast.error('Table name cannot be empty.');
-      return;
-    }
+    if (!name) { toast.error('Table name cannot be empty.'); return; }
     if (hasDuplicateName(name, editingTable.id)) {
       toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
       return;
     }
-    updateTable(editingTable.id, { number: name, section: editTableSection.trim() || 'Ground Floor' });
+    updateTable(editingTable.id, { number: name, section: editTableSection || 'Ground Floor' });
     setEditingTableId(null);
-    toast.success(`Table renamed to ${tableDisplayName(name)}`);
+    toast.success(`Table updated`);
   };
 
-  const requestDelete = (table: typeof tables[number]) => {
-    if (table.status !== 'free') {
-      toast.error('Cannot edit or delete a table with an active order.');
-      return;
-    }
-    setDeletingTableId(table.id);
+  const requestDeleteTable = (t: typeof tables[number]) => {
+    if (t.status !== 'free') { toast.error('Cannot delete a table with an active order.'); return; }
+    setDeletingTableId(t.id);
   };
 
-  const confirmDelete = () => {
+  const confirmDeleteTable = () => {
     if (!deletingTable) return;
     deleteTable(deletingTable.id);
     toast.success(`${tableDisplayName(deletingTable.number)} removed`);
     setDeletingTableId(null);
   };
 
-  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-    free:    { label: 'Free',      color: 'text-green-400',  bg: 'bg-green-500/12 border-green-500/25' },
-    active:  { label: 'Occupied',  color: 'text-blue-400',   bg: 'bg-blue-500/12 border-blue-500/25' },
-    billing: { label: 'Billing',   color: 'text-amber-400',  bg: 'bg-amber-500/12 border-amber-500/25' },
-  };
-
   return (
-    <div className="space-y-5">
-      <div className="bg-card rounded-2xl border border-border p-5">
-        <h3 className="font-semibold text-foreground text-sm mb-3">Add Table</h3>
-        <div className="flex flex-wrap gap-2 max-w-2xl">
-          <input
-            value={newTableName}
-            onChange={(e) => setNewTableName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submitTable()}
-            type="text"
-            placeholder="Table name/number (e.g., VIP 1, Rooftop A, 9)"
-            data-testid="input-table-name"
-            className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
-          />
-          <SectionSelector
-            value={newTableSection}
-            sections={tableSections}
-            onChange={(section) => {
-              setNewTableSection(section);
-              if (section) setLastUsedSection(section);
-            }}
-            testId="select-table-section"
-          />
-          <button
-            onClick={submitTable}
-            data-testid="button-add-table"
-            className="px-4 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-semibold flex items-center gap-1.5 hover:brightness-110 transition-all active:scale-95 h-11"
-          >
-            <Plus size={14} /> Add
-          </button>
+    <div className="space-y-4">
+      {/* ── Top bar ────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {tables.length} table{tables.length !== 1 ? 's' : ''} across {areas.length} area{areas.length !== 1 ? 's' : ''}
+          </p>
         </div>
+        <button
+          onClick={() => { setAddAreaName(''); setAddAreaOpen(true); }}
+          data-testid="button-add-area"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:brightness-110 transition-all active:scale-95"
+        >
+          <Plus size={14} /> Add Area
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {tables.slice().sort((a, b) => compareTableNames(a.number, b.number)).map((t) => {
-          const cfg = statusConfig[t.status] || statusConfig.free;
-          return (
-            <div
-              key={t.id}
-              className="bg-card rounded-2xl border border-border p-4 flex flex-col gap-3 hover:border-white/20 hover:shadow-lg transition-all"
-              data-testid={`table-row-${t.id}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-foreground text-base" title={tableDisplayName(t.number)}>{tableDisplayName(t.number)}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70" title={t.section || 'Ground Floor'}>{t.section || 'Ground Floor'}</p>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                    {cfg.label}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    onClick={() => openEdit(t)}
-                    disabled={t.status !== 'free'}
-                    title={t.status !== 'free' ? 'Cannot edit or delete a table with an active order.' : 'Edit table'}
-                    aria-label={`Edit ${tableDisplayName(t.number)}`}
-                    className="p-2 rounded-xl text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Edit3 size={15} />
-                  </button>
-                  <button
-                    onClick={() => requestDelete(t)}
-                    disabled={t.status !== 'free'}
-                    title={t.status !== 'free' ? 'Cannot edit or delete a table with an active order.' : 'Delete table'}
-                    aria-label={`Delete ${tableDisplayName(t.number)}`}
-                    className="p-2 rounded-xl text-danger/50 hover:text-danger hover:bg-danger/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+      {/* ── Area containers ─────────────────────────────────────────── */}
+      {areas.length === 0 && (
+        <div className="text-center py-20 text-muted-foreground">
+          <Table2 size={36} className="mx-auto mb-3 opacity-20" />
+          <p className="text-sm font-medium">No areas yet</p>
+          <p className="text-xs mt-1 opacity-60">Click "+ Add Area" to get started</p>
+        </div>
+      )}
+
+      {areas.map((area) => {
+        const areaTablesSorted = tablesInArea(area)
+          .slice()
+          .sort((a, b) => compareTableNames(a.number, b.number));
+        const isEmpty = areaTablesSorted.length === 0;
+        const isDefault = TABLE_SECTION_DEFAULTS.includes(area);
+
+        return (
+          <div
+            key={area}
+            data-testid={`area-container-${area}`}
+            className="rounded-2xl border border-border bg-card overflow-hidden"
+          >
+            {/* Area header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-white/[0.02]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="font-semibold text-foreground text-sm truncate">{area}</span>
+                <span className="shrink-0 text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border">
+                  {areaTablesSorted.length} table{areaTablesSorted.length !== 1 ? 's' : ''}
+                </span>
               </div>
-              {t.pax && t.pax > 0 && t.status !== 'free' && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Users size={12} />
-                  {t.pax} guest{t.pax !== 1 ? 's' : ''}
-                </div>
-              )}
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  onClick={() => { setRenamingArea(area); setRenameAreaVal(area); }}
+                  aria-label={`Rename area ${area}`}
+                  title="Rename area"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
+                >
+                  <Edit3 size={14} />
+                </button>
+                <button
+                  onClick={() => requestDeleteArea(area)}
+                  aria-label={`Delete area ${area}`}
+                  title={isEmpty ? 'Delete area' : 'Remove all tables first'}
+                  className={`p-2 rounded-lg transition-colors ${isEmpty ? 'text-danger/50 hover:text-danger hover:bg-danger/10' : 'text-muted-foreground/25 cursor-not-allowed'}`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-          );
-        })}
-        {tables.length === 0 && (
-          <div className="col-span-full text-center py-16 text-muted-foreground">
-            <Table2 size={36} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm font-medium">No tables configured</p>
-            <p className="text-xs mt-1 opacity-60">Add a table number above to get started</p>
+
+            {/* Table cards */}
+            <div className="p-4">
+              {areaTablesSorted.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4">
+                  {areaTablesSorted.map((t) => {
+                    const cfg = STATUS_CFG[t.status] || STATUS_CFG.free;
+                    return (
+                      <div
+                        key={t.id}
+                        data-testid={`table-row-${t.id}`}
+                        className="bg-background/50 rounded-xl border border-border/60 p-3.5 flex flex-col gap-2.5 hover:border-white/20 hover:shadow-md transition-all group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="truncate font-semibold text-foreground text-sm leading-snug"
+                              title={tableDisplayName(t.number)}
+                            >
+                              {tableDisplayName(t.number)}
+                            </p>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                              {cfg.label}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEdit(t)}
+                              disabled={t.status !== 'free'}
+                              title={t.status !== 'free' ? 'Table has an active order' : 'Edit table'}
+                              aria-label={`Edit ${tableDisplayName(t.number)}`}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button
+                              onClick={() => requestDeleteTable(t)}
+                              disabled={t.status !== 'free'}
+                              title={t.status !== 'free' ? 'Table has an active order' : 'Delete table'}
+                              aria-label={`Delete ${tableDisplayName(t.number)}`}
+                              className="p-1.5 rounded-lg text-danger/40 hover:text-danger hover:bg-danger/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                        {t.pax && t.pax > 0 && t.status !== 'free' && (
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Users size={11} />
+                            {t.pax} guest{t.pax !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic mb-3">No tables in this area yet.</p>
+              )}
+
+              {/* Inline add table */}
+              <div className="flex gap-2">
+                <input
+                  value={inlineNames[area] ?? ''}
+                  onChange={(e) => setInlineNames((prev) => ({ ...prev, [area]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && submitInlineTable(area)}
+                  type="text"
+                  placeholder={`Table name — e.g. ${isDefault ? (area === 'Cabins' ? 'Cabin 2' : area === '1st Floor' ? 'VIP 2' : '5') : 'R1'}`}
+                  data-testid={`input-table-name-${area}`}
+                  className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-accent h-10"
+                />
+                <button
+                  onClick={() => submitInlineTable(area)}
+                  data-testid={`button-add-table-${area}`}
+                  className="px-3.5 py-2 rounded-xl bg-accent/15 border border-accent/25 text-accent text-sm font-semibold flex items-center gap-1 hover:bg-accent/25 transition-all active:scale-95 h-10"
+                >
+                  <Plus size={13} /> Add
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-      <Dialog open={Boolean(editingTable)} onOpenChange={(open) => !open && setEditingTableId(null)}>
+        );
+      })}
+
+      {/* ── Add Area modal ───────────────────────────────────────────── */}
+      <Dialog open={addAreaOpen} onOpenChange={(open) => !open && setAddAreaOpen(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Table</DialogTitle>
-            <DialogDescription>Choose a unique name for this table.</DialogDescription>
+            <DialogTitle>New Seating Area</DialogTitle>
+            <DialogDescription>Enter a name for the new area (e.g. "Rooftop", "Garden Patio").</DialogDescription>
           </DialogHeader>
           <input
             autoFocus
-            value={editTableName}
-            onChange={(event) => setEditTableName(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && saveEdit()}
-            placeholder="Table name/number"
+            value={addAreaName}
+            onChange={(e) => setAddAreaName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submitAddArea()}
+            placeholder="Area name"
+            data-testid="input-new-area-name"
             className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           />
-          <SectionSelector
-            value={editTableSection}
-            sections={tableSections}
-            onChange={setEditTableSection}
-            testId="select-edit-table-section"
+          <DialogFooter>
+            <button onClick={() => setAddAreaOpen(false)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
+            <button onClick={submitAddArea} data-testid="button-confirm-add-area" className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Create</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Rename Area modal ────────────────────────────────────────── */}
+      <Dialog open={Boolean(renamingArea)} onOpenChange={(open) => !open && setRenamingArea(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Area</DialogTitle>
+            <DialogDescription>All tables in "{renamingArea}" will be updated to the new name.</DialogDescription>
+          </DialogHeader>
+          <input
+            autoFocus
+            value={renameAreaVal}
+            onChange={(e) => setRenameAreaVal(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submitRenameArea()}
+            placeholder="New area name"
+            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           />
+          <DialogFooter>
+            <button onClick={() => setRenamingArea(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
+            <button onClick={submitRenameArea} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Area confirm ──────────────────────────────────────── */}
+      <AlertDialog open={Boolean(deletingArea)} onOpenChange={(open) => !open && setDeletingArea(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Area?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the area "{deletingArea}"? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteArea} className="bg-danger text-danger-foreground hover:bg-danger/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Edit Table modal ─────────────────────────────────────────── */}
+      <Dialog open={Boolean(editingTable)} onOpenChange={(open) => !open && setEditingTableId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Table</DialogTitle>
+            <DialogDescription>Rename the table or move it to a different area.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Table name</label>
+              <input
+                autoFocus
+                value={editTableName}
+                onChange={(e) => setEditTableName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
+                placeholder="Table name / number"
+                data-testid="input-edit-table-name"
+                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Area</label>
+              <Select value={editTableSection} onValueChange={setEditTableSection}>
+                <SelectTrigger
+                  data-testid="select-edit-table-section"
+                  className="h-10 w-full rounded-xl border-border bg-secondary text-sm text-foreground"
+                >
+                  <SelectValue placeholder="Select area" />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DialogFooter>
             <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
             <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Table confirm ─────────────────────────────────────── */}
       <AlertDialog open={Boolean(deletingTable)} onOpenChange={(open) => !open && setDeletingTableId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Table?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete '{deletingTable ? tableDisplayName(deletingTable.number) : ''}'? This action cannot be undone.
+              Are you sure you want to delete '{deletingTable ? tableDisplayName(deletingTable.number) : ''}'? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-danger text-danger-foreground hover:bg-danger/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteTable} className="bg-danger text-danger-foreground hover:bg-danger/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
