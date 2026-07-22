@@ -15,6 +15,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { compareTableNames, tableDisplayName } from '@/utils/tableName';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
 
@@ -992,7 +993,14 @@ const TablesSection = () => {
   const tables = usePOSStore((s) => s.tables);
   const addTable = usePOSStore((s) => s.addTable);
   const deleteTable = usePOSStore((s) => s.deleteTable);
-  const [newNum, setNewNum] = useState('');
+  const [newTableName, setNewTableName] = useState('');
+  const submitTable = () => {
+    const name = newTableName.trim();
+    if (!name) return;
+    addTable(name);
+    setNewTableName('');
+    toast.success(`${tableDisplayName(name)} added`);
+  };
 
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
     free:    { label: 'Free',      color: 'text-green-400',  bg: 'bg-green-500/12 border-green-500/25' },
@@ -1006,16 +1014,16 @@ const TablesSection = () => {
         <h3 className="font-semibold text-foreground text-sm mb-3">Add Table</h3>
         <div className="flex gap-2 max-w-xs">
           <input
-            value={newNum}
-            onChange={(e) => setNewNum(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && Number(newNum) > 0) { addTable(Number(newNum)); setNewNum(''); toast.success(`Table ${newNum} added`); } }}
-            type="number"
-            placeholder="Table number"
-            data-testid="input-table-number"
+            value={newTableName}
+            onChange={(e) => setNewTableName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submitTable()}
+            type="text"
+            placeholder="Table name/number (e.g., VIP 1, Rooftop A, 9)"
+            data-testid="input-table-name"
             className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
           />
           <button
-            onClick={() => { if (Number(newNum) > 0) { addTable(Number(newNum)); toast.success(`Table ${newNum} added`); setNewNum(''); } }}
+            onClick={submitTable}
             data-testid="button-add-table"
             className="px-4 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-semibold flex items-center gap-1.5 hover:brightness-110 transition-all active:scale-95 h-11"
           >
@@ -1025,7 +1033,7 @@ const TablesSection = () => {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {tables.sort((a, b) => a.number - b.number).map((t) => {
+        {tables.slice().sort((a, b) => compareTableNames(a.number, b.number)).map((t) => {
           const cfg = statusConfig[t.status] || statusConfig.free;
           return (
             <div
@@ -1035,7 +1043,7 @@ const TablesSection = () => {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-bold text-foreground text-base">Table {t.number}</p>
+                  <p className="font-bold text-foreground text-base">{tableDisplayName(t.number)}</p>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                     {cfg.label}
@@ -1476,7 +1484,7 @@ const BillDesignSection = () => {
           cafePhone={cafePhone}
           cafePan={cafePan}
           billFooter={billFooter}
-          tableNumber={1}
+          tableNumber="1"
           items={sampleItems}
           subtotal={sampleSubtotal}
           discount={0}
@@ -1575,7 +1583,7 @@ const ReportsSection = () => {
             {periodPayments.slice().reverse().map((p) => (
               <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
                 <span className="text-xs font-mono text-muted-foreground w-10">#{p.billNumber}</span>
-                <span className="text-sm text-foreground flex-1">Table {p.tableNumber}</span>
+                <span className="text-sm text-foreground flex-1">{tableDisplayName(p.tableNumber)}</span>
                 <span className="text-xs text-muted-foreground">{format(p.createdAt, 'hh:mm a')}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium capitalize">{p.method}</span>
                 <span className="text-sm font-semibold text-foreground">Rs. {fmt(p.total)}</span>

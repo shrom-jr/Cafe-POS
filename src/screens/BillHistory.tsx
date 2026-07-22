@@ -9,6 +9,7 @@ import { Search, Printer, Receipt, X, Calendar } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { triggerPrint } from '@/utils/print';
 import type { Payment } from '@/types/pos';
+import { tableDisplayName } from '@/utils/tableName';
 
 type DateFilter = 'today' | 'yesterday' | 'custom';
 
@@ -161,7 +162,7 @@ const BillHistory = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-foreground text-sm">Table {p.tableNumber}</span>
+                      <span className="font-bold text-foreground text-sm">{tableDisplayName(p.tableNumber)}</span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${methodBadgeColor(p.method)}`}
                       >

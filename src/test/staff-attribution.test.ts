@@ -3,7 +3,7 @@ import { buildReceiptText } from '@/utils/buildReceiptText';
 
 const receiptBase = {
   cafeName: 'Test Cafe',
-  tableNumber: 1,
+  tableNumber: '1',
   billNumber: 1,
   createdAt: Date.now(),
   items: [{ name: 'Coffee', price: 100, quantity: 1 }],

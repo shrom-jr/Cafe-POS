@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Order, OrderItem } from '@/types/pos';
 import { fmt } from '@/utils/format';
+import { tableDisplayName } from '@/utils/tableName';
 import { SEND_DELAY, SUCCESS_DURATION, FLASH_DURATION, NOW_TICK_INTERVAL } from '@/utils/kitchenTimings';
 import { Minus, Plus, Trash2, ShoppingBag, Users, ArrowRightLeft } from 'lucide-react';
 import {
@@ -229,7 +230,7 @@ const OrderPanel = ({
       >
         <ShoppingBag size={16} style={{ color: 'rgba(59,130,246,0.65)' }} />
         <h3 className="font-bold text-sm flex-1 text-white/80">
-          {order ? `Table ${order.tableNumber}` : 'Order'}
+          {order ? tableDisplayName(order.tableNumber) : 'Order'}
         </h3>
         {order && (
           <span

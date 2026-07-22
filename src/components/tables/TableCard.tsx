@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CafeTable } from '@/types/pos';
+import { tableDisplayName } from '@/utils/tableName';
 
 const DARK_SURFACE = 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)';
 const HOVER_BORDER = 'rgba(59,130,246,0.38)';
@@ -131,7 +132,7 @@ const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
         className="text-5xl font-black tracking-tight leading-none"
         style={{ color: cfg.numberColor, textShadow: cfg.numberShadow }}
       >
-        {table.number}
+        {tableDisplayName(table.number)}
       </span>
 
       {/* Status badge */}

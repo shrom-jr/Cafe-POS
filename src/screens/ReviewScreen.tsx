@@ -8,6 +8,7 @@ import { useTables } from '@/hooks/useTables';
 import { calcBill } from '@/utils/calcBill';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { getStaffName } from '@/utils/staffName';
+import { tableDisplayName } from '@/utils/tableName';
 import { playSuccess } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -364,7 +365,7 @@ const ReviewScreen = () => {
       >
         <div className={`text-center border-b border-dashed border-border/60 ${compact ? 'pb-1' : 'pb-1'}`}>
           <p className={`font-black text-foreground ${compact ? 'text-xs' : 'text-sm'}`}>{settings.cafeName}</p>
-          <p className="text-xs text-muted-foreground font-mono">#{billNum} · Table {tableNumber}</p>
+          <p className="text-xs text-muted-foreground font-mono">#{billNum} · {tableDisplayName(tableNumber)}</p>
         </div>
         <div className={compact ? 'space-y-0.5' : 'space-y-1'}>
           {displayItems.map((item) => (
@@ -1033,7 +1034,7 @@ const ReviewScreen = () => {
           <div>
             <p className="font-black text-white text-sm leading-tight">Review Order</p>
             <p className="text-[11px] leading-tight" style={{ color: 'rgba(255,255,255,0.38)' }}>
-              Table {table.number}
+              {tableDisplayName(table.number)}
             </p>
           </div>
         </div>

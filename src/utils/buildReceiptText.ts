@@ -89,7 +89,7 @@ export interface ReceiptData {
   cafeAddress?: string;
   cafePan?: string;
   billFooter?: string;
-  tableNumber: number;
+  tableNumber: string;
   billNumber: number;
   createdAt: number;
   items: Array<{ name: string; price: number; quantity: number }>;

@@ -17,7 +17,7 @@ interface POSState {
   payments: Payment[];
   settings: Settings;
 
-  addTable: (number: number) => void;
+  addTable: (number: string) => void;
   updateTable: (id: string, updates: Partial<CafeTable>) => void;
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
@@ -35,7 +35,7 @@ interface POSState {
   deleteMenuItem: (id: string) => void;
 
   getActiveOrder: (tableId: string) => Order | undefined;
-  createOrder: (tableId: string, tableNumber: number, takenBy?: StaffAttribution) => Order;
+  createOrder: (tableId: string, tableNumber: string, takenBy?: StaffAttribution) => Order;
   addItemToOrder: (orderId: string, item: MenuItem) => void;
   updateItemQuantity: (orderId: string, menuItemId: string, delta: number) => void;
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
@@ -101,8 +101,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
   stockMovements: db.getStockMovements(),
 
   addTable: (number) => {
+    const name = number.trim();
+    if (!name) return;
     set((state) => {
-      const tables = [...state.tables, { id: crypto.randomUUID(), number, status: 'free' as const }];
+      const tables = [...state.tables, { id: crypto.randomUUID(), number: name, status: 'free' as const }];
       db.saveTables(tables);
       return { tables };
     });

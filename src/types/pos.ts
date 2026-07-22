@@ -1,6 +1,7 @@
 export interface CafeTable {
   id: string;
-  number: number;
+  /** Raw table name entered by the user; numeric names are stored as strings. */
+  number: string;
   status: 'free' | 'occupied' | 'billing';
   orderId?: string;
   orderStartTime?: number;
@@ -68,7 +69,7 @@ export interface StaffAttribution {
 export interface Order {
   id: string;
   tableId: string;
-  tableNumber: number;
+  tableNumber: string;
   items: OrderItem[];
   status: 'active' | 'billed' | 'paid';
   kitchenStatus?: 'draft' | 'placed';
@@ -82,7 +83,7 @@ export interface Order {
 export interface Payment {
   id: string;
   orderId: string;
-  tableNumber: number;
+  tableNumber: string;
   items: OrderItem[];
   subtotal: number;
   discount: number;

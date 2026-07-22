@@ -8,7 +8,7 @@ interface ReceiptPreviewProps {
   cafePhone?: string;
   cafePan?: string;
   billFooter?: string;
-  tableNumber: number;
+  tableNumber: string;
   items: OrderItem[];
   subtotal: number;
   discount: number;

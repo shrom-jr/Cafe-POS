@@ -21,7 +21,7 @@ export type PrintJobType = 'KITCHEN_KOT' | 'PRE_BILL' | 'TAX_INVOICE';
 
 export interface KOTData {
   cafeName:    string;
-  tableNumber: number;
+  tableNumber: string;
   pax:         number;
   kotNumber:   number;
   timestamp:   number;
@@ -34,7 +34,7 @@ export interface PreBillData {
   cafeName:       string;
   cafeAddress?:   string;
   cafePan?:       string;
-  tableNumber:    number;
+  tableNumber:    string;
   timestamp:      number;
   items:          Array<{ name: string; price: number; quantity: number }>;
   subtotal:       number;
@@ -54,7 +54,7 @@ export interface TaxInvoiceData {
   cafeAddress?:   string;
   cafePan?:       string;
   billFooter?:    string;
-  tableNumber:    number;
+  tableNumber:    string;
   billNumber:     number;
   timestamp:      number;
   items:          Array<{ name: string; price: number; quantity: number }>;

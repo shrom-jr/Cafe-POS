@@ -12,6 +12,7 @@ import { Banknote, Smartphone, CheckCircle2, Home, X, Loader2, Printer } from 'l
 import { resolvePaymentLabel } from '@/utils/format';
 import { OrderItem } from '@/types/pos';
 import { playSuccess } from '@/utils/sounds';
+import { tableDisplayName } from '@/utils/tableName';
 
 const PaymentScreen = () => {
   const { tableId } = useParams<{ tableId: string }>();
@@ -42,7 +43,7 @@ const PaymentScreen = () => {
   const table = tables.find((t) => t.id === tableId);
   const order = tableId ? getActiveOrder(tableId) : undefined;
 
-  const orderSnapshot = useRef<{ id: string; items: OrderItem[]; tableNumber: number; takenBy?: { id: string; name: string; role: string } } | null>(null);
+  const orderSnapshot = useRef<{ id: string; items: OrderItem[]; tableNumber: string; takenBy?: { id: string; name: string; role: string } } | null>(null);
   useEffect(() => {
     if (order && !orderSnapshot.current) {
       orderSnapshot.current = { id: order.id, items: [...order.items], tableNumber: order.tableNumber, takenBy: order.takenBy };
@@ -237,7 +238,7 @@ const PaymentScreen = () => {
               <div className="text-center pb-1 border-b border-dashed border-border/60">
                 <p className="font-black text-sm text-foreground">{settings.cafeName}</p>
                 <p className="text-xs text-muted-foreground font-mono">
-                  #{billNum} · Table {snap.tableNumber}
+                  #{billNum} · {tableDisplayName(snap.tableNumber)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -293,7 +294,7 @@ const PaymentScreen = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar title={`Payment — Table ${snap.tableNumber}`} showBack onBack={() => navigate(`/review/${tableId}`)} />
+      <TopBar title={`Payment — ${tableDisplayName(snap.tableNumber)}`} showBack onBack={() => navigate(`/review/${tableId}`)} />
 
       <div className="max-w-lg mx-auto p-4 space-y-4 pb-8">
 
@@ -303,7 +304,7 @@ const PaymentScreen = () => {
           <p className="text-6xl font-black text-foreground mt-1 tracking-tight text-center tabular-nums">
             Rs. {finalTotal}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1 font-mono text-center">Table {snap.tableNumber}</p>
+          <p className="text-xs text-muted-foreground/60 mt-1 font-mono text-center">{tableDisplayName(snap.tableNumber)}</p>
 
           <div className="mt-4 pt-3 border-t border-border/40 space-y-1.5">
             <div className="flex justify-between text-sm">

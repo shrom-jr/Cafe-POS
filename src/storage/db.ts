@@ -30,7 +30,7 @@ function set(key: string, val: unknown) {
 
 const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
   id: `table-${i + 1}`,
-  number: i + 1,
+  number: String(i + 1),
   status: 'free' as const,
 }));
 
@@ -513,7 +513,12 @@ migrateIngredientUnits();
 const MENU_VERSION = 'bamboo-v5';
 
 export const db = {
-  getTables: (): CafeTable[] => get(KEYS.tables, defaultTables),
+  getTables: (): CafeTable[] =>
+    get<CafeTable[]>(KEYS.tables, defaultTables).map((table) => ({
+      ...table,
+      // Migrate tables created before custom names were supported.
+      number: String(table.number),
+    })),
   saveTables: (t: CafeTable[]) => set(KEYS.tables, t),
 
   getPillars: (): string[] => get(KEYS.pillars, defaultPillars),
@@ -525,10 +530,16 @@ export const db = {
   getMenuItems: (): MenuItem[] => get(KEYS.menuItems, defaultMenuItems),
   saveMenuItems: (m: MenuItem[]) => set(KEYS.menuItems, m),
 
-  getOrders: (): Order[] => get(KEYS.orders, []),
+  getOrders: (): Order[] => get<Order[]>(KEYS.orders, []).map((order) => ({
+    ...order,
+    tableNumber: String(order.tableNumber),
+  })),
   saveOrders: (o: Order[]) => set(KEYS.orders, o),
 
-  getPayments: (): Payment[] => get(KEYS.payments, []),
+  getPayments: (): Payment[] => get<Payment[]>(KEYS.payments, []).map((payment) => ({
+    ...payment,
+    tableNumber: String(payment.tableNumber),
+  })),
   savePayments: (p: Payment[]) => set(KEYS.payments, p),
 
   getIngredients: (): Ingredient[] => get(KEYS.ingredients, []),

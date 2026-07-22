@@ -4,6 +4,7 @@ import { numberToWords } from '@/utils/printer';
 import { buildReceiptText } from '@/utils/buildReceiptText';
 import { setReceiptText } from '@/utils/print';
 import { useStaffStore } from '@/store/useStaffStore';
+import { tableDisplayName } from '@/utils/tableName';
 
 interface ThermalReceiptLayoutProps {
   cafeName: string;
@@ -11,7 +12,7 @@ interface ThermalReceiptLayoutProps {
   cafeAddress?: string;
   cafePan?: string;
   billFooter?: string;
-  tableNumber: number;
+  tableNumber: string;
   billNumber: number;
   createdAt: number;
   items: Array<{ name: string; price: number; quantity: number }>;
@@ -144,7 +145,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Payment:</strong> {method}</div>
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
-        <div><strong>Table:</strong> {tableNumber}</div>
+        <div><strong>Table:</strong> {tableDisplayName(tableNumber)}</div>
         <div><strong>Served By:</strong> {takenBy?.name || takenBy?.fullName || processedBy?.name || ''}</div>
       </div>
 

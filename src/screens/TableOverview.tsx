@@ -6,6 +6,7 @@ import { useOrders } from '@/hooks/useOrders';
 import TableCard from '@/components/tables/TableCard';
 import AppLayout from '@/components/ui/AppLayout';
 import { CafeTable } from '@/types/pos';
+import { compareTableNames } from '@/utils/tableName';
 
 function useClock() {
   const [time, setTime] = useState(() => new Date());
@@ -89,7 +90,7 @@ const TableOverview = () => {
           >
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
               {tables
-                .sort((a, b) => a.number - b.number)
+                .slice().sort((a, b) => compareTableNames(a.number, b.number))
                 .map((table) => {
                   const data = tableOrderData[table.id] || { itemCount: 0 };
                   return (

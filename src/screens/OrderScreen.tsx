@@ -14,6 +14,7 @@ import { playClick } from '@/utils/sounds';
 import { firePrintJob } from '@/utils/printEngine';
 import { getStaffName } from '@/utils/staffName';
 import { filterMenuItems } from '@/utils/menuFilter';
+import { compareTableNames, tableDisplayName } from '@/utils/tableName';
 import { toast } from 'sonner';
 
 const formatTime = (ts: number) =>
@@ -285,7 +286,7 @@ const OrderScreen = () => {
   };
 
   const freeTables = useMemo(
-    () => tables.filter((t) => t.status === 'free').sort((a, b) => a.number - b.number),
+    () => tables.filter((t) => t.status === 'free').slice().sort((a, b) => compareTableNames(a.number, b.number)),
     [tables]
   );
 
@@ -325,7 +326,7 @@ const OrderScreen = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: 'linear-gradient(180deg, #0d1525 0%, #060e1a 100%)' }}>
-      <TopBar title={`Table ${table.number}`} showBack onBack={() => navigate('/')} />
+      <TopBar title={tableDisplayName(table.number)} showBack onBack={() => navigate('/')} />
 
       {/* Move success banner */}
       {moveSuccessBanner && (
@@ -863,7 +864,7 @@ const OrderScreen = () => {
               <div>
                 <h2 className="font-black text-white/90 text-base">Move Table</h2>
                 <p className="text-xs text-white/40 mt-0.5">
-                  Move order from <span className="text-blue-300 font-semibold">Table {table.number}</span> to:
+                  Move order from <span className="text-blue-300 font-semibold">{tableDisplayName(table.number)}</span> to:
                 </p>
               </div>
               <button
@@ -893,7 +894,7 @@ const OrderScreen = () => {
                       color: 'rgba(255,255,255,0.85)',
                     }}
                   >
-                    {t.number}
+                    {tableDisplayName(t.number)}
                     <span className="text-[9px] font-semibold mt-1" style={{ color: 'rgba(52,211,153,0.7)' }}>
                       Available
                     </span>
@@ -932,9 +933,9 @@ const OrderScreen = () => {
               <h2 className="font-black text-white/90 text-base">Confirm Move</h2>
               <p className="text-sm text-white/50 mt-1.5 leading-relaxed">
                 Move order from{' '}
-                <span className="text-white/80 font-bold">Table {table.number}</span>
+                <span className="text-white/80 font-bold">{tableDisplayName(table.number)}</span>
                 {' '}to{' '}
-                <span className="text-blue-300 font-bold">Table {moveTargetTable.number}</span>?
+                <span className="text-blue-300 font-bold">{tableDisplayName(moveTargetTable.number)}</span>?
               </p>
               <p className="text-xs text-white/35 mt-1.5 leading-relaxed">
                 All items, kitchen status, and payments will remain unchanged.
