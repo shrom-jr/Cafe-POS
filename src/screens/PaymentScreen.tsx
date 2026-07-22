@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { firePrintJob, type PrintJob } from '@/utils/printEngine';
+import { getStaffName } from '@/utils/staffName';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -117,7 +118,7 @@ const PaymentScreen = () => {
     setPaidMethod(resolvePaymentLabel(method, settings));
 
     const processedBy = currentUser
-      ? { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+      ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role }
       : undefined;
 
     // Cross-fallbacks: whoever processes payment covers a missing server, and vice-versa.
@@ -177,6 +178,7 @@ const PaymentScreen = () => {
       },
     };
     lastPrintJobRef.current = printJob;
+    console.log('PRINT STAFF DATA:', { takenBy: resolvedTakenBy, processedBy: resolvedProcessedBy, currentUser });
     firePrintJob(printJob);
   };
 

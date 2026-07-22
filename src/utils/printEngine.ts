@@ -68,8 +68,8 @@ export interface TaxInvoiceData {
   serverName?:    string;
   cashierName?:   string;
   /** Full attribution objects — preferred over plain strings */
-  takenBy?:       { id?: string; name: string; role?: string };
-  processedBy?:   { id?: string; name: string; role?: string };
+  takenBy?:       { id?: string; name?: string; fullName?: string; role?: string };
+  processedBy?:   { id?: string; name?: string; fullName?: string; role?: string };
 }
 
 export type PrintJob =
@@ -244,8 +244,8 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   push(center('TAX INVOICE'));
   push(hr('='));
-  const servedBy = data.takenBy?.name     || data.serverName   || data.processedBy?.name || data.cashierName || 'Staff';
-  const cashier  = data.processedBy?.name || data.cashierName  || data.takenBy?.name    || data.serverName   || 'Cashier';
+  const servedBy = data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || data.processedBy?.fullName || data.processedBy?.name || data.cashierName || 'Staff';
+  const cashier  = data.processedBy?.fullName || data.processedBy?.name || data.cashierName || data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || 'Cashier';
   push(`Payment:   ${data.method}`);
   push(`Date:      ${dateStr}`);
   push(`Bill No:   #${data.billNumber}`);

@@ -52,7 +52,10 @@ export interface TablePayment {
 
 export interface StaffAttribution {
   id: string;
+  /** Normalised display name — always set via getStaffName() at write time */
   name: string;
+  /** Forward-compat: some records may store the field as fullName */
+  fullName?: string;
   role: string;
 }
 

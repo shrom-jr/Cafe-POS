@@ -12,6 +12,7 @@ import OrderPanel from '@/components/orders/OrderPanel';
 import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft } from 'lucide-react';
 import { playClick } from '@/utils/sounds';
 import { firePrintJob } from '@/utils/printEngine';
+import { getStaffName } from '@/utils/staffName';
 import { toast } from 'sonner';
 
 const formatTime = (ts: number) =>
@@ -163,7 +164,7 @@ const OrderScreen = () => {
   };
 
   const handleAddItem = (item: typeof menuItems[0]) => {
-    const takenBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.role } : undefined;
+    const takenBy = currentUser ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role } : undefined;
     const currentOrder = order || createOrder(tableId, table.number, takenBy);
     addItemToOrder(currentOrder.id, item);
     playClick();
@@ -312,7 +313,7 @@ const OrderScreen = () => {
     if (!tablePayments.length) return;
 
     const lastPayment = tablePayments[0];
-    const reorderTakenBy = currentUser ? { id: currentUser.id, name: currentUser.name, role: currentUser.role } : undefined;
+    const reorderTakenBy = currentUser ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role } : undefined;
     const currentOrder = order || createOrder(tableId, table.number, reorderTakenBy);
 
     lastPayment.items.forEach((orderItem) => {

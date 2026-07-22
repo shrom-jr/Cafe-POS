@@ -25,8 +25,8 @@ interface ThermalReceiptLayoutProps {
   serverName?: string;
   cashierName?: string;
   /** Full attribution objects — preferred over plain strings */
-  takenBy?:     { id?: string; name: string; role?: string };
-  processedBy?: { id?: string; name: string; role?: string };
+  takenBy?:     { id?: string; name?: string; fullName?: string; role?: string };
+  processedBy?: { id?: string; name?: string; fullName?: string; role?: string };
 }
 
 const HR = () => (
@@ -142,7 +142,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        <div><strong>Served By:</strong> {takenBy?.name || serverName || processedBy?.name || cashierName || 'Staff'}</div>
+        <div><strong>Served By:</strong> {takenBy?.fullName || takenBy?.name || serverName || processedBy?.fullName || processedBy?.name || cashierName || 'Staff'}</div>
       </div>
 
       <HR />
@@ -224,7 +224,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {processedBy?.name || cashierName || takenBy?.name || serverName || 'Cashier'}</span>
+        <span>Cashier: {processedBy?.fullName || processedBy?.name || cashierName || takenBy?.fullName || takenBy?.name || serverName || 'Cashier'}</span>
         <span>Time: {timeStr}</span>
       </div>
 
