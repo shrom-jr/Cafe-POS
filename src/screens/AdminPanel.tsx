@@ -12,10 +12,17 @@ import {
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
-import { compareTableNames, tableDisplayName } from '@/utils/tableName';
+import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
 
@@ -992,14 +999,67 @@ const MenuSection = () => {
 const TablesSection = () => {
   const tables = usePOSStore((s) => s.tables);
   const addTable = usePOSStore((s) => s.addTable);
+  const updateTable = usePOSStore((s) => s.updateTable);
   const deleteTable = usePOSStore((s) => s.deleteTable);
   const [newTableName, setNewTableName] = useState('');
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
+  const [editTableName, setEditTableName] = useState('');
+  const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
+  const editingTable = tables.find((table) => table.id === editingTableId);
+  const deletingTable = tables.find((table) => table.id === deletingTableId);
+  const hasDuplicateName = (name: string, excludedId?: string) =>
+    tables.some((table) => table.id !== excludedId && tableNameKey(table.number) === tableNameKey(name));
+
   const submitTable = () => {
     const name = newTableName.trim();
     if (!name) return;
+    if (hasDuplicateName(name)) {
+      toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
+      return;
+    }
     addTable(name);
     setNewTableName('');
     toast.success(`${tableDisplayName(name)} added`);
+  };
+
+  const openEdit = (table: typeof tables[number]) => {
+    if (table.status !== 'free') {
+      toast.error('Cannot edit or delete a table with an active order.');
+      return;
+    }
+    setEditingTableId(table.id);
+    setEditTableName(table.number);
+  };
+
+  const saveEdit = () => {
+    if (!editingTable) return;
+    const name = editTableName.trim();
+    if (!name) {
+      toast.error('Table name cannot be empty.');
+      return;
+    }
+    if (hasDuplicateName(name, editingTable.id)) {
+      toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
+      return;
+    }
+    updateTable(editingTable.id, { number: name });
+    setEditingTableId(null);
+    toast.success(`Table renamed to ${tableDisplayName(name)}`);
+  };
+
+  const requestDelete = (table: typeof tables[number]) => {
+    if (table.status !== 'free') {
+      toast.error('Cannot edit or delete a table with an active order.');
+      return;
+    }
+    setDeletingTableId(table.id);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingTable) return;
+    deleteTable(deletingTable.id);
+    toast.success(`${tableDisplayName(deletingTable.number)} removed`);
+    setDeletingTableId(null);
   };
 
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -1041,21 +1101,34 @@ const TablesSection = () => {
               className="bg-card rounded-2xl border border-border p-4 flex flex-col gap-3 hover:border-white/20 hover:shadow-lg transition-all"
               data-testid={`table-row-${t.id}`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-bold text-foreground text-base">{tableDisplayName(t.number)}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-foreground text-base" title={tableDisplayName(t.number)}>{tableDisplayName(t.number)}</p>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                     {cfg.label}
                   </span>
                 </div>
-                <button
-                  onClick={() => { deleteTable(t.id); toast.success(`Table ${t.number} removed`); }}
-                  disabled={t.status !== 'free'}
-                  className="p-2 rounded-xl text-danger/50 hover:text-danger hover:bg-danger/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => openEdit(t)}
+                    disabled={t.status !== 'free'}
+                    title={t.status !== 'free' ? 'Cannot edit or delete a table with an active order.' : 'Edit table'}
+                    aria-label={`Edit ${tableDisplayName(t.number)}`}
+                    className="p-2 rounded-xl text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                  <button
+                    onClick={() => requestDelete(t)}
+                    disabled={t.status !== 'free'}
+                    title={t.status !== 'free' ? 'Cannot edit or delete a table with an active order.' : 'Delete table'}
+                    aria-label={`Delete ${tableDisplayName(t.number)}`}
+                    className="p-2 rounded-xl text-danger/50 hover:text-danger hover:bg-danger/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
               {t.pax && t.pax > 0 && t.status !== 'free' && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1074,6 +1147,40 @@ const TablesSection = () => {
           </div>
         )}
       </div>
+      <Dialog open={Boolean(editingTable)} onOpenChange={(open) => !open && setEditingTableId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Table</DialogTitle>
+            <DialogDescription>Choose a unique name for this table.</DialogDescription>
+          </DialogHeader>
+          <input
+            autoFocus
+            value={editTableName}
+            onChange={(event) => setEditTableName(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && saveEdit()}
+            placeholder="Table name/number"
+            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          <DialogFooter>
+            <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
+            <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={Boolean(deletingTable)} onOpenChange={(open) => !open && setDeletingTableId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Table?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete '{deletingTable ? tableDisplayName(deletingTable.number) : ''}'? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-danger text-danger-foreground hover:bg-danger/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

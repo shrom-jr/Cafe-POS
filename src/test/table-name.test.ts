@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareTableNames, tableDisplayName } from '@/utils/tableName';
+import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
 describe('table naming', () => {
   it('formats numeric-only names with one Table prefix', () => {
@@ -11,6 +11,12 @@ describe('table naming', () => {
   it('preserves custom table names', () => {
     expect(tableDisplayName('VIP Lounge')).toBe('VIP Lounge');
     expect(tableDisplayName('Rooftop A')).toBe('Rooftop A');
+  });
+
+  it('uses display names for case-insensitive uniqueness checks', () => {
+    expect(tableNameKey('1')).toBe(tableNameKey('Table 1'));
+    expect(tableNameKey('VIP')).toBe(tableNameKey('vip'));
+    expect(tableNameKey('VIP')).not.toBe(tableNameKey('VIP Corner'));
   });
 
   it('sorts numeric names before custom names without mutating the source', () => {

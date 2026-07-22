@@ -8,6 +8,10 @@ export const tableDisplayName = (value: TableNameValue): string => {
   return /^\d+$/.test(name) ? `Table ${name}` : name;
 };
 
+/** Normalized display label used for case-insensitive uniqueness checks. */
+export const tableNameKey = (value: TableNameValue): string =>
+  tableDisplayName(value).trim().toLocaleLowerCase();
+
 /** Sorts numeric table names numerically, then custom names alphabetically. */
 export const compareTableNames = (a: TableNameValue, b: TableNameValue): number => {
   const left = String(a).trim();

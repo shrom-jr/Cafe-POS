@@ -5,6 +5,7 @@ import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import { getStaffName } from '@/utils/staffName';
+import { tableNameKey } from '@/utils/tableName';
 
 db.seed();
 
@@ -104,6 +105,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const name = number.trim();
     if (!name) return;
     set((state) => {
+      if (state.tables.some((table) => tableNameKey(table.number) === tableNameKey(name))) return state;
       const tables = [...state.tables, { id: crypto.randomUUID(), number: name, status: 'free' as const }];
       db.saveTables(tables);
       return { tables };
@@ -112,6 +114,15 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   updateTable: (id, updates) => {
     set((state) => {
+      const current = state.tables.find((table) => table.id === id);
+      if (!current || current.status !== 'free') return state;
+      if (updates.number !== undefined) {
+        const name = updates.number.trim();
+        if (!name || state.tables.some((table) =>
+          table.id !== id && tableNameKey(table.number) === tableNameKey(name)
+        )) return state;
+        updates = { ...updates, number: name };
+      }
       const tables = state.tables.map((t) => (t.id === id ? { ...t, ...updates } : t));
       db.saveTables(tables);
       return { tables };
@@ -120,6 +131,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   deleteTable: (id) => {
     set((state) => {
+      const table = state.tables.find((candidate) => candidate.id === id);
+      if (!table || table.status !== 'free') return state;
       const tables = state.tables.filter((t) => t.id !== id);
       db.saveTables(tables);
       return { tables };
