@@ -13,6 +13,7 @@
 
 import { format } from 'date-fns';
 import { numberToWords } from './printer';
+import { useStaffStore } from '@/store/useStaffStore';
 
 // ── Typed job interfaces ──────────────────────────────────────────────────────
 
@@ -244,8 +245,9 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
   push(hr('='));
   push(center('TAX INVOICE'));
   push(hr('='));
-  const servedBy = data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || data.processedBy?.fullName || data.processedBy?.name || data.cashierName || 'Staff';
-  const cashier  = data.processedBy?.fullName || data.processedBy?.name || data.cashierName || data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || 'Cashier';
+  const liveStaff = useStaffStore.getState().currentUser?.name || 'Cashier Desk';
+  const servedBy = data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || data.processedBy?.fullName || data.processedBy?.name || data.cashierName || liveStaff;
+  const cashier  = data.processedBy?.fullName || data.processedBy?.name || data.cashierName || data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || liveStaff;
   push(`Payment:   ${data.method}`);
   push(`Date:      ${dateStr}`);
   push(`Bill No:   #${data.billNumber}`);

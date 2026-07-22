@@ -3,6 +3,8 @@ import { db } from '@/storage/db';
 import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StaffAttribution, StockMovement, TablePayment } from '@/types/pos';
 import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
+import { useStaffStore } from '@/store/useStaffStore';
+import { getStaffName } from '@/utils/staffName';
 
 db.seed();
 
@@ -226,6 +228,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const existing = get().getActiveOrder(tableId);
     if (existing) return existing;
 
+    // Auto-fill takenBy from the active staff session when caller didn't supply one.
+    let resolvedTakenBy: StaffAttribution | undefined = takenBy;
+    if (!resolvedTakenBy) {
+      const { currentUser, users } = useStaffStore.getState();
+      const activeUser = currentUser ?? users.find((u) => u.active);
+      if (activeUser) {
+        resolvedTakenBy = { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role };
+      }
+    }
+
     const order: Order = {
       id: crypto.randomUUID(),
       tableId,
@@ -233,7 +245,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       items: [],
       status: 'active',
       createdAt: Date.now(),
-      ...(takenBy ? { takenBy } : {}),
+      ...(resolvedTakenBy ? { takenBy: resolvedTakenBy } : {}),
     };
 
     set((state) => {
@@ -468,8 +480,21 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   addPayment: (payment) => {
+    // Auto-fill processedBy (and takenBy when the order missed it) from active staff.
+    const { currentUser, users } = useStaffStore.getState();
+    const activeUser = currentUser ?? users.find((u) => u.active);
+    const autoAttrib: StaffAttribution | undefined = activeUser
+      ? { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role }
+      : undefined;
+
+    const enriched = {
+      ...payment,
+      processedBy: payment.processedBy ?? autoAttrib,
+      takenBy:     payment.takenBy     ?? autoAttrib,
+    };
+
     set((state) => {
-      const payments = [...state.payments, { ...payment, id: crypto.randomUUID() }];
+      const payments = [...state.payments, { ...enriched, id: crypto.randomUUID() }];
       db.savePayments(payments);
       return { payments };
     });

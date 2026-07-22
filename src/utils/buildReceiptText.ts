@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { useStaffStore } from '@/store/useStaffStore';
 import { numberToWords } from './printer';
 
 // Total line width
@@ -129,8 +130,9 @@ export function buildReceiptText(data: ReceiptData): string {
   push(`Date: ${dateStr}`);
   push(`Bill No: #${data.billNumber}`);
   push(`Table: ${data.tableNumber}`);
-  const servedBy = data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || data.processedBy?.fullName || data.processedBy?.name || data.cashierName || 'Staff';
-  const cashier  = data.processedBy?.fullName || data.processedBy?.name || data.cashierName || data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || 'Cashier';
+  const liveStaff = useStaffStore.getState().currentUser?.name || 'Cashier Desk';
+  const servedBy = data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || data.processedBy?.fullName || data.processedBy?.name || data.cashierName || liveStaff;
+  const cashier  = data.processedBy?.fullName || data.processedBy?.name || data.cashierName || data.takenBy?.fullName     || data.takenBy?.name     || data.serverName  || liveStaff;
   push(`Served By: ${servedBy}`);
   push(hr('-'));
 

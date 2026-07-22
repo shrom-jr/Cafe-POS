@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { numberToWords } from '@/utils/printer';
 import { buildReceiptText } from '@/utils/buildReceiptText';
 import { setReceiptText } from '@/utils/print';
+import { useStaffStore } from '@/store/useStaffStore';
 
 interface ThermalReceiptLayoutProps {
   cafeName: string;
@@ -65,6 +66,8 @@ const ThermalReceiptLayout = ({
   const taxableAmount = subtotal - discountAmount;
   const dateStr = format(createdAt, 'dd/MM/yyyy');
   const timeStr = format(createdAt, 'hh:mm aa');
+  // Live staff fallback — reactive, used when attribution objects are absent.
+  const liveStaff = useStaffStore((s) => s.currentUser?.name) || 'Cashier Desk';
 
   // Register plain-text receipt so triggerPrint() can use it instead of HTML
   useEffect(() => {
@@ -142,7 +145,7 @@ const ThermalReceiptLayout = ({
         <div><strong>Date:</strong> {dateStr}</div>
         <div><strong>Bill No:</strong> #{billNumber}</div>
         <div><strong>Table:</strong> {tableNumber}</div>
-        <div><strong>Served By:</strong> {takenBy?.fullName || takenBy?.name || serverName || processedBy?.fullName || processedBy?.name || cashierName || 'Staff'}</div>
+        <div><strong>Served By:</strong> {takenBy?.fullName || takenBy?.name || serverName || processedBy?.fullName || processedBy?.name || cashierName || liveStaff}</div>
       </div>
 
       <HR />
@@ -224,7 +227,7 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700 }}>
-        <span>Cashier: {processedBy?.fullName || processedBy?.name || cashierName || takenBy?.fullName || takenBy?.name || serverName || 'Cashier'}</span>
+        <span>Cashier: {processedBy?.fullName || processedBy?.name || cashierName || takenBy?.fullName || takenBy?.name || serverName || liveStaff}</span>
         <span>Time: {timeStr}</span>
       </div>
 
