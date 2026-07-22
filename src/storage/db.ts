@@ -31,6 +31,7 @@ function set(key: string, val: unknown) {
 const defaultTables: CafeTable[] = Array.from({ length: 8 }, (_, i) => ({
   id: `table-${i + 1}`,
   number: String(i + 1),
+  section: 'Ground Floor',
   status: 'free' as const,
 }));
 
@@ -518,6 +519,7 @@ export const db = {
       ...table,
       // Migrate tables created before custom names were supported.
       number: String(table.number),
+      section: table.section?.trim() || 'Ground Floor',
     })),
   saveTables: (t: CafeTable[]) => set(KEYS.tables, t),
 

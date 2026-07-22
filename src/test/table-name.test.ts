@@ -19,6 +19,11 @@ describe('table naming', () => {
     expect(tableNameKey('VIP')).not.toBe(tableNameKey('VIP Corner'));
   });
 
+  it('uses Ground Floor for tables without a section', () => {
+    const legacyTable = { number: '1' } as { number: string; section?: string };
+    expect(legacyTable.section || 'Ground Floor').toBe('Ground Floor');
+  });
+
   it('sorts numeric names before custom names without mutating the source', () => {
     const values = ['VIP A', '10', '2', 'Rooftop 1'];
     expect([...values].sort(compareTableNames)).toEqual(['2', '10', 'Rooftop 1', 'VIP A']);

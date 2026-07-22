@@ -2,6 +2,8 @@ export interface CafeTable {
   id: string;
   /** Raw table name entered by the user; numeric names are stored as strings. */
   number: string;
+  /** Area or floor used to organize tables in the overview. */
+  section?: string;
   status: 'free' | 'occupied' | 'billing';
   orderId?: string;
   orderStartTime?: number;

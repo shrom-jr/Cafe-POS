@@ -24,6 +24,7 @@ const TableOverview = () => {
   const navigate = useNavigate();
   const clock = useClock();
   const [panelHovered, setPanelHovered] = useState(false);
+  const [selectedSection, setSelectedSection] = useState('All');
 
   const tableOrderData = useMemo(() => {
     const map: Record<string, { itemCount: number }> = {};
@@ -40,6 +41,19 @@ const TableOverview = () => {
     available: tables.filter((t) => t.status === 'free').length,
     active:    tables.filter((t) => t.status === 'occupied').length,
   }), [tables]);
+  const sections = useMemo(() => {
+    const standard = ['Ground Floor', 'Cabins', '1st Floor'];
+    const custom = tables
+      .map((table) => table.section?.trim() || 'Ground Floor')
+      .filter((section) => !standard.includes(section));
+    return [...standard, ...Array.from(new Set(custom))];
+  }, [tables]);
+  const visibleTables = useMemo(() => (
+    tables
+      .filter((table) => selectedSection === 'All' || (table.section?.trim() || 'Ground Floor') === selectedSection)
+      .slice()
+      .sort((a, b) => compareTableNames(a.number, b.number))
+  ), [tables, selectedSection]);
 
   const handleTableClick = (table: CafeTable) => {
     navigate(`/order/${table.id}`);
@@ -77,6 +91,30 @@ const TableOverview = () => {
             <p className="text-sm mt-1">Go to Admin → Tables to add tables.</p>
           </div>
         ) : (
+          <div>
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Table sections">
+              {['All', ...sections].map((section) => {
+                const count = section === 'All'
+                  ? tables.length
+                  : tables.filter((table) => (table.section?.trim() || 'Ground Floor') === section).length;
+                const active = selectedSection === section;
+                return (
+                  <button
+                    key={section}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setSelectedSection(section)}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      active
+                        ? 'border-accent/50 bg-accent/15 text-accent'
+                        : 'border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white/75'
+                    }`}
+                  >
+                    {section} <span className="ml-1 opacity-70">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
           <div
             onMouseEnter={() => setPanelHovered(true)}
             onMouseLeave={() => setPanelHovered(false)}
@@ -89,8 +127,7 @@ const TableOverview = () => {
             }}
           >
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-              {tables
-                .slice().sort((a, b) => compareTableNames(a.number, b.number))
+              {visibleTables
                 .map((table) => {
                   const data = tableOrderData[table.id] || { itemCount: 0 };
                   return (
@@ -98,11 +135,13 @@ const TableOverview = () => {
                       key={table.id}
                       table={table}
                       itemCount={data.itemCount}
+                      showSection={selectedSection === 'All'}
                       onClick={() => handleTableClick(table)}
                     />
                   );
                 })}
             </div>
+          </div>
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ interface POSState {
   payments: Payment[];
   settings: Settings;
 
-  addTable: (number: string) => void;
+  addTable: (number: string, section?: string) => void;
   updateTable: (id: string, updates: Partial<CafeTable>) => void;
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
@@ -101,12 +101,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
   recipes: db.getRecipes(),
   stockMovements: db.getStockMovements(),
 
-  addTable: (number) => {
+  addTable: (number, section = 'Ground Floor') => {
     const name = number.trim();
     if (!name) return;
+    const area = section.trim() || 'Ground Floor';
     set((state) => {
       if (state.tables.some((table) => tableNameKey(table.number) === tableNameKey(name))) return state;
-      const tables = [...state.tables, { id: crypto.randomUUID(), number: name, status: 'free' as const }];
+      const tables = [...state.tables, { id: crypto.randomUUID(), number: name, section: area, status: 'free' as const }];
       db.saveTables(tables);
       return { tables };
     });
@@ -122,6 +123,9 @@ export const usePOSStore = create<POSState>((set, get) => ({
           table.id !== id && tableNameKey(table.number) === tableNameKey(name)
         )) return state;
         updates = { ...updates, number: name };
+      }
+      if (updates.section !== undefined) {
+        updates = { ...updates, section: updates.section.trim() || 'Ground Floor' };
       }
       const tables = state.tables.map((t) => (t.id === id ? { ...t, ...updates } : t));
       db.saveTables(tables);

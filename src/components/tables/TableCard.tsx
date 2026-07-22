@@ -87,9 +87,10 @@ interface TableCardProps {
   table: CafeTable;
   itemCount?: number;
   onClick: () => void;
+  showSection?: boolean;
 }
 
-const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
+const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
   const cfg = statusConfig[table.status];
   const isActive = table.status !== 'free';
@@ -135,6 +136,11 @@ const TableCard = ({ table, itemCount = 0, onClick }: TableCardProps) => {
       >
         {tableDisplayName(table.number)}
       </span>
+      {showSection && (
+        <span className="mt-1 max-w-full truncate text-[10px] font-medium text-white/40" title={table.section || 'Ground Floor'}>
+          {table.section || 'Ground Floor'}
+        </span>
+      )}
 
       {/* Status badge */}
       <span

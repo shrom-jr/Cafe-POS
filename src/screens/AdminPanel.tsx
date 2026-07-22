@@ -24,6 +24,8 @@ import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
+const TABLE_SECTIONS = ['Ground Floor', 'Cabins', '1st Floor'];
+
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -1002,8 +1004,10 @@ const TablesSection = () => {
   const updateTable = usePOSStore((s) => s.updateTable);
   const deleteTable = usePOSStore((s) => s.deleteTable);
   const [newTableName, setNewTableName] = useState('');
+  const [newTableSection, setNewTableSection] = useState('Ground Floor');
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
   const [editTableName, setEditTableName] = useState('');
+  const [editTableSection, setEditTableSection] = useState('Ground Floor');
   const [deletingTableId, setDeletingTableId] = useState<string | null>(null);
   const editingTable = tables.find((table) => table.id === editingTableId);
   const deletingTable = tables.find((table) => table.id === deletingTableId);
@@ -1017,8 +1021,9 @@ const TablesSection = () => {
       toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
       return;
     }
-    addTable(name);
+    addTable(name, newTableSection);
     setNewTableName('');
+    setNewTableSection('Ground Floor');
     toast.success(`${tableDisplayName(name)} added`);
   };
 
@@ -1029,6 +1034,7 @@ const TablesSection = () => {
     }
     setEditingTableId(table.id);
     setEditTableName(table.number);
+    setEditTableSection(table.section || 'Ground Floor');
   };
 
   const saveEdit = () => {
@@ -1042,7 +1048,7 @@ const TablesSection = () => {
       toast.error(`A table named '${tableDisplayName(name)}' already exists.`);
       return;
     }
-    updateTable(editingTable.id, { number: name });
+    updateTable(editingTable.id, { number: name, section: editTableSection.trim() || 'Ground Floor' });
     setEditingTableId(null);
     toast.success(`Table renamed to ${tableDisplayName(name)}`);
   };
@@ -1072,7 +1078,7 @@ const TablesSection = () => {
     <div className="space-y-5">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h3 className="font-semibold text-foreground text-sm mb-3">Add Table</h3>
-        <div className="flex gap-2 max-w-xs">
+        <div className="flex flex-wrap gap-2 max-w-2xl">
           <input
             value={newTableName}
             onChange={(e) => setNewTableName(e.target.value)}
@@ -1082,6 +1088,17 @@ const TablesSection = () => {
             data-testid="input-table-name"
             className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
           />
+          <input
+            value={newTableSection}
+            onChange={(e) => setNewTableSection(e.target.value)}
+            list="table-section-options"
+            placeholder="Section / category"
+            data-testid="input-table-section"
+            className="w-44 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent h-11"
+          />
+          <datalist id="table-section-options">
+            {TABLE_SECTIONS.map((section) => <option key={section} value={section} />)}
+          </datalist>
           <button
             onClick={submitTable}
             data-testid="button-add-table"
@@ -1104,6 +1121,7 @@ const TablesSection = () => {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-bold text-foreground text-base" title={tableDisplayName(t.number)}>{tableDisplayName(t.number)}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70" title={t.section || 'Ground Floor'}>{t.section || 'Ground Floor'}</p>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                     {cfg.label}
@@ -1161,6 +1179,16 @@ const TablesSection = () => {
             placeholder="Table name/number"
             className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
           />
+          <input
+            value={editTableSection}
+            onChange={(event) => setEditTableSection(event.target.value)}
+            list="edit-table-section-options"
+            placeholder="Section / category"
+            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          <datalist id="edit-table-section-options">
+            {TABLE_SECTIONS.map((section) => <option key={section} value={section} />)}
+          </datalist>
           <DialogFooter>
             <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
             <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
