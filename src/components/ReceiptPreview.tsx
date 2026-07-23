@@ -20,6 +20,9 @@ interface ReceiptPreviewProps {
   method?: string;
   billNumber?: number;
   date?: number;
+  showLogoOnBill?: boolean;
+  receiptFontSize?: number;
+  receiptFontFamily?: string;
 }
 
 const ReceiptPreview = ({
@@ -40,16 +43,27 @@ const ReceiptPreview = ({
   method,
   billNumber = 1001,
   date,
+  showLogoOnBill = true,
+  receiptFontSize = 10,
+  receiptFontFamily = 'monospace',
 }: ReceiptPreviewProps) => {
   const discountAmount =
     discountType === 'percent' ? Math.round((subtotal * discount) / 100) : discount;
+
+  const resolvedFont = receiptFontFamily === 'monospace'
+    ? "'Courier New', Courier, monospace"
+    : receiptFontFamily === 'sans-serif'
+    ? 'Arial, Helvetica, sans-serif'
+    : receiptFontFamily === 'serif'
+    ? 'Georgia, serif'
+    : "'Courier New', Courier, monospace";
 
   return (
     <div
       data-testid="receipt-preview"
       style={{
-        fontFamily: "'Courier New', Courier, monospace",
-        fontSize: 12,
+        fontFamily: resolvedFont,
+        fontSize: receiptFontSize ?? 12,
         lineHeight: 1.5,
         color: '#000',
         background: '#fff',
@@ -76,6 +90,9 @@ const ReceiptPreview = ({
         vatRate={vatRate}
         total={total}
         method={method || 'Cash'}
+        showLogoOnBill={showLogoOnBill}
+        receiptFontSize={receiptFontSize}
+        receiptFontFamily={receiptFontFamily}
       />
     </div>
   );

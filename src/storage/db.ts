@@ -458,6 +458,9 @@ const defaultSettings: Settings = {
   vatEnabled: true,
   vatRate: 0.13,
   vatMode: 'excluded',
+  showLogoOnBill: true,
+  receiptFontSize: 10,
+  receiptFontFamily: 'monospace',
 };
 
 const SETTINGS_VERSION = 2;

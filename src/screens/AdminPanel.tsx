@@ -1817,6 +1817,9 @@ const BillingReceiptsSection = () => {
   const [billCounter, setBillCounter] = useState(String(settings.billCounter));
   const [kotCounter, setKotCounter] = useState(String(settings.kotCounter ?? 100));
   const [resetKotDaily, setResetKotDaily] = useState(settings.resetKotDaily ?? false);
+  const [showLogoOnBill, setShowLogoOnBill] = useState(settings.showLogoOnBill ?? true);
+  const [receiptFontSize, setReceiptFontSize] = useState(settings.receiptFontSize ?? 10);
+  const [receiptFontFamily, setReceiptFontFamily] = useState(settings.receiptFontFamily ?? 'monospace');
 
   const saveAll = () => {
     updateSettings({
@@ -1824,6 +1827,9 @@ const BillingReceiptsSection = () => {
       billCounter: Number(billCounter) || settings.billCounter,
       kotCounter: Number(kotCounter) || settings.kotCounter,
       resetKotDaily,
+      showLogoOnBill,
+      receiptFontSize,
+      receiptFontFamily,
     });
     toast.success('Changes saved successfully');
   };
@@ -1838,8 +1844,85 @@ const BillingReceiptsSection = () => {
     { menuItemId: '2', name: 'Croissant', price: 180, quantity: 1 },
   ];
 
+  const fontFamilyOptions = [
+    { value: 'monospace',  label: 'Monospace / Standard Thermal' },
+    { value: 'sans-serif', label: 'Sans-Serif' },
+    { value: 'serif',      label: 'Serif' },
+  ];
+
   return (
     <div className="space-y-5">
+
+      {/* Logo Display */}
+      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-foreground">Logo Display</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Control logo visibility on printed bills</p>
+        </div>
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+          <div>
+            <p className="text-sm font-medium text-foreground">Show Logo on Printed Bills &amp; Receipts</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Requires a logo to be uploaded in Company Profile</p>
+          </div>
+          <button onClick={() => setShowLogoOnBill((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
+            {showLogoOnBill
+              ? <ToggleRight size={36} className="text-accent" />
+              : <ToggleLeft size={36} className="text-muted-foreground" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Font Settings */}
+      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-foreground">Font Settings</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Adjust receipt font size and style</p>
+          </div>
+          <button
+            onClick={() => { setReceiptFontSize(10); setReceiptFontFamily('monospace'); }}
+            className="text-xs px-3 py-1.5 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-2">Font Size</label>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setReceiptFontSize((s) => Math.max(8, s - 1))}
+              className="w-9 h-9 rounded-xl bg-secondary border border-border text-foreground flex items-center justify-center font-bold text-lg hover:bg-accent/15 transition-colors disabled:opacity-40"
+              disabled={receiptFontSize <= 8}
+            >−</button>
+            <span className="w-12 text-center text-foreground font-semibold text-sm">{receiptFontSize}px</span>
+            <button
+              onClick={() => setReceiptFontSize((s) => Math.min(16, s + 1))}
+              className="w-9 h-9 rounded-xl bg-secondary border border-border text-foreground flex items-center justify-center font-bold text-lg hover:bg-accent/15 transition-colors disabled:opacity-40"
+              disabled={receiptFontSize >= 16}
+            >+</button>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Font Family</label>
+          <div className="flex flex-col gap-2">
+            {fontFamilyOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setReceiptFontFamily(opt.value)}
+                className={`w-full px-4 py-2.5 rounded-xl text-sm text-left border transition-all ${
+                  receiptFontFamily === opt.value
+                    ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                    : 'bg-secondary border-border text-foreground hover:bg-accent/10'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Receipt Settings */}
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground">Receipt Settings</h3>
@@ -1901,6 +1984,9 @@ const BillingReceiptsSection = () => {
           method="Cash"
           billNumber={Number(billCounter) + 1}
           date={Date.now()}
+          showLogoOnBill={showLogoOnBill}
+          receiptFontSize={receiptFontSize}
+          receiptFontFamily={receiptFontFamily}
         />
       </div>
     </div>

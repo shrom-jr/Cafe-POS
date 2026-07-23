@@ -1,0 +1,35 @@
+TASK: Fix logo rendering in actual print outputs (Receipt/Pre-bill/KOT) and add Logo Toggle + Font Customization settings inside 'Billing & Receipts'.
+
+1. STORE & SETTINGS STATE UPDATE:
+   - Update settings state/store (usePOSStore or settingsStore) to include:
+     * `showLogoOnBill`: boolean (default: true)
+     * `receiptFontSize`: number (default: 10)
+     * `receiptFontFamily`: string (default: 'monospace')
+
+2. BILLING & RECEIPTS UI UPDATES (`BillingReceiptsSection`):
+   - Add a 'Logo Display' toggle card/row:
+     * Toggle switch for 'Show Logo on Printed Bills & Receipts'.
+   - Add a 'Font Settings' card styled cleanly like RestroX POS:
+     * 'Font Size' stepper control with decrement (-) and increment (+) buttons (range: 8 to 16, default: 10).
+     * 'Font Family' selector (Monospace / Standard Thermal, Sans-Serif, Serif).
+     * 'Reset' button to restore font size to 10 and default font.
+
+3. FIX PRINT OUTPUT (Printable Component / HTML / CSS):
+   - Locate the receipt/bill/KOT print component/template used during print generation (e.g., PrintableBill, @media print block, or thermal generator).
+   - Fix Logo Printing:
+     * Check if `settings.logo` exists AND `settings.showLogoOnBill` is TRUE.
+     * Include `<img src={settings.logo} />` at the very top of the receipt header.
+     * Apply print CSS styling: `max-width: 120px`, `max-height: 60px`, `margin: 0 auto 8px auto`, `display: block`, `object-fit: contain`, and `filter: grayscale(100%) contrast(200%)` (ensures crisp black-and-white print on thermal printers).
+   - Apply Font Settings:
+     * Dynamically set `font-size: ${settings.receiptFontSize}px` and `font-family: ${settings.receiptFontFamily}` on the root printable receipt container.
+
+4. LIVE PREVIEW UPDATE:
+   - Ensure the live 'Bill Preview' card in 'Billing & Receipts' dynamically reflects:
+     * Logo visibility based on 'Show Logo' toggle.
+     * Selected font size and font style in real time.
+
+5. VERIFICATION:
+   - Upload a logo in Company Profile -> Switch to Billing & Receipts.
+   - Toggle logo off/on and verify live preview updates.
+   - Adjust font size stepper and verify live preview updates.
+   - Trigger a print test (or Ctrl+P browser preview) to confirm the logo image and font size actually appear in the final printed sheet.

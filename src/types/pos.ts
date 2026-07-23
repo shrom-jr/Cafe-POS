@@ -244,4 +244,7 @@ export interface Settings {
   vatEnabled: boolean;
   vatRate: number;
   vatMode: 'excluded' | 'included';
+  showLogoOnBill: boolean;
+  receiptFontSize: number;
+  receiptFontFamily: string;
 }

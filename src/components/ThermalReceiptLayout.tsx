@@ -23,6 +23,10 @@ interface ThermalReceiptLayoutProps {
   vatRate: number;
   total: number;
   method: string;
+  /** Logo / font settings */
+  showLogoOnBill?: boolean;
+  receiptFontSize?: number;
+  receiptFontFamily?: string;
   /** Plain-string fallbacks (legacy) */
   serverName?: string;
   cashierName?: string;
@@ -59,6 +63,9 @@ const ThermalReceiptLayout = ({
   vatRate,
   total,
   method,
+  showLogoOnBill = true,
+  receiptFontSize = 10,
+  receiptFontFamily = 'monospace',
   serverName,
   cashierName,
   takenBy,
@@ -96,7 +103,7 @@ const ThermalReceiptLayout = ({
   }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName, takenBy, processedBy]);
 
   return (
-    <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff' }}>
+    <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff', fontSize: receiptFontSize, fontFamily: receiptFontFamily === 'monospace' ? "'Courier New', Courier, monospace" : receiptFontFamily === 'sans-serif' ? 'Arial, Helvetica, sans-serif' : receiptFontFamily === 'serif' ? 'Georgia, serif' : "'Courier New', Courier, monospace" }}>
       {/* Heavy Print Matrix Override Stylesheet */}
       <style>{`
         @media print {
@@ -108,22 +115,23 @@ const ThermalReceiptLayout = ({
             text-shadow: none !important;
           }
           img {
-            filter: brightness(0) !important;
+            filter: grayscale(100%) contrast(200%) !important;
           }
         }
       `}</style>
 
       <div style={{ textAlign: 'center', marginBottom: 6 }}>
-        {cafeLogo && (
+        {showLogoOnBill && cafeLogo && (
           <img
             src={cafeLogo}
             alt="Logo"
             style={{
               display: 'block',
-              margin: '0 auto 4px',
-              maxWidth: 80,
-              maxHeight: 80,
+              margin: '0 auto 8px',
+              maxWidth: 120,
+              maxHeight: 60,
               objectFit: 'contain',
+              filter: 'grayscale(100%) contrast(200%)',
             }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />

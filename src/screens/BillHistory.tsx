@@ -312,6 +312,9 @@ const BillHistory = () => {
             cafeAddress={settings.cafeAddress}
             cafePan={settings.cafePan}
             billFooter={settings.billFooter}
+            showLogoOnBill={settings.showLogoOnBill ?? true}
+            receiptFontSize={settings.receiptFontSize}
+            receiptFontFamily={settings.receiptFontFamily}
             tableNumber={selectedBill.tableNumber}
             billNumber={selectedBill.billNumber}
             createdAt={selectedBill.createdAt}
