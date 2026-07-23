@@ -17,45 +17,63 @@ function useClock() {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+// ── Per-area accent palette (cycles for areas beyond 3) ───────────────────────
+const AREA_ACCENTS = [
+  // Emerald — Ground Floor
+  { bar: '#10b981', barGlow: 'rgba(16,185,129,0.55)', nameCss: 'rgba(52,211,153,0.92)' },
+  // Blue/Cyan — Cabins
+  { bar: '#38bdf8', barGlow: 'rgba(56,189,248,0.55)', nameCss: 'rgba(125,211,252,0.92)' },
+  // Purple/Indigo — 1st Floor
+  { bar: '#818cf8', barGlow: 'rgba(129,140,248,0.55)', nameCss: 'rgba(165,180,252,0.92)' },
+  // Rose — overflow
+  { bar: '#fb7185', barGlow: 'rgba(251,113,133,0.55)', nameCss: 'rgba(253,164,175,0.92)' },
+];
+
 // ── Area container box ────────────────────────────────────────────────────────
 interface AreaBoxProps {
   areaName: string;
+  areaIndex: number;
   tables: CafeTable[];
   tableOrderData: Record<string, { itemCount: number }>;
   onTableClick: (table: CafeTable) => void;
 }
 
-const AreaBox = ({ areaName, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
+const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
   const freeCount     = tables.filter((t) => t.status === 'free').length;
   const occupiedCount = tables.filter((t) => t.status !== 'free').length;
+  const accent        = AREA_ACCENTS[areaIndex % AREA_ACCENTS.length];
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.88) 0%, rgba(2,6,23,0.78) 100%)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: '0 4px 16px -4px rgba(0,0,0,0.40)',
-      }}
-    >
+    <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(15,23,42,0.45)' }}>
       {/* Area header */}
       <div
         className="flex items-center justify-between px-4 py-3"
-        style={{
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(255,255,255,0.025)',
-        }}
+        style={{ borderBottom: '1px solid rgba(148,163,184,0.10)' }}
       >
-        <span className="text-sm font-semibold text-white/85 tracking-wide">{areaName}</span>
-        <div className="flex items-center gap-2 text-[11px] font-medium">
+        {/* Left accent bar + name */}
+        <div className="flex items-center gap-3 min-w-0">
+          <span
+            className="flex-shrink-0 w-[3px] h-5 rounded-full"
+            style={{ background: accent.bar, boxShadow: `0 0 8px 2px ${accent.barGlow}` }}
+          />
+          <span
+            className="text-sm font-semibold tracking-wide truncate"
+            style={{ color: accent.nameCss }}
+          >
+            {areaName}
+          </span>
+        </div>
+
+        {/* Status badges */}
+        <div className="flex items-center gap-2 text-[11px] font-medium flex-shrink-0 ml-3">
           {freeCount > 0 && (
             <span
               className="flex items-center gap-1 px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(16,185,129,0.10)', color: 'rgba(52,211,153,0.85)' }}
             >
               <span
-                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: '#10b981', boxShadow: '0 0 5px 1px rgba(16,185,129,0.5)' }}
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: '#10b981' }}
               />
               {freeCount} free
             </span>
@@ -66,8 +84,8 @@ const AreaBox = ({ areaName, tables, tableOrderData, onTableClick }: AreaBoxProp
               style={{ background: 'hsl(32 90% 50% / 0.11)', color: 'hsl(32 90% 65%)' }}
             >
               <span
-                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: 'hsl(32 90% 55%)', boxShadow: '0 0 5px 1px hsl(32 90% 50% / 0.5)' }}
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: 'hsl(32 90% 55%)' }}
               />
               {occupiedCount} active
             </span>
@@ -217,6 +235,7 @@ const TableOverview = () => {
               <AreaBox
                 key={section}
                 areaName={section}
+                areaIndex={Math.max(0, sections.indexOf(section))}
                 tables={tablesByArea[section] ?? []}
                 tableOrderData={tableOrderData}
                 onTableClick={handleTableClick}
