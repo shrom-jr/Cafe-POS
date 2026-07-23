@@ -18,13 +18,49 @@ function useClock() {
 }
 
 // ── Per-area color palette — non-status hues only (no green/amber/orange/red) ──
-const AREA_COLORS = [
-  { text: 'text-sky-400',     bg: 'bg-sky-500',     glow: 'shadow-sky-500/50',     border: 'border-sky-500/30'     }, // Ground Floor
-  { text: 'text-blue-400',    bg: 'bg-blue-500',    glow: 'shadow-blue-500/50',    border: 'border-blue-500/30'    }, // Cabins
-  { text: 'text-violet-400',  bg: 'bg-violet-500',  glow: 'shadow-violet-500/50',  border: 'border-violet-500/30'  }, // 1st Floor
-  { text: 'text-teal-400',    bg: 'bg-teal-500',    glow: 'shadow-teal-500/50',    border: 'border-teal-500/30'    }, // 4th area
-  { text: 'text-rose-400',    bg: 'bg-rose-500',    glow: 'shadow-rose-500/50',    border: 'border-rose-500/30'    }, // 5th area
-  { text: 'text-indigo-400',  bg: 'bg-indigo-500',  glow: 'shadow-indigo-500/50',  border: 'border-indigo-500/30'  }, // 6th area
+export const AREA_COLORS = [
+  // Slot 0 - Ground Floor (Electric Sky Blue)
+  {
+    text: "text-sky-400",
+    bg: "bg-sky-500",
+    glow: "shadow-sky-500/50",
+    border: "border-sky-500/30"
+  },
+  // Slot 1 - Cabins (Vivid Purple)
+  {
+    text: "text-purple-400",
+    bg: "bg-purple-500",
+    glow: "shadow-purple-500/50",
+    border: "border-purple-500/30"
+  },
+  // Slot 2 - 1st Floor (Seafoam Teal)
+  {
+    text: "text-teal-400",
+    bg: "bg-teal-500",
+    glow: "shadow-teal-500/50",
+    border: "border-teal-500/30"
+  },
+  // Slot 3 - Soft Gold / Warm Amber
+  {
+    text: "text-amber-300",
+    bg: "bg-amber-400",
+    glow: "shadow-amber-400/50",
+    border: "border-amber-400/30"
+  },
+  // Slot 4 - Royal Indigo
+  {
+    text: "text-indigo-400",
+    bg: "bg-indigo-500",
+    glow: "shadow-indigo-500/50",
+    border: "border-indigo-500/30"
+  },
+  // Slot 5 - Pure Silver / Crisp White Accent
+  {
+    text: "text-slate-200",
+    bg: "bg-slate-300",
+    glow: "shadow-slate-300/50",
+    border: "border-slate-300/30"
+  }
 ];
 
 // ── Area container box ────────────────────────────────────────────────────────
