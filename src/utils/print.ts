@@ -34,15 +34,18 @@ export function triggerPrint(_mode: 'receipt' | 'invoice') {
       box-sizing: border-box; 
     }
     body {
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
       font-size: 11pt;
-      line-height: 1.4;
+      line-height: 1.2;
+      letter-spacing: 0.2px;
       color: #000000 !important;
       background: #ffffff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       -webkit-font-smoothing: none !important;
-      -moz-osx-font-smoothing: none !important;
+      -moz-osx-font-smoothing: unset !important;
+      font-smooth: never !important;
+      text-rendering: optimizeSpeed !important;
     }
     pre {
       white-space: pre;
@@ -51,8 +54,16 @@ export function triggerPrint(_mode: 'receipt' | 'invoice') {
       line-height: inherit;
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
-      font-weight: 900 !important;
-      letter-spacing: 0.5px;
+      font-weight: 600 !important;
+      letter-spacing: 0.2px;
+    }
+    img {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      display: block !important;
+      margin: 0 auto 6px auto !important;
+      max-width: 110px !important;
+      height: auto !important;
     }
     @page { 
       margin: 4mm; 
@@ -74,8 +85,18 @@ export function triggerPrint(_mode: 'receipt' | 'invoice') {
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(() => {
-    win.print();
-    setTimeout(() => win.close(), 500);
-  }, 350);
+
+  // Wait for any images to finish loading before printing
+  const printWhenReady = () => {
+    const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
+    Promise.all(
+      images.map((img) =>
+        img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = res; img.onerror = res; })
+      )
+    ).then(() => {
+      setTimeout(() => { win.print(); setTimeout(() => win.close(), 500); }, 150);
+    });
+  };
+  // Allow the popup document to fully render before checking images
+  setTimeout(printWhenReady, 200);
 }

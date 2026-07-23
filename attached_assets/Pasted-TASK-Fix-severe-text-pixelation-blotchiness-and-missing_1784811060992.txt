@@ -1,0 +1,46 @@
+TASK: Fix severe text pixelation/blotchiness and missing logo on physical thermal receipts.
+
+1. CRITICAL CSS PRINT FIXES FOR CRISP THERMAL TEXT:
+   - In `ThermalReceiptLayout.tsx` and any `@media print` styles, eliminate browser antialiasing dithering by adding these rules to the root print container:
+     ```css
+     @media print {
+       * {
+         color: #000000 !important;
+         text-shadow: none !important;
+         box-shadow: none !important;
+         -webkit-font-smoothing: none !important;
+         -moz-osx-font-smoothing: unset !important;
+         font-smooth: never !important;
+         text-rendering: optimizeSpeed !important;
+       }
+       
+       /* Fix font bleeds from heavy bolding */
+       b, strong, .font-bold {
+         font-weight: 600 !important; /* Avoid 700/800 which bleeds thermal ink */
+       }
+     }
+     ```
+
+2. HIGH-DEFINITION FONT STACK OPTIMIZATION:
+   - Update font family choices in `ThermalReceiptLayout`:
+     * Monospace: `'Consolas', 'Courier New', 'Lucida Console', monospace` (Consolas/Courier render far cleaner lines on thermal hardware than generic system monospace).
+     * Sans-Serif: `'Arial', 'Helvetica', sans-serif` (extremely sharp on 200dpi/300dpi thermal heads).
+   - Set strict `line-height: 1.2` and explicit letter spacing `letter-spacing: 0.2px` so characters don't bleed into each other.
+
+3. LOGO ASYNCHRONOUS LOAD & RENDER FIX:
+   - In the print handler trigger (`window.print()` hook):
+     * Ensure `window.print()` is only called after printable images (`img`) inside the portal finish loading:
+       ```ts
+       const images = Array.from(document.querySelectorAll('#printable-receipt img'));
+       await Promise.all(
+         images.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; }))
+       );
+       await new Promise(res => setTimeout(res, 150)); // Short spooler buffer delay
+       window.print();
+       ```
+   - On the Logo `<img>` tag inside `ThermalReceiptLayout`:
+     * Set explicit CSS: `-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; display: block !important; margin: 0 auto 6px auto !important; max-width: 110px !important; height: auto !important;`
+     * Remove heavy CSS filters (like high contrast/grayscale filters) that can confuse POS drivers into rendering blank blocks.
+
+4. VERIFICATION:
+   - Test print a bill to confirm text characters are razor-sharp with crisp solid edges (no fuzzy grey dots around letters) and the logo prints at the top.

@@ -102,20 +102,38 @@ const ThermalReceiptLayout = ({
     }));
   }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName, takenBy, processedBy]);
 
+  const fontStack =
+    receiptFontFamily === 'monospace'  ? "'Consolas', 'Courier New', 'Lucida Console', monospace" :
+    receiptFontFamily === 'sans-serif' ? "'Arial', 'Helvetica', sans-serif" :
+    receiptFontFamily === 'serif'      ? 'Georgia, serif' :
+                                         "'Consolas', 'Courier New', 'Lucida Console', monospace";
+
   return (
-    <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff', fontSize: receiptFontSize, fontFamily: receiptFontFamily === 'monospace' ? "'Courier New', Courier, monospace" : receiptFontFamily === 'sans-serif' ? 'Arial, Helvetica, sans-serif' : receiptFontFamily === 'serif' ? 'Georgia, serif' : "'Courier New', Courier, monospace" }}>
-      {/* Heavy Print Matrix Override Stylesheet */}
+    <div style={{ color: '#000000', fontWeight: 700, backgroundColor: '#ffffff', fontSize: receiptFontSize, fontFamily: fontStack, lineHeight: 1.2, letterSpacing: '0.2px' }}>
+      {/* Thermal print CSS — suppress antialiasing, fix ink bleed */}
       <style>{`
         @media print {
-          *, html, body, div, span, strong, td, th {
+          * {
             color: #000000 !important;
             -webkit-text-fill-color: #000000 !important;
-            font-weight: 800 !important;
             background-color: #ffffff !important;
             text-shadow: none !important;
+            box-shadow: none !important;
+            -webkit-font-smoothing: none !important;
+            -moz-osx-font-smoothing: unset !important;
+            font-smooth: never !important;
+            text-rendering: optimizeSpeed !important;
+          }
+          b, strong {
+            font-weight: 600 !important;
           }
           img {
-            filter: grayscale(100%) contrast(200%) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            display: block !important;
+            margin: 0 auto 6px auto !important;
+            max-width: 110px !important;
+            height: auto !important;
           }
         }
       `}</style>
@@ -127,11 +145,10 @@ const ThermalReceiptLayout = ({
             alt="Logo"
             style={{
               display: 'block',
-              margin: '0 auto 8px',
-              maxWidth: 120,
-              maxHeight: 60,
+              margin: '0 auto 6px',
+              maxWidth: 110,
+              height: 'auto',
               objectFit: 'contain',
-              filter: 'grayscale(100%) contrast(200%)',
             }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />

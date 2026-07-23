@@ -306,14 +306,26 @@ function openPrintPopup(text: string): void {
     * { box-sizing: border-box; }
     body {
       margin: 0.3cm;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
       font-size: 11px;
       line-height: 1.2;
+      letter-spacing: 0.2px;
       color: #000000 !important;
       background: #ffffff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       -webkit-font-smoothing: none !important;
+      -moz-osx-font-smoothing: unset !important;
+      font-smooth: never !important;
+      text-rendering: optimizeSpeed !important;
+    }
+    img {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      display: block !important;
+      margin: 0 auto 6px auto !important;
+      max-width: 110px !important;
+      height: auto !important;
     }
     pre {
       white-space: pre;
@@ -343,7 +355,19 @@ function openPrintPopup(text: string): void {
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(() => { win.print(); setTimeout(() => win.close(), 500); }, 350);
+
+  // Wait for any images to finish loading before printing
+  const printWhenReady = () => {
+    const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
+    Promise.all(
+      images.map((img) =>
+        img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = res; img.onerror = res; })
+      )
+    ).then(() => {
+      setTimeout(() => { win.print(); setTimeout(() => win.close(), 500); }, 150);
+    });
+  };
+  setTimeout(printWhenReady, 200);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

@@ -240,9 +240,10 @@
     inset: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-family: 'Courier New', Courier, monospace !important;
-    font-size: 12px !important;
-    line-height: 1.5 !important;
+    font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.2px !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
@@ -253,6 +254,26 @@
     color: #000000 !important;
     background: transparent !important;
     border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+    font-smooth: never !important;
+    text-rendering: optimizeSpeed !important;
+  }
+
+  #print-receipt b,
+  #print-receipt strong {
+    font-weight: 600 !important;
+  }
+
+  #print-receipt img {
+    display: block !important;
+    margin: 0 auto 6px auto !important;
+    max-width: 110px !important;
+    height: auto !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
