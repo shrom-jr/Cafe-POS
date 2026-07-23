@@ -58,6 +58,7 @@ const PageHeader = ({
 
 const AdminPanel = () => {
   const currentUser = useStaffStore((s) => s.currentUser);
+  const staffUsers  = useStaffStore((s) => s.users);
   // ADMIN users are already authenticated via the PIN login screen
   const [authenticated, setAuthenticated] = useState(currentUser?.role === 'ADMIN');
   const [pin, setPin] = useState('');
@@ -67,7 +68,7 @@ const AdminPanel = () => {
   const settings = usePOSStore((s) => s.settings);
 
   const handlePinSubmit = () => {
-    if (pin === settings.adminPin) {
+    if (staffUsers.some((u) => u.role === 'ADMIN' && u.pin === pin)) {
       setAuthenticated(true);
       setPinError(false);
     } else {
