@@ -20,7 +20,7 @@ function useClock() {
 // ── Per-area color palette — non-status hues only (no green/amber/orange/red) ──
 const AREA_COLORS = [
   { text: 'text-sky-400',     bg: 'bg-sky-500',     glow: 'shadow-sky-500/50',     border: 'border-sky-500/30'     }, // Ground Floor
-  { text: 'text-fuchsia-400', bg: 'bg-fuchsia-500', glow: 'shadow-fuchsia-500/50', border: 'border-fuchsia-500/30' }, // Cabins
+  { text: 'text-blue-400',    bg: 'bg-blue-500',    glow: 'shadow-blue-500/50',    border: 'border-blue-500/30'    }, // Cabins
   { text: 'text-violet-400',  bg: 'bg-violet-500',  glow: 'shadow-violet-500/50',  border: 'border-violet-500/30'  }, // 1st Floor
   { text: 'text-teal-400',    bg: 'bg-teal-500',    glow: 'shadow-teal-500/50',    border: 'border-teal-500/30'    }, // 4th area
   { text: 'text-rose-400',    bg: 'bg-rose-500',    glow: 'shadow-rose-500/50',    border: 'border-rose-500/30'    }, // 5th area
