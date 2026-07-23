@@ -44,37 +44,32 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
   return (
     <div className="rounded-2xl overflow-hidden bg-slate-900/30">
       {/* Area header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/60">
-        {/* Left accent pill + name */}
-        <div className="flex items-center gap-3 min-w-0">
-          <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
-          <span className={`text-sm font-semibold tracking-wide truncate ${theme.text}`}>
-            {areaName}
-          </span>
-        </div>
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800/60">
+        {/* Left accent pill */}
+        <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
 
-        {/* Status badges */}
-        <div className="flex items-center gap-2 text-[11px] font-medium flex-shrink-0 ml-3">
-          {freeCount > 0 && (
-            <span
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(16,185,129,0.10)', color: 'rgba(52,211,153,0.85)' }}
-            >
-              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />
-              {freeCount} free
-            </span>
-          )}
-          {occupiedCount > 0 && (
-            <span
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{ background: 'hsl(32 90% 50% / 0.11)', color: 'hsl(32 90% 65%)' }}
-            >
-              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(32 90% 55%)' }} />
-              {occupiedCount} active
-            </span>
-          )}
-          <span className="text-white/25 text-[10px]">{tables.length} tables</span>
-        </div>
+        {/* Area name */}
+        <span className={`text-sm font-semibold tracking-wide ${theme.text}`}>
+          {areaName}
+        </span>
+
+        {/* Inline stats — sit directly after the title */}
+        {freeCount > 0 && (
+          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            {freeCount} free
+          </span>
+        )}
+        {occupiedCount > 0 && (
+          <span
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border"
+            style={{ background: 'hsl(32 90% 50% / 0.10)', color: 'hsl(32 90% 65%)', borderColor: 'hsl(32 90% 50% / 0.25)' }}
+          >
+            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(32 90% 55%)' }} />
+            {occupiedCount} active
+          </span>
+        )}
+        <span className="text-slate-400 text-xs font-medium">{tables.length} tables</span>
       </div>
 
       {/* Table grid */}
