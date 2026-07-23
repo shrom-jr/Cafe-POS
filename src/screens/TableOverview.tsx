@@ -31,11 +31,11 @@ const AreaBox = ({ areaName, tables, tableOrderData, onTableClick }: AreaBoxProp
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="rounded-xl overflow-hidden"
       style={{
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.90) 0%, rgba(2,6,23,0.80) 100%)',
-        border: '1px solid rgba(59,130,246,0.13)',
-        boxShadow: '0 8px 32px -6px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.04)',
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.88) 0%, rgba(2,6,23,0.78) 100%)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 4px 16px -4px rgba(0,0,0,0.40)',
       }}
     >
       {/* Area header */}
