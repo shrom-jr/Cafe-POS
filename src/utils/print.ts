@@ -31,42 +31,50 @@ export function isReceiptTextReady(): boolean {
 // ── Shared popup CSS ──────────────────────────────────────────────────────────
 
 const POPUP_CSS = `
-  @page { size: auto; margin: 0mm; }
+  @page { size: 80mm auto; margin: 0; }
   body {
     font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 12px !important;
-    line-height: 1.25 !important;
+    font-size: 10.5px !important;
+    line-height: 1.2 !important;
     color: #000000 !important;
-    margin: 0 !important;
-    padding: 4px 6px !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
     width: 100% !important;
-    box-sizing: border-box;
+    max-width: 72mm !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   .header { text-align: center; margin-bottom: 8px; }
-  .header h2 { margin: 0; font-size: 15px; font-weight: bold; }
-  .header p { margin: 2px 0; font-size: 11px; }
+  .header h2 { margin: 0; font-size: 14px; font-weight: bold; }
+  .header p { margin: 2px 0; font-size: 10px; }
   .meta-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .meta-table td { font-size: 11px; padding: 1px 0; }
+  .meta-table td { font-size: 10.5px; padding: 1px 0; }
   .items-table th {
     border-top: 1px dashed #000;
     border-bottom: 1px dashed #000;
-    font-size: 11px;
+    font-size: 10.5px;
     padding: 4px 0;
     text-align: left;
   }
-  .items-table td { font-size: 11px; padding: 3px 0; vertical-align: top; }
+  .items-table td {
+    font-size: 10.5px;
+    padding: 3px 0;
+    vertical-align: top;
+    word-break: break-word;
+    white-space: normal;
+  }
   .totals-table { width: 100%; border-collapse: collapse; border-top: 1px dashed #000; margin-top: 4px; }
-  .totals-table td { font-size: 11px; padding: 2px 0; }
-  .grand-total td { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }
-  .text-right { text-align: right !important; }
+  .totals-table td { font-size: 10.5px; padding: 1px 0; }
+  .grand-total td { font-size: 12px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }
+  .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
   .bold { font-weight: bold !important; }
   .logo { max-width: 100px; height: auto; margin: 0 auto 6px auto; display: block;
           -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .divider { border-top: 1px dashed #000; margin: 4px 0; }
-  .footer { text-align: center; font-size: 11px; margin-top: 6px; }
+  .footer { text-align: center; font-size: 10px; margin-top: 6px; }
   .inwords { font-size: 10px; margin: 4px 0; }
 `;
 
@@ -136,10 +144,10 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
   <table class="items-table">
     <thead>
       <tr>
-        <th style="width:10%">SN</th>
-        <th style="width:45%">Particulars</th>
-        <th style="width:10%;text-align:right">Qty</th>
-        <th style="width:15%;text-align:right">Rate</th>
+        <th style="width:8%">SN</th>
+        <th style="width:42%">Particulars</th>
+        <th style="width:12%;text-align:right">Qty</th>
+        <th style="width:18%;text-align:right">Rate</th>
         <th style="width:20%;text-align:right">Amt</th>
       </tr>
     </thead>
