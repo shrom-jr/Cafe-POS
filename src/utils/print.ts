@@ -31,51 +31,49 @@ export function isReceiptTextReady(): boolean {
 // ── Shared popup CSS ──────────────────────────────────────────────────────────
 
 const POPUP_CSS = `
-  @page { size: 80mm auto; margin: 0; }
+  @page { size: 80mm auto; margin: 0mm !important; }
+  * { box-sizing: border-box !important; }
   body {
     font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 10.5px !important;
+    font-size: 10px !important;
     line-height: 1.2 !important;
     color: #000000 !important;
-    margin: 0 auto !important;
-    padding: 2mm 3mm !important;
-    width: 100% !important;
-    max-width: 72mm !important;
-    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 1mm !important;
+    width: 66mm !important;
+    max-width: 66mm !important;
     overflow: hidden !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+  td, th { word-break: break-word !important; overflow: hidden !important; }
   .header { text-align: center; margin-bottom: 8px; }
-  .header h2 { margin: 0; font-size: 14px; font-weight: bold; }
+  .header h2 { margin: 0; font-size: 13px; font-weight: bold; }
   .header p { margin: 2px 0; font-size: 10px; }
-  .meta-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .meta-table td { font-size: 10.5px; padding: 1px 0; }
+  .meta-table td { font-size: 10px; padding: 1px 0; }
   .items-table th {
     border-top: 1px dashed #000;
     border-bottom: 1px dashed #000;
-    font-size: 10.5px;
-    padding: 4px 0;
+    font-size: 10px;
+    padding: 3px 0;
     text-align: left;
   }
-  .items-table td {
-    font-size: 10.5px;
-    padding: 3px 0;
-    vertical-align: top;
-    word-break: break-word;
-    white-space: normal;
-  }
-  .totals-table { width: 100%; border-collapse: collapse; border-top: 1px dashed #000; margin-top: 4px; }
-  .totals-table td { font-size: 10.5px; padding: 1px 0; }
-  .grand-total td { font-size: 12px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }
+  .items-table td { font-size: 10px; padding: 2px 0; vertical-align: top; }
+  .totals-table td { font-size: 10px; padding: 1px 0; }
+  .grand-total td { font-size: 11px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
   .bold { font-weight: bold !important; }
-  .logo { max-width: 100px; height: auto; margin: 0 auto 6px auto; display: block;
+  .logo { max-width: 90px; height: auto; margin: 0 auto 6px auto; display: block;
           -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .divider { border-top: 1px dashed #000; margin: 4px 0; }
-  .footer { text-align: center; font-size: 10px; margin-top: 6px; }
-  .inwords { font-size: 10px; margin: 4px 0; }
+  .divider { border-top: 1px dashed #000; margin: 3px 0; }
+  .footer { text-align: center; font-size: 10px; margin-top: 5px; }
+  .inwords { font-size: 10px; margin: 3px 0; }
 `;
 
 // ── HTML builder ──────────────────────────────────────────────────────────────
@@ -146,9 +144,9 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
       <tr>
         <th style="width:8%">SN</th>
         <th style="width:42%">Particulars</th>
-        <th style="width:12%;text-align:right">Qty</th>
+        <th style="width:10%;text-align:right">Qty</th>
         <th style="width:18%;text-align:right">Rate</th>
-        <th style="width:20%;text-align:right">Amt</th>
+        <th style="width:22%;text-align:right">Amt</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
