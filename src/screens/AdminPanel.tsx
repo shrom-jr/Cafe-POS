@@ -1321,7 +1321,7 @@ const TablesSection = () => {
                   onChange={(e) => setInlineNames((prev) => ({ ...prev, [area]: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && submitInlineTable(area)}
                   type="text"
-                  placeholder={`Table name — e.g. ${isDefault ? (area === 'Cabins' ? 'Cabin 2' : area === '1st Floor' ? 'VIP 2' : '5') : 'R1'}`}
+                  placeholder="Table name (e.g. 5, Cabin 2, VIP 2)"
                   data-testid={`input-table-name-${area}`}
                   className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-accent h-10"
                 />
