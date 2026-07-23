@@ -1466,7 +1466,6 @@ const PaymentsSection = () => {
   const updateSettings = usePOSStore((s) => s.updateSettings);
 
   const [cafeName, setCafeName] = useState(settings.cafeName);
-  const [adminPin, setAdminPin] = useState(settings.adminPin);
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
 
@@ -1550,17 +1549,6 @@ const PaymentsSection = () => {
               onBlur={() => { updateSettings({ cafeName }); toast.success('Settings saved'); }}
               data-testid="input-cafe-name"
               className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent h-11"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Admin PIN</label>
-            <input
-              value={adminPin}
-              onChange={(e) => setAdminPin(e.target.value)}
-              onBlur={() => { updateSettings({ adminPin }); toast.success('PIN updated'); }}
-              data-testid="input-admin-pin-change"
-              className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent h-11"
-              type="password"
             />
           </div>
         </div>
