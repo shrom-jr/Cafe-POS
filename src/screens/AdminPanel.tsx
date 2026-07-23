@@ -1466,7 +1466,6 @@ const PaymentsSection = () => {
   const settings = usePOSStore((s) => s.settings);
   const updateSettings = usePOSStore((s) => s.updateSettings);
 
-  const [cafeName, setCafeName] = useState(settings.cafeName);
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
 
@@ -1536,25 +1535,6 @@ const PaymentsSection = () => {
 
   return (
     <div className="space-y-5">
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold text-foreground">General Settings</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Basic café and security settings</p>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Café Name</label>
-            <input
-              value={cafeName}
-              onChange={(e) => setCafeName(e.target.value)}
-              onBlur={() => { updateSettings({ cafeName }); toast.success('Settings saved'); }}
-              data-testid="input-cafe-name"
-              className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent h-11"
-            />
-          </div>
-        </div>
-      </div>
-
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground">Digital Wallets</h3>
