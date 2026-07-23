@@ -1,0 +1,31 @@
+Please refactor TableOverview.tsx and the AreaBox component to establish a sleek, professional dark-mode POS layout with strict visual distinction and future-proof area styling:
+
+1. REMOVE FULL OUTER BOX BORDERS:
+   - Remove heavy 4-sided outer box borders (`border` / `border-white/*`) around the main AreaBox containers to eliminate visual clutter and "box-in-a-box" stacking.
+   - Use a clean, subtle dark background panel (`bg-slate-900/30` or `bg-slate-800/20`) with rounded corners (`rounded-2xl`).
+   - Include a crisp 1px horizontal hairline divider under the header (`border-b border-slate-800/60`).
+
+2. FUTURE-PROOF MODULO COLOR PALETTE (NON-STATUS HUED):
+   - Define an array of 6 distinct, high-contrast, non-status Tailwind color themes. 
+   - CRITICAL UI RULE: Do NOT use Green, Amber, Orange, or Red for Area header accents, as those are strictly reserved for table status states (Available/Occupied).
+   
+   const AREA_COLORS = [
+     { text: "text-sky-400", bg: "bg-sky-500", glow: "shadow-sky-500/50", border: "border-sky-500/30" },      // Ground Floor
+     { text: "text-fuchsia-400", bg: "bg-fuchsia-500", glow: "shadow-fuchsia-500/50", border: "border-fuchsia-500/30" }, // Cabins
+     { text: "text-violet-400", bg: "bg-violet-500", glow: "shadow-violet-500/50", border: "border-violet-500/30" },   // 1st Floor
+     { text: "text-teal-400", bg: "bg-teal-500", glow: "shadow-teal-500/50", border: "border-teal-500/30" },      // 4th Area
+     { text: "text-rose-400", bg: "bg-rose-500", glow: "shadow-rose-500/50", border: "border-rose-500/30" },      // 5th Area
+     { text: "text-indigo-400", bg: "bg-indigo-500", glow: "shadow-indigo-500/50", border: "border-indigo-500/30" }, // 6th Area
+   ];
+
+3. DYNAMIC COLOR RESOLUTION:
+   - For any area at `index`, calculate its color dynamically using modulo logic:
+     `const theme = AREA_COLORS[index % AREA_COLORS.length];`
+   - Apply `theme.text` to the section header title.
+   - Apply `theme.bg` and `theme.glow` (`shadow-sm ${theme.glow}`) to a vertical left-accent pill/bar next to the section title for instant visual anchoring.
+
+4. VERIFY:
+   - Check the main "All" overview screen.
+   - Confirm section clutter is gone and area headers stand out instantly with zero overlap with table status badges (Free/Occupied).
+   - Test adding a 4th and 5th mock floor section to verify the modulo looping picks up new distinct colors automatically without UI breakages.
+   - Run production build and test.

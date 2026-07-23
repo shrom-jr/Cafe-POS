@@ -17,16 +17,14 @@ function useClock() {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-// ── Per-area accent palette (cycles for areas beyond 3) ───────────────────────
-const AREA_ACCENTS = [
-  // Emerald — Ground Floor
-  { bar: '#10b981', barGlow: 'rgba(16,185,129,0.55)', nameCss: 'rgba(52,211,153,0.92)' },
-  // Blue/Cyan — Cabins
-  { bar: '#38bdf8', barGlow: 'rgba(56,189,248,0.55)', nameCss: 'rgba(125,211,252,0.92)' },
-  // Purple/Indigo — 1st Floor
-  { bar: '#818cf8', barGlow: 'rgba(129,140,248,0.55)', nameCss: 'rgba(165,180,252,0.92)' },
-  // Rose — overflow
-  { bar: '#fb7185', barGlow: 'rgba(251,113,133,0.55)', nameCss: 'rgba(253,164,175,0.92)' },
+// ── Per-area color palette — non-status hues only (no green/amber/orange/red) ──
+const AREA_COLORS = [
+  { text: 'text-sky-400',     bg: 'bg-sky-500',     glow: 'shadow-sky-500/50',     border: 'border-sky-500/30'     }, // Ground Floor
+  { text: 'text-fuchsia-400', bg: 'bg-fuchsia-500', glow: 'shadow-fuchsia-500/50', border: 'border-fuchsia-500/30' }, // Cabins
+  { text: 'text-violet-400',  bg: 'bg-violet-500',  glow: 'shadow-violet-500/50',  border: 'border-violet-500/30'  }, // 1st Floor
+  { text: 'text-teal-400',    bg: 'bg-teal-500',    glow: 'shadow-teal-500/50',    border: 'border-teal-500/30'    }, // 4th area
+  { text: 'text-rose-400',    bg: 'bg-rose-500',    glow: 'shadow-rose-500/50',    border: 'border-rose-500/30'    }, // 5th area
+  { text: 'text-indigo-400',  bg: 'bg-indigo-500',  glow: 'shadow-indigo-500/50',  border: 'border-indigo-500/30'  }, // 6th area
 ];
 
 // ── Area container box ────────────────────────────────────────────────────────
@@ -41,25 +39,16 @@ interface AreaBoxProps {
 const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
   const freeCount     = tables.filter((t) => t.status === 'free').length;
   const occupiedCount = tables.filter((t) => t.status !== 'free').length;
-  const accent        = AREA_ACCENTS[areaIndex % AREA_ACCENTS.length];
+  const theme         = AREA_COLORS[areaIndex % AREA_COLORS.length];
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(15,23,42,0.45)' }}>
+    <div className="rounded-2xl overflow-hidden bg-slate-900/30">
       {/* Area header */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid rgba(148,163,184,0.10)' }}
-      >
-        {/* Left accent bar + name */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/60">
+        {/* Left accent pill + name */}
         <div className="flex items-center gap-3 min-w-0">
-          <span
-            className="flex-shrink-0 w-[3px] h-5 rounded-full"
-            style={{ background: accent.bar, boxShadow: `0 0 8px 2px ${accent.barGlow}` }}
-          />
-          <span
-            className="text-sm font-semibold tracking-wide truncate"
-            style={{ color: accent.nameCss }}
-          >
+          <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
+          <span className={`text-sm font-semibold tracking-wide truncate ${theme.text}`}>
             {areaName}
           </span>
         </div>
@@ -71,10 +60,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
               className="flex items-center gap-1 px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(16,185,129,0.10)', color: 'rgba(52,211,153,0.85)' }}
             >
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ background: '#10b981' }}
-              />
+              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />
               {freeCount} free
             </span>
           )}
@@ -83,10 +69,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
               className="flex items-center gap-1 px-2 py-0.5 rounded-full"
               style={{ background: 'hsl(32 90% 50% / 0.11)', color: 'hsl(32 90% 65%)' }}
             >
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ background: 'hsl(32 90% 55%)' }}
-              />
+              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(32 90% 55%)' }} />
               {occupiedCount} active
             </span>
           )}
