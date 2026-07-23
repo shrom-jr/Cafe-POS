@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { format } from 'date-fns';
 import { numberToWords } from '@/utils/printer';
-import { buildReceiptText } from '@/utils/buildReceiptText';
-import { setReceiptText } from '@/utils/print';
+import { setReceiptData } from '@/utils/print';
 import { useStaffStore } from '@/store/useStaffStore';
 import { tableDisplayName } from '@/utils/tableName';
 
@@ -77,9 +76,9 @@ const ThermalReceiptLayout = ({
   // Live staff fallback — reactive, used when attribution objects are absent.
   const liveStaff = useStaffStore((s) => s.currentUser?.name) || 'Cashier Desk';
 
-  // Register plain-text receipt so triggerPrint() can use it instead of HTML
+  // Register structured receipt data so triggerPrint() can build HTML from it
   useEffect(() => {
-    setReceiptText(buildReceiptText({
+    setReceiptData({
       cafeName,
       cafeAddress,
       cafePan,
@@ -99,7 +98,7 @@ const ThermalReceiptLayout = ({
       cashierName,
       takenBy,
       processedBy,
-    }));
+    });
   }, [cafeName, cafeAddress, cafePan, billFooter, tableNumber, billNumber, createdAt, items, subtotal, discountAmount, vatEnabled, vatAmount, vatRate, total, method, serverName, cashierName, takenBy, processedBy]);
 
   const fontStack =

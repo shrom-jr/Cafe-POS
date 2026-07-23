@@ -6,7 +6,7 @@
 //   PRE_BILL     — customer pre-bill with watermark   (Printer B: Counter)
 //   TAX_INVOICE  — official sequential tax invoice    (Printer B: Counter)
 //
-// All layouts target 80mm thermal paper (≈ 42 mono chars wide).
+// All layouts target 80mm thermal paper, rendered as clean HTML/CSS tables.
 // Jobs are dispatched via a popup window so the main-app DOM is never
 // interrupted, no CSS @media print overrides on #root are needed.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,6 +14,7 @@
 import { format } from 'date-fns';
 import { numberToWords } from './printer';
 import { useStaffStore } from '@/store/useStaffStore';
+import { tableDisplayName } from '@/utils/tableName';
 
 // ── Typed job interfaces ──────────────────────────────────────────────────────
 
@@ -84,223 +85,247 @@ export type PrintJob =
   | { type: 'PRE_BILL';    data: PreBillData }
   | { type: 'TAX_INVOICE'; data: TaxInvoiceData };
 
-// ── Text-layout helpers (80 mm ≈ 38 chars safe printable area) ───────────────
-// W=38 leaves a comfortable margin buffer so right-edge content (dates, prices)
-// is not clipped by the Pantum PD-80BW's physical paper guides.
+// ── Shared popup CSS ──────────────────────────────────────────────────────────
 
-const W = 38;
-
-function hr(char = '-'): string { return char.repeat(W); }
-
-function center(text: string): string {
-  if (text.length >= W) return text.slice(0, W);
-  const pad = Math.floor((W - text.length) / 2);
-  return ' '.repeat(pad) + text;
-}
-
-function formatLine(left: string, right: string): string {
-  if (left.length + right.length >= W)
-    return left.slice(0, W - right.length - 1) + ' ' + right;
-  return left + ' '.repeat(W - left.length - right.length) + right;
-}
-
-function ljust(s: string, w: number): string {
-  return s.length >= w ? s.slice(0, w) : s.padEnd(w);
-}
-
-function rjust(s: string | number, w: number): string {
-  const str = String(s);
-  return str.length >= w ? str.slice(-w) : str.padStart(w);
-}
-
-function wrapText(text: string, width: number): string[] {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let current = '';
-  for (const word of words) {
-    if ((current + word).length + 1 > width) { lines.push(current.trim()); current = word + ' '; }
-    else current += word + ' ';
+const POPUP_CSS = `
+  @page { size: auto; margin: 0mm; }
+  body {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  if (current.trim()) lines.push(current.trim());
-  return lines;
-}
-
-// ── Column widths for the item table (must sum to W = 38) ────────────────────
-// SN(3) + Item(14) + Qty(4) + Rate(8) + Amt(9) = 38
-const C_SN = 3; const C_ITEM = 14; const C_QTY = 4; const C_RATE = 8; const C_AMT = 9;
-
-function itemRow(sn: string | number, name: string, qty: string | number, rate: string, amt: string): string {
-  return (
-    ljust(String(sn), C_SN) +
-    ljust(name,       C_ITEM) +
-    rjust(qty,        C_QTY) +
-    rjust(rate,       C_RATE) +
-    rjust(amt,        C_AMT)
-  );
-}
-
-// Wraps long item names across continuation lines so nothing is truncated.
-function itemRowMultiline(sn: string | number, name: string, qty: string | number, rate: string, amt: string): string[] {
-  const nameLines = wrapText(name, C_ITEM);
-  const rows = [
-    ljust(String(sn), C_SN) + ljust(nameLines[0], C_ITEM) + rjust(qty, C_QTY) + rjust(rate, C_RATE) + rjust(amt, C_AMT),
-  ];
-  for (let i = 1; i < nameLines.length; i++) {
-    rows.push(' '.repeat(C_SN) + nameLines[i]);
+  .header { text-align: center; margin-bottom: 8px; }
+  .header h2 { margin: 0; font-size: 15px; font-weight: bold; }
+  .header p { margin: 2px 0; font-size: 11px; }
+  .meta-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .meta-table td { font-size: 11px; padding: 1px 0; }
+  .items-table th {
+    border-top: 1px dashed #000;
+    border-bottom: 1px dashed #000;
+    font-size: 11px;
+    padding: 4px 0;
+    text-align: left;
   }
-  return rows;
-}
+  .items-table td { font-size: 11px; padding: 3px 0; vertical-align: top; }
+  .totals-table { width: 100%; border-collapse: collapse; border-top: 1px dashed #000; margin-top: 4px; }
+  .totals-table td { font-size: 11px; padding: 2px 0; }
+  .grand-total td { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }
+  .text-right { text-align: right !important; }
+  .text-center { text-align: center !important; }
+  .bold { font-weight: bold !important; }
+  .logo { max-width: 100px; height: auto; margin: 0 auto 6px auto; display: block;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .divider { border-top: 1px dashed #000; margin: 4px 0; }
+  .footer { text-align: center; font-size: 11px; margin-top: 6px; }
+  .inwords { font-size: 10px; margin: 4px 0; }
+  .watermark { text-align: center; font-size: 10px; font-style: italic; margin-top: 6px; }
+`;
 
-// ── KITCHEN_KOT builder ───────────────────────────────────────────────────────
-// Strips ALL financial data — prints only what the kitchen needs.
-// Items are pre-filtered to food-only categories by the caller (OrderScreen).
+// ── KITCHEN_KOT HTML builder ──────────────────────────────────────────────────
 
-function buildKOTText(data: KOTData): string {
-  const lines: string[] = [];
-  const push = (s = '') => lines.push(s);
+function buildKOTHtml(data: KOTData): string {
   const dateStr = format(data.timestamp, 'dd/MM/yyyy');
   const timeStr = format(data.timestamp, 'hh:mm aa');
 
-  push(hr('='));
-  push(center(data.cafeName));
-  push(hr('='));
-  push(center('KITCHEN ORDER TICKET  (KOT)'));
-  push(center(`KOT #${data.kotNumber}`));
-  push(hr('='));
-  push(formatLine(`Table: ${data.tableNumber}`, `Pax: ${data.pax}`));
-  push(formatLine(`Date:  ${dateStr}`, timeStr));
-  push(`Taken By: ${data.serverName || 'N/A'}`);
-  push(hr('-'));
-  // "Qty x Item" header — matches the "2 x Garlic Bread" row format below
-  push(ljust('QTY', 5) + 'ITEM');
-  push(hr('-'));
+  const itemRows = data.items.map(item => `
+    <tr>
+      <td class="bold" style="width:20%">${item.quantity}</td>
+      <td>${item.name}</td>
+    </tr>`).join('');
 
-  for (const item of data.items) {
-    // Format: "  2 x French Fries" — qty right-justified in 4 chars, then " x name"
-    const qtyPart = rjust(item.quantity, 4);
-    const label = `${qtyPart} x ${item.name}`;
-    push(label.slice(0, W));
-  }
-
-  push(hr('-'));
-  push(center('*** KITCHEN COPY  —  NO PRICING ***'));
-  push(hr('='));
-  push('');
-
-  return lines.join('\n');
+  return `
+    <div class="header">
+      <h2>${data.cafeName}</h2>
+      <p><strong>KITCHEN ORDER TICKET (KOT)</strong></p>
+      <p>KOT #${data.kotNumber}</p>
+    </div>
+    <div class="divider"></div>
+    <table class="meta-table">
+      <tr>
+        <td><strong>Table:</strong> ${tableDisplayName(data.tableNumber)}</td>
+        <td class="text-right"><strong>Pax:</strong> ${data.pax}</td>
+      </tr>
+      <tr>
+        <td><strong>Date:</strong> ${dateStr}</td>
+        <td class="text-right">${timeStr}</td>
+      </tr>
+      <tr><td colspan="2"><strong>Taken By:</strong> ${data.serverName || 'N/A'}</td></tr>
+    </table>
+    <div class="divider"></div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:20%">QTY</th>
+          <th>ITEM</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <div class="divider"></div>
+    <p class="text-center" style="font-size:10px">*** KITCHEN COPY — NO PRICING ***</p>`;
 }
 
-// ── PRE_BILL builder ──────────────────────────────────────────────────────────
-// Full itemisation + financials, prominent watermark header.
+// ── PRE_BILL HTML builder ─────────────────────────────────────────────────────
 
-function buildPreBillText(data: PreBillData): string {
-  const lines: string[] = [];
-  const push = (s = '') => lines.push(s);
+function buildPreBillHtml(data: PreBillData): string {
   const dateStr = format(data.timestamp, 'dd/MM/yyyy');
   const taxableAmount = data.subtotal - data.discountAmount;
+  const vatPct = Math.round((data.vatRate ?? 0.13) * 100);
+  const servedBy = data.takenBy?.name || data.serverName;
 
-  push(hr('='));
-  push(center(data.cafeName));
-  if (data.cafeAddress) push(center(data.cafeAddress));
-  if (data.cafePan)     push(center(`PAN: ${data.cafePan}`));
-  push(hr('='));
-  push(center('PRE-BILL / FOR VERIFICATION ONLY'));
-  push(hr('='));
-  push(formatLine(`Table: ${data.tableNumber}`, `Date: ${dateStr}`));
-  const preBillServer = data.takenBy?.name || data.serverName;
-  if (preBillServer) push(`Served By: ${preBillServer}`);
-  push(hr('-'));
+  const itemRows = data.items.map((item, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${item.name}</td>
+      <td class="text-right">${item.quantity}</td>
+      <td class="text-right">${(item.price * item.quantity).toFixed(0)}</td>
+    </tr>`).join('');
 
-  push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
-  push(hr('-'));
-  data.items.forEach((item, idx) => {
-    itemRowMultiline(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)).forEach(push);
-  });
+  const discountRow = data.discountAmount > 0
+    ? `<tr><td>Discount:</td><td class="text-right">-Rs. ${data.discountAmount.toFixed(2)}</td></tr>`
+    : '';
+  const vatRow = (data.vatEnabled && data.vatAmount > 0)
+    ? `<tr><td>VAT (${vatPct}%):</td><td class="text-right">Rs. ${data.vatAmount.toFixed(2)}</td></tr>`
+    : '';
+  const servedRow = servedBy
+    ? `<tr><td colspan="2"><strong>Served By:</strong> ${servedBy}</td></tr>`
+    : '';
 
-  push(hr('-'));
-  push(formatLine('Basic Amount:',    `Rs. ${data.subtotal.toFixed(2)}`));
-  if (data.discountAmount > 0)
-    push(formatLine('Discount:',      `-Rs. ${data.discountAmount.toFixed(2)}`));
-  push(formatLine('Taxable Amount:',  `Rs. ${taxableAmount.toFixed(2)}`));
-  if (data.vatEnabled && data.vatAmount > 0)
-    push(formatLine(`VAT (${Math.round(data.vatRate * 100)}%):`, `Rs. ${data.vatAmount.toFixed(2)}`));
-  push(hr('='));
-  push(formatLine('TOTAL:', `Rs. ${data.total.toFixed(2)}`));
-  push(hr('='));
-  push(center('** SUBJECT TO CHANGE BEFORE FINAL BILL **'));
-  push(hr('='));
-  push('');
-
-  return lines.join('\n');
+  return `
+    <div class="header">
+      <h2>${data.cafeName}</h2>
+      ${data.cafeAddress ? `<p>${data.cafeAddress}</p>` : ''}
+      ${data.cafePan ? `<p>PAN: ${data.cafePan}</p>` : ''}
+      <p><strong>PRE-BILL / FOR VERIFICATION ONLY</strong></p>
+    </div>
+    <div class="divider"></div>
+    <table class="meta-table">
+      <tr>
+        <td><strong>Table:</strong> ${tableDisplayName(data.tableNumber)}</td>
+        <td class="text-right"><strong>Date:</strong> ${dateStr}</td>
+      </tr>
+      ${servedRow}
+    </table>
+    <div class="divider"></div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:10%">SN</th>
+          <th style="width:55%">Particulars</th>
+          <th style="width:15%;text-align:right">Qty</th>
+          <th style="width:20%;text-align:right">Amt</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <table class="totals-table">
+      <tr><td>Basic Amount:</td><td class="text-right">Rs. ${data.subtotal.toFixed(2)}</td></tr>
+      ${discountRow}
+      <tr><td>Taxable Amount:</td><td class="text-right">Rs. ${taxableAmount.toFixed(2)}</td></tr>
+      ${vatRow}
+      <tr class="grand-total"><td>TOTAL:</td><td class="text-right">Rs. ${data.total.toFixed(2)}</td></tr>
+    </table>
+    <div class="divider"></div>
+    <p class="watermark">** SUBJECT TO CHANGE BEFORE FINAL BILL **</p>`;
 }
 
-// ── TAX_INVOICE builder ───────────────────────────────────────────────────────
-// Official receipt: sequential bill no., payment channel, VAT, amount-in-words.
+// ── TAX_INVOICE HTML builder ──────────────────────────────────────────────────
 
-function buildTaxInvoiceText(data: TaxInvoiceData): string {
-  const lines: string[] = [];
-  const push = (s = '') => lines.push(s);
+function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
   const dateStr = format(data.timestamp, 'dd/MM/yyyy');
   const timeStr = format(data.timestamp, 'hh:mm aa');
   const taxableAmount = data.subtotal - data.discountAmount;
+  const vatPct = Math.round((data.vatRate ?? 0.13) * 100);
 
-  push(hr('='));
-  push(center(data.cafeName));
-  if (data.cafeAddress) push(center(data.cafeAddress));
-  if (data.cafePan)     push(center(`PAN: ${data.cafePan}`));
-  push(hr('='));
-  push(center('TAX INVOICE'));
-  push(hr('='));
   const liveStaff = useStaffStore.getState().currentUser?.name || 'Cashier Desk';
-  const servedBy = data.takenBy?.name || data.takenBy?.fullName || data.processedBy?.name || '';
-  const cashier  = data.processedBy?.name || data.processedBy?.fullName || liveStaff;
-  push(`Payment:   ${data.method}`);
-  push(`Date:      ${dateStr}`);
-  push(`Bill No:   #${data.billNumber}`);
-  push(`Table:     ${data.tableNumber}`);
-  push(`Served By: ${servedBy}`);
-  push(hr('-'));
+  const servedBy  = data.takenBy?.name    || data.takenBy?.fullName    || data.serverName  || '';
+  const cashier   = data.processedBy?.name || data.processedBy?.fullName || data.cashierName || liveStaff;
 
-  push(itemRow('SN', 'Particulars', 'Qty', 'Rate', 'Amt'));
-  push(hr('-'));
-  data.items.forEach((item, idx) => {
-    itemRowMultiline(idx + 1, item.name, item.quantity, item.price.toFixed(0), (item.price * item.quantity).toFixed(0)).forEach(push);
-  });
+  const itemRows = data.items.map((item, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${item.name}</td>
+      <td class="text-right">${item.quantity}</td>
+      <td class="text-right">${item.price.toFixed(0)}</td>
+      <td class="text-right">${(item.price * item.quantity).toFixed(0)}</td>
+    </tr>`).join('');
 
-  push(hr('-'));
-  push(formatLine('Basic Amount:',   `Rs. ${data.subtotal.toFixed(2)}`));
-  if (data.discountAmount > 0)
-    push(formatLine('Discount:',     `-Rs. ${data.discountAmount.toFixed(2)}`));
-  push(formatLine('Taxable Amount:', `Rs. ${taxableAmount.toFixed(2)}`));
-  if (data.vatEnabled && data.vatAmount > 0)
-    push(formatLine(`VAT (${Math.round(data.vatRate * 100)}%):`, `Rs. ${data.vatAmount.toFixed(2)}`));
-  push(hr('='));
-  push(formatLine('TOTAL:', `Rs. ${data.total.toFixed(2)}`));
-  push(hr('='));
-  wrapText(`In words: ${numberToWords(Math.round(data.total))}`, W).forEach(push);
-  push(hr('-'));
-  push(formatLine(`Cashier: ${cashier}`, `Time: ${timeStr}`));
-  push(hr('='));
-  push(center(data.billFooter || 'Thank you for visiting!'));
-  push(hr('='));
-  push('');
+  const discountRow = data.discountAmount > 0
+    ? `<tr><td>Discount:</td><td class="text-right" colspan="4">-Rs. ${data.discountAmount.toFixed(2)}</td></tr>`
+    : '';
+  const vatRow = (data.vatEnabled && data.vatAmount > 0)
+    ? `<tr><td>VAT (${vatPct}%):</td><td class="text-right" colspan="4">Rs. ${data.vatAmount.toFixed(2)}</td></tr>`
+    : '';
+  const servedRow = servedBy
+    ? `<tr><td colspan="2"><strong>Served By:</strong> ${servedBy}</td></tr>`
+    : '';
 
-  return lines.join('\n');
+  return `
+    <div class="header">
+      <h2>${data.cafeName}</h2>
+      ${data.cafeAddress ? `<p>${data.cafeAddress}</p>` : ''}
+      ${data.cafePan ? `<p>PAN: ${data.cafePan}</p>` : ''}
+    </div>
+    <div class="divider"></div>
+    <div class="text-center bold" style="font-size:12px;letter-spacing:1px;margin-bottom:4px">TAX INVOICE</div>
+    <div class="divider"></div>
+    <table class="meta-table">
+      <tr>
+        <td><strong>Payment:</strong> ${data.method}</td>
+        <td class="text-right"><strong>Date:</strong> ${dateStr}</td>
+      </tr>
+      <tr>
+        <td><strong>Bill No:</strong> #${data.billNumber}</td>
+        <td class="text-right"><strong>Table:</strong> ${tableDisplayName(data.tableNumber)}</td>
+      </tr>
+      ${servedRow}
+    </table>
+    <div class="divider"></div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:10%">SN</th>
+          <th style="width:45%">Particulars</th>
+          <th style="width:10%;text-align:right">Qty</th>
+          <th style="width:15%;text-align:right">Rate</th>
+          <th style="width:20%;text-align:right">Amt</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <table class="totals-table">
+      <tr><td>Basic Amount:</td><td class="text-right">Rs. ${data.subtotal.toFixed(2)}</td></tr>
+      ${discountRow}
+      <tr><td>Taxable Amount:</td><td class="text-right">Rs. ${taxableAmount.toFixed(2)}</td></tr>
+      ${vatRow}
+      <tr class="grand-total"><td>TOTAL:</td><td class="text-right">Rs. ${data.total.toFixed(2)}</td></tr>
+    </table>
+    <div class="divider"></div>
+    <div class="inwords">In words: ${numberToWords(Math.round(data.total))}</div>
+    <div class="divider"></div>
+    <table class="meta-table">
+      <tr>
+        <td>Cashier: ${cashier}</td>
+        <td class="text-right">Time: ${timeStr}</td>
+      </tr>
+    </table>
+    <div class="divider"></div>
+    <div class="footer">${data.billFooter || 'Thank you for visiting!'}</div>`;
 }
 
 // ── Popup dispatcher ──────────────────────────────────────────────────────────
-// Opens a minimal popup window, writes the plain-text receipt as <pre>, and
-// fires window.print(). CSS @media print in the popup hides everything except
-// the receipt, matching an 80 mm thermal roll.
+// Opens a minimal popup window, writes the HTML receipt, and fires window.print().
 
-function openPrintPopup(text: string, logo?: string): void {
-  const safe = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
+function openPrintPopup(bodyContent: string, logo?: string): void {
   const logoHtml = logo
-    ? `<div class="logo-container"><img src="${logo}" /></div>`
+    ? `<img src="${logo}" class="logo" />`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -308,55 +333,9 @@ function openPrintPopup(text: string, logo?: string): void {
 <head>
   <meta charset="utf-8">
   <title>Print</title>
-  <style>
-    @page { margin: 0; size: auto; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: Arial, Helvetica, 'Liberation Sans', sans-serif !important;
-      font-size: 11px !important;
-      line-height: 1.3 !important;
-      color: #000000 !important;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 8px !important;
-      background: #ffffff !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
-    .logo-container {
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    .logo-container img {
-      max-width: 110px !important;
-      height: auto !important;
-      display: block !important;
-      margin: 0 auto !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    b, strong, .bold {
-      font-weight: 700 !important;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    .divider { border-bottom: 1px dashed #000; margin: 6px 0; }
-    pre {
-      white-space: pre;
-      font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
-      font-size: 11px;
-      line-height: 1.3;
-      color: #000000 !important;
-      -webkit-text-fill-color: #000000 !important;
-      font-weight: 900 !important;
-      letter-spacing: 0.2px;
-    }
-  </style>
+  <style>${POPUP_CSS}</style>
 </head>
-<body>${logoHtml}<pre>${safe}</pre></body>
+<body>${logoHtml}${bodyContent}</body>
 </html>`;
 
   const win = window.open('', '_blank', 'width=420,height=700,toolbar=0,scrollbars=0,menubar=0');
@@ -381,9 +360,9 @@ function openPrintPopup(text: string, logo?: string): void {
 /**
  * Fire a structured print job.
  *
- * Builds the correct 80 mm plain-text layout for the given job type and
- * dispatches it to a dedicated popup printer window. The main-app DOM,
- * navigation, and CSS are never touched during the print cycle.
+ * Builds the correct HTML table layout for the given job type and dispatches
+ * it to a dedicated popup printer window. The main-app DOM, navigation, and
+ * CSS are never touched during the print cycle.
  *
  * Callers should store the job in a ref if they need to support reprints:
  *   const lastJobRef = useRef<PrintJob | null>(null);
@@ -391,20 +370,21 @@ function openPrintPopup(text: string, logo?: string): void {
  *   firePrintJob(job);
  */
 export function firePrintJob(job: PrintJob): void {
-  let text: string;
-  let logo: string | undefined;
   switch (job.type) {
     case 'KITCHEN_KOT':
-      text = buildKOTText(job.data);
+      openPrintPopup(buildKOTHtml(job.data));
       break;
     case 'PRE_BILL':
-      text = buildPreBillText(job.data);
-      logo = job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined;
+      openPrintPopup(
+        buildPreBillHtml(job.data),
+        job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined,
+      );
       break;
     case 'TAX_INVOICE':
-      text = buildTaxInvoiceText(job.data);
-      logo = job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined;
+      openPrintPopup(
+        buildTaxInvoiceHtml(job.data),
+        job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined,
+      );
       break;
   }
-  openPrintPopup(text, logo);
 }

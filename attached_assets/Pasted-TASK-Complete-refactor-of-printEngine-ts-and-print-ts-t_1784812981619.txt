@@ -1,0 +1,94 @@
+TASK: Complete refactor of printEngine.ts and print.ts to eliminate plain-text <pre> tags and render modern, razor-sharp HTML/CSS table layouts.
+
+1. REMOVE ALL `<pre>` TAGS & ASCII TEXT FORMATTING:
+   - In `src/utils/print.ts` and `src/utils/printEngine.ts`, completely remove the use of `<pre>` tags, monospaced ASCII text generation, and manual space-padding (`padStart`, `padEnd`).
+
+2. BUILD PURE HTML/CSS TABLE STRUCTURE:
+   - Rewrite the HTML generator inside `openPrintPopup` and `triggerPrint` to use strict HTML5 semantics:
+     ```html
+     <!DOCTYPE html>
+     <html>
+     <head>
+       <meta charset="utf-8">
+       <style>
+         @page { size: auto; margin: 0mm; }
+         body {
+           font-family: Arial, Helvetica, sans-serif !important;
+           font-size: 12px !important;
+           line-height: 1.25 !important;
+           color: #000000 !important;
+           margin: 0 !important;
+           padding: 4px 6px !important;
+           width: 100% !important;
+           box-sizing: border-box;
+           -webkit-print-color-adjust: exact;
+         }
+         .header { text-align: center; margin-bottom: 8px; }
+         .header h2 { margin: 0; font-size: 15px; font-weight: bold; }
+         .header p { margin: 2px 0; font-size: 11px; }
+         
+         .meta-table, .items-table {
+           width: 100%;
+           border-collapse: collapse;
+           margin-bottom: 6px;
+         }
+         .meta-table td { font-size: 11px; padding: 1px 0; }
+         
+         .items-table th {
+           border-top: 1px dashed #000;
+           border-bottom: 1px dashed #000;
+           font-size: 11px;
+           padding: 4px 0;
+           text-align: left;
+         }
+         .items-table td {
+           font-size: 11px;
+           padding: 3px 0;
+           vertical-align: top;
+         }
+         
+         .totals-table {
+           width: 100%;
+           border-top: 1px dashed #000;
+           padding-top: 4px;
+           margin-top: 4px;
+         }
+         .totals-table td { font-size: 11px; padding: 2px 0; }
+         .totals-table .grand-total { font-size: 13px; font-weight: bold; }
+         
+         .text-right { text-align: right !important; }
+         .text-center { text-align: center !important; }
+         .bold { font-weight: bold !important; }
+         .logo { max-width: 100px; height: auto; margin: 0 auto 6px auto; display: block; }
+       </style>
+     </head>
+     <body>
+       <!-- Inject Logo if present -->
+       ${showLogo && logo ? `<img src="${logo}" class="logo" />` : ''}
+       
+       <div class="header">
+         <h2>${companyName}</h2>
+         <p>${taxInvoiceTitle}</p>
+       </div>
+
+       <!-- Table layout for items instead of plain text -->
+       <table class="items-table">
+         <thead>
+           <tr>
+             <th style="width: 10%;">SN</th>
+             <th style="width: 50%;">Particulars</th>
+             <th style="width: 15%; text-align: right;">Qty</th>
+             <th style="width: 25%; text-align: right;">Amt</th>
+           </tr>
+         </thead>
+         <tbody>
+           <!-- Map items into clean <tr> standard HTML rows -->
+         </tbody>
+       </table>
+     </body>
+     </html>
+     ```
+
+3. VERIFICATION:
+   - Ensure NO monospace fonts or raw `<pre>` tags exist anywhere in the print path output.
+   - Verify that column alignment is handled cleanly via HTML table cell percentage widths rather than spaces.
