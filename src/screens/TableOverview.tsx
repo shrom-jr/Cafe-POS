@@ -17,13 +17,94 @@ function useClock() {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+// ── Area container box ────────────────────────────────────────────────────────
+interface AreaBoxProps {
+  areaName: string;
+  tables: CafeTable[];
+  tableOrderData: Record<string, { itemCount: number }>;
+  onTableClick: (table: CafeTable) => void;
+}
+
+const AreaBox = ({ areaName, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
+  const freeCount     = tables.filter((t) => t.status === 'free').length;
+  const occupiedCount = tables.filter((t) => t.status !== 'free').length;
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.90) 0%, rgba(2,6,23,0.80) 100%)',
+        border: '1px solid rgba(59,130,246,0.13)',
+        boxShadow: '0 8px 32px -6px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.04)',
+      }}
+    >
+      {/* Area header */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(255,255,255,0.025)',
+        }}
+      >
+        <span className="text-sm font-semibold text-white/85 tracking-wide">{areaName}</span>
+        <div className="flex items-center gap-2 text-[11px] font-medium">
+          {freeCount > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(16,185,129,0.10)', color: 'rgba(52,211,153,0.85)' }}
+            >
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: '#10b981', boxShadow: '0 0 5px 1px rgba(16,185,129,0.5)' }}
+              />
+              {freeCount} free
+            </span>
+          )}
+          {occupiedCount > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ background: 'hsl(32 90% 50% / 0.11)', color: 'hsl(32 90% 65%)' }}
+            >
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: 'hsl(32 90% 55%)', boxShadow: '0 0 5px 1px hsl(32 90% 50% / 0.5)' }}
+              />
+              {occupiedCount} active
+            </span>
+          )}
+          <span className="text-white/25 text-[10px]">{tables.length} tables</span>
+        </div>
+      </div>
+
+      {/* Table grid */}
+      <div className="p-3 sm:p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+          {tables.map((table) => {
+            const data = tableOrderData[table.id] || { itemCount: 0 };
+            return (
+              <TableCard
+                key={table.id}
+                table={table}
+                itemCount={data.itemCount}
+                showSection={false}
+                onClick={() => onTableClick(table)}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 const TableOverview = () => {
   const { tables } = useTables();
   const { orders } = useOrders();
   const settings = usePOSStore((s) => s.settings);
+  const areaOrder = usePOSStore((s) => s.areaOrder);
   const navigate = useNavigate();
   const clock = useClock();
-  const [panelHovered, setPanelHovered] = useState(false);
   const [selectedSection, setSelectedSection] = useState('All');
 
   const tableOrderData = useMemo(() => {
@@ -41,9 +122,8 @@ const TableOverview = () => {
     available: tables.filter((t) => t.status === 'free').length,
     active:    tables.filter((t) => t.status === 'occupied').length,
   }), [tables]);
-  const areaOrder = usePOSStore((s) => s.areaOrder);
 
-  // Build ordered section list: areaOrder first, then any table sections not yet in areaOrder
+  // Ordered section list: areaOrder first, then any orphaned sections
   const sections = useMemo(() => {
     const tableSections = tables.map((t) => t.section?.trim() || 'Ground Floor');
     const seen = new Set<string>();
@@ -57,23 +137,19 @@ const TableOverview = () => {
     return result;
   }, [tables, areaOrder]);
 
-  const visibleTables = useMemo(() => {
-    const filtered = tables.filter(
-      (t) => selectedSection === 'All' || (t.section?.trim() || 'Ground Floor') === selectedSection
-    );
-    return filtered.slice().sort((a, b) => {
-      // When viewing All, sort by area position first, then by table name within the area
-      if (selectedSection === 'All') {
-        const aSection = a.section?.trim() || 'Ground Floor';
-        const bSection = b.section?.trim() || 'Ground Floor';
-        const aIdx = sections.indexOf(aSection);
-        const bIdx = sections.indexOf(bSection);
-        const sectionDiff = (aIdx === -1 ? 9999 : aIdx) - (bIdx === -1 ? 9999 : bIdx);
-        if (sectionDiff !== 0) return sectionDiff;
-      }
-      return compareTableNames(a.number, b.number);
-    });
-  }, [tables, selectedSection, sections]);
+  // Tables per area, sorted by name within each area
+  const tablesByArea = useMemo(() => {
+    const map: Record<string, CafeTable[]> = {};
+    for (const section of sections) {
+      map[section] = tables
+        .filter((t) => (t.section?.trim() || 'Ground Floor') === section)
+        .sort((a, b) => compareTableNames(a.number, b.number));
+    }
+    return map;
+  }, [tables, sections]);
+
+  // Which areas to render based on selected tab
+  const visibleSections = selectedSection === 'All' ? sections : [selectedSection];
 
   const handleTableClick = (table: CafeTable) => {
     navigate(`/order/${table.id}`);
@@ -103,7 +179,6 @@ const TableOverview = () => {
 
   return (
     <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'} headerRight={headerRight}>
-      {/* Single scroll container — no nested scrollers */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 pb-20">
         {tables.length === 0 ? (
           <div className="text-center text-muted-foreground py-20">
@@ -111,12 +186,13 @@ const TableOverview = () => {
             <p className="text-sm mt-1">Go to Admin → Tables to add tables.</p>
           </div>
         ) : (
-          <div>
-            <div className="mb-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Table sections">
+          <div className="flex flex-col gap-4">
+            {/* Section tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Table sections">
               {['All', ...sections].map((section) => {
                 const count = section === 'All'
                   ? tables.length
-                  : tables.filter((table) => (table.section?.trim() || 'Ground Floor') === section).length;
+                  : tables.filter((t) => (t.section?.trim() || 'Ground Floor') === section).length;
                 const active = selectedSection === section;
                 return (
                   <button
@@ -135,33 +211,17 @@ const TableOverview = () => {
                 );
               })}
             </div>
-          <div
-            onMouseEnter={() => setPanelHovered(true)}
-            onMouseLeave={() => setPanelHovered(false)}
-            className="rounded-2xl p-3 sm:p-4 transition-all duration-500"
-            style={{
-              background: 'linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(2,6,23,0.75) 100%)',
-              border: '1px solid rgba(59,130,246,0.12)',
-              boxShadow: '0 12px 48px -8px rgba(0,0,0,0.65), inset 0 1px 0 0 rgba(255,255,255,0.04)',
-              filter: panelHovered ? 'brightness(1.03)' : 'brightness(1)',
-            }}
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-              {visibleTables
-                .map((table) => {
-                  const data = tableOrderData[table.id] || { itemCount: 0 };
-                  return (
-                    <TableCard
-                      key={table.id}
-                      table={table}
-                      itemCount={data.itemCount}
-                      showSection={selectedSection === 'All'}
-                      onClick={() => handleTableClick(table)}
-                    />
-                  );
-                })}
-            </div>
-          </div>
+
+            {/* Area boxes */}
+            {visibleSections.map((section) => (
+              <AreaBox
+                key={section}
+                areaName={section}
+                tables={tablesByArea[section] ?? []}
+                tableOrderData={tableOrderData}
+                onTableClick={handleTableClick}
+              />
+            ))}
           </div>
         )}
       </div>
