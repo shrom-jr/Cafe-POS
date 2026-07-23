@@ -11,6 +11,8 @@ db.seed();
 
 interface POSState {
   tables: CafeTable[];
+  areaOrder: string[];
+  setAreaOrder: (order: string[]) => void;
   pillars: string[];
   categories: Category[];
   menuItems: MenuItem[];
@@ -76,6 +78,11 @@ interface POSState {
 
 export const usePOSStore = create<POSState>((set, get) => ({
   tables: db.getTables(),
+  areaOrder: db.getAreaOrder(),
+  setAreaOrder: (order) => {
+    db.saveAreaOrder(order);
+    set({ areaOrder: order });
+  },
   pillars: db.getPillars(),
   categories: db.getCategories(),
   menuItems: db.getMenuItems(),

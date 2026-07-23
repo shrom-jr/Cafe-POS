@@ -11,6 +11,7 @@ import {
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
+  ChevronUp, ChevronDown,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -36,8 +37,6 @@ const ACTIVE_STYLE = {
   boxShadow: '0 0 18px -4px rgba(59,130,246,0.3)',
 };
 
-const TABLE_SECTION_DEFAULTS = ['Ground Floor', 'Cabins', '1st Floor'];
-const CREATE_SECTION_VALUE = '__create_new_section__';
 
 const PageHeader = ({
   title,
@@ -1003,11 +1002,11 @@ const MenuSection = () => {
 
 // ── TABLE MANAGEMENT ──────────────────────────────────────────────────────
 
-/** Build an ordered, deduplicated area list from defaults + live table sections. */
-function buildAreaList(tables: { section?: string }[], extras: string[] = []): string[] {
+/** Build an ordered, deduplicated area list: areaOrder first, then any table sections not yet in it. */
+function buildAreaList(areaOrder: string[], tables: { section?: string }[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
-  for (const name of [...TABLE_SECTION_DEFAULTS, ...extras, ...tables.map((t) => t.section?.trim() || 'Ground Floor')]) {
+  for (const name of [...areaOrder, ...tables.map((t) => t.section?.trim() || 'Ground Floor')]) {
     const key = name.trim();
     if (key && !seen.has(key)) { seen.add(key); result.push(key); }
   }
@@ -1021,13 +1020,13 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> =
 };
 
 const TablesSection = () => {
-  const tables     = usePOSStore((s) => s.tables);
-  const addTable   = usePOSStore((s) => s.addTable);
+  const tables      = usePOSStore((s) => s.tables);
+  const addTable    = usePOSStore((s) => s.addTable);
   const updateTable = usePOSStore((s) => s.updateTable);
   const deleteTable = usePOSStore((s) => s.deleteTable);
+  const areaOrder   = usePOSStore((s) => s.areaOrder);
+  const setAreaOrder = usePOSStore((s) => s.setAreaOrder);
 
-  // Extra area names that have been created but may not yet contain tables
-  const [extraAreas, setExtraAreas]   = useState<string[]>([]);
   // Per-area inline "add table" input values
   const [inlineNames, setInlineNames] = useState<Record<string, string>>({});
 
@@ -1047,10 +1046,22 @@ const TablesSection = () => {
   const editingTable  = tables.find((t) => t.id === editingTableId);
   const deletingTable = tables.find((t) => t.id === deletingTableId);
 
-  const areas = buildAreaList(tables, extraAreas);
+  // Canonical area list: persisted areaOrder + any table sections not yet in it
+  const areas = buildAreaList(areaOrder, tables);
 
   const hasDuplicateName = (name: string, excludedId?: string) =>
     tables.some((t) => t.id !== excludedId && tableNameKey(t.number) === tableNameKey(name));
+
+  // ── Area reordering ──────────────────────────
+  const moveArea = (area: string, direction: 'up' | 'down') => {
+    const list = [...areas];
+    const idx  = list.indexOf(area);
+    if (idx === -1) return;
+    const target = direction === 'up' ? idx - 1 : idx + 1;
+    if (target < 0 || target >= list.length) return;
+    [list[idx], list[target]] = [list[target], list[idx]];
+    setAreaOrder(list);
+  };
 
   // ── Area helpers ────────────────────────────
   const submitAddArea = () => {
@@ -1060,7 +1071,7 @@ const TablesSection = () => {
       toast.error(`An area named "${name}" already exists.`);
       return;
     }
-    setExtraAreas((prev) => [...prev, name]);
+    setAreaOrder([...areas, name]);
     setAddAreaName('');
     setAddAreaOpen(false);
     toast.success(`Area "${name}" added`);
@@ -1078,8 +1089,8 @@ const TablesSection = () => {
     tables
       .filter((t) => (t.section?.trim() || 'Ground Floor') === renamingArea)
       .forEach((t) => updateTable(t.id, { section: next }));
-    // Update extraAreas list if present
-    setExtraAreas((prev) => prev.map((a) => (a === renamingArea ? next : a)));
+    // Update persisted areaOrder
+    setAreaOrder(areas.map((a) => (a === renamingArea ? next : a)));
     // Transfer inline input state
     setInlineNames((prev) => {
       const copy = { ...prev };
@@ -1103,8 +1114,7 @@ const TablesSection = () => {
 
   const confirmDeleteArea = () => {
     if (!deletingArea) return;
-    setExtraAreas((prev) => prev.filter((a) => a !== deletingArea));
-    // also remove from inline state
+    setAreaOrder(areas.filter((a) => a !== deletingArea));
     setInlineNames((prev) => { const c = { ...prev }; delete c[deletingArea]; return c; });
     toast.success(`Area "${deletingArea}" deleted`);
     setDeletingArea(null);
@@ -1182,12 +1192,13 @@ const TablesSection = () => {
         </div>
       )}
 
-      {areas.map((area) => {
+      {areas.map((area, areaIdx) => {
         const areaTablesSorted = tablesInArea(area)
           .slice()
           .sort((a, b) => compareTableNames(a.number, b.number));
         const isEmpty = areaTablesSorted.length === 0;
-        const isDefault = TABLE_SECTION_DEFAULTS.includes(area);
+        const isFirst = areaIdx === 0;
+        const isLast  = areaIdx === areas.length - 1;
 
         return (
           <div
@@ -1204,6 +1215,26 @@ const TablesSection = () => {
                 </span>
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
+                {/* Move up / down */}
+                <button
+                  onClick={() => moveArea(area, 'up')}
+                  disabled={isFirst}
+                  aria-label={`Move ${area} up`}
+                  title="Move area up"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  onClick={() => moveArea(area, 'down')}
+                  disabled={isLast}
+                  aria-label={`Move ${area} down`}
+                  title="Move area down"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronDown size={14} />
+                </button>
+                <span className="w-px h-4 bg-border/60 mx-1" />
                 <button
                   onClick={() => { setRenamingArea(area); setRenameAreaVal(area); }}
                   aria-label={`Rename area ${area}`}

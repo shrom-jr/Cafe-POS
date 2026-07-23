@@ -11,7 +11,10 @@ const KEYS = {
   recipes: 'pos_recipes',
   stockMovements: 'pos_stockMovements',
   pillars: 'pos_pillars',
+  areaOrder: 'pos_areaOrder',
 };
+
+const DEFAULT_AREA_ORDER = ['Ground Floor', 'Cabins', '1st Floor'];
 
 const defaultPillars: string[] = ['Foods', 'Beverages', 'Cigarettes', 'Hukkah'];
 
@@ -544,6 +547,13 @@ export const db = {
   },
   saveTables: (t: CafeTable[]) => set(KEYS.tables, t),
 
+  getAreaOrder: (): string[] => {
+    const stored = get<string[] | null>(KEYS.areaOrder, null);
+    if (stored && Array.isArray(stored) && stored.length > 0) return stored;
+    return [...DEFAULT_AREA_ORDER];
+  },
+  saveAreaOrder: (order: string[]) => set(KEYS.areaOrder, order),
+
   getPillars: (): string[] => get(KEYS.pillars, defaultPillars),
   savePillars: (p: string[]) => set(KEYS.pillars, p),
 
@@ -612,6 +622,7 @@ export const db = {
       set(KEYS.orders, []);
       set(KEYS.payments, []);
       set(KEYS.settings, defaultSettings);
+      set(KEYS.areaOrder, DEFAULT_AREA_ORDER);
       localStorage.setItem('pos_initialized', 'true');
       localStorage.setItem('pos_menu_version', MENU_VERSION);
     } else if (localStorage.getItem('pos_menu_version') !== MENU_VERSION) {

@@ -41,28 +41,39 @@ const TableOverview = () => {
     available: tables.filter((t) => t.status === 'free').length,
     active:    tables.filter((t) => t.status === 'occupied').length,
   }), [tables]);
+  const areaOrder = usePOSStore((s) => s.areaOrder);
+
+  // Build ordered section list: areaOrder first, then any table sections not yet in areaOrder
   const sections = useMemo(() => {
-    const preferredOrder = ['Ground Floor', 'Cabins', '1st Floor'];
-    const uniqueSections = Array.from(new Set(
-      tables.map((table) => table.section?.trim() || 'Ground Floor')
-    ));
-    return uniqueSections.sort((a, b) => {
-      const aIndex = preferredOrder.indexOf(a);
-      const bIndex = preferredOrder.indexOf(b);
-      if (aIndex !== -1 || bIndex !== -1) {
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
+    const tableSections = tables.map((t) => t.section?.trim() || 'Ground Floor');
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const name of [...areaOrder, ...tableSections]) {
+      if (name && !seen.has(name) && tableSections.includes(name)) {
+        seen.add(name);
+        result.push(name);
       }
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    }
+    return result;
+  }, [tables, areaOrder]);
+
+  const visibleTables = useMemo(() => {
+    const filtered = tables.filter(
+      (t) => selectedSection === 'All' || (t.section?.trim() || 'Ground Floor') === selectedSection
+    );
+    return filtered.slice().sort((a, b) => {
+      // When viewing All, sort by area position first, then by table name within the area
+      if (selectedSection === 'All') {
+        const aSection = a.section?.trim() || 'Ground Floor';
+        const bSection = b.section?.trim() || 'Ground Floor';
+        const aIdx = sections.indexOf(aSection);
+        const bIdx = sections.indexOf(bSection);
+        const sectionDiff = (aIdx === -1 ? 9999 : aIdx) - (bIdx === -1 ? 9999 : bIdx);
+        if (sectionDiff !== 0) return sectionDiff;
+      }
+      return compareTableNames(a.number, b.number);
     });
-  }, [tables]);
-  const visibleTables = useMemo(() => (
-    tables
-      .filter((table) => selectedSection === 'All' || (table.section?.trim() || 'Ground Floor') === selectedSection)
-      .slice()
-      .sort((a, b) => compareTableNames(a.number, b.number))
-  ), [tables, selectedSection]);
+  }, [tables, selectedSection, sections]);
 
   const handleTableClick = (table: CafeTable) => {
     navigate(`/order/${table.id}`);
