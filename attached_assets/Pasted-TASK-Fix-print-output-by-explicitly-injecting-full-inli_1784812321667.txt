@@ -1,0 +1,69 @@
+TASK: Fix print output by explicitly injecting full inline CSS, logo image, and Sans-Serif thermal font directly into the window.open() print popup HTML document.
+
+1. UPDATE POPUP PRINT GENERATOR (`src/utils/print.ts` and `src/utils/printEngine.ts`):
+   - Locate the function(s) generating the printable window (`window.open('', '_blank')`).
+   - Ensure the generated HTML string explicitly embeds a full `<style>` block in `<head>`:
+     ```html
+     <!DOCTYPE html>
+     <html>
+     <head>
+       <style>
+         @page { margin: 0; size: auto; }
+         body {
+           font-family: Arial, Helvetica, 'Liberation Sans', sans-serif !important;
+           font-size: 11px !important;
+           line-height: 1.3 !important;
+           color: #000000 !important;
+           width: 100% !important;
+           margin: 0 !important;
+           padding: 8px !important;
+           -webkit-font-smoothing: antialiased;
+           text-rendering: optimizeLegibility;
+         }
+         .logo-container {
+           text-align: center;
+           margin-bottom: 8px;
+         }
+         .logo-container img {
+           max-width: 110px !important;
+           height: auto !important;
+           display: block !important;
+           margin: 0 auto !important;
+         }
+         b, strong, .bold {
+           font-weight: 700 !important;
+         }
+         /* Table & layout alignment */
+         table { width: 100%; border-collapse: collapse; }
+         .text-center { text-align: center; }
+         .text-right { text-align: right; }
+         .divider { border-bottom: 1px dashed #000; margin: 6px 0; }
+       </style>
+     </head>
+     <body>...</body>
+     </html>
+     ```
+
+2. INJECT LOGO DIRECTLY INTO POPUP HTML:
+   - Check if `settings.showLogoOnBill` is true AND `settings.logo` (base64/data URI) exists.
+   - If true, insert `<div class="logo-container"><img src="${settings.logo}" /></div>` directly at the top of the popup `<body>` content string BEFORE the restaurant title.
+
+3. SANS-SERIF FONT DEFAULT FOR THERMAL:
+   - In `ThermalReceiptLayout.tsx`, `BillingReceiptsSection.tsx`, and `db.ts`, make `Sans-Serif` (`Arial, sans-serif`) the DEFAULT selected font family for thermal receipts, as vector sans-serif fonts render razor-sharp on thermal print heads.
+
+4. WAIT FOR POPUP IMAGES BEFORE PRINTING:
+   - Ensure the print call in popup scripts uses:
+     ```js
+     printWindow.document.close();
+     printWindow.focus();
+     // Wait for image inside popup to render before printing
+     setTimeout(() => {
+       printWindow.print();
+       printWindow.close();
+     }, 300);
+     ```
+
+5. VERIFICATION:
+   - Trigger a print.
+   - Confirm the printable popup window carries the injected `<style>` block and logo `<img>`.
+   - Confirm the physical printout renders clean, sharp Sans-Serif text with the logo at the top.

@@ -47,6 +47,9 @@ export interface PreBillData {
   serverName?:    string;
   /** Full attribution object — preferred over serverName */
   takenBy?:       { id?: string; name: string; role?: string };
+  /** Logo base64/data-URI to embed at the top of the printed receipt */
+  logo?:          string;
+  showLogoOnBill?: boolean;
 }
 
 export interface TaxInvoiceData {
@@ -71,6 +74,9 @@ export interface TaxInvoiceData {
   /** Full attribution objects — preferred over plain strings */
   takenBy?:       { id?: string; name?: string; fullName?: string; role?: string };
   processedBy?:   { id?: string; name?: string; fullName?: string; role?: string };
+  /** Logo base64/data-URI to embed at the top of the printed receipt */
+  logo?:          string;
+  showLogoOnBill?: boolean;
 }
 
 export type PrintJob =
@@ -287,11 +293,15 @@ function buildTaxInvoiceText(data: TaxInvoiceData): string {
 // fires window.print(). CSS @media print in the popup hides everything except
 // the receipt, matching an 80 mm thermal roll.
 
-function openPrintPopup(text: string): void {
+function openPrintPopup(text: string, logo?: string): void {
   const safe = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+
+  const logoHtml = logo
+    ? `<div class="logo-container"><img src="${logo}" /></div>`
+    : '';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -299,51 +309,54 @@ function openPrintPopup(text: string): void {
   <meta charset="utf-8">
   <title>Print</title>
   <style>
-    /* Physical paper: Pantum PD-80BW 80 mm roll.
-       margin:0 on @page removes browser chrome margins;
-       body margin 0.3cm is the safe inner printable inset. */
-    @page { margin: 0; size: 80mm auto; }
-    * { box-sizing: border-box; }
+    @page { margin: 0; size: auto; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0.3cm;
-      font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
-      font-size: 11px;
-      line-height: 1.2;
-      letter-spacing: 0.2px;
+      font-family: Arial, Helvetica, 'Liberation Sans', sans-serif !important;
+      font-size: 11px !important;
+      line-height: 1.3 !important;
       color: #000000 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 8px !important;
       background: #ffffff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      -webkit-font-smoothing: none !important;
-      -moz-osx-font-smoothing: unset !important;
-      font-smooth: never !important;
-      text-rendering: optimizeSpeed !important;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
-    img {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      display: block !important;
-      margin: 0 auto 6px auto !important;
+    .logo-container {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .logo-container img {
       max-width: 110px !important;
       height: auto !important;
+      display: block !important;
+      margin: 0 auto !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
+    b, strong, .bold {
+      font-weight: 700 !important;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .divider { border-bottom: 1px dashed #000; margin: 6px 0; }
     pre {
       white-space: pre;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
+      font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
+      font-size: 11px;
+      line-height: 1.3;
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
       font-weight: 900 !important;
-    }
-    @media print {
-      @page { margin: 0; size: 80mm auto; }
-      body { margin: 0.3cm; }
-      body > *:not(pre) { display: none !important; }
+      letter-spacing: 0.2px;
     }
   </style>
 </head>
-<body><pre>${safe}</pre></body>
+<body>${logoHtml}<pre>${safe}</pre></body>
 </html>`;
 
   const win = window.open('', '_blank', 'width=420,height=700,toolbar=0,scrollbars=0,menubar=0');
@@ -356,18 +369,11 @@ function openPrintPopup(text: string): void {
   win.document.close();
   win.focus();
 
-  // Wait for any images to finish loading before printing
-  const printWhenReady = () => {
-    const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
-    Promise.all(
-      images.map((img) =>
-        img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = res; img.onerror = res; })
-      )
-    ).then(() => {
-      setTimeout(() => { win.print(); setTimeout(() => win.close(), 500); }, 150);
-    });
-  };
-  setTimeout(printWhenReady, 200);
+  // Wait for image inside popup to render before printing
+  setTimeout(() => {
+    win.print();
+    win.close();
+  }, 300);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -386,10 +392,19 @@ function openPrintPopup(text: string): void {
  */
 export function firePrintJob(job: PrintJob): void {
   let text: string;
+  let logo: string | undefined;
   switch (job.type) {
-    case 'KITCHEN_KOT':  text = buildKOTText(job.data);        break;
-    case 'PRE_BILL':     text = buildPreBillText(job.data);    break;
-    case 'TAX_INVOICE':  text = buildTaxInvoiceText(job.data); break;
+    case 'KITCHEN_KOT':
+      text = buildKOTText(job.data);
+      break;
+    case 'PRE_BILL':
+      text = buildPreBillText(job.data);
+      logo = job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined;
+      break;
+    case 'TAX_INVOICE':
+      text = buildTaxInvoiceText(job.data);
+      logo = job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined;
+      break;
   }
-  openPrintPopup(text);
+  openPrintPopup(text, logo);
 }

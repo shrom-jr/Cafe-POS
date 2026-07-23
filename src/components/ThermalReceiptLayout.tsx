@@ -65,7 +65,7 @@ const ThermalReceiptLayout = ({
   method,
   showLogoOnBill = true,
   receiptFontSize = 10,
-  receiptFontFamily = 'monospace',
+  receiptFontFamily = 'sans-serif',
   serverName,
   cashierName,
   takenBy,

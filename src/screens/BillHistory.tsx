@@ -7,7 +7,7 @@ import ReceiptPreview from '@/components/ReceiptPreview';
 import ThermalReceiptLayout from '@/components/ThermalReceiptLayout';
 import { Search, Printer, Receipt, X, Calendar } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
-import { triggerPrint } from '@/utils/print';
+import { triggerPrint, setLogoForPrint } from '@/utils/print';
 import type { Payment } from '@/types/pos';
 import { tableDisplayName } from '@/utils/tableName';
 
@@ -54,6 +54,7 @@ const BillHistory = () => {
   }, [baseList, search, methodFilter]);
 
   const handlePrint = () => {
+    setLogoForPrint(settings.logo ?? null, settings.showLogoOnBill ?? true);
     triggerPrint('receipt');
   };
 

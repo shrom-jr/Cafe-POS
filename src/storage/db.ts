@@ -460,7 +460,7 @@ const defaultSettings: Settings = {
   vatMode: 'excluded',
   showLogoOnBill: true,
   receiptFontSize: 10,
-  receiptFontFamily: 'monospace',
+  receiptFontFamily: 'sans-serif',
 };
 
 const SETTINGS_VERSION = 2;
