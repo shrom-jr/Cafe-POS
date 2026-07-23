@@ -40,8 +40,8 @@ const POPUP_CSS = `
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 1mm !important;
-    width: 66mm !important;
-    max-width: 66mm !important;
+    width: 70mm !important;
+    max-width: 70mm !important;
     overflow: hidden !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -64,8 +64,11 @@ const POPUP_CSS = `
     text-align: left;
   }
   .items-table td { font-size: 10px; padding: 2px 0; vertical-align: top; }
-  .totals-table td { font-size: 10px; padding: 1px 0; }
-  .grand-total td { font-size: 11px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
+  .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000; margin-top: 4px; }
+  .totals-table td { font-size: 10.5px !important; padding: 1px 0; white-space: nowrap !important; }
+  .totals-table td:first-child { text-align: left !important; }
+  .totals-table td:last-child { text-align: right !important; }
+  .grand-total td { font-size: 11px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
   .bold { font-weight: bold !important; }
