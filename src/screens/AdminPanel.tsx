@@ -11,7 +11,7 @@ import {
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, Settings,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -28,7 +28,8 @@ import { fmt } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'payments' | 'bill' | 'reports' | 'backup' | 'inventory' | 'staff';
+type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'backup' | 'inventory';
+type SettingsSubTab = 'bill' | 'payments' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -65,6 +66,7 @@ const AdminPanel = () => {
   const [pinError, setPinError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('bill');
   const settings = usePOSStore((s) => s.settings);
 
   const handlePinSubmit = () => {
@@ -121,15 +123,13 @@ const AdminPanel = () => {
   }
 
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode; subtitle: string }[] = [
-    { id: 'dashboard', label: 'Dashboard',       icon: <BarChart3 size={15} />,  subtitle: 'Overview of your café performance' },
-    { id: 'menu',      label: 'Menu',            icon: <Coffee size={15} />,     subtitle: 'Manage items and categories' },
-    { id: 'tables',    label: 'Tables',          icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
-    { id: 'payments',  label: 'Payments',        icon: <CreditCard size={15} />, subtitle: 'Configure payment methods' },
-    { id: 'bill',      label: 'Company Profile', icon: <Receipt size={15} />,    subtitle: 'Business info and receipt settings' },
-    { id: 'reports',   label: 'Reports',         icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
-    { id: 'inventory', label: 'Inventory',       icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
-    { id: 'staff',     label: 'Staff & Users',   icon: <Users size={15} />,      subtitle: 'Manage staff accounts, roles, and PINs' },
-    { id: 'backup',    label: 'Backup',          icon: <FileDown size={15} />,   subtitle: 'Export, restore or reset data' },
+    { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} />,  subtitle: 'Overview of your café performance' },
+    { id: 'menu',      label: 'Menu',      icon: <Coffee size={15} />,     subtitle: 'Manage items and categories' },
+    { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
+    { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
+    { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
+    { id: 'backup',    label: 'Backup',    icon: <FileDown size={15} />,   subtitle: 'Export, restore or reset data' },
+    { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
   ];
 
   const active = tabs.find((t) => t.id === activeTab)!;
@@ -209,12 +209,37 @@ const AdminPanel = () => {
             {activeTab === 'dashboard' && <DashboardSection />}
             {activeTab === 'menu'      && <MenuSection />}
             {activeTab === 'tables'    && <TablesSection />}
-            {activeTab === 'payments'  && <PaymentsSection />}
-            {activeTab === 'bill'      && <BillDesignSection />}
             {activeTab === 'reports'   && <ReportsSection />}
             {activeTab === 'inventory' && <InventorySection />}
-            {activeTab === 'staff'     && <StaffManagement />}
             {activeTab === 'backup'    && <BackupSection />}
+            {activeTab === 'settings'  && (
+              <div className="space-y-6">
+                {/* Sub-tab pills */}
+                <div className="flex gap-2 flex-wrap">
+                  {([ 
+                    { id: 'bill',     label: 'Company Profile' },
+                    { id: 'payments', label: 'Payments' },
+                    { id: 'staff',    label: 'Staff & Users' },
+                  ] as { id: SettingsSubTab; label: string }[]).map((sub) => (
+                    <button
+                      key={sub.id}
+                      onClick={() => setSettingsSubTab(sub.id)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                        settingsSubTab === sub.id
+                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                          : 'border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Sub-tab content */}
+                {settingsSubTab === 'bill'      && <BillDesignSection />}
+                {settingsSubTab === 'payments'  && <PaymentsSection />}
+                {settingsSubTab === 'staff'     && <StaffManagement />}
+              </div>
+            )}
           </div>
         </div>
       </div>
