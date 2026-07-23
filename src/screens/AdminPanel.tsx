@@ -29,7 +29,7 @@ import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'backup' | 'inventory';
-type SettingsSubTab = 'bill' | 'payments' | 'staff';
+type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -216,8 +216,9 @@ const AdminPanel = () => {
               <div className="space-y-6">
                 {/* Sub-tab pills */}
                 <div className="flex gap-2 flex-wrap">
-                  {([ 
+                  {([
                     { id: 'bill',     label: 'Company Profile' },
+                    { id: 'billing',  label: 'Billing & Receipts' },
                     { id: 'payments', label: 'Payments' },
                     { id: 'staff',    label: 'Staff & Users' },
                   ] as { id: SettingsSubTab; label: string }[]).map((sub) => (
@@ -235,9 +236,10 @@ const AdminPanel = () => {
                   ))}
                 </div>
                 {/* Sub-tab content */}
-                {settingsSubTab === 'bill'      && <BillDesignSection />}
-                {settingsSubTab === 'payments'  && <PaymentsSection />}
-                {settingsSubTab === 'staff'     && <StaffManagement />}
+                {settingsSubTab === 'bill'     && <CompanyProfileSection />}
+                {settingsSubTab === 'billing'  && <BillingReceiptsSection />}
+                {settingsSubTab === 'payments' && <PaymentsSection />}
+                {settingsSubTab === 'staff'    && <StaffManagement />}
               </div>
             )}
           </div>
@@ -1696,7 +1698,8 @@ const PaymentsSection = () => {
 };
 
 // ── COMPANY PROFILE / BILL DESIGN ─────────────────────────────────────────
-const BillDesignSection = () => {
+// ── COMPANY PROFILE ────────────────────────────────────────────────────────
+const CompanyProfileSection = () => {
   const settings = usePOSStore((s) => s.settings);
   const updateSettings = usePOSStore((s) => s.updateSettings);
 
@@ -1705,10 +1708,6 @@ const BillDesignSection = () => {
   const [cafePhone, setCafePhone] = useState(settings.cafePhone || '');
   const [cafePan, setCafePan] = useState(settings.cafePan || '');
   const [vatEnabled, setVatEnabled] = useState(settings.vatEnabled ?? true);
-  const [billFooter, setBillFooter] = useState(settings.billFooter || 'Thank you for visiting!');
-  const [billCounter, setBillCounter] = useState(String(settings.billCounter));
-  const [kotCounter, setKotCounter] = useState(String(settings.kotCounter ?? 100));
-  const [resetKotDaily, setResetKotDaily] = useState(settings.resetKotDaily ?? false);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1725,23 +1724,11 @@ const BillDesignSection = () => {
       cafePhone: cafePhone || undefined,
       cafePan: cafePan || undefined,
       vatEnabled,
-      billFooter: billFooter || undefined,
-      billCounter: Number(billCounter) || settings.billCounter,
-      kotCounter: Number(kotCounter) || settings.kotCounter,
-      resetKotDaily,
     });
     toast.success('Changes saved successfully');
   };
 
   const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
-
-  const sampleSubtotal = 680;
-  const sampleVatAmount = vatEnabled ? Math.round(sampleSubtotal * settings.vatRate) : 0;
-  const sampleTotal = vatEnabled ? sampleSubtotal + sampleVatAmount : sampleSubtotal;
-  const sampleItems = [
-    { menuItemId: '1', name: 'Cappuccino', price: 250, quantity: 2 },
-    { menuItemId: '2', name: 'Croissant', price: 180, quantity: 1 },
-  ];
 
   return (
     <div className="space-y-5">
@@ -1810,6 +1797,49 @@ const BillDesignSection = () => {
         </div>
       </div>
 
+      <button
+        onClick={saveAll}
+        data-testid="button-save-bill-design"
+        className="w-full py-3.5 rounded-2xl bg-accent text-accent-foreground font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)]"
+      >
+        <Save size={16} /> Save Changes
+      </button>
+    </div>
+  );
+};
+
+// ── BILLING & RECEIPTS ─────────────────────────────────────────────────────
+const BillingReceiptsSection = () => {
+  const settings = usePOSStore((s) => s.settings);
+  const updateSettings = usePOSStore((s) => s.updateSettings);
+
+  const [billFooter, setBillFooter] = useState(settings.billFooter || 'Thank you for visiting!');
+  const [billCounter, setBillCounter] = useState(String(settings.billCounter));
+  const [kotCounter, setKotCounter] = useState(String(settings.kotCounter ?? 100));
+  const [resetKotDaily, setResetKotDaily] = useState(settings.resetKotDaily ?? false);
+
+  const saveAll = () => {
+    updateSettings({
+      billFooter: billFooter || undefined,
+      billCounter: Number(billCounter) || settings.billCounter,
+      kotCounter: Number(kotCounter) || settings.kotCounter,
+      resetKotDaily,
+    });
+    toast.success('Changes saved successfully');
+  };
+
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+
+  const sampleSubtotal = 680;
+  const sampleVatAmount = settings.vatEnabled ? Math.round(sampleSubtotal * settings.vatRate) : 0;
+  const sampleTotal = settings.vatEnabled ? sampleSubtotal + sampleVatAmount : sampleSubtotal;
+  const sampleItems = [
+    { menuItemId: '1', name: 'Cappuccino', price: 250, quantity: 2 },
+    { menuItemId: '2', name: 'Croissant', price: 180, quantity: 1 },
+  ];
+
+  return (
+    <div className="space-y-5">
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground">Receipt Settings</h3>
@@ -1844,7 +1874,6 @@ const BillDesignSection = () => {
 
       <button
         onClick={saveAll}
-        data-testid="button-save-bill-design"
         className="w-full py-3.5 rounded-2xl bg-accent text-accent-foreground font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)]"
       >
         <Save size={16} /> Save Changes
@@ -1854,18 +1883,18 @@ const BillDesignSection = () => {
         <h3 className="font-semibold text-foreground">Bill Preview</h3>
         <p className="text-xs text-muted-foreground">Preview of how your receipt will look</p>
         <ReceiptPreview
-          cafeName={cafeName}
+          cafeName={settings.cafeName}
           cafeLogo={settings.cafeLogo}
-          cafeAddress={cafeAddress}
-          cafePhone={cafePhone}
-          cafePan={cafePan}
+          cafeAddress={settings.cafeAddress || ''}
+          cafePhone={settings.cafePhone || ''}
+          cafePan={settings.cafePan || ''}
           billFooter={billFooter}
           tableNumber="1"
           items={sampleItems}
           subtotal={sampleSubtotal}
           discount={0}
           discountType="fixed"
-          vatEnabled={vatEnabled}
+          vatEnabled={settings.vatEnabled}
           vatRate={settings.vatRate}
           vatAmount={sampleVatAmount}
           total={sampleTotal}
