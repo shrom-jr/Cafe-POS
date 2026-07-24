@@ -52,7 +52,7 @@ const PageHeader = ({
   <div className="flex items-start justify-between mb-6 pb-5 border-b border-white/[0.06]">
     <div>
       <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-      <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+      <p className="text-sm text-slate-300 mt-0.5">{subtitle}</p>
     </div>
     {action && <div className="flex-shrink-0 ml-4">{action}</div>}
   </div>
@@ -365,7 +365,7 @@ const DashboardSection = () => {
             <TrendBadge curr={todaySales} prev={yesterdaySales} />
           </div>
           <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(todaySales)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Today's Revenue</p>
+          <p className="text-xs font-semibold text-slate-200 mt-1">Today's Revenue</p>
         </div>
 
         {/* Orders */}
@@ -377,7 +377,7 @@ const DashboardSection = () => {
             <TrendBadge curr={todayOrders} prev={yesterdayOrders} />
           </div>
           <p className="text-2xl font-bold text-foreground leading-tight">{todayOrders}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total Orders Today</p>
+          <p className="text-xs font-semibold text-slate-200 mt-1">Total Orders Today</p>
         </div>
 
         {/* AOV */}
@@ -389,7 +389,7 @@ const DashboardSection = () => {
             <TrendBadge curr={todayAOV} prev={yesterdayAOV} />
           </div>
           <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(Math.round(todayAOV))}</p>
-          <p className="text-xs text-muted-foreground mt-1">Avg. Order Value</p>
+          <p className="text-xs font-semibold text-slate-200 mt-1">Avg. Order Value</p>
         </div>
 
         {/* Cash vs Digital — FIX: show 0% digital when revenue is zero */}
@@ -403,14 +403,14 @@ const DashboardSection = () => {
             </span>
           </div>
           <p className="text-2xl font-bold text-foreground leading-tight">{digitalShare}%</p>
-          <p className="text-xs text-muted-foreground mt-1">Digital Share</p>
+          <p className="text-xs font-semibold text-slate-200 mt-1">Digital Share</p>
           <div className="mt-2.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
               style={{ width: `${cashRatio}%`, background: 'linear-gradient(90deg,#f59e0b,#8b5cf6)' }}
             />
           </div>
-          <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+          <div className="flex justify-between mt-1 text-[10px] font-medium text-slate-300">
             <span>Cash</span><span>Digital</span>
           </div>
         </div>
@@ -421,7 +421,7 @@ const DashboardSection = () => {
         {/* Peak hours bar chart — Y-axis shows Rs. revenue */}
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-4">Hourly revenue (Rs.) — 10 AM to 10 PM</p>
+          <p className="text-xs text-slate-300 mt-0.5 mb-4">Hourly revenue (Rs.) — 10 AM to 10 PM</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
               <defs>
@@ -430,10 +430,10 @@ const DashboardSection = () => {
                   <stop offset="100%" stopColor="rgba(99,102,241,0.45)" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="hour" stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="hour" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} />
               {/* FIX: Y-axis values formatted as Rs. */}
-              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={10} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
+              <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
               <Tooltip
                 contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12 }}
                 formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
@@ -447,12 +447,12 @@ const DashboardSection = () => {
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground mb-4">Top Selling Items</h3>
           {topItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <ShoppingCart size={20} className="opacity-25" />
+                <ShoppingCart size={20} className="text-slate-300 opacity-70" />
               </div>
-              <p className="text-sm font-medium">No sales today yet</p>
-              <p className="text-xs opacity-50 mt-0.5">Items appear after orders close</p>
+              <p className="text-sm font-semibold text-slate-300">No sales today yet</p>
+              <p className="text-xs text-slate-400 mt-0.5">Items appear after orders close</p>
             </div>
           ) : (
             <div className="space-y-3.5">
@@ -2265,8 +2265,8 @@ const ReportsSection = () => {
                 <span className={c.ic}>{card.icon}</span>
               </div>
               <p className={`text-xl font-bold ${c.val} leading-tight`}>{card.value}</p>
-              <p className="text-xs font-semibold text-foreground/80 mt-0.5">{card.label}</p>
-              <p className="text-[10px] text-muted-foreground/55 mt-0.5">{card.sub}</p>
+              <p className="text-xs font-bold text-slate-100 mt-0.5">{card.label}</p>
+              <p className="text-[10px] text-slate-300 mt-0.5">{card.sub}</p>
             </div>
           );
         })}
@@ -2278,12 +2278,12 @@ const ReportsSection = () => {
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground mb-4">Sales by Category</h3>
           {catData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <BarChart3 size={20} className="opacity-25" />
+                <BarChart3 size={20} className="text-slate-300 opacity-70" />
               </div>
-              <p className="text-sm font-medium">No category data</p>
-              <p className="text-xs opacity-50 mt-0.5">Appears after orders close</p>
+              <p className="text-sm font-semibold text-slate-300">No category data</p>
+              <p className="text-xs text-slate-400 mt-0.5">Appears after orders close</p>
             </div>
           ) : (
             <div className="flex items-center gap-5">
@@ -2318,11 +2318,11 @@ const ReportsSection = () => {
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground mb-4">Payment Breakdown</h3>
           {paymentEntries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <CreditCard size={20} className="opacity-25" />
+                <CreditCard size={20} className="text-slate-300 opacity-70" />
               </div>
-              <p className="text-sm font-medium">No payments this period</p>
+              <p className="text-sm font-semibold text-slate-300">No payments this period</p>
             </div>
           ) : (
             <div className="space-y-3.5">
@@ -2371,12 +2371,12 @@ const ReportsSection = () => {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-12 text-slate-300">
             <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-              <Receipt size={20} className="opacity-25" />
+              <Receipt size={20} className="text-slate-300 opacity-70" />
             </div>
-            <p className="text-sm font-medium">{search ? 'No matching transactions' : 'No transactions this period'}</p>
-            <p className="text-xs opacity-50 mt-0.5">{search ? 'Try a different search term' : 'Completed orders will appear here'}</p>
+            <p className="text-sm font-semibold text-slate-300">{search ? 'No matching transactions' : 'No transactions this period'}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{search ? 'Try a different search term' : 'Completed orders will appear here'}</p>
           </div>
         ) : (
           <>
