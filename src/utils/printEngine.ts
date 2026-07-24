@@ -85,15 +85,12 @@ export type PrintJob =
   | { type: 'PRE_BILL';    data: PreBillData }
   | { type: 'TAX_INVOICE'; data: TaxInvoiceData };
 
-// ── Shared popup CSS ──────────────────────────────────────────────────────────
+// ── Shared print CSS ──────────────────────────────────────────────────────────
 
-const POPUP_CSS = `
-  @page {
-    size: 80mm 3276mm !important;
-    margin: 0mm !important;
-  }
-  * { box-sizing: border-box !important; }
-  body, table, td, th, div, span, p {
+const PRINT_CSS = `
+  @page { size: 80mm auto; margin: 0; }
+  * {
+    box-sizing: border-box;
     font-family: Consolas, 'Courier New', Courier, monospace !important;
     color: #000000 !important;
     background-color: #ffffff !important;
@@ -101,83 +98,47 @@ const POPUP_CSS = `
     -webkit-font-smoothing: antialiased !important;
     letter-spacing: 0.2px !important;
   }
-  html {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-  body {
-    font-family: Consolas, 'Courier New', Courier, monospace !important;
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
     font-size: 11.5px !important;
     line-height: 1.35 !important;
-    letter-spacing: 0.2px !important;
-    color: #000000 !important;
-    margin: 0 !important;
-    padding: 0 1mm !important;
+  }
+  #receipt-content {
     width: 70mm !important;
     max-width: 70mm !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    text-rendering: optimizeLegibility !important;
-    -webkit-font-smoothing: antialiased !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-before: avoid !important;
-    break-after: avoid !important;
+    margin: 0 auto !important;
   }
-  .receipt-container {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-before: avoid !important;
-    break-after: avoid !important;
-  }
-  tr, td, th, div, section, .totals-table, .receipt-header, .receipt-footer {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-  table {
-    width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-    color: #000000 !important;
-  }
-  td, th { word-break: break-word !important; overflow: hidden !important; color: #000000 !important; }
-  .header { text-align: center; margin-bottom: 8px; color: #000000 !important; }
-  .header h2 { margin: 0; font-size: 13px; font-weight: bold; color: #000000 !important; }
-  .header p { margin: 2px 0; font-size: 11.5px; color: #000000 !important; }
-  .meta-table td { font-size: 11.5px; padding: 1px 0; color: #000000 !important; }
+  table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+  td, th { word-break: break-word !important; overflow: hidden !important; }
+  .header { text-align: center; margin-bottom: 8px; }
+  .header h2 { margin: 0; font-size: 13px; font-weight: bold; }
+  .header p { margin: 2px 0; font-size: 11.5px; }
+  .meta-table td { font-size: 11.5px; padding: 1px 0; }
   .items-table th {
     border-top: 1px dashed #000;
     border-bottom: 1px dashed #000;
     font-size: 11.5px;
     padding: 3px 0;
     text-align: left;
-    color: #000000 !important;
   }
-  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; color: #000000 !important; }
+  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; }
   .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000; margin-top: 4px; }
-  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; color: #000000 !important; }
+  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; }
   .totals-table td:first-child { text-align: left !important; }
   .totals-table td:last-child { text-align: right !important; }
-  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; color: #000000 !important; }
+  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
-  .bold { font-weight: bold !important; color: #000000 !important; }
+  .bold { font-weight: bold !important; }
   .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
                   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .divider { border-top: 1px dashed #000; margin: 3px 0; }
-  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; color: #000000 !important; }
-  .inwords { font-size: 11.5px; margin: 3px 0; color: #000000 !important; }
-  .watermark { text-align: center; font-size: 11.5px; font-style: italic; margin-top: 5px; color: #000000 !important; }
+  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; }
+  .inwords { font-size: 11.5px; margin: 3px 0; }
+  .watermark { text-align: center; font-size: 11.5px; font-style: italic; margin-top: 5px; }
 `;
 
 // ── KITCHEN_KOT HTML builder ──────────────────────────────────────────────────
@@ -372,46 +333,62 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
     <div class="footer">${data.billFooter || 'Thank you for visiting!'}</div>`;
 }
 
-// ── Popup dispatcher ──────────────────────────────────────────────────────────
-// Opens a minimal popup window, writes the HTML receipt, and fires window.print().
+// ── Iframe dispatcher ─────────────────────────────────────────────────────────
+// Writes the receipt into an offscreen iframe and fires contentWindow.print().
+// Uses position:fixed with 1px dimensions instead of display:none so Firefox
+// does not skip the print command on invisible frames.
 
-function openPrintPopup(bodyContent: string, logo?: string): void {
+function openPrintIframe(bodyContent: string, logo?: string): void {
   const logoHtml = logo
-    ? `<img src="${logo}" class="receipt-logo" style="display: block !important; margin: 0 auto 4px auto; max-width: 45mm; max-height: 20mm; visibility: visible !important;" />`
+    ? `<img src="${logo}" class="receipt-logo" />`
     : '';
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Print</title>
-  <style>${POPUP_CSS}</style>
+  <style>${PRINT_CSS}</style>
 </head>
-<body>${logoHtml}${bodyContent}</body>
+<body>
+  <div id="receipt-content">
+    ${logoHtml}${bodyContent}
+  </div>
+</body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=420,height=700,toolbar=0,scrollbars=0,menubar=0');
-  if (!win) {
-    alert('Please allow popups for this site to enable printing.');
-    window.dispatchEvent(new Event('print-blocked'));
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  iframe.style.border = '0';
+  iframe.style.opacity = '0';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    document.body.removeChild(iframe);
     return;
   }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
 
-  // Wait for all images to fully load before printing
-  const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
-  Promise.all(
-    images.map(img =>
-      img.complete
-        ? Promise.resolve()
-        : new Promise<void>(res => { img.onload = res; img.onerror = res; })
-    )
-  ).then(() => {
-    win.print();
-    win.close();
-  });
+  iframeDoc.open();
+  iframeDoc.write(html);
+  iframeDoc.close();
+
+  const removeIframe = () => {
+    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+  };
+
+  // Clean up after printing (or after 2 s if afterprint never fires)
+  iframe.contentWindow?.addEventListener('afterprint', () => setTimeout(removeIframe, 100));
+
+  // Allow 100 ms for the browser to fully render before triggering print
+  setTimeout(() => {
+    iframe.contentWindow?.print();
+    // Fallback cleanup in case afterprint doesn't fire (e.g. print cancelled)
+    setTimeout(removeIframe, 2000);
+  }, 100);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -431,16 +408,16 @@ function openPrintPopup(bodyContent: string, logo?: string): void {
 export function firePrintJob(job: PrintJob): void {
   switch (job.type) {
     case 'KITCHEN_KOT':
-      openPrintPopup(buildKOTHtml(job.data));
+      openPrintIframe(buildKOTHtml(job.data));
       break;
     case 'PRE_BILL':
-      openPrintPopup(
+      openPrintIframe(
         buildPreBillHtml(job.data),
         job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined,
       );
       break;
     case 'TAX_INVOICE':
-      openPrintPopup(
+      openPrintIframe(
         buildTaxInvoiceHtml(job.data),
         job.data.showLogoOnBill && job.data.logo ? job.data.logo : undefined,
       );

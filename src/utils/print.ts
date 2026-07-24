@@ -28,90 +28,59 @@ export function isReceiptTextReady(): boolean {
   return !!_receiptData;
 }
 
-// ── Shared popup CSS ──────────────────────────────────────────────────────────
+// ── Shared print CSS ──────────────────────────────────────────────────────────
 
-const POPUP_CSS = `
-  @page {
-    size: 80mm 3276mm !important;
-    margin: 0mm !important;
-  }
-  * { box-sizing: border-box !important; color: #000000 !important; }
-  html {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-  body {
+const PRINT_CSS = `
+  @page { size: 80mm auto; margin: 0; }
+  * {
+    box-sizing: border-box;
     font-family: Consolas, 'Courier New', Courier, monospace !important;
-    font-size: 11.5px !important;
-    line-height: 1.35 !important;
-    letter-spacing: 0.2px !important;
     color: #000000 !important;
-    margin: 0 !important;
-    padding: 0 1mm !important;
-    width: 70mm !important;
-    max-width: 70mm !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background-color: #ffffff !important;
     text-rendering: optimizeLegibility !important;
     -webkit-font-smoothing: antialiased !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-before: avoid !important;
-    break-after: avoid !important;
+    letter-spacing: 0.2px !important;
   }
-  .receipt-container {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-before: avoid !important;
-    break-after: avoid !important;
-  }
-  tr, td, th, div, section, .totals-table, .receipt-header, .receipt-footer {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-  table {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
     width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-    color: #000000 !important;
+    background: #ffffff !important;
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
   }
-  td, th { word-break: break-word !important; overflow: hidden !important; color: #000000 !important; }
-  .header { text-align: center; margin-bottom: 8px; color: #000000 !important; }
-  .header h2 { margin: 0; font-size: 13px; font-weight: bold; color: #000000 !important; }
-  .header p { margin: 2px 0; font-size: 11.5px; color: #000000 !important; }
-  .meta-table td { font-size: 11.5px; padding: 1px 0; color: #000000 !important; }
+  #receipt-content {
+    width: 70mm !important;
+    max-width: 70mm !important;
+    margin: 0 auto !important;
+  }
+  table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+  td, th { word-break: break-word !important; overflow: hidden !important; }
+  .header { text-align: center; margin-bottom: 8px; }
+  .header h2 { margin: 0; font-size: 13px; font-weight: bold; }
+  .header p { margin: 2px 0; font-size: 11.5px; }
+  .meta-table td { font-size: 11.5px; padding: 1px 0; }
   .items-table th {
     border-top: 1px dashed #000;
     border-bottom: 1px dashed #000;
     font-size: 11.5px;
     padding: 3px 0;
     text-align: left;
-    color: #000000 !important;
   }
-  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; color: #000000 !important; }
+  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; }
   .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000; margin-top: 4px; }
-  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; color: #000000 !important; }
+  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; }
   .totals-table td:first-child { text-align: left !important; }
   .totals-table td:last-child { text-align: right !important; }
-  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; color: #000000 !important; }
+  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
-  .bold { font-weight: bold !important; color: #000000 !important; }
+  .bold { font-weight: bold !important; }
   .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
                   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .divider { border-top: 1px dashed #000; margin: 3px 0; }
-  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; color: #000000 !important; }
-  .inwords { font-size: 11.5px; margin: 3px 0; color: #000000 !important; }
+  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; }
+  .inwords { font-size: 11.5px; margin: 3px 0; }
 `;
 
 // ── HTML builder ──────────────────────────────────────────────────────────────
@@ -149,13 +118,7 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
     ? `<tr><td colspan="2"><strong>Served By:</strong> ${servedBy}</td></tr>`
     : '';
 
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>${POPUP_CSS}</style>
-</head>
-<body>
+  return `
   ${logoHtml}
   <div class="header">
     <h2>${data.cafeName}</h2>
@@ -206,9 +169,7 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
     </tr>
   </table>
   <div class="divider"></div>
-  <div class="footer">${data.billFooter || 'Thank you for visiting!'}</div>
-</body>
-</html>`;
+  <div class="footer">${data.billFooter || 'Thank you for visiting!'}</div>`;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -219,29 +180,52 @@ export function triggerPrint(_mode: 'receipt' | 'invoice') {
     return;
   }
 
-  const html = buildReceiptHtml(_receiptData, _logo, _showLogo);
+  const bodyContent = buildReceiptHtml(_receiptData, _logo, _showLogo);
 
-  const win = window.open('', '_blank', 'width=420,height=700,toolbar=0,scrollbars=0,menubar=0');
-  if (!win) {
-    alert('Please allow popups to print receipt');
-    window.dispatchEvent(new Event('print-blocked'));
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>${PRINT_CSS}</style>
+</head>
+<body>
+  <div id="receipt-content">
+    ${bodyContent}
+  </div>
+</body>
+</html>`;
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  iframe.style.border = '0';
+  iframe.style.opacity = '0';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    document.body.removeChild(iframe);
     return;
   }
 
-  win.document.write(html);
-  win.document.close();
-  win.focus();
+  iframeDoc.open();
+  iframeDoc.write(html);
+  iframeDoc.close();
 
-  // Wait for all images to fully load before printing
-  const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
-  Promise.all(
-    images.map(img =>
-      img.complete
-        ? Promise.resolve()
-        : new Promise<void>(res => { img.onload = res; img.onerror = res; })
-    )
-  ).then(() => {
-    win.print();
-    win.close();
-  });
+  const removeIframe = () => {
+    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+  };
+
+  // Clean up after printing (or after 2 s if afterprint never fires)
+  iframe.contentWindow?.addEventListener('afterprint', () => setTimeout(removeIframe, 100));
+
+  // Allow 100 ms for the browser to fully render before triggering print
+  setTimeout(() => {
+    iframe.contentWindow?.print();
+    // Fallback cleanup in case afterprint doesn't fire (e.g. print cancelled)
+    setTimeout(removeIframe, 2000);
+  }, 100);
 }

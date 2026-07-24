@@ -1,0 +1,64 @@
+UNIVERSAL CROSS-BROWSER THERMAL PRINT ENGINE FIX (FIREFOX + CHROME + SAFARI):
+
+DO NOT modify any screen UI components, React routes, or layout files.
+ONLY update `src/utils/printEngine.ts` and `src/utils/print.ts`.
+
+Ensure thermal receipt generation works reliably across ALL browsers (Firefox, Chrome, Safari) by implementing these exact rules:
+
+1. IFRAME CREATION & VISIBILITY (FIREFOX FIX):
+   - When creating the hidden print iframe, DO NOT use `display: none` or `visibility: hidden` on the container (Firefox ignores print commands on display:none frames).
+   - Use absolute positioning offscreen with 1px dimensions instead:
+     iframe.style.position = 'fixed';
+     iframe.style.right = '0';
+     iframe.style.bottom = '0';
+     iframe.style.width = '1px';
+     iframe.style.height = '1px';
+     iframe.style.border = '0';
+     iframe.style.opacity = '0';
+
+2. FULL ISOLATED HTML STRUCTURE:
+   Inside the iframe document, write a fully standard HTML template:
+   `<!DOCTYPE html>
+   <html>
+     <head>
+       <meta charset="utf-8">
+       <style>
+         @page { size: 80mm auto; margin: 0; }
+         * {
+           box-sizing: border-box;
+           font-family: Consolas, 'Courier New', Courier, monospace !important;
+           color: #000000 !important;
+           background-color: #ffffff !important;
+           text-rendering: optimizeLegibility !important;
+           -webkit-font-smoothing: antialiased !important;
+           letter-spacing: 0.2px !important;
+         }
+         html, body {
+           margin: 0 !important;
+           padding: 0 !important;
+           width: 100% !important;
+           background: #ffffff !important;
+           font-size: 11.5px !important;
+           line-height: 1.35 !important;
+         }
+         #receipt-content {
+           width: 70mm !important;
+           max-width: 70mm !important;
+           margin: 0 auto !important;
+         }
+         .totals-table td { white-space: nowrap !important; }
+       </style>
+     </head>
+     <body>
+       <div id="receipt-content">
+         ${receiptHtml}
+       </div>
+     </body>
+   </html>`
+
+3. ROBUST EXECUTION TIMING (CROSS-BROWSER):
+   - Wrap `iframeDoc.close()` and trigger printing safely across all engines:
+     - Allow a 100ms timeout or `onload` handler before triggering `iframe.contentWindow.print()`.
+     - Remove the iframe from DOM ONLY after the `afterprint` event or a 1000ms cleanup timeout.
+
+Verify build clean with zero errors.
