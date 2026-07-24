@@ -89,7 +89,7 @@ export type PrintJob =
 
 const POPUP_CSS = `
   @page {
-    size: auto;
+    size: 80mm 3276mm !important;
     margin: 0mm !important;
   }
   * { box-sizing: border-box !important; color: #000000 !important; }
