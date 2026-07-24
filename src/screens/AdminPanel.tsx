@@ -433,7 +433,7 @@ const DashboardSection = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="hour" stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} />
               {/* FIX: Y-axis values formatted as Rs. */}
-              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={10} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} />
+              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={10} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
               <Tooltip
                 contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12 }}
                 formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
