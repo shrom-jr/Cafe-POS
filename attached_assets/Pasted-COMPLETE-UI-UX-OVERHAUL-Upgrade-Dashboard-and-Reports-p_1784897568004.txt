@@ -1,0 +1,28 @@
+COMPLETE UI/UX OVERHAUL: Upgrade Dashboard and Reports pages to enterprise-grade POS analytics.
+
+1. REDESIGN DASHBOARD (Operational Real-time HUD):
+   - TOP KPI CARDS: Make cards compact with sleek dark glassmorphism styling, subtle hover glows, bold primary typography, and trend badges (+12% vs yesterday indicator badges).
+     - Card 1: Today's Revenue (Large bold font + trend badge)
+     - Card 2: Total Orders Today
+     - Card 3: Average Order Value (AOV = Sales / Orders)
+     - Card 4: Cash vs. Digital Ratio (Visual mini progress bar)
+   - MAIN SECTION (Grid Layout):
+     - Left (65% width): "Today's Peak Hours" - Hourly sales bar chart (X-axis: 10AM to 10PM) with modern rounded bars and accent gradients.
+     - Right (35% width): "Top Selling Items" - Ranked list (1-5) showing item name, quantity sold, and progress bar indicating % contribution to total sales.
+
+2. OVERHAUL REPORTS PAGE (Deep Financial & Audit Center):
+   - HEADER TOOLBAR:
+     - Replace full-width bottom export button with a top-right Action Bar containing: [ Date Range Picker Dropdown (Today, Yesterday, Last 7 Days, This Month, Custom) ], [ Export CSV Button ], and [ Print PDF Button ].
+   - DATA CARDS:
+     - Net Sales, Gross Sales, Total Discounts Given, Total Voids/Canceled Orders.
+   - ANALYTICAL SECTIONS (Grid Layout):
+     - Section A: Sales by Category (Donut / Pie Chart showing Food vs. Beverage vs. Sekuwa % split).
+     - Section B: Payment Breakdown (Cash vs. Digital/QR vs. Card breakdown card with clean percentages).
+     - Section C: Detailed Transactions Data Table (Columns: Time, Order #, Table, Items Count, Payment Method, Discount, Total, Staff Name) with search and pagination.
+
+3. POLISH & STYLING HARDENING:
+   - Use high-contrast font weights for numbers (font-semibold / font-bold).
+   - Add subtle borders (border-slate-800/80), dark glass backgrounds (bg-slate-900/60 backdrop-blur-md), and crisp brand accent colors.
+   - Replace empty placeholder states with clean, polished empty-state vectors/cards.
+
+4. VERIFY BUILD CLEAN & ALL ROUTING/STATE REMAINS INTACT.

@@ -11,7 +11,8 @@ import {
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
-  ChevronUp, ChevronDown, Settings,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
+  Search, Printer, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -23,8 +24,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { fmt } from '@/utils/format';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
@@ -257,106 +258,189 @@ const AdminPanel = () => {
 };
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────
+const DONUT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'];
+
 const DashboardSection = () => {
   const payments = usePOSStore((s) => s.payments);
-  const today = startOfDay(new Date()).getTime();
+  const now = new Date();
+  const todayStart  = startOfDay(now).getTime();
+  const yesterdayStart = startOfDay(subDays(now, 1)).getTime();
 
-  const todayPayments = payments.filter((p) => p.createdAt >= today);
-  const todaySales = todayPayments.reduce((s, p) => s + p.total, 0);
-  const todayOrders = todayPayments.length;
-  const cashToday = todayPayments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.total, 0);
-  const digitalToday = todaySales - cashToday;
+  const todayPayments     = payments.filter((p) => p.createdAt >= todayStart);
+  const yesterdayPayments = payments.filter((p) => p.createdAt >= yesterdayStart && p.createdAt < todayStart);
 
-  const itemCounts: Record<string, { name: string; count: number; revenue: number }> = {};
-  todayPayments.forEach((p) => {
-    p.items.forEach((i) => {
-      if (!itemCounts[i.menuItemId]) itemCounts[i.menuItemId] = { name: i.name, count: 0, revenue: 0 };
-      itemCounts[i.menuItemId].count += i.quantity;
-      itemCounts[i.menuItemId].revenue += i.price * i.quantity;
-    });
-  });
-  const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+  const todaySales    = todayPayments.reduce((s, p) => s + p.total, 0);
+  const yesterdaySales = yesterdayPayments.reduce((s, p) => s + p.total, 0);
+  const todayOrders   = todayPayments.length;
+  const yesterdayOrders = yesterdayPayments.length;
+  const todayAOV      = todayOrders > 0 ? todaySales / todayOrders : 0;
+  const yesterdayAOV  = yesterdayOrders > 0 ? yesterdaySales / yesterdayOrders : 0;
+  const cashToday     = todayPayments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.total, 0);
+  const cashRatio     = todaySales > 0 ? (cashToday / todaySales) * 100 : 0;
 
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const day = startOfDay(subDays(new Date(), 6 - i));
-    const dayEnd = startOfDay(subDays(new Date(), 5 - i));
-    const daySales = payments
-      .filter((p) => p.createdAt >= day.getTime() && p.createdAt < (i === 6 ? Date.now() : dayEnd.getTime()))
+  const pctChange = (curr: number, prev: number) => {
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return Math.round(((curr - prev) / prev) * 100);
+  };
+
+  const TrendBadge = ({ curr, prev }: { curr: number; prev: number }) => {
+    const pct = pctChange(curr, prev);
+    const up  = pct >= 0;
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+        up ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
+      }`}>
+        {up ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+        {Math.abs(pct)}%
+      </span>
+    );
+  };
+
+  // Hourly data 10 AM – 10 PM
+  const hourlyData = Array.from({ length: 13 }, (_, i) => {
+    const hour = 10 + i;
+    const hStart = new Date(now); hStart.setHours(hour, 0, 0, 0);
+    const hEnd   = new Date(now); hEnd.setHours(hour + 1, 0, 0, 0);
+    const sales  = todayPayments
+      .filter((p) => p.createdAt >= hStart.getTime() && p.createdAt < hEnd.getTime())
       .reduce((s, p) => s + p.total, 0);
-    return { day: format(day, 'EEE'), sales: daySales };
+    const label  = hour === 12 ? '12P' : hour < 12 ? `${hour}A` : `${hour - 12}P`;
+    return { hour: label, sales };
   });
 
-  const stats = [
-    { label: "Today's Sales",  value: `Rs. ${fmt(todaySales)}`,   icon: <DollarSign size={18} />,  color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20' },
-    { label: 'Orders Today',   value: todayOrders,                icon: <ShoppingCart size={18} />, color: 'text-green-400',  bg: 'bg-green-500/10',  border: 'border-green-500/20' },
-    { label: 'Cash Sales',     value: `Rs. ${fmt(cashToday)}`,    icon: <DollarSign size={18} />,   color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20' },
-    { label: 'Digital Sales',  value: `Rs. ${fmt(digitalToday)}`, icon: <Smartphone size={18} />,  color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  ];
+  // Top selling items with progress bar
+  const itemCounts: Record<string, { name: string; count: number }> = {};
+  todayPayments.forEach((p) =>
+    p.items.forEach((i) => {
+      if (!itemCounts[i.menuItemId]) itemCounts[i.menuItemId] = { name: i.name, count: 0 };
+      itemCounts[i.menuItemId].count += i.quantity;
+    })
+  );
+  const topItems  = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+  const maxCount  = topItems[0]?.count || 1;
 
   return (
     <div className="space-y-5">
+      {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map((s, i) => (
-          <div
-            key={i}
-            className={`bg-card rounded-2xl border ${s.border} p-4 hover:scale-[1.01] hover:shadow-lg transition-all cursor-default`}
-          >
-            <div className={`w-9 h-9 rounded-xl ${s.bg} border ${s.border} flex items-center justify-center mb-3`}>
-              <span className={s.color}>{s.icon}</span>
+        {/* Revenue */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-blue-500/30 hover:shadow-[0_0_20px_-4px_rgba(59,130,246,0.25)] transition-all cursor-default">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <DollarSign size={14} className="text-blue-400" />
             </div>
-            <p className="text-2xl font-bold text-foreground leading-tight">{s.value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+            <TrendBadge curr={todaySales} prev={yesterdaySales} />
           </div>
-        ))}
-      </div>
+          <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(todaySales)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Today's Revenue</p>
+        </div>
 
-      <div className="bg-card rounded-2xl border border-border p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-foreground">Weekly Sales</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Revenue over the last 7 days</p>
+        {/* Orders */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-emerald-500/30 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.25)] transition-all cursor-default">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <ShoppingCart size={14} className="text-emerald-400" />
+            </div>
+            <TrendBadge curr={todayOrders} prev={yesterdayOrders} />
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-tight">{todayOrders}</p>
+          <p className="text-xs text-muted-foreground mt-1">Total Orders Today</p>
+        </div>
+
+        {/* AOV */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-amber-500/30 hover:shadow-[0_0_20px_-4px_rgba(245,158,11,0.25)] transition-all cursor-default">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <TrendingUp size={14} className="text-amber-400" />
+            </div>
+            <TrendBadge curr={todayAOV} prev={yesterdayAOV} />
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(Math.round(todayAOV))}</p>
+          <p className="text-xs text-muted-foreground mt-1">Avg. Order Value</p>
+        </div>
+
+        {/* Cash vs Digital */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-purple-500/30 hover:shadow-[0_0_20px_-4px_rgba(168,85,247,0.25)] transition-all cursor-default">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+              <CreditCard size={14} className="text-purple-400" />
+            </div>
+            <span className="text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">{Math.round(cashRatio)}% Cash</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-tight">{Math.round(100 - cashRatio)}%</p>
+          <p className="text-xs text-muted-foreground mt-1">Digital Share</p>
+          <div className="mt-2.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${cashRatio}%`, background: 'linear-gradient(90deg,#f59e0b,#8b5cf6)' }}
+            />
+          </div>
+          <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+            <span>Cash</span><span>Digital</span>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={last7} barSize={28}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-            <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip
-              contentStyle={{
-                background: '#0d1525',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '10px',
-                color: '#fff',
-                fontSize: 13,
-              }}
-            />
-            <Bar dataKey="sales" fill="rgba(59,130,246,0.7)" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border p-5">
-        <h3 className="font-semibold text-foreground mb-4">Top Selling Items Today</h3>
-        {topItems.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <ShoppingCart size={32} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm">No sales recorded today yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {topItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-colors">
-                <span className="w-7 h-7 rounded-lg bg-accent/15 text-accent flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-sm text-foreground font-medium">{item.name}</span>
-                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-lg">{item.count} sold</span>
-                <span className="text-sm font-semibold text-accent">Rs. {fmt(item.revenue)}</span>
+      {/* ── Main grid: peak hours + top items ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[65%_1fr] gap-4">
+        {/* Peak hours bar chart */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+          <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-4">Hourly sales — 10 AM to 10 PM</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(59,130,246,0.9)" />
+                  <stop offset="100%" stopColor="rgba(99,102,241,0.45)" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="hour" stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => v === 0 ? '' : String(v)} />
+              <Tooltip
+                contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12 }}
+                formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Sales']}
+              />
+              <Bar dataKey="sales" fill="url(#peakGrad)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Top selling items */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+          <h3 className="font-semibold text-foreground mb-4">Top Selling Items</h3>
+          {topItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
+                <ShoppingCart size={20} className="opacity-25" />
               </div>
-            ))}
-          </div>
-        )}
+              <p className="text-sm font-medium">No sales today yet</p>
+              <p className="text-xs opacity-50 mt-0.5">Items appear after orders close</p>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {topItems.map((item, i) => {
+                const pct = Math.round((item.count / maxCount) * 100);
+                return (
+                  <div key={i}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-5 h-5 rounded-md bg-blue-500/15 text-blue-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</span>
+                      <span className="flex-1 text-sm text-foreground font-medium truncate">{item.name}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{item.count} sold</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden ml-7">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, background: `linear-gradient(90deg,${DONUT_COLORS[i % DONUT_COLORS.length]},${DONUT_COLORS[(i + 1) % DONUT_COLORS.length]})` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1950,103 +2034,339 @@ const BillingReceiptsSection = () => {
 };
 
 // ── REPORTS ───────────────────────────────────────────────────────────────
+type ReportPeriod = 'today' | 'yesterday' | 'last7' | 'month';
+const PERIOD_LABELS: Record<ReportPeriod, string> = {
+  today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 Days', month: 'This Month',
+};
+
 const ReportsSection = () => {
-  const payments = usePOSStore((s) => s.payments);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const payments  = usePOSStore((s) => s.payments);
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const categories = usePOSStore((s) => s.categories);
+  const settings  = usePOSStore((s) => s.settings);
+
+  const [period, setPeriod] = useState<ReportPeriod>('today');
+  const [search, setSearch]   = useState('');
+  const [page, setPage]       = useState(1);
+  const PAGE_SIZE = 8;
 
   const now = new Date();
-  const periodStart =
-    period === 'day' ? startOfDay(now) : period === 'week' ? startOfWeek(now) : startOfMonth(now);
-  const periodPayments = payments.filter((p) => p.createdAt >= periodStart.getTime());
-  const totalRevenue = periodPayments.reduce((s, p) => s + p.total, 0);
-  const cashTotal = periodPayments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.total, 0);
-  const digitalTotal = totalRevenue - cashTotal;
+
+  const periodStart = (() => {
+    switch (period) {
+      case 'today':     return startOfDay(now);
+      case 'yesterday': return startOfDay(subDays(now, 1));
+      case 'last7':     return startOfDay(subDays(now, 6));
+      case 'month':     return startOfMonth(now);
+    }
+  })();
+  const periodEnd = period === 'yesterday' ? startOfDay(now).getTime() : now.getTime() + 1;
+
+  const periodPayments = payments.filter(
+    (p) => p.createdAt >= periodStart.getTime() && p.createdAt < periodEnd,
+  );
+
+  // Summary metrics
+  const netSales       = periodPayments.reduce((s, p) => s + p.total, 0);
+  const grossSales     = periodPayments.reduce((s, p) => s + p.subtotal, 0);
+  const totalDiscounts = periodPayments.reduce((s, p) => s + (p.discount || 0), 0);
+  const discountedCount = periodPayments.filter((p) => p.discount > 0).length;
+
+  // Payment breakdown
+  const paymentBreakdown: Record<string, number> = {};
+  periodPayments.forEach((p) => {
+    paymentBreakdown[p.method] = (paymentBreakdown[p.method] || 0) + p.total;
+  });
+  const paymentEntries = Object.entries(paymentBreakdown).sort((a, b) => b[1] - a[1]);
+
+  // Category donut data
+  const catMap: Record<string, { name: string; total: number }> = {};
+  periodPayments.forEach((p) =>
+    p.items.forEach((item) => {
+      const mi  = menuItems.find((m) => m.id === item.menuItemId);
+      const cat = mi ? categories.find((c) => c.id === mi.categoryId) : null;
+      const key = cat?.parentCategory || cat?.name || 'Other';
+      if (!catMap[key]) catMap[key] = { name: key, total: 0 };
+      catMap[key].total += item.price * item.quantity;
+    })
+  );
+  const catData = Object.values(catMap).sort((a, b) => b.total - a.total);
+
+  // Filtered + paginated transactions
+  const filtered = periodPayments
+    .slice()
+    .reverse()
+    .filter((p) => {
+      if (!search) return true;
+      const s = search.toLowerCase();
+      return (
+        String(p.billNumber).includes(s) ||
+        p.tableNumber.toLowerCase().includes(s) ||
+        p.method.toLowerCase().includes(s) ||
+        (p.processedBy?.name || p.takenBy?.name || '').toLowerCase().includes(s)
+      );
+    });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const changePeriod = (p: ReportPeriod) => { setPeriod(p); setPage(1); setSearch(''); };
 
   const exportCSV = () => {
-    const headers = 'Bill#,Table,Items,Subtotal,Discount,Total,Method,Date\n';
+    const headers = 'Time,Bill#,Table,Items,Subtotal,Discount,Total,Method,Staff\n';
     const rows = periodPayments
+      .slice()
+      .reverse()
       .map((p) =>
-        `${p.billNumber},${p.tableNumber},"${p.items.map((i) => `${i.name}x${i.quantity}`).join('; ')}",${p.subtotal},${p.discount},${p.total},${p.method},${format(p.createdAt, 'yyyy-MM-dd HH:mm')}`
+        `${format(p.createdAt, 'yyyy-MM-dd HH:mm')},${p.billNumber},${p.tableNumber},"${p.items.map((i) => `${i.name}x${i.quantity}`).join('; ')}",${p.subtotal},${p.discount},${p.total},${p.method},"${p.processedBy?.name || p.takenBy?.name || ''}"`
       )
       .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `report-${period}-${format(now, 'yyyy-MM-dd')}.csv`;
-    a.click();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `report-${period}-${format(now, 'yyyy-MM-dd')}.csv`; a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV exported');
   };
 
-  const periodLabel = period === 'day' ? 'Today' : period === 'week' ? 'This Week' : 'This Month';
-
-  const stats = [
-    { label: 'Total Revenue', value: `Rs. ${fmt(totalRevenue)}`, color: 'text-blue-400',  border: 'border-blue-500/20',  bg: 'bg-blue-500/8' },
-    { label: 'Orders',        value: periodPayments.length,       color: 'text-green-400', border: 'border-green-500/20', bg: 'bg-green-500/8' },
-    { label: 'Cash',          value: `Rs. ${fmt(cashTotal)}`,     color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/8' },
-    { label: 'Digital',       value: `Rs. ${fmt(digitalTotal)}`,  color: 'text-purple-400',border: 'border-purple-500/20',bg: 'bg-purple-500/8' },
-  ];
-
   return (
     <div className="space-y-5">
-      <div className="flex gap-2">
-        {(['day', 'week', 'month'] as const).map((p) => (
+      {/* ── Header toolbar ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(Object.entries(PERIOD_LABELS) as [ReportPeriod, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => changePeriod(key)}
+              data-testid={`button-report-period-${key}`}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                period === key
+                  ? 'text-white'
+                  : 'bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white/80'
+              }`}
+              style={period === key ? ACTIVE_STYLE : {}}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
           <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            data-testid={`button-report-period-${p}`}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${
-              period === p
-                ? 'text-white shadow-[0_0_12px_-2px_rgba(59,130,246,0.4)]'
-                : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
-            }`}
-            style={period === p ? ACTIVE_STYLE : {}}
+            onClick={exportCSV}
+            data-testid="button-export-csv"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all"
           >
-            {p === 'day' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+            <Download size={14} /> CSV
           </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {stats.map((s, i) => (
-          <div key={i} className={`bg-card rounded-2xl border ${s.border} p-4 ${s.bg}`}>
-            <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
-            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {periodPayments.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-border p-10 text-center text-muted-foreground">
-          <TrendingUp size={36} className="mx-auto mb-2 opacity-20" />
-          <p className="text-sm font-medium">No data for {periodLabel.toLowerCase()}</p>
-          <p className="text-xs mt-1 opacity-60">Sales will appear here once orders are completed</p>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-blue-400 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all"
+          >
+            <Printer size={14} /> PDF
+          </button>
         </div>
-      ) : (
-        <div className="bg-card rounded-2xl border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Transactions — {periodLabel}</h3>
-          <div className="space-y-2 max-h-72 overflow-y-auto">
-            {periodPayments.slice().reverse().map((p) => (
-              <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                <span className="text-xs font-mono text-muted-foreground w-10">#{p.billNumber}</span>
-                <span className="text-sm text-foreground flex-1">{tableDisplayName(p.tableNumber)}</span>
-                <span className="text-xs text-muted-foreground">{format(p.createdAt, 'hh:mm a')}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium capitalize">{p.method}</span>
-                <span className="text-sm font-semibold text-foreground">Rs. {fmt(p.total)}</span>
+      </div>
+
+      {/* ── Data cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Net Sales',         value: `Rs. ${fmt(netSales)}`,       sub: 'After discounts & tax',               color: 'blue',    icon: <DollarSign size={14} /> },
+          { label: 'Gross Sales',       value: `Rs. ${fmt(grossSales)}`,     sub: 'Before discounts',                    color: 'emerald', icon: <TrendingUp size={14} /> },
+          { label: 'Discounts Given',   value: `Rs. ${fmt(totalDiscounts)}`, sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <Receipt size={14} /> },
+          { label: 'Cancelled / Voids', value: '0',                          sub: 'No void tracking yet',                color: 'red',     icon: <X size={14} /> },
+        ].map((card, i) => {
+          const c = {
+            blue:    { b: 'border-blue-500/25',    bg: 'bg-blue-500/[0.08]',    ic: 'text-blue-400',    val: 'text-blue-300' },
+            emerald: { b: 'border-emerald-500/25', bg: 'bg-emerald-500/[0.08]', ic: 'text-emerald-400', val: 'text-emerald-300' },
+            amber:   { b: 'border-amber-500/25',   bg: 'bg-amber-500/[0.08]',   ic: 'text-amber-400',   val: 'text-amber-300' },
+            red:     { b: 'border-red-500/25',     bg: 'bg-red-500/[0.08]',     ic: 'text-red-400',     val: 'text-red-300' },
+          }[card.color]!;
+          return (
+            <div key={i} className={`rounded-2xl border ${c.b} bg-slate-900/60 backdrop-blur-md p-4`}>
+              <div className={`w-8 h-8 rounded-lg ${c.bg} border ${c.b} flex items-center justify-center mb-3`}>
+                <span className={c.ic}>{card.icon}</span>
               </div>
-            ))}
+              <p className={`text-xl font-bold ${c.val} leading-tight`}>{card.value}</p>
+              <p className="text-xs font-semibold text-foreground/80 mt-0.5">{card.label}</p>
+              <p className="text-[10px] text-muted-foreground/55 mt-0.5">{card.sub}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Analytics grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Sales by category — donut */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+          <h3 className="font-semibold text-foreground mb-4">Sales by Category</h3>
+          {catData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
+                <BarChart3 size={20} className="opacity-25" />
+              </div>
+              <p className="text-sm font-medium">No category data</p>
+              <p className="text-xs opacity-50 mt-0.5">Appears after orders close</p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-5">
+              <div className="flex-shrink-0">
+                <PieChart width={150} height={150}>
+                  <Pie data={catData} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={46} outerRadius={68} paddingAngle={3} strokeWidth={0}>
+                    {catData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
+                  />
+                </PieChart>
+              </div>
+              <div className="flex-1 space-y-2 min-w-0">
+                {catData.map((cat, i) => {
+                  const pct = netSales > 0 ? Math.round((cat.total / netSales) * 100) : 0;
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="text-xs text-foreground font-medium flex-1 truncate">{cat.name}</span>
+                      <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Payment breakdown */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+          <h3 className="font-semibold text-foreground mb-4">Payment Breakdown</h3>
+          {paymentEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
+                <CreditCard size={20} className="opacity-25" />
+              </div>
+              <p className="text-sm font-medium">No payments this period</p>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {paymentEntries.map(([method, total], i) => {
+                const pct   = netSales > 0 ? Math.round((total / netSales) * 100) : 0;
+                const label = resolvePaymentLabel(method, settings);
+                const count = periodPayments.filter((p) => p.method === method).length;
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                        <span className="text-sm font-semibold text-foreground">{label}</span>
+                        <span className="text-[11px] text-muted-foreground">{count} txns</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-foreground">Rs. {fmt(total)}</span>
+                        <span className="text-[11px] text-muted-foreground bg-white/[0.06] px-1.5 py-0.5 rounded">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Transactions table ── */}
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <h3 className="font-semibold text-foreground">Detailed Transactions</h3>
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search bill, table, staff…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-8 pr-3 py-1.5 text-sm rounded-lg bg-white/[0.05] border border-white/[0.1] text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:border-blue-500/40 w-52"
+            />
           </div>
         </div>
-      )}
 
-      <button
-        onClick={exportCSV}
-        data-testid="button-export-csv"
-        className="w-full py-3.5 rounded-2xl bg-secondary text-secondary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-accent/15 hover:text-accent transition-all active:scale-[0.98]"
-      >
-        <Download size={16} /> Export CSV
-      </button>
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
+              <Receipt size={20} className="opacity-25" />
+            </div>
+            <p className="text-sm font-medium">{search ? 'No matching transactions' : 'No transactions this period'}</p>
+            <p className="text-xs opacity-50 mt-0.5">{search ? 'Try a different search term' : 'Completed orders will appear here'}</p>
+          </div>
+        ) : (
+          <>
+            {/* Column headers */}
+            <div className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-white/[0.06] mb-1">
+              <span>Time</span><span>Bill #</span><span>Table</span>
+              <span className="text-center">Items</span><span>Method</span>
+              <span className="text-right">Discount</span><span className="text-right">Total</span><span>Staff</span>
+            </div>
+            <div className="space-y-0.5">
+              {paginated.map((p) => (
+                <div
+                  key={p.id}
+                  className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+                >
+                  <span className="text-xs text-muted-foreground tabular-nums">{format(p.createdAt, 'hh:mm a')}</span>
+                  <span className="text-xs font-mono text-muted-foreground">#{p.billNumber}</span>
+                  <span className="text-xs font-medium text-foreground truncate">{tableDisplayName(p.tableNumber)}</span>
+                  <span className="text-xs text-center text-muted-foreground">{p.items.reduce((s, i) => s + i.quantity, 0)}</span>
+                  <span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-semibold capitalize">
+                      {resolvePaymentLabel(p.method, settings)}
+                    </span>
+                  </span>
+                  <span className="text-xs text-right font-medium text-amber-400">{p.discount > 0 ? `Rs. ${fmt(p.discount)}` : '—'}</span>
+                  <span className="text-sm text-right font-bold text-foreground">Rs. {fmt(p.total)}</span>
+                  <span className="text-xs text-muted-foreground truncate">{p.processedBy?.name || p.takenBy?.name || '—'}</span>
+                </div>
+              ))}
+              {/* Mobile fallback rows */}
+              {paginated.map((p) => (
+                <div key={`m-${p.id}`} className="sm:hidden flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground">#{p.billNumber}</span>
+                      <span className="text-xs font-medium text-foreground">{tableDisplayName(p.tableNumber)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] text-muted-foreground">{format(p.createdAt, 'hh:mm a')}</span>
+                      <span className="text-[10px] text-muted-foreground">{p.processedBy?.name || p.takenBy?.name || ''}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-semibold capitalize flex-shrink-0">
+                    {resolvePaymentLabel(p.method, settings)}
+                  </span>
+                  <span className="text-sm font-bold text-foreground flex-shrink-0">Rs. {fmt(p.total)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/[0.06]">
+                <p className="text-xs text-muted-foreground">{filtered.length} transactions · Page {page} of {totalPages}</p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage((v) => Math.max(1, v - 1))} disabled={page === 1}
+                    className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground disabled:opacity-30 transition-colors">
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button onClick={() => setPage((v) => Math.min(totalPages, v + 1))} disabled={page === totalPages}
+                    className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground disabled:opacity-30 transition-colors">
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
