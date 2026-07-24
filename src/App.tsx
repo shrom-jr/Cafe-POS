@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -12,6 +12,16 @@ import AdminPanel from '@/screens/AdminPanel';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
+
+/** Redirects non-admin users away from /admin to / */
+const RequireAdmin = ({ children }: { children: React.ReactNode }) => {
+  const currentUser = useStaffStore((s) => s.currentUser);
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
 
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
@@ -45,7 +55,7 @@ const App = () => {
             {/* UNUSED ROUTE - DO NOT USE */}
             <Route path="/payment/:tableId" element={<PaymentScreen />} />
             <Route path="/history" element={<BillHistory />} />
-            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

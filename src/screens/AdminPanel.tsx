@@ -60,7 +60,8 @@ const PageHeader = ({
 const AdminPanel = () => {
   const currentUser = useStaffStore((s) => s.currentUser);
   const staffUsers  = useStaffStore((s) => s.users);
-  // ADMIN users are already authenticated via the PIN login screen
+
+  // All hooks must be declared before any conditional return (Rules of Hooks)
   const [authenticated, setAuthenticated] = useState(currentUser?.role === 'ADMIN');
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -68,6 +69,12 @@ const AdminPanel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('bill');
   const settings = usePOSStore((s) => s.settings);
+
+  // Hard RBAC guard — belt-and-suspenders on top of the route-level RequireAdmin.
+  // Placed after all hooks so Rules of Hooks is satisfied.
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return null;
+  }
 
   const handlePinSubmit = () => {
     if (staffUsers.some((u) => u.role === 'ADMIN' && u.pin === pin)) {
