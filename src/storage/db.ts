@@ -68,31 +68,32 @@ const defaultCategories: Category[] = [
   // ── Hukkah (parentCategory: 'Hukkah') ────────────────────────────────────
   { id: 'cat-hookah-reg',   name: 'Regular Hookah',                order:  9, sendToKitchen: false, parentCategory: 'Hukkah' },
   { id: 'cat-hookah-cloud', name: 'Cloud Hookah',                  order: 10, sendToKitchen: false, parentCategory: 'Hukkah' },
+  { id: 'cat-hookah-coil', name: 'Hookah Coil',                   order: 11, sendToKitchen: false, parentCategory: 'Hukkah' },
   // ── Cigarettes (parentCategory: 'Cigarettes') ─────────────────────────────
-  { id: 'cat-cig',          name: 'Cigarettes (Per Stick)',         order: 11, sendToKitchen: false, parentCategory: 'Cigarettes' },
+  { id: 'cat-cig',          name: 'Cigarettes (Per Stick)',         order: 12, sendToKitchen: false, parentCategory: 'Cigarettes' },
   // ── Foods (parentCategory: 'Foods') — 22 kitchen categories ──────────────
-  { id: 'cat-burger',       name: 'Burgers & Sandwiches',          order: 12, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-soup',         name: 'Soups',                         order: 13, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-sizzler',      name: 'Sizzlers',                      order: 14, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-veg-snack',    name: 'Vegetarian Snacks',             order: 15, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-nonveg-snack', name: 'Main Non-Veg Snacks',           order: 16, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-chhoila',      name: 'Chhoila',                       order: 17, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-thukpa',       name: 'Thukpa',                        order: 18, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-chowmein',     name: 'Chowmein',                      order: 19, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-momo',         name: 'Momo Varieties',                order: 20, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-fried-rice',   name: 'Fried Rice',                    order: 21, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-biryani',      name: 'Biryani',                       order: 22, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-curry',        name: 'Main Curries',                  order: 23, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-rice',         name: 'Rice Sides',                    order: 24, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-khana',        name: 'Traditional Dhido & Khana Sets',order: 25, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-pizza',        name: 'Pizza',                         order: 26, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-rolls',        name: 'Rolls',                         order: 27, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-chop-suey',    name: 'Chop Suey',                     order: 28, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-fish',         name: 'Fish Dishes',                   order: 29, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-sekuwa',       name: 'Special Sekuwa',                order: 30, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-sekuwa-combo', name: 'Sekuwa Combo Sets',             order: 31, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-khaja',        name: 'Traditional Khaja Sets',        order: 32, sendToKitchen: true,  parentCategory: 'Foods' },
-  { id: 'cat-platter',      name: 'Sharing Platters',              order: 33, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-burger',       name: 'Burgers & Sandwiches',          order: 13, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-soup',         name: 'Soups',                         order: 14, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sizzler',      name: 'Sizzlers',                      order: 15, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-veg-snack',    name: 'Vegetarian Snacks',             order: 16, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-nonveg-snack', name: 'Main Non-Veg Snacks',           order: 17, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chhoila',      name: 'Chhoila',                       order: 18, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-thukpa',       name: 'Thukpa',                        order: 19, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chowmein',     name: 'Chowmein',                      order: 20, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-momo',         name: 'Momo Varieties',                order: 21, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-fried-rice',   name: 'Fried Rice',                    order: 22, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-biryani',      name: 'Biryani',                       order: 23, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-curry',        name: 'Main Curries',                  order: 24, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-rice',         name: 'Rice Sides',                    order: 25, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-khana',        name: 'Traditional Dhido & Khana Sets',order: 26, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-pizza',        name: 'Pizza',                         order: 27, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-rolls',        name: 'Rolls',                         order: 28, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-chop-suey',    name: 'Chop Suey',                     order: 29, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-fish',         name: 'Fish Dishes',                   order: 30, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sekuwa',       name: 'Special Sekuwa',                order: 31, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-sekuwa-combo', name: 'Sekuwa Combo Sets',             order: 32, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-khaja',        name: 'Traditional Khaja Sets',        order: 33, sendToKitchen: true,  parentCategory: 'Foods' },
+  { id: 'cat-platter',      name: 'Sharing Platters',              order: 34, sendToKitchen: true,  parentCategory: 'Foods' },
 ];
 
 const defaultMenuItems: MenuItem[] = [
@@ -132,6 +133,7 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-sp-4',  categoryId: 'cat-soup',         name: 'Creamy Chicken Mushroom Soup',      price:   280 },
   { id: 'mi-sp-5',  categoryId: 'cat-soup',         name: 'Hot & Sour Soup (Veg)',             price:   280 },
   { id: 'mi-sp-6',  categoryId: 'cat-soup',         name: 'Hot & Sour Soup (Non-Veg)',         price:   300 },
+  { id: 'mi-sp-7',  categoryId: 'cat-soup',         name: 'Mutton Khutta Soup',                price:   450 },
   // ── Sizzlers ──────────────────────────────────────────────────────────────
   { id: 'mi-sz-1',  categoryId: 'cat-sizzler',      name: 'Veg Sizzler',                       price:   350 },
   { id: 'mi-sz-2',  categoryId: 'cat-sizzler',      name: 'Fish Sizzler',                      price:   400 },
@@ -146,7 +148,8 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-vs-7',  categoryId: 'cat-veg-snack',    name: 'Onion Pakoda',                      price:   200 },
   { id: 'mi-vs-8',  categoryId: 'cat-veg-snack',    name: 'Chips Chili',                       price:   200 },
   { id: 'mi-vs-9',  categoryId: 'cat-veg-snack',    name: 'Crispy Aloo',                       price:   200 },
-  { id: 'mi-vs-10', categoryId: 'cat-veg-snack',    name: 'Boiled Corn',                       price:   200 },
+  { id: 'mi-vs-10', categoryId: 'cat-veg-snack',    name: 'Mushroom Stick',                    price:   200 },
+  { id: 'mi-vs-10b',categoryId: 'cat-veg-snack',    name: 'Boiled Corn',                       price:   200 },
   { id: 'mi-vs-11', categoryId: 'cat-veg-snack',    name: 'Chura Bhatmas Sadheko',             price:   220 },
   { id: 'mi-vs-12', categoryId: 'cat-veg-snack',    name: 'Mixed Veg (Boiled)',                price:   220 },
   { id: 'mi-vs-13', categoryId: 'cat-veg-snack',    name: 'Crispy Corn',                       price:   240 },
@@ -169,16 +172,17 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-nv-10', categoryId: 'cat-nonveg-snack', name: 'Nepali Chicken',                    price:   350 },
   { id: 'mi-nv-11', categoryId: 'cat-nonveg-snack', name: 'Timur Pork',                        price:   350 },
   { id: 'mi-nv-12', categoryId: 'cat-nonveg-snack', name: 'Pangra Fry',                        price:   350 },
-  { id: 'mi-nv-13', categoryId: 'cat-nonveg-snack', name: 'Palpali Chicken',                   price:   360 },
+  { id: 'mi-nv-13', categoryId: 'cat-nonveg-snack', name: 'Polpal Chicken',                    price:   360 },
   { id: 'mi-nv-14', categoryId: 'cat-nonveg-snack', name: 'Bhutan',                            price:   380 },
   { id: 'mi-nv-15', categoryId: 'cat-nonveg-snack', name: 'Dragon Chicken',                    price:   400 },
   { id: 'mi-nv-16', categoryId: 'cat-nonveg-snack', name: 'Head Fry (Gidi Fry)',               price:   450 },
   { id: 'mi-nv-17', categoryId: 'cat-nonveg-snack', name: 'Head Sadheko (Gidi Sadheko)',       price:   460 },
-  { id: 'mi-nv-18', categoryId: 'cat-nonveg-snack', name: 'Rajkhani Poleko & Sadheko',         price:   550 },
+  { id: 'mi-nv-18', categoryId: 'cat-nonveg-snack', name: 'Mutton Tash',                       price:   550 },
+  { id: 'mi-nv-21', categoryId: 'cat-nonveg-snack', name: 'Rajkhani Poleko & Sadheko',         price:   550 },
   { id: 'mi-nv-19', categoryId: 'cat-nonveg-snack', name: 'Pakku',                             price:   550 },
   { id: 'mi-nv-20', categoryId: 'cat-nonveg-snack', name: 'Hyakula Dameko & Sadheko',          price:   600 },
   // ── Chhoila ───────────────────────────────────────────────────────────────
-  { id: 'mi-ch-1',  categoryId: 'cat-chhoila',      name: 'Mushroom Chhoila',                  price:   200 },
+  { id: 'mi-ch-1',  categoryId: 'cat-chhoila',      name: 'Mushroom Chhoila',                  price:   220 },
   { id: 'mi-ch-2',  categoryId: 'cat-chhoila',      name: 'Buff Chhoila',                      price:   280 },
   { id: 'mi-ch-3',  categoryId: 'cat-chhoila',      name: 'Pork Chhoila',                      price:   280 },
   { id: 'mi-ch-4',  categoryId: 'cat-chhoila',      name: 'Chicken Chhoila',                   price:   300 },
@@ -254,8 +258,6 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-rl-2',  categoryId: 'cat-rolls',        name: 'Katti Roll (Non-Veg)',              price:   280 },
   { id: 'mi-rl-3',  categoryId: 'cat-rolls',        name: 'Spring Roll (Veg)',                 price:   200 },
   { id: 'mi-rl-4',  categoryId: 'cat-rolls',        name: 'Spring Roll (Non-Veg)',             price:   300 },
-  { id: 'mi-rl-5',  categoryId: 'cat-rolls',        name: 'Shawarma Roll (Veg)',               price:   250 },
-  { id: 'mi-rl-6',  categoryId: 'cat-rolls',        name: 'Shawarma Roll (Non-Veg)',           price:   350 },
   // ── Chop Suey ─────────────────────────────────────────────────────────────
   { id: 'mi-cs-1',  categoryId: 'cat-chop-suey',    name: 'Chinese Chop Suey',                 price:   225 },
   { id: 'mi-cs-2',  categoryId: 'cat-chop-suey',    name: 'American Chop Suey',                price:   250 },
@@ -301,12 +303,12 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-pl-1',  categoryId: 'cat-platter',      name: 'Momo Platter (Small)',              price:   350 },
   { id: 'mi-pl-2',  categoryId: 'cat-platter',      name: 'Momo Platter (Large)',              price:   550 },
   { id: 'mi-pl-3',  categoryId: 'cat-platter',      name: 'Newari Platter (Small)',            price:   400 },
-  { id: 'mi-pl-4',  categoryId: 'cat-platter',      name: 'Newari Platter (Large)',            price:   650 },
+  { id: 'mi-pl-4',  categoryId: 'cat-platter',      name: 'Newari Platter (Large)',            price:   700 },
   { id: 'mi-pl-5',  categoryId: 'cat-platter',      name: 'Special Bamboo Platter (Small)',    price:   450 },
   { id: 'mi-pl-6',  categoryId: 'cat-platter',      name: 'Special Bamboo Platter (Large)',    price:   700 },
   // ── Beers ─────────────────────────────────────────────────────────────────
-  { id: 'mi-be-1',  categoryId: 'cat-beer',         name: 'Mini Gorkha',                       price:   250 },
-  { id: 'mi-be-2',  categoryId: 'cat-beer',         name: 'Mini Tuborg',                       price:   280 },
+  { id: 'mi-be-1',  categoryId: 'cat-beer',         name: 'Mini Gorkha',                       price:   270 },
+  { id: 'mi-be-2',  categoryId: 'cat-beer',         name: 'Mini Tuborg',                       price:   290 },
   { id: 'mi-be-3',  categoryId: 'cat-beer',         name: 'Gorkha',                            price:   480 },
   { id: 'mi-be-4',  categoryId: 'cat-beer',         name: 'Gorkha Pilsner',                    price:   550 },
   { id: 'mi-be-5',  categoryId: 'cat-beer',         name: 'Gorkha Craft',                      price:   575 },
@@ -434,6 +436,9 @@ const defaultMenuItems: MenuItem[] = [
   { id: 'mi-hc-1',  categoryId: 'cat-hookah-cloud', name: 'Mint (Cloud)',                      price:   500 },
   { id: 'mi-hc-2',  categoryId: 'cat-hookah-cloud', name: 'Double Apple (Cloud)',              price:   550 },
   { id: 'mi-hc-3',  categoryId: 'cat-hookah-cloud', name: 'Lady Killer (Cloud)',               price:   600 },
+  // ── Hookah Coil ───────────────────────────────────────────────────────────
+  { id: 'mi-hk-1',  categoryId: 'cat-hookah-coil',  name: 'Normal Coil',                       price:    50 },
+  { id: 'mi-hk-2',  categoryId: 'cat-hookah-coil',  name: 'Coconut Coil',                      price:   120 },
   // ── Cigarettes (Per Stick) ────────────────────────────────────────────────
   { id: 'mi-cg-1',  categoryId: 'cat-cig',          name: 'Shikhar Ice',                       price:    25 },
   { id: 'mi-cg-2',  categoryId: 'cat-cig',          name: 'Surya Red',                         price:    30 },
@@ -531,7 +536,7 @@ function migrateIngredientUnits() {
 migrateIngredientUnits();
 
 /** Bump this string any time defaultCategories or defaultMenuItems change. */
-const MENU_VERSION = 'bamboo-v5';
+const MENU_VERSION = 'bamboo-v6';
 
 export const db = {
   getTables: (): CafeTable[] => {
