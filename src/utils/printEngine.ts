@@ -88,7 +88,7 @@ export type PrintJob =
 // ── Shared print CSS ──────────────────────────────────────────────────────────
 
 const PRINT_CSS = `
-  @page { size: 80mm auto; margin: 0; }
+  @page { size: 80mm auto; margin: 0mm !important; }
   * {
     box-sizing: border-box;
     font-family: Consolas, 'Courier New', Courier, monospace !important;
@@ -103,13 +103,13 @@ const PRINT_CSS = `
     padding: 0 !important;
     width: 100% !important;
     background: #ffffff !important;
-    font-size: 11.5px !important;
-    line-height: 1.35 !important;
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
   }
   #receipt-content {
-    width: 70mm !important;
-    max-width: 70mm !important;
-    margin: 0 auto !important;
+    width: 68mm !important;
+    max-width: 72mm !important;
+    margin: 0 !important;
   }
   table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
   td, th { word-break: break-word !important; overflow: hidden !important; }
