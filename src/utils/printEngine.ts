@@ -89,11 +89,12 @@ export type PrintJob =
 
 const POPUP_CSS = `
   @page { size: 80mm auto; margin: 0mm !important; }
-  * { box-sizing: border-box !important; }
+  * { box-sizing: border-box !important; color: #000000 !important; }
   body {
-    font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 10px !important;
-    line-height: 1.2 !important;
+    font-family: Consolas, 'Courier New', Courier, monospace !important;
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    letter-spacing: 0.2px !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 1mm !important;
@@ -102,39 +103,43 @@ const POPUP_CSS = `
     overflow: hidden !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
   }
   table {
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
+    color: #000000 !important;
   }
-  td, th { word-break: break-word !important; overflow: hidden !important; }
-  .header { text-align: center; margin-bottom: 8px; }
-  .header h2 { margin: 0; font-size: 13px; font-weight: bold; }
-  .header p { margin: 2px 0; font-size: 10px; }
-  .meta-table td { font-size: 10px; padding: 1px 0; }
+  td, th { word-break: break-word !important; overflow: hidden !important; color: #000000 !important; }
+  .header { text-align: center; margin-bottom: 8px; color: #000000 !important; }
+  .header h2 { margin: 0; font-size: 13px; font-weight: bold; color: #000000 !important; }
+  .header p { margin: 2px 0; font-size: 11.5px; color: #000000 !important; }
+  .meta-table td { font-size: 11.5px; padding: 1px 0; color: #000000 !important; }
   .items-table th {
     border-top: 1px dashed #000;
     border-bottom: 1px dashed #000;
-    font-size: 10px;
+    font-size: 11.5px;
     padding: 3px 0;
     text-align: left;
+    color: #000000 !important;
   }
-  .items-table td { font-size: 10px; padding: 2px 0; vertical-align: top; }
+  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; color: #000000 !important; }
   .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000; margin-top: 4px; }
-  .totals-table td { font-size: 10.5px !important; padding: 1px 0; white-space: nowrap !important; }
+  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; color: #000000 !important; }
   .totals-table td:first-child { text-align: left !important; }
   .totals-table td:last-child { text-align: right !important; }
-  .grand-total td { font-size: 11px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
+  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; color: #000000 !important; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
-  .bold { font-weight: bold !important; }
+  .bold { font-weight: bold !important; color: #000000 !important; }
   .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
-                  filter: contrast(150%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .divider { border-top: 1px dashed #000; margin: 3px 0; }
-  .footer { text-align: center; font-size: 10px; margin-top: 5px; }
-  .inwords { font-size: 10px; margin: 3px 0; }
-  .watermark { text-align: center; font-size: 10px; font-style: italic; margin-top: 5px; }
+  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; color: #000000 !important; }
+  .inwords { font-size: 11.5px; margin: 3px 0; color: #000000 !important; }
+  .watermark { text-align: center; font-size: 11.5px; font-style: italic; margin-top: 5px; color: #000000 !important; }
 `;
 
 // ── KITCHEN_KOT HTML builder ──────────────────────────────────────────────────
