@@ -239,11 +239,11 @@ const PinLoginScreen = () => {
           >
             <Lock size={14} className="text-blue-400" />
           </div>
-          <p className="text-xs font-bold text-white/50 tracking-[0.14em] uppercase select-none">
+          <p className="text-xs font-medium text-slate-200 tracking-[0.14em] uppercase select-none">
             {settings.cafeName}
           </p>
         </div>
-        <p className="text-sm font-medium text-white/60">Select your profile to log in</p>
+        <p className="text-sm font-medium text-slate-300">Select your profile to log in</p>
       </header>
 
       {/* Profile grid */}

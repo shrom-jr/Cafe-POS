@@ -176,7 +176,7 @@ const AdminPanel = () => {
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
                     isActive
                       ? 'text-white'
-                      : 'text-white/40 hover:text-white/72 hover:bg-white/[0.05]'
+                      : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
                   }`}
                   style={isActive ? ACTIVE_STYLE : {}}
                 >
@@ -1055,7 +1055,7 @@ const MenuSection = () => {
               <h3 className="font-semibold text-foreground">
                 {selectedCatName ? `${selectedCatName} Items` : 'Menu Items'}
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{catItems.length} item{catItems.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-slate-300 mt-0.5">{catItems.length} item{catItems.length !== 1 ? 's' : ''}</p>
             </div>
             <button
               onClick={() => { setShowAddItem(!showAddItem); setItemName(''); setItemPrice(''); setItemImage(undefined); }}
@@ -1121,7 +1121,7 @@ const MenuSection = () => {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Rs. {fmt(item.price)}</p>
+                      <p className="text-xs text-slate-200 font-semibold mt-0.5">Rs. {fmt(item.price)}</p>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => startEdit(item)} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"><Edit3 size={14} /></button>
@@ -1325,7 +1325,7 @@ const TablesSection = () => {
       {/* ── Top bar ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-slate-300 mt-0.5">
             {tables.length} table{tables.length !== 1 ? 's' : ''} across {areas.length} area{areas.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -1365,7 +1365,7 @@ const TablesSection = () => {
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-white/[0.02]">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="font-semibold text-foreground text-sm truncate">{area}</span>
-                <span className="shrink-0 text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border">
+                <span className="shrink-0 text-[11px] text-slate-300 bg-secondary px-2 py-0.5 rounded-full border border-border">
                   {areaTablesSorted.length} table{areaTablesSorted.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -1478,7 +1478,7 @@ const TablesSection = () => {
                   type="text"
                   placeholder="Table name (e.g. 5, Cabin 2, VIP 2)"
                   data-testid={`input-table-name-${area}`}
-                  className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-accent h-10"
+                  className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-accent h-10"
                 />
                 <button
                   onClick={() => submitInlineTable(area)}
@@ -1863,7 +1863,7 @@ const CompanyProfileSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
 
   return (
     <div className="space-y-5">
@@ -1874,21 +1874,21 @@ const CompanyProfileSection = () => {
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Café Name</label>
+            <label className="text-xs font-medium text-slate-200 block mb-1.5">Café Name</label>
             <input value={cafeName} onChange={(e) => setCafeName(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Phone Number</label>
+            <label className="text-xs font-medium text-slate-200 block mb-1.5">Phone Number</label>
             <input value={cafePhone} onChange={(e) => setCafePhone(e.target.value)} placeholder="e.g. 01-XXXXXXX" className={inputCls} />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Address</label>
+            <label className="text-xs font-medium text-slate-200 block mb-1.5">Address</label>
             <input value={cafeAddress} onChange={(e) => setCafeAddress(e.target.value)} placeholder="e.g. Kathmandu, Nepal" className={inputCls} />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Logo</label>
+          <label className="text-xs font-medium text-slate-200 block mb-1.5">Logo</label>
           <div className="flex items-center gap-4">
             {settings.cafeLogo ? (
               <div className="relative w-20 h-20">
@@ -1919,7 +1919,7 @@ const CompanyProfileSection = () => {
           <p className="text-xs text-muted-foreground mt-0.5">VAT and PAN configuration</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1.5">PAN / VAT Number</label>
+          <label className="text-xs font-medium text-slate-200 block mb-1.5">PAN / VAT Number</label>
           <input value={cafePan} onChange={(e) => setCafePan(e.target.value)} placeholder="e.g. 123456789" className={inputCls} />
         </div>
         <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
@@ -1968,7 +1968,7 @@ const BillingReceiptsSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
 
   const sampleSubtotal = 680;
   const sampleVatAmount = settings.vatEnabled ? Math.round(sampleSubtotal * settings.vatRate) : 0;
@@ -2007,16 +2007,16 @@ const BillingReceiptsSection = () => {
           <p className="text-xs text-muted-foreground mt-0.5">Customize receipt appearance</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Footer Message</label>
+          <label className="text-xs font-medium text-slate-200 block mb-1.5">Footer Message</label>
           <input value={billFooter} onChange={(e) => setBillFooter(e.target.value)} placeholder="Thank you for visiting!" className={inputCls} />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Current Bill Number</label>
+          <label className="text-xs font-medium text-slate-200 block mb-1.5">Current Bill Number</label>
           <input value={billCounter} onChange={(e) => setBillCounter(e.target.value)} type="number" className={inputCls} />
           <p className="text-xs text-muted-foreground mt-1.5">Next bill will be <span className="text-foreground font-medium">#{Number(billCounter) + 1}</span></p>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground block mb-1.5">Current KOT Number</label>
+          <label className="text-xs font-medium text-slate-200 block mb-1.5">Current KOT Number</label>
           <input value={kotCounter} onChange={(e) => setKotCounter(e.target.value)} type="number" className={inputCls} />
           <p className="text-xs text-muted-foreground mt-1.5">Next KOT will be <span className="text-foreground font-medium">#{Number(kotCounter) + 1}</span></p>
         </div>
@@ -2491,7 +2491,7 @@ const BackupSection = () => {
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground">Export Backup</h3>
-          <p className="text-sm text-muted-foreground mt-1">Download all your data as a JSON file for safekeeping. Include menu, tables, orders, and settings.</p>
+          <p className="text-sm text-slate-300 mt-1">Download all your data as a JSON file for safekeeping. Include menu, tables, orders, and settings.</p>
         </div>
         <button
           onClick={handleExport}
@@ -2505,7 +2505,7 @@ const BackupSection = () => {
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-foreground">Restore Backup</h3>
-          <p className="text-sm text-muted-foreground mt-1">Import a previously exported backup file. This will overwrite your current data.</p>
+          <p className="text-sm text-slate-300 mt-1">Import a previously exported backup file. This will overwrite your current data.</p>
         </div>
         <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
         <button
@@ -2520,7 +2520,7 @@ const BackupSection = () => {
       <div className="bg-card rounded-2xl border-2 border-destructive/25 p-5 space-y-4">
         <div>
           <h3 className="font-semibold text-destructive">Factory Reset</h3>
-          <p className="text-sm text-muted-foreground mt-1">Delete all data and restore default settings. <span className="text-destructive font-medium">This cannot be undone.</span></p>
+          <p className="text-sm text-slate-300 mt-1">Delete all data and restore default settings. <span className="text-destructive font-medium">This cannot be undone.</span></p>
         </div>
         {!showResetConfirm ? (
           <button

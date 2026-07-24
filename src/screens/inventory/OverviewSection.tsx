@@ -90,34 +90,34 @@ export const OverviewSection = () => {
         <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
           <div className="flex items-center gap-2 mb-2">
             <ShoppingCart size={13} className="text-blue-400" />
-            <span className="text-xs text-muted-foreground">Today's Purchases</span>
+            <span className="text-xs text-slate-300">Today's Purchases</span>
           </div>
           <p className="text-2xl font-bold text-foreground">{stats.todayPurchases.length}</p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">transactions</p>
+          <p className="text-xs text-slate-300 mt-0.5">transactions</p>
         </div>
         <div className={`rounded-xl border p-4 ${stats.allLow.length > 0 ? 'border-red-500/25 bg-red-500/[0.05]' : 'border-white/[0.07] bg-white/[0.03]'}`}>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={13} className={stats.allLow.length > 0 ? 'text-red-400' : 'text-muted-foreground'} />
-            <span className="text-xs text-muted-foreground">Low Stock</span>
+            <span className="text-xs text-slate-300">Low Stock</span>
           </div>
           <p className={`text-2xl font-bold ${stats.allLow.length > 0 ? 'text-red-400' : 'text-foreground'}`}>{stats.allLow.length}</p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">products below min</p>
+          <p className="text-xs text-slate-300 mt-0.5">products below min</p>
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
           <div className="flex items-center gap-2 mb-2">
             <Activity size={13} className="text-purple-400" />
-            <span className="text-xs text-muted-foreground">Sales Today</span>
+            <span className="text-xs text-slate-300">Sales Today</span>
           </div>
           <p className="text-2xl font-bold text-foreground">{stats.salesToday}</p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">deductions</p>
+          <p className="text-xs text-slate-300 mt-0.5">deductions</p>
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
           <div className="flex items-center gap-2 mb-2">
             <Activity size={13} className="text-green-400" />
-            <span className="text-xs text-muted-foreground">This Month</span>
+            <span className="text-xs text-slate-300">This Month</span>
           </div>
           <p className="text-2xl font-bold text-foreground">{stats.salesThisMonth}</p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">sale deductions</p>
+          <p className="text-xs text-slate-300 mt-0.5">sale deductions</p>
         </div>
       </div>
 

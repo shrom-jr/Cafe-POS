@@ -55,7 +55,7 @@ export const InventorySection = () => {
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left w-full ${
                 isActive
                   ? 'bg-white/[0.07] text-foreground font-medium border border-white/[0.08]'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/[0.03] font-normal border border-transparent'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.03] font-normal border border-transparent'
               }`}
             >
               <Icon size={13} className={isActive ? 'text-blue-400' : ''} />
@@ -94,7 +94,7 @@ export const InventorySection = () => {
         {/* Sub-section header (desktop) */}
         <div className="hidden md:block pb-4 border-b border-white/[0.06]">
           <h2 className="text-base font-semibold text-foreground">{active.label}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{active.subtitle}</p>
+          <p className="text-xs text-slate-300 mt-0.5">{active.subtitle}</p>
         </div>
 
         {/* Section content */}

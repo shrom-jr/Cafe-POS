@@ -56,7 +56,7 @@ export const ValueCard = ({
   }`}>
     <p className="text-xs text-muted-foreground mb-1">{label}</p>
     <p className={`text-xl font-bold ${warn ? 'text-red-400' : 'text-foreground'}`}>{value}</p>
-    {sub && <p className="text-xs text-muted-foreground/60 mt-0.5">{sub}</p>}
+    {sub && <p className="text-xs text-slate-300 mt-0.5">{sub}</p>}
   </div>
 );
 
@@ -119,7 +119,7 @@ export const MappingsSection = ({ productType, products, unit }: MappingsSection
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-foreground">POS Menu Item Mappings</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-slate-300 mt-0.5">
             Link each menu item to an inventory product and set exactly how much stock to deduct per sale. Selling prices are set independently in the menu and are not affected here.
           </p>
         </div>
