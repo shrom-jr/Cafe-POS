@@ -307,15 +307,14 @@ const DashboardSection = () => {
     );
   };
 
-  // Hourly revenue data 10 AM – 10 PM
-  const hourlyData = Array.from({ length: 13 }, (_, i) => {
-    const hour   = 10 + i;
+  // Hourly revenue data — full 24-hour day (12 AM to 11 PM)
+  const hourlyData = Array.from({ length: 24 }, (_, hour) => {
     const hStart = new Date(now); hStart.setHours(hour, 0, 0, 0);
     const hEnd   = new Date(now); hEnd.setHours(hour + 1, 0, 0, 0);
     const sales  = todayPayments
       .filter((p) => p.createdAt >= hStart.getTime() && p.createdAt < hEnd.getTime())
       .reduce((s, p) => s + p.total, 0);
-    const label  = hour === 12 ? '12P' : hour < 12 ? `${hour}A` : `${hour - 12}P`;
+    const label  = hour === 0 ? '12A' : hour === 12 ? '12P' : hour < 12 ? `${hour}A` : `${hour - 12}P`;
     return { hour: label, sales };
   });
 
@@ -421,7 +420,7 @@ const DashboardSection = () => {
         {/* Peak hours bar chart — Y-axis shows Rs. revenue */}
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
-          <p className="text-xs text-slate-300 mt-0.5 mb-4">Hourly revenue (Rs.) — 10 AM to 10 PM</p>
+          <p className="text-xs text-slate-300 mt-0.5 mb-4">Hourly revenue (Rs.)</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
               <defs>
