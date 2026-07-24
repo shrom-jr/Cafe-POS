@@ -40,6 +40,10 @@ const PRINT_CSS = `
     text-rendering: optimizeLegibility !important;
     -webkit-font-smoothing: antialiased !important;
     letter-spacing: 0.2px !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    opacity: 1 !important;
   }
   html, body {
     margin: 0 !important;
@@ -48,11 +52,24 @@ const PRINT_CSS = `
     background: #ffffff !important;
     font-size: 10.5px !important;
     line-height: 1.3 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    filter: contrast(200%) grayscale(100%) !important;
   }
   #receipt-content {
     width: 68mm !important;
     max-width: 72mm !important;
     margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  #receipt-content * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    opacity: 1 !important;
   }
   table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
   td, th { word-break: break-word !important; overflow: hidden !important; }
@@ -61,24 +78,30 @@ const PRINT_CSS = `
   .header p { margin: 2px 0; font-size: 11.5px; }
   .meta-table td { font-size: 11.5px; padding: 1px 0; }
   .items-table th {
-    border-top: 1px dashed #000;
-    border-bottom: 1px dashed #000;
+    border-top: 1px dashed #000000 !important;
+    border-top-color: #000000 !important;
+    border-top-style: dashed !important;
+    border-top-width: 1px !important;
+    border-bottom: 1px dashed #000000 !important;
+    border-bottom-color: #000000 !important;
+    border-bottom-style: dashed !important;
+    border-bottom-width: 1px !important;
     font-size: 11.5px;
     padding: 3px 0;
     text-align: left;
   }
   .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; }
-  .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000; margin-top: 4px; }
+  .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000000 !important; border-top-color: #000000 !important; border-top-style: dashed !important; border-top-width: 1px !important; margin-top: 4px; }
   .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; }
   .totals-table td:first-child { text-align: left !important; }
   .totals-table td:last-child { text-align: right !important; }
-  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
+  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000000 !important; border-top-color: #000000 !important; border-top-style: solid !important; border-top-width: 1px !important; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
   .bold { font-weight: bold !important; }
   .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
-                  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .divider { border-top: 1px dashed #000; margin: 3px 0; }
+                  -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important; }
+  .divider { border-top: 1px dashed #000000 !important; border-top-color: #000000 !important; border-top-style: dashed !important; border-top-width: 1px !important; margin: 3px 0; }
   .footer { text-align: center; font-size: 11.5px; margin-top: 5px; }
   .inwords { font-size: 11.5px; margin: 3px 0; }
 `;
