@@ -31,8 +31,17 @@ export function isReceiptTextReady(): boolean {
 // ── Shared popup CSS ──────────────────────────────────────────────────────────
 
 const POPUP_CSS = `
-  @page { size: 80mm auto; margin: 0mm !important; }
+  @page {
+    size: auto;
+    margin: 0mm !important;
+  }
   * { box-sizing: border-box !important; color: #000000 !important; }
+  html {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
   body {
     font-family: Consolas, 'Courier New', Courier, monospace !important;
     font-size: 11.5px !important;
@@ -43,11 +52,32 @@ const POPUP_CSS = `
     padding: 0 1mm !important;
     width: 70mm !important;
     max-width: 70mm !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     text-rendering: optimizeLegibility !important;
     -webkit-font-smoothing: antialiased !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
+  }
+  .receipt-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
+  }
+  tr, td, th, div, section, .totals-table, .receipt-header, .receipt-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   table {
     width: 100% !important;
