@@ -262,43 +262,54 @@ const DONUT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#e
 
 const DashboardSection = () => {
   const payments = usePOSStore((s) => s.payments);
+  const tables   = usePOSStore((s) => s.tables);
+  const orders   = usePOSStore((s) => s.orders);
   const now = new Date();
-  const todayStart  = startOfDay(now).getTime();
+  const todayStart     = startOfDay(now).getTime();
   const yesterdayStart = startOfDay(subDays(now, 1)).getTime();
 
   const todayPayments     = payments.filter((p) => p.createdAt >= todayStart);
   const yesterdayPayments = payments.filter((p) => p.createdAt >= yesterdayStart && p.createdAt < todayStart);
 
-  const todaySales    = todayPayments.reduce((s, p) => s + p.total, 0);
-  const yesterdaySales = yesterdayPayments.reduce((s, p) => s + p.total, 0);
-  const todayOrders   = todayPayments.length;
+  const todaySales      = todayPayments.reduce((s, p) => s + p.total, 0);
+  const yesterdaySales  = yesterdayPayments.reduce((s, p) => s + p.total, 0);
+  const todayOrders     = todayPayments.length;
   const yesterdayOrders = yesterdayPayments.length;
-  const todayAOV      = todayOrders > 0 ? todaySales / todayOrders : 0;
-  const yesterdayAOV  = yesterdayOrders > 0 ? yesterdaySales / yesterdayOrders : 0;
-  const cashToday     = todayPayments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.total, 0);
-  const cashRatio     = todaySales > 0 ? (cashToday / todaySales) * 100 : 0;
+  const todayAOV        = todayOrders > 0 ? todaySales / todayOrders : 0;
+  const yesterdayAOV    = yesterdayOrders > 0 ? yesterdaySales / yesterdayOrders : 0;
+  const cashToday       = todayPayments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.total, 0);
+  // FIX: when no revenue, both shares are 0 — not 100%
+  const cashRatio       = todaySales > 0 ? (cashToday / todaySales) * 100 : 0;
+  const digitalShare    = todaySales > 0 ? Math.round(100 - cashRatio) : 0;
+
+  // Live operational counts
+  const activeTables = tables.filter((t) => t.status !== 'free').length;
+  const openOrders   = orders.filter((o) => o.status === 'active' || o.status === 'billed').length;
 
   const pctChange = (curr: number, prev: number) => {
     if (prev === 0) return curr > 0 ? 100 : 0;
     return Math.round(((curr - prev) / prev) * 100);
   };
 
+  // FIX: 0% → neutral slate; >0 → green; <0 → red
   const TrendBadge = ({ curr, prev }: { curr: number; prev: number }) => {
     const pct = pctChange(curr, prev);
-    const up  = pct >= 0;
+    const cls =
+      pct > 0  ? 'bg-emerald-500/15 text-emerald-400' :
+      pct < 0  ? 'bg-red-500/15 text-red-400'         :
+                 'bg-slate-800 text-slate-400';
     return (
-      <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-        up ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
-      }`}>
-        {up ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+      <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>
+        {pct > 0 && <ArrowUp size={10} />}
+        {pct < 0 && <ArrowDown size={10} />}
         {Math.abs(pct)}%
       </span>
     );
   };
 
-  // Hourly data 10 AM – 10 PM
+  // Hourly revenue data 10 AM – 10 PM
   const hourlyData = Array.from({ length: 13 }, (_, i) => {
-    const hour = 10 + i;
+    const hour   = 10 + i;
     const hStart = new Date(now); hStart.setHours(hour, 0, 0, 0);
     const hEnd   = new Date(now); hEnd.setHours(hour + 1, 0, 0, 0);
     const sales  = todayPayments
@@ -316,15 +327,37 @@ const DashboardSection = () => {
       itemCounts[i.menuItemId].count += i.quantity;
     })
   );
-  const topItems  = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
-  const maxCount  = topItems[0]?.count || 1;
+  const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+  const maxCount = topItems[0]?.count || 1;
+
+  // Compact Rs. formatter for Y-axis ticks
+  const yAxisFmt = (v: number) => {
+    if (v === 0) return '';
+    if (v >= 1000) return `Rs.${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k`;
+    return `Rs.${v}`;
+  };
 
   return (
     <div className="space-y-5">
+      {/* ── Live status bar ── */}
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800/80 bg-slate-900/50 text-xs text-muted-foreground"
+      >
+        <span className="relative flex h-2 w-2 flex-shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+        <span className="font-semibold text-emerald-400">Live Café Status</span>
+        <span className="text-slate-600">·</span>
+        <span><span className="font-semibold text-foreground">{activeTables}</span> Active Table{activeTables !== 1 ? 's' : ''}</span>
+        <span className="text-slate-600">·</span>
+        <span><span className="font-semibold text-foreground">{openOrders}</span> Open Order{openOrders !== 1 ? 's' : ''}</span>
+      </div>
+
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Revenue */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-blue-500/30 hover:shadow-[0_0_20px_-4px_rgba(59,130,246,0.25)] transition-all cursor-default">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-blue-500/30 hover:shadow-[0_0_20px_-4px_rgba(59,130,246,0.25)] transition-all cursor-default">
           <div className="flex items-start justify-between mb-3">
             <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
               <DollarSign size={14} className="text-blue-400" />
@@ -336,7 +369,7 @@ const DashboardSection = () => {
         </div>
 
         {/* Orders */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-emerald-500/30 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.25)] transition-all cursor-default">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-emerald-500/30 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.25)] transition-all cursor-default">
           <div className="flex items-start justify-between mb-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <ShoppingCart size={14} className="text-emerald-400" />
@@ -348,7 +381,7 @@ const DashboardSection = () => {
         </div>
 
         {/* AOV */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-amber-500/30 hover:shadow-[0_0_20px_-4px_rgba(245,158,11,0.25)] transition-all cursor-default">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-amber-500/30 hover:shadow-[0_0_20px_-4px_rgba(245,158,11,0.25)] transition-all cursor-default">
           <div className="flex items-start justify-between mb-3">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <TrendingUp size={14} className="text-amber-400" />
@@ -359,15 +392,17 @@ const DashboardSection = () => {
           <p className="text-xs text-muted-foreground mt-1">Avg. Order Value</p>
         </div>
 
-        {/* Cash vs Digital */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-purple-500/30 hover:shadow-[0_0_20px_-4px_rgba(168,85,247,0.25)] transition-all cursor-default">
+        {/* Cash vs Digital — FIX: show 0% digital when revenue is zero */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-purple-500/30 hover:shadow-[0_0_20px_-4px_rgba(168,85,247,0.25)] transition-all cursor-default">
           <div className="flex items-start justify-between mb-3">
             <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
               <CreditCard size={14} className="text-purple-400" />
             </div>
-            <span className="text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">{Math.round(cashRatio)}% Cash</span>
+            <span className="text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+              {todaySales > 0 ? `${Math.round(cashRatio)}%` : '0%'} Cash
+            </span>
           </div>
-          <p className="text-2xl font-bold text-foreground leading-tight">{Math.round(100 - cashRatio)}%</p>
+          <p className="text-2xl font-bold text-foreground leading-tight">{digitalShare}%</p>
           <p className="text-xs text-muted-foreground mt-1">Digital Share</p>
           <div className="mt-2.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
             <div
@@ -383,12 +418,12 @@ const DashboardSection = () => {
 
       {/* ── Main grid: peak hours + top items ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[65%_1fr] gap-4">
-        {/* Peak hours bar chart */}
+        {/* Peak hours bar chart — Y-axis shows Rs. revenue */}
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
           <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-4">Hourly sales — 10 AM to 10 PM</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-4">Hourly revenue (Rs.) — 10 AM to 10 PM</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="rgba(59,130,246,0.9)" />
@@ -397,10 +432,11 @@ const DashboardSection = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="hour" stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => v === 0 ? '' : String(v)} />
+              {/* FIX: Y-axis values formatted as Rs. */}
+              <YAxis stroke="rgba(255,255,255,0.22)" fontSize={10} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} />
               <Tooltip
                 contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12 }}
-                formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Sales']}
+                formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
               />
               <Bar dataKey="sales" fill="url(#peakGrad)" radius={[6, 6, 0, 0]} />
             </BarChart>
@@ -2034,9 +2070,9 @@ const BillingReceiptsSection = () => {
 };
 
 // ── REPORTS ───────────────────────────────────────────────────────────────
-type ReportPeriod = 'today' | 'yesterday' | 'last7' | 'month';
+type ReportPeriod = 'today' | 'yesterday' | 'last7' | 'month' | 'custom';
 const PERIOD_LABELS: Record<ReportPeriod, string> = {
-  today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 Days', month: 'This Month',
+  today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 Days', month: 'This Month', custom: 'Custom',
 };
 
 const ReportsSection = () => {
@@ -2045,9 +2081,12 @@ const ReportsSection = () => {
   const categories = usePOSStore((s) => s.categories);
   const settings  = usePOSStore((s) => s.settings);
 
-  const [period, setPeriod] = useState<ReportPeriod>('today');
-  const [search, setSearch]   = useState('');
-  const [page, setPage]       = useState(1);
+  const [period, setPeriod]         = useState<ReportPeriod>('today');
+  const [search, setSearch]         = useState('');
+  const [page, setPage]             = useState(1);
+  // Custom date range (ISO date strings yyyy-MM-dd)
+  const [customStart, setCustomStart] = useState(() => format(subDays(new Date(), 6), 'yyyy-MM-dd'));
+  const [customEnd,   setCustomEnd]   = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const PAGE_SIZE = 8;
 
   const now = new Date();
@@ -2058,9 +2097,18 @@ const ReportsSection = () => {
       case 'yesterday': return startOfDay(subDays(now, 1));
       case 'last7':     return startOfDay(subDays(now, 6));
       case 'month':     return startOfMonth(now);
+      case 'custom':    return startOfDay(new Date(customStart + 'T00:00:00'));
     }
   })();
-  const periodEnd = period === 'yesterday' ? startOfDay(now).getTime() : now.getTime() + 1;
+  const periodEnd = (() => {
+    if (period === 'yesterday') return startOfDay(now).getTime();
+    if (period === 'custom') {
+      const end = new Date(customEnd + 'T00:00:00');
+      end.setDate(end.getDate() + 1); // include the full end day
+      return end.getTime();
+    }
+    return now.getTime() + 1;
+  })();
 
   const periodPayments = payments.filter(
     (p) => p.createdAt >= periodStart.getTime() && p.createdAt < periodEnd,
@@ -2128,6 +2176,9 @@ const ReportsSection = () => {
     toast.success('CSV exported');
   };
 
+  // shared date-input style
+  const dateInputCls = 'px-2.5 py-1.5 text-sm rounded-lg bg-white/[0.05] border border-white/[0.1] text-foreground focus:outline-none focus:border-blue-500/40 [color-scheme:dark]';
+
   return (
     <div className="space-y-5">
       {/* ── Header toolbar ── */}
@@ -2165,6 +2216,34 @@ const ReportsSection = () => {
           </button>
         </div>
       </div>
+
+      {/* ── Custom date range inputs (shown only when Custom is active) ── */}
+      {period === 'custom' && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-blue-500/20 bg-blue-500/[0.06]">
+          <span className="text-xs font-semibold text-blue-400 flex-shrink-0">Date Range</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd}
+              onChange={(e) => { setCustomStart(e.target.value); setPage(1); }}
+              className={dateInputCls}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart}
+              max={format(new Date(), 'yyyy-MM-dd')}
+              onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }}
+              className={dateInputCls}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {periodPayments.length} transaction{periodPayments.length !== 1 ? 's' : ''} in range
+          </span>
+        </div>
+      )}
 
       {/* ── Data cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
