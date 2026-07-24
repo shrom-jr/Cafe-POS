@@ -92,7 +92,15 @@ const POPUP_CSS = `
     size: 80mm 3276mm !important;
     margin: 0mm !important;
   }
-  * { box-sizing: border-box !important; color: #000000 !important; }
+  * { box-sizing: border-box !important; }
+  body, table, td, th, div, span, p {
+    font-family: Consolas, 'Courier New', Courier, monospace !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
+    letter-spacing: 0.2px !important;
+  }
   html {
     height: auto !important;
     max-height: none !important;
