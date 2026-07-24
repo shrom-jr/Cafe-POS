@@ -183,6 +183,8 @@ const PaymentScreen = () => {
         cashierName:    resolvedProcessedBy?.name,
         takenBy:        resolvedTakenBy,
         processedBy:    resolvedProcessedBy,
+        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        showLogoOnBill: settings.showLogoOnBill,
       },
     };
     lastPrintJobRef.current = printJob;

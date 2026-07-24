@@ -92,7 +92,7 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
   const cashier  = data.processedBy?.name || data.processedBy?.fullName || data.cashierName || liveStaff;
 
   const logoHtml = showLogo && logo
-    ? `<img src="${logo}" class="receipt-logo" />`
+    ? `<img src="${logo}" class="receipt-logo" style="display: block !important; margin: 0 auto 4px auto; max-width: 45mm; max-height: 20mm; visibility: visible !important;" />`
     : '';
 
   const itemRows = data.items.map((item, idx) => `

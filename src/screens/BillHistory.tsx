@@ -54,7 +54,7 @@ const BillHistory = () => {
   }, [baseList, search, methodFilter]);
 
   const handlePrint = () => {
-    setLogoForPrint(settings.logo ?? null, settings.showLogoOnBill ?? true);
+    setLogoForPrint(settings.cafeLogo ?? settings.logoUrl ?? settings.logo ?? null, settings.showLogoOnBill ?? true);
     triggerPrint('receipt');
   };
 

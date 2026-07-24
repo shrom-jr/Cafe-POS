@@ -1713,7 +1713,10 @@ const CompanyProfileSection = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => updateSettings({ cafeLogo: reader.result as string });
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      updateSettings({ cafeLogo: base64, logo: base64, logoUrl: base64 });
+    };
     reader.readAsDataURL(file);
   };
 

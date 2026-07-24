@@ -157,6 +157,8 @@ const ReviewScreen = () => {
         vatAmount:      bill.vatAmount,
         vatRate:        bill.vatRate,
         total:          bill.total,
+        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        showLogoOnBill: settings.showLogoOnBill,
       },
     });
   };
@@ -301,6 +303,8 @@ const ReviewScreen = () => {
         method:         resolvedMethod,
         takenBy,
         processedBy,
+        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        showLogoOnBill: settings.showLogoOnBill,
       },
     };
     lastPrintJobRef.current = taxJob;

@@ -334,7 +334,7 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
 
 function openPrintPopup(bodyContent: string, logo?: string): void {
   const logoHtml = logo
-    ? `<img src="${logo}" class="receipt-logo" />`
+    ? `<img src="${logo}" class="receipt-logo" style="display: block !important; margin: 0 auto 4px auto; max-width: 45mm; max-height: 20mm; visibility: visible !important;" />`
     : '';
 
   const html = `<!DOCTYPE html>

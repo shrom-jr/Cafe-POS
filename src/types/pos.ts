@@ -223,6 +223,9 @@ export interface InvMenuMapping {
 export interface Settings {
   cafeName: string;
   cafeLogo?: string;
+  /** Aliases kept in sync with cafeLogo for cross-component compatibility */
+  logo?: string;
+  logoUrl?: string;
   cafeAddress?: string;
   cafePhone?: string;
   cafePan?: string;
