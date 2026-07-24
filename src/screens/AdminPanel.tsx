@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
-import { format, startOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'backup' | 'inventory';
@@ -2107,7 +2107,8 @@ const ReportsSection = () => {
       end.setDate(end.getDate() + 1); // include the full end day
       return end.getTime();
     }
-    return now.getTime() + 1;
+    // Use end-of-day so all transactions made today are always included
+    return endOfDay(now).getTime();
   })();
 
   const periodPayments = payments.filter(
@@ -2115,9 +2116,13 @@ const ReportsSection = () => {
   );
 
   // Summary metrics
-  const netSales       = periodPayments.reduce((s, p) => s + p.total, 0);
+  // grossSales  = item subtotals before any discount or tax
+  // netSales    = grossSales minus discounts (pre-tax revenue)
+  // totalRevenue = final amount actually collected (post-discount, post-tax)
   const grossSales     = periodPayments.reduce((s, p) => s + p.subtotal, 0);
   const totalDiscounts = periodPayments.reduce((s, p) => s + (p.discount || 0), 0);
+  const netSales       = grossSales - totalDiscounts;
+  const totalRevenue   = periodPayments.reduce((s, p) => s + p.total, 0);
   const discountedCount = periodPayments.filter((p) => p.discount > 0).length;
 
   // Payment breakdown
@@ -2248,14 +2253,15 @@ const ReportsSection = () => {
       {/* ── Data cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Net Sales',         value: `Rs. ${fmt(netSales)}`,       sub: 'After discounts & tax',               color: 'blue',    icon: <DollarSign size={14} /> },
-          { label: 'Gross Sales',       value: `Rs. ${fmt(grossSales)}`,     sub: 'Before discounts',                    color: 'emerald', icon: <TrendingUp size={14} /> },
-          { label: 'Discounts Given',   value: `Rs. ${fmt(totalDiscounts)}`, sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <Receipt size={14} /> },
-          { label: 'Cancelled / Voids', value: '0',                          sub: 'No void tracking yet',                color: 'red',     icon: <X size={14} /> },
+          { label: 'Gross Sales',       value: `Rs. ${fmt(grossSales)}`,     sub: 'Item totals before discounts/tax',     color: 'blue',    icon: <TrendingUp size={14} /> },
+          { label: 'Net Sales',         value: `Rs. ${fmt(netSales)}`,       sub: 'Gross minus discounts (pre-tax)',       color: 'emerald', icon: <DollarSign size={14} /> },
+          { label: 'Total Revenue',     value: `Rs. ${fmt(totalRevenue)}`,   sub: 'Collected after discounts & tax',      color: 'indigo',  icon: <Receipt size={14} /> },
+          { label: 'Discounts Given',   value: `Rs. ${fmt(totalDiscounts)}`, sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <X size={14} /> },
         ].map((card, i) => {
           const c = {
             blue:    { b: 'border-blue-500/25',    bg: 'bg-blue-500/[0.08]',    ic: 'text-blue-400',    val: 'text-blue-300' },
             emerald: { b: 'border-emerald-500/25', bg: 'bg-emerald-500/[0.08]', ic: 'text-emerald-400', val: 'text-emerald-300' },
+            indigo:  { b: 'border-indigo-500/25',  bg: 'bg-indigo-500/[0.08]',  ic: 'text-indigo-400',  val: 'text-indigo-300' },
             amber:   { b: 'border-amber-500/25',   bg: 'bg-amber-500/[0.08]',   ic: 'text-amber-400',   val: 'text-amber-300' },
             red:     { b: 'border-red-500/25',     bg: 'bg-red-500/[0.08]',     ic: 'text-red-400',     val: 'text-red-300' },
           }[card.color]!;
@@ -2293,22 +2299,35 @@ const ReportsSection = () => {
                     {catData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: '#ffffff',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                    }}
+                    itemStyle={{ color: '#ffffff' }}
+                    labelStyle={{ color: '#94a3b8', fontWeight: 'normal', marginBottom: 2 }}
                     formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
                   />
                 </PieChart>
               </div>
               <div className="flex-1 space-y-2 min-w-0">
-                {catData.map((cat, i) => {
-                  const pct = netSales > 0 ? Math.round((cat.total / netSales) * 100) : 0;
-                  return (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                      <span className="text-xs text-foreground font-medium flex-1 truncate">{cat.name}</span>
-                      <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
-                    </div>
-                  );
-                })}
+                {(() => {
+                  const catTotal = catData.reduce((s, c) => s + c.total, 0);
+                  return catData.map((cat, i) => {
+                    const pct = catTotal > 0 ? Math.round((cat.total / catTotal) * 100) : 0;
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                        <span className="text-xs text-foreground font-medium flex-1 truncate">{cat.name}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">{pct}%</span>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -2327,7 +2346,7 @@ const ReportsSection = () => {
           ) : (
             <div className="space-y-3.5">
               {paymentEntries.map(([method, total], i) => {
-                const pct   = netSales > 0 ? Math.round((total / netSales) * 100) : 0;
+                const pct   = totalRevenue > 0 ? Math.round((total / totalRevenue) * 100) : 0;
                 const label = resolvePaymentLabel(method, settings);
                 const count = periodPayments.filter((p) => p.method === method).length;
                 return (
