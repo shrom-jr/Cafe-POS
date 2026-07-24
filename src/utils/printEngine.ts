@@ -129,8 +129,8 @@ const POPUP_CSS = `
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
   .bold { font-weight: bold !important; }
-  .logo { max-width: 90px; height: auto; margin: 0 auto 6px auto; display: block;
-          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
+                  filter: contrast(150%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .divider { border-top: 1px dashed #000; margin: 3px 0; }
   .footer { text-align: center; font-size: 10px; margin-top: 5px; }
   .inwords { font-size: 10px; margin: 3px 0; }
@@ -334,7 +334,7 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
 
 function openPrintPopup(bodyContent: string, logo?: string): void {
   const logoHtml = logo
-    ? `<img src="${logo}" class="logo" />`
+    ? `<img src="${logo}" class="receipt-logo" />`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -357,11 +357,18 @@ function openPrintPopup(bodyContent: string, logo?: string): void {
   win.document.close();
   win.focus();
 
-  // Wait for image inside popup to render before printing
-  setTimeout(() => {
+  // Wait for all images to fully load before printing
+  const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
+  Promise.all(
+    images.map(img =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>(res => { img.onload = res; img.onerror = res; })
+    )
+  ).then(() => {
     win.print();
     win.close();
-  }, 300);
+  });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
