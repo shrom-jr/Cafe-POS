@@ -50,7 +50,11 @@ const PinModal = ({
     setPin(next);
     if (next.length === 4) {
       const ok = login(user.id, next);
-      if (!ok) {
+      if (ok) {
+        // Set the URL before BrowserRouter mounts so it initialises at the
+        // correct path for this role (admin → /admin, others → /).
+        window.history.replaceState(null, '', user.role === 'ADMIN' ? '/admin' : '/');
+      } else {
         setShake(true);
         setShowError(true);
         setTimeout(() => {
@@ -59,7 +63,7 @@ const PinModal = ({
           setTimeout(() => setShowError(false), 200);
         }, 600);
       }
-      // On success, store sets currentUser → App re-renders → modal disappears.
+      // On success, store sets currentUser → App re-renders → BrowserRouter mounts.
     }
   };
 
@@ -69,9 +73,10 @@ const PinModal = ({
 
   const handleSubmit = () => {
     if (pinRef.current.length === 4) {
-      // Trigger login with current pin value
       const ok = login(user.id, pinRef.current);
-      if (!ok) {
+      if (ok) {
+        window.history.replaceState(null, '', user.role === 'ADMIN' ? '/admin' : '/');
+      } else {
         setShake(true);
         setShowError(true);
         setTimeout(() => {
