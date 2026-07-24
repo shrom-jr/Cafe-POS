@@ -422,7 +422,7 @@ const DashboardSection = () => {
           <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
           <p className="text-xs text-slate-300 mt-0.5 mb-4">Hourly revenue (Rs.)</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={hourlyData} barSize={16} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
+            <BarChart data={hourlyData} barSize={8} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="rgba(59,130,246,0.9)" />
@@ -430,7 +430,7 @@ const DashboardSection = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-              <XAxis dataKey="hour" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="hour" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 500 }} tickLine={false} axisLine={false} interval={0} />
               {/* FIX: Y-axis values formatted as Rs. */}
               <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
               <Tooltip
