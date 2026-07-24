@@ -1712,6 +1712,11 @@ const CompanyProfileSection = () => {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Please choose an image under 2MB.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
@@ -1770,10 +1775,13 @@ const CompanyProfileSection = () => {
                 <ImagePlus size={22} />
               </div>
             )}
-            <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium cursor-pointer hover:bg-accent/15 hover:text-accent transition-colors">
-              <Upload size={14} /> {settings.cafeLogo ? 'Replace' : 'Upload'} Logo
-              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium cursor-pointer hover:bg-accent/15 hover:text-accent transition-colors">
+                <Upload size={14} /> {settings.cafeLogo ? 'Replace' : 'Upload'} Logo
+                <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
+              </label>
+              <p className="text-[11px] text-muted-foreground/60 leading-tight">PNG or JPG · Max 2MB · High contrast works best</p>
+            </div>
           </div>
         </div>
       </div>
