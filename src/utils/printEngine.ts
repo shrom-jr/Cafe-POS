@@ -91,7 +91,7 @@ const PRINT_CSS = `
   @page { size: 80mm auto; margin: 0mm !important; }
   * {
     box-sizing: border-box;
-    font-family: Consolas, 'Courier New', Courier, monospace !important;
+    font-family: 'Consolas', 'Lucida Console', 'Monaco', 'Courier New', Courier, monospace !important;
     color: #000000 !important;
     background-color: #ffffff !important;
     text-rendering: optimizeLegibility !important;
@@ -101,6 +101,7 @@ const PRINT_CSS = `
     color-adjust: exact !important;
     print-color-adjust: exact !important;
     opacity: 1 !important;
+    font-weight: 400 !important;
   }
   html, body {
     margin: 0 !important;
@@ -112,7 +113,6 @@ const PRINT_CSS = `
     -webkit-print-color-adjust: exact !important;
     color-adjust: exact !important;
     print-color-adjust: exact !important;
-    filter: contrast(200%) grayscale(100%) !important;
   }
   #receipt-content {
     width: 68mm !important;
@@ -129,11 +129,11 @@ const PRINT_CSS = `
     opacity: 1 !important;
   }
   table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
-  td, th { word-break: break-word !important; overflow: hidden !important; }
+  td, th { word-break: break-word !important; overflow: hidden !important; font-weight: 400 !important; }
   .header { text-align: center; margin-bottom: 8px; }
-  .header h2 { margin: 0; font-size: 13px; font-weight: bold; }
-  .header p { margin: 2px 0; font-size: 11.5px; }
-  .meta-table td { font-size: 11.5px; padding: 1px 0; }
+  .header h2 { margin: 0; font-size: 13px; font-weight: 700 !important; }
+  .header p { margin: 2px 0; font-size: 11.5px; font-weight: 400 !important; }
+  .meta-table td { font-size: 11.5px; padding: 1px 0; font-weight: 400 !important; }
   .items-table th {
     border-top: 1px dashed #000000 !important;
     border-top-color: #000000 !important;
@@ -146,22 +146,23 @@ const PRINT_CSS = `
     font-size: 11.5px;
     padding: 3px 0;
     text-align: left;
+    font-weight: 400 !important;
   }
-  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; }
+  .items-table td { font-size: 11.5px; padding: 2px 0; vertical-align: top; font-weight: 400 !important; }
   .totals-table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; border-top: 1px dashed #000000 !important; border-top-color: #000000 !important; border-top-style: dashed !important; border-top-width: 1px !important; margin-top: 4px; }
-  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; }
+  .totals-table td { font-size: 11.5px !important; padding: 1px 0; white-space: nowrap !important; font-weight: 400 !important; }
   .totals-table td:first-child { text-align: left !important; }
   .totals-table td:last-child { text-align: right !important; }
-  .grand-total td { font-size: 12px !important; font-weight: bold; border-top: 1px solid #000000 !important; border-top-color: #000000 !important; border-top-style: solid !important; border-top-width: 1px !important; padding-top: 3px; }
+  .grand-total td { font-size: 12px !important; font-weight: 700 !important; border-top: 1px solid #000000 !important; border-top-color: #000000 !important; border-top-style: solid !important; border-top-width: 1px !important; padding-top: 3px; }
   .text-right { text-align: right !important; padding-right: 0 !important; }
   .text-center { text-align: center !important; }
-  .bold { font-weight: bold !important; }
+  .bold { font-weight: 700 !important; }
   .receipt-logo { max-width: 45mm; max-height: 20mm; display: block; margin: 0 auto 4px auto;
                   -webkit-print-color-adjust: exact !important; color-adjust: exact !important; print-color-adjust: exact !important; }
   .divider { border-top: 1px dashed #000000 !important; border-top-color: #000000 !important; border-top-style: dashed !important; border-top-width: 1px !important; margin: 3px 0; }
-  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; }
-  .inwords { font-size: 11.5px; margin: 3px 0; }
-  .watermark { text-align: center; font-size: 11.5px; font-style: italic; margin-top: 5px; }
+  .footer { text-align: center; font-size: 11.5px; margin-top: 5px; font-weight: 400 !important; }
+  .inwords { font-size: 11.5px; margin: 3px 0; font-weight: 400 !important; }
+  .watermark { text-align: center; font-size: 11.5px; font-style: italic; margin-top: 5px; font-weight: 400 !important; }
 `;
 
 // ── KITCHEN_KOT HTML builder ──────────────────────────────────────────────────
