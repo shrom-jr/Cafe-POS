@@ -91,7 +91,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     let dirty = false;
     const migrated = raw.map((o) => ({
       ...o,
-      items: o.items.map((i) => {
+      items: (o.items ?? []).map((i) => {
         if (!(i as unknown as { id?: string }).id) {
           dirty = true;
           return { ...i, id: crypto.randomUUID() };

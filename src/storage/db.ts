@@ -574,6 +574,9 @@ export const db = {
   getOrders: (): Order[] => get<Order[]>(KEYS.orders, []).map((order) => ({
     ...order,
     tableNumber: String(order.tableNumber),
+    // Guard against corrupted data (e.g. Firebase dropped empty arrays as null)
+    items: Array.isArray(order.items) ? order.items : [],
+    tablePayments: Array.isArray(order.tablePayments) ? order.tablePayments : undefined,
   })),
   saveOrders: (o: Order[]) => set(KEYS.orders, o),
 
