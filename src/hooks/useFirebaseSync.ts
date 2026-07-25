@@ -5,86 +5,61 @@ import { pushOrdersToFirebase, subscribeToOrders } from "@/utils/firebaseSync";
 import type { Order } from "@/types/pos";
 
 /**
- * Mounts once at the app root to sync orders bidirectionally with Firebase.
+ * Mounts once at the app root. Bidirectional Firebase ↔ Zustand order sync.
  *
- * STARTUP LOGIC (first Firebase callback):
- *   • Firebase empty  + local has orders  → seed Firebase with local data.
- *   • Firebase has orders                 → load Firebase data into local store.
+ * ECHO PREVENTION:
+ *   isRemoteUpdate is set to true immediately before applying a Firebase
+ *   snapshot to Zustand state, and back to false right after. Because Zustand
+ *   notifies subscribers synchronously inside setState, the store subscriber
+ *   sees isRemoteUpdate === true for that update and skips the push. All local
+ *   mutations see isRemoteUpdate === false and push immediately.
  *
- * ONGOING SYNC:
- *   • LOCAL → FIREBASE: Zustand subscriber pushes whenever orders data changes.
- *   • FIREBASE → LOCAL: onValue updates the store + localStorage in real time.
- *
- * ECHO PREVENTION (no timing flags):
- *   When a Firebase update arrives, prevOrdersRef is set to remoteOrders BEFORE
- *   calling setState. Zustand then stores that exact reference as state.orders,
- *   so the store subscriber's reference check (`state.orders === prevOrdersRef`)
- *   passes and the echo is silently skipped — no setTimeout, no isRemoteUpdate flag.
- *
- *   For the reverse direction, the store subscriber also deep-compares content
- *   via JSON so that identical payloads coming back from Firebase never trigger
- *   a redundant push.
+ * STARTUP:
+ *   First onValue callback decides direction:
+ *     Firebase empty + local orders exist  → seed Firebase from local.
+ *     Firebase has orders                  → load Firebase as source of truth.
  */
 export function useFirebaseSync() {
   const isFirstLoad = useRef(true);
-  // Tracks the last orders reference written to or received from Firebase.
-  const prevOrdersRef = useRef<Order[] | null>(null);
+  const isRemoteUpdate = useRef(false);
 
   useEffect(() => {
     // ── LOCAL → FIREBASE ─────────────────────────────────────────────────────
+    // Fires on every Zustand state change. Skip only when the change itself
+    // came from Firebase (echo guard). Push the full sanitized orders list.
     const unsubscribeStore = usePOSStore.subscribe((state) => {
-      // Nothing changed — same reference (includes echoes set by Firebase path below).
-      if (state.orders === prevOrdersRef.current) return;
-
-      // Same content but different reference (e.g. Firebase echo returned, was
-      // applied via setState, Zustand re-boxed it). Update ref, skip push.
-      if (
-        prevOrdersRef.current !== null &&
-        JSON.stringify(state.orders) === JSON.stringify(prevOrdersRef.current)
-      ) {
-        prevOrdersRef.current = state.orders;
-        return;
-      }
-
-      // Genuine local change — push to Firebase.
-      prevOrdersRef.current = state.orders;
+      if (isRemoteUpdate.current) return;
       pushOrdersToFirebase(state.orders);
     });
 
-    // ── FIREBASE → LOCAL (+ startup seed) ────────────────────────────────────
+    // ── FIREBASE → LOCAL ─────────────────────────────────────────────────────
     const unsubscribeFirebase = subscribeToOrders((remoteOrders: Order[]) => {
-      // ── First callback: seed or load ───────────────────────────────────────
+      // ── Startup: seed or load ──────────────────────────────────────────────
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
 
         if (remoteOrders.length === 0) {
-          // Firebase is empty — seed with local data.
+          // Firebase is empty — push local orders to seed the database.
           const localOrders = usePOSStore.getState().orders;
           if (localOrders.length > 0) {
-            prevOrdersRef.current = localOrders;
             pushOrdersToFirebase(localOrders);
           }
           return;
         }
 
         // Firebase has data — it is the source of truth.
-        // Set prevOrdersRef BEFORE setState so the store subscriber skips the echo.
-        prevOrdersRef.current = remoteOrders;
+        isRemoteUpdate.current = true;
         localDb.saveOrders(remoteOrders);
         usePOSStore.setState({ orders: remoteOrders });
+        isRemoteUpdate.current = false;
         return;
       }
 
-      // ── Subsequent callbacks: live sync ────────────────────────────────────
-      // Skip if content hasn't actually changed (avoids needless re-renders).
-      const currentOrders = usePOSStore.getState().orders;
-      if (JSON.stringify(currentOrders) === JSON.stringify(remoteOrders)) return;
-
-      // Set prevOrdersRef BEFORE setState — the store subscriber will see
-      // state.orders === prevOrdersRef and skip the echo push automatically.
-      prevOrdersRef.current = remoteOrders;
+      // ── Live sync: apply remote snapshot locally ───────────────────────────
+      isRemoteUpdate.current = true;
       localDb.saveOrders(remoteOrders);
       usePOSStore.setState({ orders: remoteOrders });
+      isRemoteUpdate.current = false;
     });
 
     return () => {
