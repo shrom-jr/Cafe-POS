@@ -17,7 +17,11 @@ function ordersToMap(orders: Order[]): Record<string, Order> {
  */
 export function pushOrdersToFirebase(orders: Order[]): void {
   const ordersRef = ref(db, ORDERS_PATH);
-  set(ordersRef, orders.length > 0 ? ordersToMap(orders) : null).catch((err) =>
+  // JSON round-trip strips all `undefined` values — Firebase rejects them.
+  const payload = orders.length > 0
+    ? JSON.parse(JSON.stringify(ordersToMap(orders)))
+    : null;
+  set(ordersRef, payload).catch((err) =>
     console.error("[Firebase] Failed to push orders:", err)
   );
 }
