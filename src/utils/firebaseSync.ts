@@ -38,8 +38,18 @@ export function subscribeToOrders(callback: (orders: Order[]) => void): () => vo
         callback([]);
         return;
       }
-      // data is a map of id → Order; convert back to array
-      const orders: Order[] = Object.values(data);
+      // data is a map of id → Order; convert back to array.
+      // Firebase drops empty arrays (stores them as null), so we must
+      // guard every array field so downstream .reduce / .map calls never
+      // receive undefined.
+      const orders: Order[] = Object.values(data).map((raw) => {
+        const o = raw as Order;
+        return {
+          ...o,
+          items: Array.isArray(o.items) ? o.items : [],
+          tablePayments: Array.isArray(o.tablePayments) ? o.tablePayments : undefined,
+        };
+      });
       callback(orders);
     },
     (err) => console.error("[Firebase] Orders subscription error:", err)
