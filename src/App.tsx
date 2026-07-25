@@ -12,6 +12,7 @@ import AdminPanel from '@/screens/AdminPanel';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
+import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 
 /** Redirects non-admin users away from /admin to / */
 const RequireAdmin = ({ children }: { children: React.ReactNode }) => {
@@ -26,6 +27,9 @@ const RequireAdmin = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
   const currentUser = useStaffStore((s) => s.currentUser);
+
+  // Sync orders bidirectionally with Firebase Realtime Database
+  useFirebaseSync();
 
   useEffect(() => {
     const handler = () => setPrintBlocked(true);
