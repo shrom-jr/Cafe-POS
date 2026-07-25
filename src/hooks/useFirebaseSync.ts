@@ -7,17 +7,10 @@ import type { Order } from "@/types/pos";
 /**
  * Mounts once at the app root. Bidirectional Firebase ↔ Zustand order sync.
  *
- * ECHO PREVENTION:
- *   isRemoteUpdate is set to true immediately before applying a Firebase
- *   snapshot to Zustand state, and back to false right after. Because Zustand
- *   notifies subscribers synchronously inside setState, the store subscriber
- *   sees isRemoteUpdate === true for that update and skips the push. All local
- *   mutations see isRemoteUpdate === false and push immediately.
- *
- * STARTUP:
- *   First onValue callback decides direction:
- *     Firebase empty + local orders exist  → seed Firebase from local.
- *     Firebase has orders                  → load Firebase as source of truth.
+ * STRICT INITIALIZATION & ECHO PREVENTION:
+ *  - isFirstLoad remains TRUE until the FIRST snapshot from Firebase completes.
+ *  - Store subscriber STRICTLY BLOCKS pushes while isFirstLoad is TRUE.
+ *  - Firebase is strictly treated as the Source of Truth on startup.
  */
 export function useFirebaseSync() {
   const isFirstLoad = useRef(true);
@@ -25,37 +18,30 @@ export function useFirebaseSync() {
 
   useEffect(() => {
     // ── LOCAL → FIREBASE ─────────────────────────────────────────────────────
-    // Fires on every Zustand state change. Skip only when the change itself
-    // came from Firebase (echo guard). Push the full sanitized orders list.
     const unsubscribeStore = usePOSStore.subscribe((state) => {
-      if (isRemoteUpdate.current) return;
+      // STRICT GATE: Block outgoing pushes until initial cloud load finishes
+      // AND skip if the state change originated from Firebase itself.
+      if (isFirstLoad.current || isRemoteUpdate.current) return;
+
       pushOrdersToFirebase(state.orders);
     });
 
     // ── FIREBASE → LOCAL ─────────────────────────────────────────────────────
     const unsubscribeFirebase = subscribeToOrders((remoteOrders: Order[]) => {
-      // ── Startup: seed or load ──────────────────────────────────────────────
+      // ── Startup Hydration ──────────────────────────────────────────────────
       if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-
-        if (remoteOrders.length === 0) {
-          // Firebase is empty — push local orders to seed the database.
-          const localOrders = usePOSStore.getState().orders;
-          if (localOrders.length > 0) {
-            pushOrdersToFirebase(localOrders);
-          }
-          return;
-        }
-
-        // Firebase has data — it is the source of truth.
+        // 1. Force local state to mirror Firebase cloud data
         isRemoteUpdate.current = true;
         localDb.saveOrders(remoteOrders);
         usePOSStore.setState({ orders: remoteOrders });
         isRemoteUpdate.current = false;
+
+        // 2. NOW unblock outgoing local pushes
+        isFirstLoad.current = false;
         return;
       }
 
-      // ── Live sync: apply remote snapshot locally ───────────────────────────
+      // ── Live Sync ──────────────────────────────────────────────────────────
       isRemoteUpdate.current = true;
       localDb.saveOrders(remoteOrders);
       usePOSStore.setState({ orders: remoteOrders });
