@@ -2,7 +2,7 @@ import { ref, onValue, set } from "firebase/database";
 import { db } from "../firebase";
 import type { Order } from "../types/pos";
 
-// Sends order updates to Firebase
+// Sends order updates to Firebase safely
 export function pushOrdersToFirebase(orders: Order[]) {
   try {
     const ordersRef = ref(db, "orders");
@@ -13,7 +13,7 @@ export function pushOrdersToFirebase(orders: Order[]) {
   }
 }
 
-// Receives live updates from Firebase and converts them to an array
+// Reads orders from Firebase and converts them into a clean array
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
   const ordersRef = ref(db, "orders");
 
