@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { usePOSStore } from "@/store/usePOSStore";
+import { useStaffStore } from "@/store/useStaffStore";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -12,6 +13,7 @@ import {
   subscribeToIngredients,
   subscribeToRecipes,
   subscribeToStockMovements,
+  subscribeToStaff,
   pushOrdersToFirebase,
   pushTablesToFirebase,
   pushPaymentsToFirebase,
@@ -23,6 +25,7 @@ import {
   pushIngredientsToFirebase,
   pushRecipesToFirebase,
   pushStockMovementsToFirebase,
+  pushStaffToFirebase,
 } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
@@ -37,6 +40,7 @@ export function useFirebaseSync() {
   const ingredients = usePOSStore((s) => s.ingredients);
   const recipes = usePOSStore((s) => s.recipes);
   const stockMovements = usePOSStore((s) => s.stockMovements);
+  const users = useStaffStore((s) => s.users);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
   const setPayments = usePOSStore((s) => s.setPayments);
@@ -48,6 +52,7 @@ export function useFirebaseSync() {
   const setIngredients = usePOSStore((s) => s.setIngredients);
   const setRecipes = usePOSStore((s) => s.setRecipes);
   const setStockMovements = usePOSStore((s) => s.setStockMovements);
+  const setUsers = useStaffStore((s) => s.setUsers);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
@@ -60,6 +65,7 @@ export function useFirebaseSync() {
   const isRemoteIngredientsUpdate = useRef(false);
   const isRemoteRecipesUpdate = useRef(false);
   const isRemoteStockMovementsUpdate = useRef(false);
+  const isRemoteStaffUpdate = useRef(false);
   const isInitialCloudSyncDone = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
@@ -167,6 +173,16 @@ export function useFirebaseSync() {
     const unsubscribeIngredients = subscribeToIngredients(store);
     const unsubscribeRecipes = subscribeToRecipes(store);
     const unsubscribeStockMovements = subscribeToStockMovements(store);
+    const unsubscribeStaff = subscribeToStaff({
+      setUsers: (remoteUsers) => {
+        const currentUsers = useStaffStore.getState().users;
+
+        if (JSON.stringify(currentUsers) !== JSON.stringify(remoteUsers)) {
+          isRemoteStaffUpdate.current = true;
+          setUsers(remoteUsers);
+        }
+      },
+    });
 
     return () => {
       unsubscribeOrders();
@@ -180,6 +196,7 @@ export function useFirebaseSync() {
       unsubscribeIngredients();
       unsubscribeRecipes();
       unsubscribeStockMovements();
+      unsubscribeStaff();
     };
   }, [
     setOrders,
@@ -193,6 +210,7 @@ export function useFirebaseSync() {
     setIngredients,
     setRecipes,
     setStockMovements,
+    setUsers,
   ]);
 
   // 2. Push Local Order Changes to Cloud
@@ -304,4 +322,14 @@ export function useFirebaseSync() {
     }
     pushStockMovementsToFirebase(stockMovements);
   }, [stockMovements]);
+
+  // 13. Push Local Staff Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteStaffUpdate.current) {
+      isRemoteStaffUpdate.current = false;
+      return;
+    }
+    pushStaffToFirebase(users);
+  }, [users]);
 }

@@ -54,6 +54,7 @@ function saveCurrentUser(user: StaffUser | null) {
 
 interface StaffState {
   users: StaffUser[];
+  setUsers: (users: StaffUser[]) => void;
   currentUser: StaffUser | null;
 
   /** Attempts login; returns true on success, false on wrong PIN. */
@@ -71,6 +72,7 @@ export const useStaffStore = create<StaffState>((set, get) => {
 
   return {
     users,
+    setUsers: (users) => set({ users }),
     currentUser,
 
     login: (userId, pin) => {

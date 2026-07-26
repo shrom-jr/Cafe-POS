@@ -11,6 +11,7 @@ import type {
   Recipe,
   StockMovement,
 } from "../types/pos";
+import type { StaffUser } from "../types/staff";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[]) => void;
@@ -22,6 +23,10 @@ type FirebaseSyncStore = {
   setIngredients: (ingredients: Ingredient[]) => void;
   setRecipes: (recipes: Recipe[]) => void;
   setStockMovements: (stockMovements: StockMovement[]) => void;
+};
+
+type StaffSyncStore = {
+  setUsers: (users: StaffUser[]) => void;
 };
 
 // Safely converts Firebase objects/arrays/nulls into clean JavaScript arrays
@@ -148,6 +153,15 @@ export async function pushStockMovementsToFirebase(stockMovements: StockMovement
   }
 }
 
+// Push Staff Users
+export async function pushStaffToFirebase(users: StaffUser[]) {
+  try {
+    await set(ref(db, "users"), JSON.parse(JSON.stringify(users || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Staff Push FAILED]:", error);
+  }
+}
+
 // Subscribe to Live Orders
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
   return onValue(ref(db, "orders"), (snapshot) => {
@@ -223,6 +237,13 @@ export function subscribeToRecipes(store: FirebaseSyncStore) {
 export function subscribeToStockMovements(store: FirebaseSyncStore) {
   return onValue(ref(db, "stockMovements"), (snapshot) => {
     store.setStockMovements(safeArray<StockMovement>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Staff Users
+export function subscribeToStaff(store: StaffSyncStore) {
+  return onValue(ref(db, "users"), (snapshot) => {
+    store.setUsers(safeArray<StaffUser>(snapshot.val()));
   });
 }
 
