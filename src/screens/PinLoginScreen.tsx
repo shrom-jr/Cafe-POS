@@ -213,7 +213,7 @@ const PinModal = ({
 
 // ── Main Login Screen ────────────────────────────────────────────────────────
 const PinLoginScreen = () => {
-  const { users } = useStaffStore();
+  const users = useStaffStore((state) => state.users);
   const settings = usePOSStore((s) => s.settings);
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
 
