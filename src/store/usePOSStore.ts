@@ -20,7 +20,9 @@ interface POSState {
   orders: Order[];
   setOrders: (orders: Order[]) => void;
   payments: Payment[];
+  setPayments: (payments: Payment[]) => void;
   settings: Settings;
+  setSettings: (settings: Settings) => void;
 
   addTable: (number: string, section?: string) => void;
   updateTable: (id: string, updates: Partial<CafeTable>) => void;
@@ -113,7 +115,9 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set({ orders });
   },
   payments: db.getPayments(),
+  setPayments: (payments) => set({ payments }),
   settings: db.getSettings(),
+  setSettings: (settings) => set({ settings }),
   ingredients: db.getIngredients(),
   recipes: db.getRecipes(),
   stockMovements: db.getStockMovements(),

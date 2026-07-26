@@ -3,21 +3,31 @@ import { usePOSStore } from "@/store/usePOSStore";
 import {
   subscribeToOrders,
   subscribeToTables,
+  subscribeToPayments,
+  subscribeToSettings,
   pushOrdersToFirebase,
   pushTablesToFirebase,
+  pushPaymentsToFirebase,
+  pushSettingsToFirebase,
 } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
   const orders = usePOSStore((s) => s.orders);
   const tables = usePOSStore((s) => s.tables);
+  const payments = usePOSStore((s) => s.payments);
+  const settings = usePOSStore((s) => s.settings);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
+  const setPayments = usePOSStore((s) => s.setPayments);
+  const setSettings = usePOSStore((s) => s.setSettings);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
+  const isRemotePaymentUpdate = useRef(false);
+  const isRemoteSettingsUpdate = useRef(false);
   const isInitialCloudSyncDone = useRef(false);
 
-  // 1. Subscribe to Cloud Updates (Orders + Tables)
+  // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
   useEffect(() => {
     const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
       const currentOrders = usePOSStore.getState().orders;
@@ -38,11 +48,35 @@ export function useFirebaseSync() {
       }
     });
 
+    const store = {
+      setPayments: (remotePayments: typeof payments) => {
+        const currentPayments = usePOSStore.getState().payments;
+
+        if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
+          isRemotePaymentUpdate.current = true;
+          setPayments(remotePayments);
+        }
+      },
+      setSettings: (remoteSettings: typeof settings) => {
+        const currentSettings = usePOSStore.getState().settings;
+
+        if (JSON.stringify(currentSettings) !== JSON.stringify(remoteSettings)) {
+          isRemoteSettingsUpdate.current = true;
+          setSettings(remoteSettings);
+        }
+      },
+    };
+
+    const unsubscribePayments = subscribeToPayments(store);
+    const unsubscribeSettings = subscribeToSettings(store);
+
     return () => {
       unsubscribeOrders();
       unsubscribeTables();
+      unsubscribePayments();
+      unsubscribeSettings();
     };
-  }, [setOrders, setTables]);
+  }, [setOrders, setTables, setPayments, setSettings]);
 
   // 2. Push Local Order Changes to Cloud
   useEffect(() => {
@@ -63,4 +97,24 @@ export function useFirebaseSync() {
     }
     pushTablesToFirebase(tables);
   }, [tables]);
+
+  // 4. Push Local Payment Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemotePaymentUpdate.current) {
+      isRemotePaymentUpdate.current = false;
+      return;
+    }
+    pushPaymentsToFirebase(payments);
+  }, [payments]);
+
+  // 5. Push Local Settings Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteSettingsUpdate.current) {
+      isRemoteSettingsUpdate.current = false;
+      return;
+    }
+    pushSettingsToFirebase(settings);
+  }, [settings]);
 }
