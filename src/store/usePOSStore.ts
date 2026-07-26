@@ -9,14 +9,19 @@ import { tableNameKey } from '@/utils/tableName';
 
 db.seed();
 
+type DynamicPillar = string;
+
 interface POSState {
   tables: CafeTable[];
   setTables: (tables: CafeTable[]) => void;
   areaOrder: string[];
-  setAreaOrder: (order: string[]) => void;
+  setAreaOrder: (areaOrder: string[]) => void;
   pillars: string[];
+  setPillars: (pillars: DynamicPillar[]) => void;
   categories: Category[];
+  setCategories: (categories: Category[]) => void;
   menuItems: MenuItem[];
+  setMenuItems: (menuItems: MenuItem[]) => void;
   orders: Order[];
   setOrders: (orders: Order[]) => void;
   payments: Payment[];
@@ -87,13 +92,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set({ tables });
   },
   areaOrder: db.getAreaOrder(),
-  setAreaOrder: (order) => {
-    db.saveAreaOrder(order);
-    set({ areaOrder: order });
-  },
+  setAreaOrder: (areaOrder) => set({ areaOrder }),
   pillars: db.getPillars(),
+  setPillars: (pillars) => set({ pillars }),
   categories: db.getCategories(),
+  setCategories: (categories) => set({ categories }),
   menuItems: db.getMenuItems(),
+  setMenuItems: (menuItems) => set({ menuItems }),
   orders: (() => {
     const raw = db.getOrders();
     let dirty = false;
