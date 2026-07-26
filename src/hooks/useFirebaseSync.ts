@@ -82,13 +82,27 @@ export function useFirebaseSync() {
   const isRemoteGroceryPurchasesUpdate = useRef(false);
   const isRemoteInvMovementsUpdate = useRef(false);
   const isRemoteInvMappingsUpdate = useRef(false);
-  const isInitialCloudSyncDone = useRef(false);
+  const hasLoadedOrders = useRef(false);
+  const hasLoadedTables = useRef(false);
+  const hasLoadedPayments = useRef(false);
+  const hasLoadedSettings = useRef(false);
+  const hasLoadedMenuItems = useRef(false);
+  const hasLoadedCategories = useRef(false);
+  const hasLoadedPillars = useRef(false);
+  const hasLoadedAreaOrder = useRef(false);
+  const hasLoadedStaff = useRef(false);
+  const hasLoadedAlcoholProducts = useRef(false);
+  const hasLoadedBeverageProducts = useRef(false);
+  const hasLoadedCigaretteProducts = useRef(false);
+  const hasLoadedGroceryPurchases = useRef(false);
+  const hasLoadedInvMovements = useRef(false);
+  const hasLoadedInvMappings = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
   useEffect(() => {
     const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
       const currentOrders = usePOSStore.getState().orders;
-      isInitialCloudSyncDone.current = true;
+      hasLoadedOrders.current = true;
 
       if (JSON.stringify(currentOrders) !== JSON.stringify(remoteOrders)) {
         isRemoteOrderUpdate.current = true;
@@ -98,6 +112,7 @@ export function useFirebaseSync() {
 
     const unsubscribeTables = subscribeToTables((remoteTables) => {
       const currentTables = usePOSStore.getState().tables;
+      hasLoadedTables.current = true;
 
       if (JSON.stringify(currentTables) !== JSON.stringify(remoteTables)) {
         isRemoteTableUpdate.current = true;
@@ -108,6 +123,7 @@ export function useFirebaseSync() {
     const store = {
       setPayments: (remotePayments: typeof payments) => {
         const currentPayments = usePOSStore.getState().payments;
+        hasLoadedPayments.current = true;
 
         if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
           isRemotePaymentUpdate.current = true;
@@ -116,6 +132,7 @@ export function useFirebaseSync() {
       },
       setSettings: (remoteSettings: typeof settings) => {
         const currentSettings = usePOSStore.getState().settings;
+        hasLoadedSettings.current = true;
 
         if (JSON.stringify(currentSettings) !== JSON.stringify(remoteSettings)) {
           isRemoteSettingsUpdate.current = true;
@@ -124,6 +141,7 @@ export function useFirebaseSync() {
       },
       setMenuItems: (remoteMenuItems: typeof menuItems) => {
         const currentMenuItems = usePOSStore.getState().menuItems;
+        hasLoadedMenuItems.current = true;
 
         if (JSON.stringify(currentMenuItems) !== JSON.stringify(remoteMenuItems)) {
           isRemoteMenuItemsUpdate.current = true;
@@ -132,6 +150,7 @@ export function useFirebaseSync() {
       },
       setCategories: (remoteCategories: typeof categories) => {
         const currentCategories = usePOSStore.getState().categories;
+        hasLoadedCategories.current = true;
 
         if (JSON.stringify(currentCategories) !== JSON.stringify(remoteCategories)) {
           isRemoteCategoriesUpdate.current = true;
@@ -140,6 +159,7 @@ export function useFirebaseSync() {
       },
       setPillars: (remotePillars: typeof pillars) => {
         const currentPillars = usePOSStore.getState().pillars;
+        hasLoadedPillars.current = true;
 
         if (JSON.stringify(currentPillars) !== JSON.stringify(remotePillars)) {
           isRemotePillarsUpdate.current = true;
@@ -148,6 +168,7 @@ export function useFirebaseSync() {
       },
       setAreaOrder: (remoteAreaOrder: typeof areaOrder) => {
         const currentAreaOrder = usePOSStore.getState().areaOrder;
+        hasLoadedAreaOrder.current = true;
 
         if (JSON.stringify(currentAreaOrder) !== JSON.stringify(remoteAreaOrder)) {
           isRemoteAreaOrderUpdate.current = true;
@@ -156,6 +177,7 @@ export function useFirebaseSync() {
       },
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
         const currentProducts = useInventoryStore.getState().alcoholProducts;
+        hasLoadedAlcoholProducts.current = true;
 
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteAlcoholProductsUpdate.current = true;
@@ -164,6 +186,7 @@ export function useFirebaseSync() {
       },
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
         const currentProducts = useInventoryStore.getState().beverageProducts;
+        hasLoadedBeverageProducts.current = true;
 
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteBeverageProductsUpdate.current = true;
@@ -172,6 +195,7 @@ export function useFirebaseSync() {
       },
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
+        hasLoadedCigaretteProducts.current = true;
 
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteCigaretteProductsUpdate.current = true;
@@ -180,6 +204,7 @@ export function useFirebaseSync() {
       },
       setGroceryPurchases: (remotePurchases: typeof groceryPurchases) => {
         const currentPurchases = useInventoryStore.getState().groceryPurchases;
+        hasLoadedGroceryPurchases.current = true;
 
         if (JSON.stringify(currentPurchases) !== JSON.stringify(remotePurchases)) {
           isRemoteGroceryPurchasesUpdate.current = true;
@@ -188,6 +213,7 @@ export function useFirebaseSync() {
       },
       setInvMovements: (remoteMovements: typeof invMovements) => {
         const currentMovements = useInventoryStore.getState().invMovements;
+        hasLoadedInvMovements.current = true;
 
         if (JSON.stringify(currentMovements) !== JSON.stringify(remoteMovements)) {
           isRemoteInvMovementsUpdate.current = true;
@@ -196,6 +222,7 @@ export function useFirebaseSync() {
       },
       setInvMappings: (remoteMappings: typeof invMappings) => {
         const currentMappings = useInventoryStore.getState().invMappings;
+        hasLoadedInvMappings.current = true;
 
         if (JSON.stringify(currentMappings) !== JSON.stringify(remoteMappings)) {
           isRemoteInvMappingsUpdate.current = true;
@@ -224,6 +251,7 @@ export function useFirebaseSync() {
           isRemoteStaffUpdate.current = true;
           setUsers(remoteUsers);
         }
+        hasLoadedStaff.current = true;
       },
     });
 
@@ -264,7 +292,7 @@ export function useFirebaseSync() {
 
   // 2. Push Local Order Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedOrders.current) return;
     if (isRemoteOrderUpdate.current) {
       isRemoteOrderUpdate.current = false;
       return;
@@ -274,7 +302,7 @@ export function useFirebaseSync() {
 
   // 3. Push Local Table Status Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedTables.current) return;
     if (isRemoteTableUpdate.current) {
       isRemoteTableUpdate.current = false;
       return;
@@ -284,7 +312,7 @@ export function useFirebaseSync() {
 
   // 4. Push Local Payment Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedPayments.current) return;
     if (isRemotePaymentUpdate.current) {
       isRemotePaymentUpdate.current = false;
       return;
@@ -294,7 +322,7 @@ export function useFirebaseSync() {
 
   // 5. Push Local Settings Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedSettings.current) return;
     if (isRemoteSettingsUpdate.current) {
       isRemoteSettingsUpdate.current = false;
       return;
@@ -304,7 +332,7 @@ export function useFirebaseSync() {
 
   // 6. Push Local Menu Item Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedMenuItems.current) return;
     if (isRemoteMenuItemsUpdate.current) {
       isRemoteMenuItemsUpdate.current = false;
       return;
@@ -314,7 +342,7 @@ export function useFirebaseSync() {
 
   // 7. Push Local Category Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedCategories.current) return;
     if (isRemoteCategoriesUpdate.current) {
       isRemoteCategoriesUpdate.current = false;
       return;
@@ -324,7 +352,7 @@ export function useFirebaseSync() {
 
   // 8. Push Local Pillar Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedPillars.current) return;
     if (isRemotePillarsUpdate.current) {
       isRemotePillarsUpdate.current = false;
       return;
@@ -334,7 +362,7 @@ export function useFirebaseSync() {
 
   // 9. Push Local Area Order Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedAreaOrder.current) return;
     if (isRemoteAreaOrderUpdate.current) {
       isRemoteAreaOrderUpdate.current = false;
       return;
@@ -344,7 +372,7 @@ export function useFirebaseSync() {
 
   // 10. Push Local Alcohol Product Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedAlcoholProducts.current) return;
     if (isRemoteAlcoholProductsUpdate.current) {
       isRemoteAlcoholProductsUpdate.current = false;
       return;
@@ -354,7 +382,7 @@ export function useFirebaseSync() {
 
   // 11. Push Local Beverage Product Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedBeverageProducts.current) return;
     if (isRemoteBeverageProductsUpdate.current) {
       isRemoteBeverageProductsUpdate.current = false;
       return;
@@ -364,7 +392,7 @@ export function useFirebaseSync() {
 
   // 12. Push Local Cigarette Product Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedCigaretteProducts.current) return;
     if (isRemoteCigaretteProductsUpdate.current) {
       isRemoteCigaretteProductsUpdate.current = false;
       return;
@@ -374,7 +402,7 @@ export function useFirebaseSync() {
 
   // 13. Push Local Grocery Purchase Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedGroceryPurchases.current) return;
     if (isRemoteGroceryPurchasesUpdate.current) {
       isRemoteGroceryPurchasesUpdate.current = false;
       return;
@@ -384,7 +412,7 @@ export function useFirebaseSync() {
 
   // 14. Push Local Inventory Movement Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedInvMovements.current) return;
     if (isRemoteInvMovementsUpdate.current) {
       isRemoteInvMovementsUpdate.current = false;
       return;
@@ -394,7 +422,7 @@ export function useFirebaseSync() {
 
   // 15. Push Local Inventory Mapping Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedInvMappings.current) return;
     if (isRemoteInvMappingsUpdate.current) {
       isRemoteInvMappingsUpdate.current = false;
       return;
@@ -404,7 +432,7 @@ export function useFirebaseSync() {
 
   // 16. Push Local Staff Changes to Cloud
   useEffect(() => {
-    if (!isInitialCloudSyncDone.current) return;
+    if (!hasLoadedStaff.current) return;
     if (isRemoteStaffUpdate.current) {
       isRemoteStaffUpdate.current = false;
       return;

@@ -37,11 +37,11 @@ type StaffSyncStore = {
   setUsers: (users: StaffUser[]) => void;
 };
 
-// Safely converts Firebase objects/arrays/nulls into clean JavaScript arrays
-const safeArray = <T>(val: any): T[] => {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.filter(Boolean);
-  if (typeof val === "object") return Object.values(val).filter(Boolean) as T[];
+// Safely converts Firebase keyed objects/arrays/nulls into clean JavaScript arrays
+const toArray = (data: any) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data.filter(Boolean);
+  if (typeof data === "object") return Object.values(data).filter(Boolean);
   return [];
 };
 
@@ -49,10 +49,10 @@ const safeArray = <T>(val: any): T[] => {
 export function sanitizeOrder(rawOrder: any): Order {
   if (!rawOrder) return rawOrder;
 
-  const items = safeArray(rawOrder.items);
-  const tablePayments = safeArray(rawOrder.tablePayments).map((pay: any) => ({
+  const items = toArray(rawOrder.items);
+  const tablePayments = toArray(rawOrder.tablePayments).map((pay: any) => ({
     ...pay,
-    itemIds: safeArray(pay?.itemIds),
+    itemIds: toArray(pay?.itemIds),
   }));
 
   return {
@@ -200,12 +200,7 @@ export async function pushStaffToFirebase(users: StaffUser[]) {
 // Subscribe to Live Orders
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
   return onValue(ref(db, "orders"), (snapshot) => {
-    const rawData = snapshot.val();
-    if (!rawData) {
-      callback([]);
-      return;
-    }
-    const cleanOrders = safeArray(rawData).map(sanitizeOrder);
+    const cleanOrders = toArray(snapshot.val()).map(sanitizeOrder);
     callback(cleanOrders);
   });
 }
@@ -213,8 +208,7 @@ export function subscribeToOrders(callback: (orders: Order[]) => void) {
 // Subscribe to Live Payments
 export function subscribeToPayments(store: FirebaseSyncStore) {
   return onValue(ref(db, "payments"), (snapshot) => {
-    const rawData = snapshot.val();
-    store.setPayments(safeArray<Payment>(rawData));
+    store.setPayments(toArray(snapshot.val()) as Payment[]);
   });
 }
 
@@ -229,70 +223,70 @@ export function subscribeToSettings(store: FirebaseSyncStore) {
 // Subscribe to Live Menu Items
 export function subscribeToMenuItems(store: FirebaseSyncStore) {
   return onValue(ref(db, "menuItems"), (snapshot) => {
-    store.setMenuItems(safeArray<MenuItem>(snapshot.val()));
+    store.setMenuItems(toArray(snapshot.val()) as MenuItem[]);
   });
 }
 
 // Subscribe to Live Categories
 export function subscribeToCategories(store: FirebaseSyncStore) {
   return onValue(ref(db, "categories"), (snapshot) => {
-    store.setCategories(safeArray<Category>(snapshot.val()));
+    store.setCategories(toArray(snapshot.val()) as Category[]);
   });
 }
 
 // Subscribe to Live Pillars
 export function subscribeToPillars(store: FirebaseSyncStore) {
   return onValue(ref(db, "pillars"), (snapshot) => {
-    store.setPillars(safeArray<string>(snapshot.val()));
+    store.setPillars(toArray(snapshot.val()) as string[]);
   });
 }
 
 // Subscribe to Live Area Order
 export function subscribeToAreaOrder(store: FirebaseSyncStore) {
   return onValue(ref(db, "areaOrder"), (snapshot) => {
-    store.setAreaOrder(safeArray<string>(snapshot.val()));
+    store.setAreaOrder(toArray(snapshot.val()) as string[]);
   });
 }
 
 // Subscribe to Live Alcohol Products
 export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "alcoholProducts"), (snapshot) => {
-    store.setAlcoholProducts(safeArray<AlcoholProduct>(snapshot.val()));
+    store.setAlcoholProducts(toArray(snapshot.val()) as AlcoholProduct[]);
   });
 }
 
 // Subscribe to Live Beverage Products
 export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "beverageProducts"), (snapshot) => {
-    store.setBeverageProducts(safeArray<BeverageProduct>(snapshot.val()));
+    store.setBeverageProducts(toArray(snapshot.val()) as BeverageProduct[]);
   });
 }
 
 // Subscribe to Live Cigarette Products
 export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "cigaretteProducts"), (snapshot) => {
-    store.setCigaretteProducts(safeArray<CigaretteProduct>(snapshot.val()));
+    store.setCigaretteProducts(toArray(snapshot.val()) as CigaretteProduct[]);
   });
 }
 
 // Subscribe to Live Grocery Purchases
 export function subscribeToGroceryPurchases(store: FirebaseSyncStore) {
   return onValue(ref(db, "groceryPurchases"), (snapshot) => {
-    store.setGroceryPurchases(safeArray<GroceryPurchase>(snapshot.val()));
+    store.setGroceryPurchases(toArray(snapshot.val()) as GroceryPurchase[]);
   });
 }
 
 // Subscribe to Live Inventory Movements
 export function subscribeToInvMovements(store: FirebaseSyncStore) {
   return onValue(ref(db, "invMovements"), (snapshot) => {
-    store.setInvMovements(safeArray<InventoryMovement>(snapshot.val()));
+    store.setInvMovements(toArray(snapshot.val()) as InventoryMovement[]);
   });
 }
 
 // Subscribe to Live Inventory Mappings
 export function subscribeToInvMappings(store: FirebaseSyncStore) {
   return onValue(ref(db, "invMappings"), (snapshot) => {
-    store.setInvMappings(safeArray<InvMenuMapping>(snapshot.val()));
+    store.setInvMappings(toArray(snapshot.val()) as InvMenuMapping[]);
   });
 }
 
@@ -306,7 +300,7 @@ export function subscribeToStaff(store: StaffSyncStore) {
   ];
 
   return onValue(ref(db, "users"), (snapshot) => {
-    const users = safeArray<StaffUser>(snapshot.val());
+    const users = toArray(snapshot.val()) as StaffUser[];
 
     if (users.length === 0) {
       if (!hasSeededEmptyStaff) {
@@ -323,12 +317,7 @@ export function subscribeToStaff(store: StaffSyncStore) {
 // Subscribe to Live Table Statuses
 export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
   return onValue(ref(db, "tables"), (snapshot) => {
-    const rawData = snapshot.val();
-    if (!rawData) {
-      callback([]);
-      return;
-    }
-    const cleanTables = safeArray<CafeTable>(rawData);
+    const cleanTables = toArray(snapshot.val()) as CafeTable[];
     callback(cleanTables);
   });
 }
