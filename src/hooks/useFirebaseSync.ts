@@ -4,33 +4,35 @@ import { subscribeToOrders, pushOrdersToFirebase } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
   const orders = usePOSStore((s) => s.orders);
-  const isRemoteUpdate = useRef(false);
-  const hasLoadedFromCloud = useRef(false);
+  const setOrders = usePOSStore((s) => s.setOrders);
 
-  // 1. Listen for cloud updates from Firebase
+  const isRemoteUpdate = useRef(false);
+  const isInitialCloudSyncDone = useRef(false);
+
+  // 1. Live stream active orders from Firebase Cloud to local device memory
   useEffect(() => {
     const unsubscribe = subscribeToOrders((remoteOrders) => {
       const currentOrders = usePOSStore.getState().orders;
 
-      // Mark that initial cloud fetch has completed
-      hasLoadedFromCloud.current = true;
+      // Mark that this device has received the initial cloud dataset
+      isInitialCloudSyncDone.current = true;
 
-      // Only update local store if cloud data is different
+      // Only update local memory if remote data actually changed
       if (JSON.stringify(currentOrders) !== JSON.stringify(remoteOrders)) {
         isRemoteUpdate.current = true;
-        usePOSStore.getState().setOrders(remoteOrders);
+        setOrders(remoteOrders);
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [setOrders]);
 
-  // 2. Push local updates to cloud
+  // 2. Push local device changes up to Firebase Cloud
   useEffect(() => {
-    // Block pushes until initial cloud fetch has finished (prevents fresh sessions from wiping database)
-    if (!hasLoadedFromCloud.current) return;
+    // Block pushes until initial cloud download completes (prevents fresh devices from wiping data)
+    if (!isInitialCloudSyncDone.current) return;
 
-    // Block echo pushes from remote updates
+    // Block echo pushes triggered by remote updates
     if (isRemoteUpdate.current) {
       isRemoteUpdate.current = false;
       return;
