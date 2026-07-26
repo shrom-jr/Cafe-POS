@@ -12,4 +12,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+
+// Explicitly passing databaseURL guarantees connection to the Asia-Southeast instance
+export const db = getDatabase(app, firebaseConfig.databaseURL);
