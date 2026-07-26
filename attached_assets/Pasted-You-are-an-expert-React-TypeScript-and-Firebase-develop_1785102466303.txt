@@ -1,0 +1,27 @@
+You are an expert React, TypeScript, and Firebase developer.
+
+Problem: In a busy restaurant environment, Wi-Fi can flicker or drop. While Firebase Realtime Database handles offline writes automatically, cashiers have no visual indicator showing whether they are currently connected to the cloud or operating in offline mode. Firebase provides connection state telemetry at the system path `/.info/connected`.
+
+Task: Create a real-time offline detection hook and mount a persistent, non-intrusive notification banner across the top of the POS interface when disconnected.
+
+Instructions:
+1. Create `src/hooks/useOnlineStatus.ts`:
+   - Import `getDatabase`, `ref`, and `onValue` from `firebase/database`.
+   - Create a React hook `useOnlineStatus` that initializes a state `isOnline` default to `true`.
+   - Subscribe to the database path `ref(db, '.info/connected')`.
+   - In the snapshot listener: set `isOnline(true)` if `snap.val() === true`, else `isOnline(false)`.
+   - Ensure a proper cleanup function returns from `useEffect` to unsubscribe the listener on unmount.
+   - Export `useOnlineStatus`.
+
+2. Create `src/components/OfflineBanner.tsx` (or integrate into main Header/Navbar):
+   - Consume `useOnlineStatus()`.
+   - When `isOnline` is `false`, render a full-width top banner with an amber/yellow background (`bg-amber-500 text-white` or similar high-contrast styling).
+   - Display the text: "⚠️ Working Offline — Orders will sync automatically when reconnected."
+   - Ensure the banner uses proper z-index and flex layout so it pushes down or overlays cleanly without blocking POS buttons, cart totals, or table navigation.
+
+3. Mount Banner in Layout:
+   - Import and render this banner inside your main layout wrapper (e.g., `src/App.tsx` or `src/components/Layout.tsx`) so it is visible across all screen routes (POS, Orders, Kitchen, Inventory).
+
+Validation:
+- Run `npm run build` to verify there are zero TypeScript errors.
+- Do NOT alter any existing transaction payload structures, database sync helpers (`firebaseSync.ts`), or payment logic.
