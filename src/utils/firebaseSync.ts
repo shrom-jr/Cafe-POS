@@ -13,7 +13,7 @@ export function pushOrdersToFirebase(orders: Order[]) {
   }
 }
 
-// Reads orders from Firebase and converts them into a clean array
+// Reads orders from Firebase and GUARANTEES every order has a valid items array
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
   const ordersRef = ref(db, "orders");
 
@@ -25,12 +25,23 @@ export function subscribeToOrders(callback: (orders: Order[]) => void) {
       return;
     }
 
-    // Convert Firebase dictionary object into a standard list array
-    const ordersArray = Array.isArray(rawData)
+    // 1. Convert Firebase dictionary object into a list array
+    const rawOrdersArray = Array.isArray(rawData)
       ? rawData
       : Object.values(rawData);
 
-    const cleanOrders = ordersArray.filter(Boolean) as Order[];
+    // 2. Fix missing/undefined items on every order so .reduce() never fails
+    const cleanOrders = rawOrdersArray
+      .filter(Boolean)
+      .map((order: any) => ({
+        ...order,
+        items: Array.isArray(order?.items)
+          ? order.items
+          : order?.items
+          ? Object.values(order.items)
+          : [],
+      })) as Order[];
+
     callback(cleanOrders);
   });
 }
