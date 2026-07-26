@@ -7,6 +7,9 @@ import type {
   Settings,
   MenuItem,
   Category,
+  Ingredient,
+  Recipe,
+  StockMovement,
 } from "../types/pos";
 
 type FirebaseSyncStore = {
@@ -16,6 +19,9 @@ type FirebaseSyncStore = {
   setCategories: (categories: Category[]) => void;
   setPillars: (pillars: string[]) => void;
   setAreaOrder: (areaOrder: string[]) => void;
+  setIngredients: (ingredients: Ingredient[]) => void;
+  setRecipes: (recipes: Recipe[]) => void;
+  setStockMovements: (stockMovements: StockMovement[]) => void;
 };
 
 // Safely converts Firebase objects/arrays/nulls into clean JavaScript arrays
@@ -115,6 +121,33 @@ export async function pushAreaOrderToFirebase(areaOrder: string[]) {
   }
 }
 
+// Push Ingredients
+export async function pushIngredientsToFirebase(ingredients: Ingredient[]) {
+  try {
+    await set(ref(db, "ingredients"), JSON.parse(JSON.stringify(ingredients || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Ingredients Push FAILED]:", error);
+  }
+}
+
+// Push Recipes
+export async function pushRecipesToFirebase(recipes: Recipe[]) {
+  try {
+    await set(ref(db, "recipes"), JSON.parse(JSON.stringify(recipes || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Recipes Push FAILED]:", error);
+  }
+}
+
+// Push Stock Movements
+export async function pushStockMovementsToFirebase(stockMovements: StockMovement[]) {
+  try {
+    await set(ref(db, "stockMovements"), JSON.parse(JSON.stringify(stockMovements || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Stock Movements Push FAILED]:", error);
+  }
+}
+
 // Subscribe to Live Orders
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
   return onValue(ref(db, "orders"), (snapshot) => {
@@ -169,6 +202,27 @@ export function subscribeToPillars(store: FirebaseSyncStore) {
 export function subscribeToAreaOrder(store: FirebaseSyncStore) {
   return onValue(ref(db, "areaOrder"), (snapshot) => {
     store.setAreaOrder(safeArray<string>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Ingredients
+export function subscribeToIngredients(store: FirebaseSyncStore) {
+  return onValue(ref(db, "ingredients"), (snapshot) => {
+    store.setIngredients(safeArray<Ingredient>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Recipes
+export function subscribeToRecipes(store: FirebaseSyncStore) {
+  return onValue(ref(db, "recipes"), (snapshot) => {
+    store.setRecipes(safeArray<Recipe>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Stock Movements
+export function subscribeToStockMovements(store: FirebaseSyncStore) {
+  return onValue(ref(db, "stockMovements"), (snapshot) => {
+    store.setStockMovements(safeArray<StockMovement>(snapshot.val()));
   });
 }
 

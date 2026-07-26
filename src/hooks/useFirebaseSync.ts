@@ -9,6 +9,9 @@ import {
   subscribeToCategories,
   subscribeToPillars,
   subscribeToAreaOrder,
+  subscribeToIngredients,
+  subscribeToRecipes,
+  subscribeToStockMovements,
   pushOrdersToFirebase,
   pushTablesToFirebase,
   pushPaymentsToFirebase,
@@ -17,6 +20,9 @@ import {
   pushCategoriesToFirebase,
   pushPillarsToFirebase,
   pushAreaOrderToFirebase,
+  pushIngredientsToFirebase,
+  pushRecipesToFirebase,
+  pushStockMovementsToFirebase,
 } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
@@ -28,6 +34,9 @@ export function useFirebaseSync() {
   const categories = usePOSStore((s) => s.categories);
   const pillars = usePOSStore((s) => s.pillars);
   const areaOrder = usePOSStore((s) => s.areaOrder);
+  const ingredients = usePOSStore((s) => s.ingredients);
+  const recipes = usePOSStore((s) => s.recipes);
+  const stockMovements = usePOSStore((s) => s.stockMovements);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
   const setPayments = usePOSStore((s) => s.setPayments);
@@ -36,6 +45,9 @@ export function useFirebaseSync() {
   const setCategories = usePOSStore((s) => s.setCategories);
   const setPillars = usePOSStore((s) => s.setPillars);
   const setAreaOrder = usePOSStore((s) => s.setAreaOrder);
+  const setIngredients = usePOSStore((s) => s.setIngredients);
+  const setRecipes = usePOSStore((s) => s.setRecipes);
+  const setStockMovements = usePOSStore((s) => s.setStockMovements);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
@@ -45,6 +57,9 @@ export function useFirebaseSync() {
   const isRemoteCategoriesUpdate = useRef(false);
   const isRemotePillarsUpdate = useRef(false);
   const isRemoteAreaOrderUpdate = useRef(false);
+  const isRemoteIngredientsUpdate = useRef(false);
+  const isRemoteRecipesUpdate = useRef(false);
+  const isRemoteStockMovementsUpdate = useRef(false);
   const isInitialCloudSyncDone = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
@@ -117,6 +132,30 @@ export function useFirebaseSync() {
           setAreaOrder(remoteAreaOrder);
         }
       },
+      setIngredients: (remoteIngredients: typeof ingredients) => {
+        const currentIngredients = usePOSStore.getState().ingredients;
+
+        if (JSON.stringify(currentIngredients) !== JSON.stringify(remoteIngredients)) {
+          isRemoteIngredientsUpdate.current = true;
+          setIngredients(remoteIngredients);
+        }
+      },
+      setRecipes: (remoteRecipes: typeof recipes) => {
+        const currentRecipes = usePOSStore.getState().recipes;
+
+        if (JSON.stringify(currentRecipes) !== JSON.stringify(remoteRecipes)) {
+          isRemoteRecipesUpdate.current = true;
+          setRecipes(remoteRecipes);
+        }
+      },
+      setStockMovements: (remoteStockMovements: typeof stockMovements) => {
+        const currentStockMovements = usePOSStore.getState().stockMovements;
+
+        if (JSON.stringify(currentStockMovements) !== JSON.stringify(remoteStockMovements)) {
+          isRemoteStockMovementsUpdate.current = true;
+          setStockMovements(remoteStockMovements);
+        }
+      },
     };
 
     const unsubscribePayments = subscribeToPayments(store);
@@ -125,6 +164,9 @@ export function useFirebaseSync() {
     const unsubscribeCategories = subscribeToCategories(store);
     const unsubscribePillars = subscribeToPillars(store);
     const unsubscribeAreaOrder = subscribeToAreaOrder(store);
+    const unsubscribeIngredients = subscribeToIngredients(store);
+    const unsubscribeRecipes = subscribeToRecipes(store);
+    const unsubscribeStockMovements = subscribeToStockMovements(store);
 
     return () => {
       unsubscribeOrders();
@@ -135,6 +177,9 @@ export function useFirebaseSync() {
       unsubscribeCategories();
       unsubscribePillars();
       unsubscribeAreaOrder();
+      unsubscribeIngredients();
+      unsubscribeRecipes();
+      unsubscribeStockMovements();
     };
   }, [
     setOrders,
@@ -145,6 +190,9 @@ export function useFirebaseSync() {
     setCategories,
     setPillars,
     setAreaOrder,
+    setIngredients,
+    setRecipes,
+    setStockMovements,
   ]);
 
   // 2. Push Local Order Changes to Cloud
@@ -226,4 +274,34 @@ export function useFirebaseSync() {
     }
     pushAreaOrderToFirebase(areaOrder);
   }, [areaOrder]);
+
+  // 10. Push Local Ingredient Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteIngredientsUpdate.current) {
+      isRemoteIngredientsUpdate.current = false;
+      return;
+    }
+    pushIngredientsToFirebase(ingredients);
+  }, [ingredients]);
+
+  // 11. Push Local Recipe Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteRecipesUpdate.current) {
+      isRemoteRecipesUpdate.current = false;
+      return;
+    }
+    pushRecipesToFirebase(recipes);
+  }, [recipes]);
+
+  // 12. Push Local Stock Movement Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteStockMovementsUpdate.current) {
+      isRemoteStockMovementsUpdate.current = false;
+      return;
+    }
+    pushStockMovementsToFirebase(stockMovements);
+  }, [stockMovements]);
 }

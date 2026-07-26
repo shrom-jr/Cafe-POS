@@ -67,13 +67,16 @@ interface POSState {
   getNextKotNumber: () => number;
 
   ingredients: Ingredient[];
+  setIngredients: (ingredients: Ingredient[]) => void;
   recipes: Recipe[];
+  setRecipes: (recipes: Recipe[]) => void;
 
   addIngredient: (ingredient: Omit<Ingredient, 'id'>) => void;
   updateIngredient: (id: string, updates: Partial<Ingredient>) => void;
   deleteIngredient: (id: string) => void;
 
   stockMovements: StockMovement[];
+  setStockMovements: (stockMovements: StockMovement[]) => void;
 
   saveRecipe: (menuItemId: string, ingredients: RecipeIngredient[]) => void;
   deleteRecipe: (menuItemId: string) => void;
@@ -124,8 +127,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
   settings: db.getSettings(),
   setSettings: (settings) => set({ settings }),
   ingredients: db.getIngredients(),
+  setIngredients: (ingredients) => set({ ingredients }),
   recipes: db.getRecipes(),
+  setRecipes: (recipes) => set({ recipes }),
   stockMovements: db.getStockMovements(),
+  setStockMovements: (stockMovements) => set({ stockMovements }),
 
   addTable: (number, section = 'Ground Floor') => {
     const name = number.trim();
