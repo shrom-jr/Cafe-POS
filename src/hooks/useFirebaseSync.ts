@@ -1,43 +1,66 @@
 import { useEffect, useRef } from "react";
 import { usePOSStore } from "@/store/usePOSStore";
-import { subscribeToOrders, pushOrdersToFirebase } from "@/utils/firebaseSync";
+import {
+  subscribeToOrders,
+  subscribeToTables,
+  pushOrdersToFirebase,
+  pushTablesToFirebase,
+} from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
   const orders = usePOSStore((s) => s.orders);
+  const tables = usePOSStore((s) => s.tables);
   const setOrders = usePOSStore((s) => s.setOrders);
+  const setTables = usePOSStore((s) => s.setTables);
 
-  const isRemoteUpdate = useRef(false);
+  const isRemoteOrderUpdate = useRef(false);
+  const isRemoteTableUpdate = useRef(false);
   const isInitialCloudSyncDone = useRef(false);
 
-  // 1. Live stream active orders from Firebase Cloud to local device memory
+  // 1. Subscribe to Cloud Updates (Orders + Tables)
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((remoteOrders) => {
+    const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
       const currentOrders = usePOSStore.getState().orders;
-
-      // Mark that this device has received the initial cloud dataset
       isInitialCloudSyncDone.current = true;
 
-      // Only update local memory if remote data actually changed
       if (JSON.stringify(currentOrders) !== JSON.stringify(remoteOrders)) {
-        isRemoteUpdate.current = true;
+        isRemoteOrderUpdate.current = true;
         setOrders(remoteOrders);
       }
     });
 
-    return () => unsubscribe();
-  }, [setOrders]);
+    const unsubscribeTables = subscribeToTables((remoteTables) => {
+      const currentTables = usePOSStore.getState().tables;
 
-  // 2. Push local device changes up to Firebase Cloud
+      if (JSON.stringify(currentTables) !== JSON.stringify(remoteTables)) {
+        isRemoteTableUpdate.current = true;
+        setTables(remoteTables);
+      }
+    });
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeTables();
+    };
+  }, [setOrders, setTables]);
+
+  // 2. Push Local Order Changes to Cloud
   useEffect(() => {
-    // Block pushes until initial cloud download completes (prevents fresh devices from wiping data)
     if (!isInitialCloudSyncDone.current) return;
-
-    // Block echo pushes triggered by remote updates
-    if (isRemoteUpdate.current) {
-      isRemoteUpdate.current = false;
+    if (isRemoteOrderUpdate.current) {
+      isRemoteOrderUpdate.current = false;
       return;
     }
-
     pushOrdersToFirebase(orders);
   }, [orders]);
+
+  // 3. Push Local Table Status Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteTableUpdate.current) {
+      isRemoteTableUpdate.current = false;
+      return;
+    }
+    pushTablesToFirebase(tables);
+  }, [tables]);
 }
