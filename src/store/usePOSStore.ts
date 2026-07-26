@@ -11,12 +11,14 @@ db.seed();
 
 interface POSState {
   tables: CafeTable[];
+  setTables: (tables: CafeTable[]) => void;
   areaOrder: string[];
   setAreaOrder: (order: string[]) => void;
   pillars: string[];
   categories: Category[];
   menuItems: MenuItem[];
   orders: Order[];
+  setOrders: (orders: Order[]) => void;
   payments: Payment[];
   settings: Settings;
 
@@ -78,6 +80,10 @@ interface POSState {
 
 export const usePOSStore = create<POSState>((set, get) => ({
   tables: db.getTables(),
+  setTables: (tables) => {
+    db.saveTables(tables);
+    set({ tables });
+  },
   areaOrder: db.getAreaOrder(),
   setAreaOrder: (order) => {
     db.saveAreaOrder(order);
@@ -102,6 +108,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
     if (dirty) db.saveOrders(migrated);
     return migrated;
   })(),
+  setOrders: (orders) => {
+    db.saveOrders(orders);
+    set({ orders });
+  },
   payments: db.getPayments(),
   settings: db.getSettings(),
   ingredients: db.getIngredients(),
@@ -254,7 +264,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const existing = get().getActiveOrder(tableId);
     if (existing) return existing;
 
-    // Auto-fill takenBy from the active staff session when caller didn't supply one.
     let resolvedTakenBy: StaffAttribution | undefined = takenBy;
     if (!resolvedTakenBy) {
       const { currentUser, users } = useStaffStore.getState();
@@ -377,7 +386,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   sendToKitchen: (orderId) => {
-    // Deduct inventory via new inventory store (alcohol, beverage, cigarette mappings)
     const order = get().orders.find((o) => o.id === orderId);
     if (order) {
       const unsentItems = order.items
@@ -506,8 +514,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   addPayment: (payment) => {
-    // The payment processor is the active staff member, but the order's
-    // original server attribution must remain intact.
     const { currentUser, users } = useStaffStore.getState();
     const activeUser = currentUser ?? users.find((u) => u.active);
     const autoAttrib: StaffAttribution | undefined = activeUser
@@ -547,8 +553,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   getNextKotNumber: () => {
     const s = get().settings;
-    const todayStr = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
-    // If daily reset is enabled and we haven't reset today, reset counter to 0 first
+    const todayStr = new Date().toISOString().slice(0, 10);
     const needsReset = s.resetKotDaily && s.kotLastResetDate !== todayStr;
     const baseCounter = needsReset ? 0 : (s.kotCounter ?? 100);
     const next = baseCounter + 1;
@@ -587,7 +592,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
       const ingredients = state.ingredients.map((i) => {
         if (i.id !== id) return i;
         const merged = { ...i, ...updates };
-        // Re-normalize whenever quantity or unit changes
         if (updates.quantity !== undefined || updates.unit !== undefined || updates.threshold !== undefined) {
           const normalized = normalizeToBase(merged.quantity, merged.unit, merged.costPerUnit);
           const factor = (merged.unit === 'L' || merged.unit === 'kg') ? 1000 : 1;
