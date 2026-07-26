@@ -66,7 +66,14 @@ export const useStaffStore = create<StaffState>((set, get) => {
 
   return {
     users,
-    setUsers: (users) => set({ users }),
+    setUsers: (users) => {
+      // Persist non-empty lists to localStorage so the login screen renders
+      // immediately on the next page load (before the Firebase listener fires).
+      // Never persist an empty array — that would wipe a valid cache if Firebase
+      // is momentarily unreachable.
+      if (users.length > 0) saveUsers(users);
+      set({ users });
+    },
     currentUser,
 
     login: (userId, pin) => {

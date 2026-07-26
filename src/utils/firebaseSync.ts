@@ -293,7 +293,22 @@ export function subscribeToInvMappings(store: FirebaseSyncStore) {
 // Subscribe to Live Staff Users
 export function subscribeToStaff(store: StaffSyncStore) {
   return onValue(ref(db, "users"), (snapshot) => {
-    const users = toArray(snapshot.val()) as StaffUser[];
+    const raw = toArray(snapshot.val());
+
+    if (raw.length === 0) {
+      // Firebase returned null / empty — do NOT seed defaults, just clear state.
+      store.setUsers([]);
+      return;
+    }
+
+    // Normalize each record:
+    //  • spread the Firebase object first so any explicit `active` value wins
+    //  • default `active` to true when the field is absent (legacy records)
+    const users: StaffUser[] = raw.map((u: Record<string, unknown>) => ({
+      active: true,
+      ...u,
+    })) as StaffUser[];
+
     store.setUsers(users);
   });
 }
