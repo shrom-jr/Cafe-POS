@@ -28,11 +28,17 @@ const INV_KEYS = {
 // ── State interface ───────────────────────────────────────────────────────────
 interface InventoryState {
   alcoholProducts:   AlcoholProduct[];
+  setAlcoholProducts: (products: AlcoholProduct[]) => void;
   beverageProducts:  BeverageProduct[];
+  setBeverageProducts: (products: BeverageProduct[]) => void;
   cigaretteProducts: CigaretteProduct[];
+  setCigaretteProducts: (products: CigaretteProduct[]) => void;
   groceryPurchases:  GroceryPurchase[];
+  setGroceryPurchases: (purchases: GroceryPurchase[]) => void;
   invMovements:      InventoryMovement[];
+  setInvMovements:   (movements: InventoryMovement[]) => void;
   invMappings:       InvMenuMapping[];
+  setInvMappings:    (mappings: InvMenuMapping[]) => void;
 
   // ── Alcohol ──
   addAlcohol:     (p: Omit<AlcoholProduct, 'id'>) => void;
@@ -91,11 +97,17 @@ interface InventoryState {
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useInventoryStore = create<InventoryState>((set, get) => ({
   alcoholProducts:   getLS(INV_KEYS.alcohol,    []),
+  setAlcoholProducts: (products) => set({ alcoholProducts: products }),
   beverageProducts:  getLS(INV_KEYS.beverages,  []),
+  setBeverageProducts: (products) => set({ beverageProducts: products }),
   cigaretteProducts: getLS(INV_KEYS.cigarettes, []),
+  setCigaretteProducts: (products) => set({ cigaretteProducts: products }),
   groceryPurchases:  getLS(INV_KEYS.grocery,    []),
+  setGroceryPurchases: (purchases) => set({ groceryPurchases: purchases }),
   invMovements:      getLS(INV_KEYS.movements,  []),
+  setInvMovements:   (movements) => set({ invMovements: movements }),
   invMappings:       getLS(INV_KEYS.mappings,   []),
+  setInvMappings:    (mappings) => set({ invMappings: mappings }),
 
   // ── ALCOHOL ──────────────────────────────────────────────────────────────
   addAlcohol: (p) => set((s) => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { usePOSStore } from "@/store/usePOSStore";
 import { useStaffStore } from "@/store/useStaffStore";
+import { useInventoryStore } from "@/store/useInventoryStore";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -10,9 +11,12 @@ import {
   subscribeToCategories,
   subscribeToPillars,
   subscribeToAreaOrder,
-  subscribeToIngredients,
-  subscribeToRecipes,
-  subscribeToStockMovements,
+  subscribeToAlcoholProducts,
+  subscribeToBeverageProducts,
+  subscribeToCigaretteProducts,
+  subscribeToGroceryPurchases,
+  subscribeToInvMovements,
+  subscribeToInvMappings,
   subscribeToStaff,
   pushOrdersToFirebase,
   pushTablesToFirebase,
@@ -22,9 +26,12 @@ import {
   pushCategoriesToFirebase,
   pushPillarsToFirebase,
   pushAreaOrderToFirebase,
-  pushIngredientsToFirebase,
-  pushRecipesToFirebase,
-  pushStockMovementsToFirebase,
+  pushAlcoholProductsToFirebase,
+  pushBeverageProductsToFirebase,
+  pushCigaretteProductsToFirebase,
+  pushGroceryPurchasesToFirebase,
+  pushInvMovementsToFirebase,
+  pushInvMappingsToFirebase,
   pushStaffToFirebase,
 } from "@/utils/firebaseSync";
 
@@ -37,10 +44,13 @@ export function useFirebaseSync() {
   const categories = usePOSStore((s) => s.categories);
   const pillars = usePOSStore((s) => s.pillars);
   const areaOrder = usePOSStore((s) => s.areaOrder);
-  const ingredients = usePOSStore((s) => s.ingredients);
-  const recipes = usePOSStore((s) => s.recipes);
-  const stockMovements = usePOSStore((s) => s.stockMovements);
   const users = useStaffStore((s) => s.users);
+  const alcoholProducts = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts = useInventoryStore((s) => s.cigaretteProducts);
+  const groceryPurchases = useInventoryStore((s) => s.groceryPurchases);
+  const invMovements = useInventoryStore((s) => s.invMovements);
+  const invMappings = useInventoryStore((s) => s.invMappings);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
   const setPayments = usePOSStore((s) => s.setPayments);
@@ -49,10 +59,13 @@ export function useFirebaseSync() {
   const setCategories = usePOSStore((s) => s.setCategories);
   const setPillars = usePOSStore((s) => s.setPillars);
   const setAreaOrder = usePOSStore((s) => s.setAreaOrder);
-  const setIngredients = usePOSStore((s) => s.setIngredients);
-  const setRecipes = usePOSStore((s) => s.setRecipes);
-  const setStockMovements = usePOSStore((s) => s.setStockMovements);
   const setUsers = useStaffStore((s) => s.setUsers);
+  const setAlcoholProducts = useInventoryStore((s) => s.setAlcoholProducts);
+  const setBeverageProducts = useInventoryStore((s) => s.setBeverageProducts);
+  const setCigaretteProducts = useInventoryStore((s) => s.setCigaretteProducts);
+  const setGroceryPurchases = useInventoryStore((s) => s.setGroceryPurchases);
+  const setInvMovements = useInventoryStore((s) => s.setInvMovements);
+  const setInvMappings = useInventoryStore((s) => s.setInvMappings);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
@@ -62,10 +75,13 @@ export function useFirebaseSync() {
   const isRemoteCategoriesUpdate = useRef(false);
   const isRemotePillarsUpdate = useRef(false);
   const isRemoteAreaOrderUpdate = useRef(false);
-  const isRemoteIngredientsUpdate = useRef(false);
-  const isRemoteRecipesUpdate = useRef(false);
-  const isRemoteStockMovementsUpdate = useRef(false);
   const isRemoteStaffUpdate = useRef(false);
+  const isRemoteAlcoholProductsUpdate = useRef(false);
+  const isRemoteBeverageProductsUpdate = useRef(false);
+  const isRemoteCigaretteProductsUpdate = useRef(false);
+  const isRemoteGroceryPurchasesUpdate = useRef(false);
+  const isRemoteInvMovementsUpdate = useRef(false);
+  const isRemoteInvMappingsUpdate = useRef(false);
   const isInitialCloudSyncDone = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
@@ -138,28 +154,52 @@ export function useFirebaseSync() {
           setAreaOrder(remoteAreaOrder);
         }
       },
-      setIngredients: (remoteIngredients: typeof ingredients) => {
-        const currentIngredients = usePOSStore.getState().ingredients;
+      setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
+        const currentProducts = useInventoryStore.getState().alcoholProducts;
 
-        if (JSON.stringify(currentIngredients) !== JSON.stringify(remoteIngredients)) {
-          isRemoteIngredientsUpdate.current = true;
-          setIngredients(remoteIngredients);
+        if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteAlcoholProductsUpdate.current = true;
+          setAlcoholProducts(remoteProducts);
         }
       },
-      setRecipes: (remoteRecipes: typeof recipes) => {
-        const currentRecipes = usePOSStore.getState().recipes;
+      setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
+        const currentProducts = useInventoryStore.getState().beverageProducts;
 
-        if (JSON.stringify(currentRecipes) !== JSON.stringify(remoteRecipes)) {
-          isRemoteRecipesUpdate.current = true;
-          setRecipes(remoteRecipes);
+        if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteBeverageProductsUpdate.current = true;
+          setBeverageProducts(remoteProducts);
         }
       },
-      setStockMovements: (remoteStockMovements: typeof stockMovements) => {
-        const currentStockMovements = usePOSStore.getState().stockMovements;
+      setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
+        const currentProducts = useInventoryStore.getState().cigaretteProducts;
 
-        if (JSON.stringify(currentStockMovements) !== JSON.stringify(remoteStockMovements)) {
-          isRemoteStockMovementsUpdate.current = true;
-          setStockMovements(remoteStockMovements);
+        if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteCigaretteProductsUpdate.current = true;
+          setCigaretteProducts(remoteProducts);
+        }
+      },
+      setGroceryPurchases: (remotePurchases: typeof groceryPurchases) => {
+        const currentPurchases = useInventoryStore.getState().groceryPurchases;
+
+        if (JSON.stringify(currentPurchases) !== JSON.stringify(remotePurchases)) {
+          isRemoteGroceryPurchasesUpdate.current = true;
+          setGroceryPurchases(remotePurchases);
+        }
+      },
+      setInvMovements: (remoteMovements: typeof invMovements) => {
+        const currentMovements = useInventoryStore.getState().invMovements;
+
+        if (JSON.stringify(currentMovements) !== JSON.stringify(remoteMovements)) {
+          isRemoteInvMovementsUpdate.current = true;
+          setInvMovements(remoteMovements);
+        }
+      },
+      setInvMappings: (remoteMappings: typeof invMappings) => {
+        const currentMappings = useInventoryStore.getState().invMappings;
+
+        if (JSON.stringify(currentMappings) !== JSON.stringify(remoteMappings)) {
+          isRemoteInvMappingsUpdate.current = true;
+          setInvMappings(remoteMappings);
         }
       },
     };
@@ -170,9 +210,12 @@ export function useFirebaseSync() {
     const unsubscribeCategories = subscribeToCategories(store);
     const unsubscribePillars = subscribeToPillars(store);
     const unsubscribeAreaOrder = subscribeToAreaOrder(store);
-    const unsubscribeIngredients = subscribeToIngredients(store);
-    const unsubscribeRecipes = subscribeToRecipes(store);
-    const unsubscribeStockMovements = subscribeToStockMovements(store);
+    const unsubscribeAlcoholProducts = subscribeToAlcoholProducts(store);
+    const unsubscribeBeverageProducts = subscribeToBeverageProducts(store);
+    const unsubscribeCigaretteProducts = subscribeToCigaretteProducts(store);
+    const unsubscribeGroceryPurchases = subscribeToGroceryPurchases(store);
+    const unsubscribeInvMovements = subscribeToInvMovements(store);
+    const unsubscribeInvMappings = subscribeToInvMappings(store);
     const unsubscribeStaff = subscribeToStaff({
       setUsers: (remoteUsers) => {
         const currentUsers = useStaffStore.getState().users;
@@ -193,9 +236,12 @@ export function useFirebaseSync() {
       unsubscribeCategories();
       unsubscribePillars();
       unsubscribeAreaOrder();
-      unsubscribeIngredients();
-      unsubscribeRecipes();
-      unsubscribeStockMovements();
+      unsubscribeAlcoholProducts();
+      unsubscribeBeverageProducts();
+      unsubscribeCigaretteProducts();
+      unsubscribeGroceryPurchases();
+      unsubscribeInvMovements();
+      unsubscribeInvMappings();
       unsubscribeStaff();
     };
   }, [
@@ -207,10 +253,13 @@ export function useFirebaseSync() {
     setCategories,
     setPillars,
     setAreaOrder,
-    setIngredients,
-    setRecipes,
-    setStockMovements,
     setUsers,
+    setAlcoholProducts,
+    setBeverageProducts,
+    setCigaretteProducts,
+    setGroceryPurchases,
+    setInvMovements,
+    setInvMappings,
   ]);
 
   // 2. Push Local Order Changes to Cloud
@@ -293,37 +342,67 @@ export function useFirebaseSync() {
     pushAreaOrderToFirebase(areaOrder);
   }, [areaOrder]);
 
-  // 10. Push Local Ingredient Changes to Cloud
+  // 10. Push Local Alcohol Product Changes to Cloud
   useEffect(() => {
     if (!isInitialCloudSyncDone.current) return;
-    if (isRemoteIngredientsUpdate.current) {
-      isRemoteIngredientsUpdate.current = false;
+    if (isRemoteAlcoholProductsUpdate.current) {
+      isRemoteAlcoholProductsUpdate.current = false;
       return;
     }
-    pushIngredientsToFirebase(ingredients);
-  }, [ingredients]);
+    pushAlcoholProductsToFirebase(alcoholProducts);
+  }, [alcoholProducts]);
 
-  // 11. Push Local Recipe Changes to Cloud
+  // 11. Push Local Beverage Product Changes to Cloud
   useEffect(() => {
     if (!isInitialCloudSyncDone.current) return;
-    if (isRemoteRecipesUpdate.current) {
-      isRemoteRecipesUpdate.current = false;
+    if (isRemoteBeverageProductsUpdate.current) {
+      isRemoteBeverageProductsUpdate.current = false;
       return;
     }
-    pushRecipesToFirebase(recipes);
-  }, [recipes]);
+    pushBeverageProductsToFirebase(beverageProducts);
+  }, [beverageProducts]);
 
-  // 12. Push Local Stock Movement Changes to Cloud
+  // 12. Push Local Cigarette Product Changes to Cloud
   useEffect(() => {
     if (!isInitialCloudSyncDone.current) return;
-    if (isRemoteStockMovementsUpdate.current) {
-      isRemoteStockMovementsUpdate.current = false;
+    if (isRemoteCigaretteProductsUpdate.current) {
+      isRemoteCigaretteProductsUpdate.current = false;
       return;
     }
-    pushStockMovementsToFirebase(stockMovements);
-  }, [stockMovements]);
+    pushCigaretteProductsToFirebase(cigaretteProducts);
+  }, [cigaretteProducts]);
 
-  // 13. Push Local Staff Changes to Cloud
+  // 13. Push Local Grocery Purchase Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteGroceryPurchasesUpdate.current) {
+      isRemoteGroceryPurchasesUpdate.current = false;
+      return;
+    }
+    pushGroceryPurchasesToFirebase(groceryPurchases);
+  }, [groceryPurchases]);
+
+  // 14. Push Local Inventory Movement Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteInvMovementsUpdate.current) {
+      isRemoteInvMovementsUpdate.current = false;
+      return;
+    }
+    pushInvMovementsToFirebase(invMovements);
+  }, [invMovements]);
+
+  // 15. Push Local Inventory Mapping Changes to Cloud
+  useEffect(() => {
+    if (!isInitialCloudSyncDone.current) return;
+    if (isRemoteInvMappingsUpdate.current) {
+      isRemoteInvMappingsUpdate.current = false;
+      return;
+    }
+    pushInvMappingsToFirebase(invMappings);
+  }, [invMappings]);
+
+  // 16. Push Local Staff Changes to Cloud
   useEffect(() => {
     if (!isInitialCloudSyncDone.current) return;
     if (isRemoteStaffUpdate.current) {

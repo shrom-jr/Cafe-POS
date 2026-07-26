@@ -7,11 +7,16 @@ import type {
   Settings,
   MenuItem,
   Category,
-  Ingredient,
-  Recipe,
-  StockMovement,
 } from "../types/pos";
 import type { StaffUser } from "../types/staff";
+import type {
+  AlcoholProduct,
+  BeverageProduct,
+  CigaretteProduct,
+  GroceryPurchase,
+  InvMenuMapping,
+  InventoryMovement,
+} from "../types/pos";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[]) => void;
@@ -20,9 +25,12 @@ type FirebaseSyncStore = {
   setCategories: (categories: Category[]) => void;
   setPillars: (pillars: string[]) => void;
   setAreaOrder: (areaOrder: string[]) => void;
-  setIngredients: (ingredients: Ingredient[]) => void;
-  setRecipes: (recipes: Recipe[]) => void;
-  setStockMovements: (stockMovements: StockMovement[]) => void;
+  setAlcoholProducts: (products: AlcoholProduct[]) => void;
+  setBeverageProducts: (products: BeverageProduct[]) => void;
+  setCigaretteProducts: (products: CigaretteProduct[]) => void;
+  setGroceryPurchases: (purchases: GroceryPurchase[]) => void;
+  setInvMovements: (movements: InventoryMovement[]) => void;
+  setInvMappings: (mappings: InvMenuMapping[]) => void;
 };
 
 type StaffSyncStore = {
@@ -126,30 +134,57 @@ export async function pushAreaOrderToFirebase(areaOrder: string[]) {
   }
 }
 
-// Push Ingredients
-export async function pushIngredientsToFirebase(ingredients: Ingredient[]) {
+// Push Alcohol Products
+export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
   try {
-    await set(ref(db, "ingredients"), JSON.parse(JSON.stringify(ingredients || [])));
+    await set(ref(db, "alcoholProducts"), JSON.parse(JSON.stringify(products || [])));
   } catch (error) {
-    console.error("❌ [Firebase Ingredients Push FAILED]:", error);
+    console.error("❌ [Firebase Alcohol Products Push FAILED]:", error);
   }
 }
 
-// Push Recipes
-export async function pushRecipesToFirebase(recipes: Recipe[]) {
+// Push Beverage Products
+export async function pushBeverageProductsToFirebase(products: BeverageProduct[]) {
   try {
-    await set(ref(db, "recipes"), JSON.parse(JSON.stringify(recipes || [])));
+    await set(ref(db, "beverageProducts"), JSON.parse(JSON.stringify(products || [])));
   } catch (error) {
-    console.error("❌ [Firebase Recipes Push FAILED]:", error);
+    console.error("❌ [Firebase Beverage Products Push FAILED]:", error);
   }
 }
 
-// Push Stock Movements
-export async function pushStockMovementsToFirebase(stockMovements: StockMovement[]) {
+// Push Cigarette Products
+export async function pushCigaretteProductsToFirebase(products: CigaretteProduct[]) {
   try {
-    await set(ref(db, "stockMovements"), JSON.parse(JSON.stringify(stockMovements || [])));
+    await set(ref(db, "cigaretteProducts"), JSON.parse(JSON.stringify(products || [])));
   } catch (error) {
-    console.error("❌ [Firebase Stock Movements Push FAILED]:", error);
+    console.error("❌ [Firebase Cigarette Products Push FAILED]:", error);
+  }
+}
+
+// Push Grocery Purchases
+export async function pushGroceryPurchasesToFirebase(purchases: GroceryPurchase[]) {
+  try {
+    await set(ref(db, "groceryPurchases"), JSON.parse(JSON.stringify(purchases || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Grocery Purchases Push FAILED]:", error);
+  }
+}
+
+// Push Inventory Movements
+export async function pushInvMovementsToFirebase(movements: InventoryMovement[]) {
+  try {
+    await set(ref(db, "invMovements"), JSON.parse(JSON.stringify(movements || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Inventory Movements Push FAILED]:", error);
+  }
+}
+
+// Push Inventory Mappings
+export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
+  try {
+    await set(ref(db, "invMappings"), JSON.parse(JSON.stringify(mappings || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Inventory Mappings Push FAILED]:", error);
   }
 }
 
@@ -219,24 +254,45 @@ export function subscribeToAreaOrder(store: FirebaseSyncStore) {
   });
 }
 
-// Subscribe to Live Ingredients
-export function subscribeToIngredients(store: FirebaseSyncStore) {
-  return onValue(ref(db, "ingredients"), (snapshot) => {
-    store.setIngredients(safeArray<Ingredient>(snapshot.val()));
+// Subscribe to Live Alcohol Products
+export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
+  return onValue(ref(db, "alcoholProducts"), (snapshot) => {
+    store.setAlcoholProducts(safeArray<AlcoholProduct>(snapshot.val()));
   });
 }
 
-// Subscribe to Live Recipes
-export function subscribeToRecipes(store: FirebaseSyncStore) {
-  return onValue(ref(db, "recipes"), (snapshot) => {
-    store.setRecipes(safeArray<Recipe>(snapshot.val()));
+// Subscribe to Live Beverage Products
+export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
+  return onValue(ref(db, "beverageProducts"), (snapshot) => {
+    store.setBeverageProducts(safeArray<BeverageProduct>(snapshot.val()));
   });
 }
 
-// Subscribe to Live Stock Movements
-export function subscribeToStockMovements(store: FirebaseSyncStore) {
-  return onValue(ref(db, "stockMovements"), (snapshot) => {
-    store.setStockMovements(safeArray<StockMovement>(snapshot.val()));
+// Subscribe to Live Cigarette Products
+export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
+  return onValue(ref(db, "cigaretteProducts"), (snapshot) => {
+    store.setCigaretteProducts(safeArray<CigaretteProduct>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Grocery Purchases
+export function subscribeToGroceryPurchases(store: FirebaseSyncStore) {
+  return onValue(ref(db, "groceryPurchases"), (snapshot) => {
+    store.setGroceryPurchases(safeArray<GroceryPurchase>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Inventory Movements
+export function subscribeToInvMovements(store: FirebaseSyncStore) {
+  return onValue(ref(db, "invMovements"), (snapshot) => {
+    store.setInvMovements(safeArray<InventoryMovement>(snapshot.val()));
+  });
+}
+
+// Subscribe to Live Inventory Mappings
+export function subscribeToInvMappings(store: FirebaseSyncStore) {
+  return onValue(ref(db, "invMappings"), (snapshot) => {
+    store.setInvMappings(safeArray<InvMenuMapping>(snapshot.val()));
   });
 }
 
