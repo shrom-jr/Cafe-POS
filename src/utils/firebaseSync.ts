@@ -1,67 +1,36 @@
-import { ref, set, onValue, off } from "firebase/database";
-import { db } from "@/firebase.js";
-import type { Order } from "@/types/pos";
+import { ref, onValue, set } from "firebase/database";
+import { db } from "../firebase";
+import type { Order } from "../types/pos";
 
-const ORDERS_PATH = "orders";
-
-/**
- * Push the full orders list to Firebase Realtime Database.
- * Sanitizes via JSON round-trip to strip any undefined values — Firebase RTDB
- * rejects writes that contain undefined in any property.
- */
-export function pushOrdersToFirebase(orders: Order[]): void {
-  const ordersRef = ref(db, ORDERS_PATH);
-
-  let payload: Record<string, Order> | null = null;
-  if (orders.length > 0) {
-    // Keyed map: { [orderId]: Order }
-    const map: Record<string, Order> = {};
-    for (const o of orders) { map[o.id] = o; }
-    // Strip every undefined field so Firebase never rejects the write.
-    payload = JSON.parse(JSON.stringify(map));
+// Sends order updates to Firebase
+export function pushOrdersToFirebase(orders: Order[]) {
+  try {
+    const ordersRef = ref(db, "orders");
+    const sanitizedOrders = JSON.parse(JSON.stringify(orders || []));
+    set(ordersRef, sanitizedOrders);
+  } catch (error) {
+    console.error("[Firebase Push Error]:", error);
   }
-
-  console.log("[Firebase Push] pushing", orders.length, "order(s) to Firebase");
-
-  set(ordersRef, payload).catch((err) => {
-    console.error("[Firebase Push] FAILED — check permissions or data shape:", err);
-  });
 }
 
-/**
- * Subscribe to real-time order updates from Firebase.
- * Normalises array fields that Firebase may return as null (empty arrays)
- * or as numeric-keyed objects (non-empty arrays written via set()).
- * Returns an unsubscribe function.
- */
-export function subscribeToOrders(callback: (orders: Order[]) => void): () => void {
-  const ordersRef = ref(db, ORDERS_PATH);
+// Receives live updates from Firebase and converts them to an array
+export function subscribeToOrders(callback: (orders: Order[]) => void) {
+  const ordersRef = ref(db, "orders");
 
-  const listener = onValue(
-    ordersRef,
-    (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        callback([]);
-        return;
-      }
+  return onValue(ordersRef, (snapshot) => {
+    const rawData = snapshot.val();
 
-      // data is { [id]: Order }. Firebase may return arrays as objects with
-      // numeric keys — Object.values() normalises both cases.
-      const orders: Order[] = Object.values(data).map((raw) => {
-        const o = raw as Order;
-        return {
-          ...o,
-          // Firebase drops empty arrays (stores as null); guard both fields.
-          items: Array.isArray(o.items) ? o.items : [],
-          tablePayments: Array.isArray(o.tablePayments) ? o.tablePayments : undefined,
-        };
-      });
+    if (!rawData) {
+      callback([]);
+      return;
+    }
 
-      callback(orders);
-    },
-    (err) => console.error("[Firebase] Orders subscription error:", err)
-  );
+    // Convert Firebase dictionary object into a standard list array
+    const ordersArray = Array.isArray(rawData)
+      ? rawData
+      : Object.values(rawData);
 
-  return () => off(ordersRef, "value", listener);
+    const cleanOrders = ordersArray.filter(Boolean) as Order[];
+    callback(cleanOrders);
+  });
 }
