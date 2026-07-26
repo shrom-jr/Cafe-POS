@@ -1,6 +1,6 @@
 import { ref, onValue, set } from "firebase/database";
 import { db } from "../firebase";
-import type { Order } from "../types/pos";
+import type { Order, CafeTable } from "../types/pos";
 
 // Safely converts Firebase objects/arrays/nulls into clean JavaScript arrays
 const safeArray = <T>(val: any): T[] => {
@@ -10,7 +10,7 @@ const safeArray = <T>(val: any): T[] => {
   return [];
 };
 
-// Deeply sanitizes raw Firebase data so nested arrays never crash any screen
+// Deeply sanitizes raw Firebase data
 export function sanitizeOrder(rawOrder: any): Order {
   if (!rawOrder) return rawOrder;
 
@@ -27,38 +27,46 @@ export function sanitizeOrder(rawOrder: any): Order {
   };
 }
 
-// Pushes order state changes to Firebase Cloud
+// Push Orders
 export async function pushOrdersToFirebase(orders: Order[]) {
   try {
-    const ordersRef = ref(db, "orders");
-    const sanitizedOrders = JSON.parse(JSON.stringify(orders || []));
-    await set(ordersRef, sanitizedOrders);
+    await set(ref(db, "orders"), JSON.parse(JSON.stringify(orders || [])));
   } catch (error) {
-    console.error("❌ [Firebase Push Error]:", error);
+    console.error("❌ [Firebase Orders Push FAILED]:", error);
   }
 }
 
-// Subscribes all devices to blistering-fast real-time updates
+// Push Tables Status
+export async function pushTablesToFirebase(tables: CafeTable[]) {
+  try {
+    await set(ref(db, "tables"), JSON.parse(JSON.stringify(tables || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Tables Push FAILED]:", error);
+  }
+}
+
+// Subscribe to Live Orders
 export function subscribeToOrders(callback: (orders: Order[]) => void) {
-  const ordersRef = ref(db, "orders");
-
-  return onValue(
-    ordersRef,
-    (snapshot) => {
-      const rawData = snapshot.val();
-
-      if (!rawData) {
-        callback([]);
-        return;
-      }
-
-      const rawOrdersArray = safeArray(rawData);
-      const cleanOrders = rawOrdersArray.map(sanitizeOrder);
-
-      callback(cleanOrders);
-    },
-    (error) => {
-      console.error("❌ [Firebase Realtime Listener Error]:", error);
+  return onValue(ref(db, "orders"), (snapshot) => {
+    const rawData = snapshot.val();
+    if (!rawData) {
+      callback([]);
+      return;
     }
-  );
+    const cleanOrders = safeArray(rawData).map(sanitizeOrder);
+    callback(cleanOrders);
+  });
+}
+
+// Subscribe to Live Table Statuses
+export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
+  return onValue(ref(db, "tables"), (snapshot) => {
+    const rawData = snapshot.val();
+    if (!rawData) {
+      callback([]);
+      return;
+    }
+    const cleanTables = safeArray<CafeTable>(rawData);
+    callback(cleanTables);
+  });
 }
