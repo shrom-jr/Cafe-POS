@@ -292,24 +292,8 @@ export function subscribeToInvMappings(store: FirebaseSyncStore) {
 
 // Subscribe to Live Staff Users
 export function subscribeToStaff(store: StaffSyncStore) {
-  let hasSeededEmptyStaff = false;
-  const defaultStaff: StaffUser[] = [
-    { id: "staff-admin", name: "Admin Owner", role: "ADMIN", pin: "1234", active: true },
-    { id: "staff-cashier", name: "Cashier Desk", role: "CASHIER", pin: "2222", active: true },
-    { id: "staff-waiter", name: "Waiter Staff", role: "WAITER", pin: "3333", active: true },
-  ];
-
   return onValue(ref(db, "users"), (snapshot) => {
     const users = toArray(snapshot.val()) as StaffUser[];
-
-    if (users.length === 0) {
-      if (!hasSeededEmptyStaff) {
-        hasSeededEmptyStaff = true;
-        void pushStaffToFirebase(defaultStaff);
-      }
-      return;
-    }
-
     store.setUsers(users);
   });
 }

@@ -7,8 +7,6 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { getStaffName } from '@/utils/staffName';
 import { tableNameKey } from '@/utils/tableName';
 
-db.seed();
-
 type DynamicPillar = string;
 
 interface POSState {
@@ -738,18 +736,17 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   factoryReset: () => {
     db.clearAll();
-    db.seed();
     set({
-      tables: db.getTables(),
-      pillars: db.getPillars(),
-      categories: db.getCategories(),
-      menuItems: db.getMenuItems(),
-      orders: db.getOrders(),
-      payments: db.getPayments(),
+      tables: [],
+      pillars: [],
+      categories: [],
+      menuItems: [],
+      orders: [],
+      payments: [],
       settings: db.getSettings(),
-      ingredients: db.getIngredients(),
-      recipes: db.getRecipes(),
-      stockMovements: db.getStockMovements(),
+      ingredients: [],
+      recipes: [],
+      stockMovements: [],
     });
   },
 }));

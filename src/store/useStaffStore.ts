@@ -5,19 +5,13 @@ const STAFF_KEY        = 'pos_staff_users';
 const SESSION_KEY      = 'pos_current_user_id';
 const SESSION_USER_KEY = 'pos_current_user';   // full object — survives HMR & refresh
 
-const DEFAULT_USERS: StaffUser[] = [
-  { id: 'staff-admin',   name: 'Admin Owner',   role: 'ADMIN',   pin: '1234', active: true },
-  { id: 'staff-cashier', name: 'Cashier Desk',  role: 'CASHIER', pin: '2222', active: true },
-  { id: 'staff-waiter',  name: 'Waiter Staff',  role: 'WAITER',  pin: '3333', active: true },
-];
-
 function loadUsers(): StaffUser[] {
   try {
     const d = localStorage.getItem(STAFF_KEY);
-    const parsed: StaffUser[] = d ? JSON.parse(d) : DEFAULT_USERS;
-    if (!parsed.length) return DEFAULT_USERS;
-    return parsed;
-  } catch { return DEFAULT_USERS; }
+    if (!d) return [];
+    const parsed: StaffUser[] = JSON.parse(d);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
 }
 
 function saveUsers(users: StaffUser[]) {
