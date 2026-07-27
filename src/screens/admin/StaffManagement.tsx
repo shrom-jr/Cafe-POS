@@ -29,6 +29,7 @@ const StaffModal = ({
 }) => {
   const { addUser, updateUser } = useStaffStore();
   const [name, setName]       = useState(existing?.name ?? '');
+  const [email, setEmail]     = useState(existing?.email ?? '');
   const [role, setRole]       = useState<Role>(existing?.role ?? 'WAITER');
   const [pin, setPin]         = useState(existing?.pin ?? '');
   const [showPin, setShowPin] = useState(false);
@@ -37,14 +38,17 @@ const StaffModal = ({
   const isEdit = !!existing;
 
   const handleSave = () => {
-    if (!name.trim())       return toast.error('Name is required');
+    if (!name.trim()) return toast.error('Name is required');
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return toast.error('Email is required');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) return toast.error('Enter a valid email address');
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) return toast.error('PIN must be exactly 4 digits');
 
     if (isEdit) {
-      updateUser(existing.id, { name: name.trim(), role, pin, active });
+      updateUser(existing.id, { name: name.trim(), email: trimmedEmail, role, pin, active });
       toast.success('Staff member updated');
     } else {
-      addUser({ name: name.trim(), role, pin, active: true });
+      addUser({ name: name.trim(), email: trimmedEmail, role, pin, active: true });
       toast.success('Staff member added');
     }
     onClose();
@@ -65,6 +69,21 @@ const StaffModal = ({
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Full Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sita Thapa" className={inputCls} />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              placeholder="e.g. sita@example.com"
+              className={inputCls}
+              autoComplete="off"
+            />
           </div>
 
           {/* Role */}
@@ -288,6 +307,9 @@ const StaffRow = ({ user }: { user: StaffUser }) => {
               </span>
             )}
           </div>
+          {user.email && (
+            <p className="text-xs text-white/40 truncate mt-0.5">{user.email}</p>
+          )}
           <div className="flex items-center gap-2 mt-0.5">
             <span
               className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
