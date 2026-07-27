@@ -322,6 +322,15 @@ export function subscribeToStaff(store: StaffSyncStore) {
   });
 }
 
+// Write PIN Reset OTP to Firebase
+export async function writePinReset(userId: string, otp: string, expiresAt: number) {
+  try {
+    await set(ref(db, `pinResets/${userId}`), { otp, expiresAt });
+  } catch (error) {
+    console.error("❌ [Firebase PIN Reset Write FAILED]:", error);
+  }
+}
+
 // Subscribe to Live Table Statuses
 export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
   return onValue(ref(db, "tables"), (snapshot) => {
