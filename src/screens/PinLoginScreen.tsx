@@ -2,9 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { StaffUser, Role } from '@/types/staff';
-import { Lock, ArrowLeft, Mail, RotateCcw } from 'lucide-react';
+import { Lock, ArrowLeft, Mail, RotateCcw, Loader2 } from 'lucide-react';
 import { writePinReset } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
+import emailjs from '@emailjs/browser';
+
+const EMAILJS_SERVICE_ID  = 'service_mgnjpll';
+const EMAILJS_TEMPLATE_ID = 'template_od1a97s';
+const EMAILJS_PUBLIC_KEY  = 'ct_T99fLZJzPB5zut';
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
   ADMIN:   { bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.35)', text: '#c084fc' },
@@ -95,11 +100,26 @@ const PinModal = ({
     const exp = Date.now() + OTP_DURATION * 1000;
     generatedOtp.current = otp;
     expiresAt.current    = exp;
-    console.log(
-      `%c[PIN Reset OTP] User: ${user.name} | Code: ${otp} | Expires: ${new Date(exp).toLocaleTimeString()}`,
-      'color:#60a5fa;font-weight:bold'
-    );
+
+    // Write to Firebase first (non-blocking on email failure)
     await writePinReset(user.id, otp, exp);
+
+    // Send via EmailJS
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        { to_name: user.name, to_email: user.email, otp },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      toast.success(`Code sent to ${user.email}`);
+    } catch (err) {
+      console.error('[EmailJS] Send failed:', err);
+      toast.error('Failed to send email — check your connection and try again.');
+      setIsSending(false);
+      return; // stay on email view so user can retry
+    }
+
     setOtpInput('');
     setOtpError('');
     setOtpKey((k) => k + 1);
@@ -372,7 +392,9 @@ const PinModal = ({
                   boxShadow: '0 4px 16px -4px rgba(59,130,246,0.55)',
                 }}
               >
-                {isSending ? 'Sending…' : 'Send Code'}
+                {isSending
+                  ? <span className="flex items-center justify-center gap-2"><Loader2 size={15} className="animate-spin" />Sending…</span>
+                  : 'Send Code'}
               </button>
               <button
                 onClick={() => setView('pin')}
@@ -396,7 +418,7 @@ const PinModal = ({
               </button>
               <div>
                 <h3 className="font-bold text-white/90 text-sm">Enter Code</h3>
-                <p className="text-xs text-white/40 mt-0.5">6-digit code logged to browser console</p>
+                <p className="text-xs text-white/40 mt-0.5">Check your email inbox for the 6-digit code</p>
               </div>
             </div>
 
