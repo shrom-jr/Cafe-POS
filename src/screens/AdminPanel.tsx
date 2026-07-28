@@ -7,7 +7,7 @@ import { InventorySection } from '@/screens/InventorySection';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { toast } from 'sonner';
 import {
-  BarChart3, Coffee, CreditCard, Table2, TrendingUp, FileDown,
+  BarChart3, Coffee, CreditCard, Table2, TrendingUp,
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
@@ -29,7 +29,7 @@ import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'backup' | 'inventory';
+type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'inventory';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -136,7 +136,6 @@ const AdminPanel = () => {
     { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
     { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
     { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
-    { id: 'backup',    label: 'Backup',    icon: <FileDown size={15} />,   subtitle: 'Export, restore or reset data' },
     { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
   ];
 
@@ -219,7 +218,6 @@ const AdminPanel = () => {
             {activeTab === 'tables'    && <TablesSection />}
             {activeTab === 'reports'   && <ReportsSection />}
             {activeTab === 'inventory' && <InventorySection />}
-            {activeTab === 'backup'    && <BackupSection />}
             {activeTab === 'settings'  && (
               <div className="space-y-6">
                 {/* Sub-tab pills */}
@@ -2462,113 +2460,6 @@ const ReportsSection = () => {
               </div>
             )}
           </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ── BACKUP ────────────────────────────────────────────────────────────────
-const BackupSection = () => {
-  const exportData = usePOSStore((s) => s.exportData);
-  const importData = usePOSStore((s) => s.importData);
-  const factoryReset = usePOSStore((s) => s.factoryReset);
-
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleExport = () => {
-    const data = exportData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cafe-pos-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Backup exported successfully');
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        importData(reader.result as string);
-        toast.success('Data restored successfully');
-      } catch {
-        toast.error('Invalid backup file');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <div className="space-y-5 max-w-lg">
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold text-foreground">Export Backup</h3>
-          <p className="text-sm text-slate-300 mt-1">Download all your data as a JSON file for safekeeping. Include menu, tables, orders, and settings.</p>
-        </div>
-        <button
-          onClick={handleExport}
-          data-testid="button-export-backup"
-          className="w-full py-3 rounded-xl bg-accent text-accent-foreground font-semibold flex items-center justify-center gap-2 hover:brightness-110 transition-all active:scale-[0.98]"
-        >
-          <Download size={16} /> Export Backup
-        </button>
-      </div>
-
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold text-foreground">Restore Backup</h3>
-          <p className="text-sm text-slate-300 mt-1">Import a previously exported backup file. This will overwrite your current data.</p>
-        </div>
-        <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-        <button
-          onClick={() => fileRef.current?.click()}
-          data-testid="button-import-backup"
-          className="w-full py-3 rounded-xl bg-secondary text-secondary-foreground font-semibold flex items-center justify-center gap-2 hover:bg-accent/15 hover:text-accent transition-all active:scale-[0.98]"
-        >
-          <Upload size={16} /> Import Backup
-        </button>
-      </div>
-
-      <div className="bg-card rounded-2xl border-2 border-destructive/25 p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold text-destructive">Factory Reset</h3>
-          <p className="text-sm text-slate-300 mt-1">Delete all data and restore default settings. <span className="text-destructive font-medium">This cannot be undone.</span></p>
-        </div>
-        {!showResetConfirm ? (
-          <button
-            onClick={() => setShowResetConfirm(true)}
-            data-testid="button-factory-reset"
-            className="w-full py-3 rounded-xl bg-destructive/8 text-destructive font-semibold flex items-center justify-center gap-2 hover:bg-destructive/18 transition-all active:scale-[0.98]"
-          >
-            <Trash2 size={16} /> Factory Reset
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <div className="p-3 rounded-xl bg-destructive/8 border border-destructive/20">
-              <p className="text-sm font-semibold text-destructive text-center">Are you sure? All data will be permanently erased.</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground font-semibold hover:bg-secondary/80 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { factoryReset(); window.location.reload(); }}
-                data-testid="button-confirm-factory-reset"
-                className="flex-1 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold hover:brightness-110 transition-all active:scale-[0.97]"
-              >
-                Confirm Reset
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
