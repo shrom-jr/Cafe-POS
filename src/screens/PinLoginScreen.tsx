@@ -15,12 +15,14 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
   ADMIN:   { bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.35)', text: '#c084fc' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.35)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)', text: '#34d399' },
+  KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.35)',  text: '#fb923c' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN:   'Admin',
   CASHIER: 'Cashier',
   WAITER:  'Waiter',
+  KITCHEN: 'Kitchen',
 };
 
 // ── Shared keypad keys ───────────────────────────────────────────────────────
