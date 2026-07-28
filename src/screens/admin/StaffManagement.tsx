@@ -4,16 +4,17 @@ import { StaffUser, Role } from '@/types/staff';
 import { Plus, Trash2, Edit3, X, Save, Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ROLES: Role[] = ['WAITER', 'CASHIER', 'ADMIN'];
+const ROLES: Role[] = ['WAITER', 'CASHIER', 'ADMIN', 'KITCHEN'];
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
   ADMIN:   { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)', text: '#c084fc' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399' },
+  KITCHEN: { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.3)',  text: '#fb923c' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter',
+  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
 };
 
 const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
@@ -89,7 +90,7 @@ const StaffModal = ({
           {/* Role */}
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Role</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => {
                 const c = ROLE_COLORS[r];
                 const active = role === r;
@@ -359,13 +360,13 @@ const StaffManagement = () => {
   const { users } = useStaffStore();
   const [showAdd, setShowAdd] = useState(false);
 
-  const byRole: Record<Role, StaffUser[]> = { ADMIN: [], CASHIER: [], WAITER: [] };
-  users.forEach((u) => byRole[u.role].push(u));
+  const byRole: Record<Role, StaffUser[]> = { ADMIN: [], CASHIER: [], WAITER: [], KITCHEN: [] };
+  users.forEach((u) => { if (byRole[u.role]) byRole[u.role].push(u); });
 
   return (
     <div className="space-y-5">
       {/* Summary row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {ROLES.map((r) => {
           const c = ROLE_COLORS[r];
           const count = byRole[r].filter((u) => u.active).length;

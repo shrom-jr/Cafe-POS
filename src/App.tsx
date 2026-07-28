@@ -9,6 +9,7 @@ import ReviewScreen from '@/screens/ReviewScreen';
 import PaymentScreen from '@/screens/PaymentScreen';
 import BillHistory from '@/screens/BillHistory';
 import AdminPanel from '@/screens/AdminPanel';
+import KitchenPortal from '@/screens/KitchenPortal';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -20,6 +21,15 @@ import OfflineBanner from '@/components/OfflineBanner';
 const RequireAdmin = ({ children }: { children: React.ReactNode }) => {
   const currentUser = useStaffStore((s) => s.currentUser);
   if (!currentUser || currentUser.role !== 'ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
+/** Redirects non-kitchen users away from /kitchen */
+const RequireKitchen = ({ children }: { children: React.ReactNode }) => {
+  const currentUser = useStaffStore((s) => s.currentUser);
+  if (!currentUser || currentUser.role !== 'KITCHEN') {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -68,13 +78,20 @@ const App = () => {
           ) : (
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
-                <Route path="/" element={<TableOverview />} />
+                {/* Kitchen users go straight to their portal */}
+                <Route
+                  path="/"
+                  element={currentUser?.role === 'KITCHEN'
+                    ? <Navigate to="/kitchen" replace />
+                    : <TableOverview />}
+                />
                 <Route path="/order/:tableId" element={<OrderScreen />} />
                 <Route path="/review/:tableId" element={<ReviewScreen />} />
                 {/* UNUSED ROUTE - DO NOT USE */}
                 <Route path="/payment/:tableId" element={<PaymentScreen />} />
                 <Route path="/history" element={<BillHistory />} />
                 <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
+                <Route path="/kitchen" element={<RequireKitchen><KitchenPortal /></RequireKitchen>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

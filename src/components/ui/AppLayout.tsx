@@ -15,16 +15,18 @@ const ROLE_TABS: Record<Role, string[]> = {
   WAITER:  ['/'],
   CASHIER: ['/', '/history'],
   ADMIN:   ['/', '/history', '/admin'],
+  KITCHEN: [], // Kitchen users see no nav — they land on the dedicated /kitchen portal
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter',
+  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
 };
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
   ADMIN:   { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)', text: '#c084fc' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399' },
+  KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.3)',  text: '#fb923c' },
 };
 
 interface AppLayoutProps {
@@ -165,13 +167,15 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
               {userBadge}
             </div>
           </div>
-          {/* Row 2: nav tabs (horizontally scrollable) */}
-          <div
-            className="flex items-center gap-2 px-3 pb-2.5 overflow-x-auto no-scrollbar"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          >
-            {tabs}
-          </div>
+          {/* Row 2: nav tabs (horizontally scrollable) — hidden when role has no nav items */}
+          {tabs.length > 0 && (
+            <div
+              className="flex items-center gap-2 px-3 pb-2.5 overflow-x-auto no-scrollbar"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {tabs}
+            </div>
+          )}
         </div>
       </header>
 
