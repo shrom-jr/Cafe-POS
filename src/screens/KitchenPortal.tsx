@@ -16,7 +16,7 @@ interface PurchaseEntry {
   totalCost: number;
 }
 
-type MeatAction = 'Marinated' | 'Sent to Grill';
+type MeatAction = 'Marinated' | 'Minced (Keema)' | 'Sent to Grill';
 
 interface MeatEntry {
   id: string;
@@ -75,8 +75,9 @@ const buildMeatPool = (purchases: PurchaseEntry[]): string[] => {
 
 interface MeatBalance {
   rawPurchased: number;
-  rawUnmarinatedLeft: number;
+  rawUnprocessedLeft: number;
   readyForGrill: number;
+  totalKeema: number;
   unit: string;
 }
 
@@ -94,15 +95,18 @@ const calcBalance = (
   const unit = purchased[0] ? extractUnit(purchased[0].quantity) : 'kg';
 
   const todayMeat = meatEntries.filter((e) => e.date === today && norm(e.meatItem) === norm(item));
-  const totalMarinated    = todayMeat.filter((e) => e.action === 'Marinated')
+  const totalMarinated   = todayMeat.filter((e) => e.action === 'Marinated')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
-  const totalSentToGrill  = todayMeat.filter((e) => e.action === 'Sent to Grill')
+  const totalMinced      = todayMeat.filter((e) => e.action === 'Minced (Keema)')
+    .reduce((s, e) => s + parseQty(e.quantity), 0);
+  const totalSentToGrill = todayMeat.filter((e) => e.action === 'Sent to Grill')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
 
   return {
     rawPurchased,
-    rawUnmarinatedLeft: rawPurchased - totalMarinated,
+    rawUnprocessedLeft: rawPurchased - totalMarinated - totalMinced,
     readyForGrill: totalMarinated - totalSentToGrill,
+    totalKeema: totalMinced,
     unit,
   };
 };
@@ -136,12 +140,14 @@ const TH = 'text-left py-2 pr-3 text-xs font-medium text-white/35 whitespace-now
 const TD = 'py-2.5 pr-3 text-sm';
 
 const ACTION_BADGE: Record<MeatAction, React.CSSProperties> = {
-  'Marinated':     { background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.4)',  color: '#fb923c' },
-  'Sent to Grill': { background: 'rgba(34,197,94,0.15)',  border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80' },
+  'Marinated':      { background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.4)',  color: '#fb923c' },
+  'Minced (Keema)': { background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.4)',  color: '#a78bfa' },
+  'Sent to Grill':  { background: 'rgba(34,197,94,0.15)',  border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80' },
 };
 const ACTION_ACTIVE: Record<MeatAction, React.CSSProperties> = {
-  'Marinated':     { background: 'rgba(249,115,22,0.22)', border: '1px solid rgba(249,115,22,0.5)', color: '#fb923c' },
-  'Sent to Grill': { background: 'rgba(34,197,94,0.18)',  border: '1px solid rgba(34,197,94,0.45)', color: '#4ade80' },
+  'Marinated':      { background: 'rgba(249,115,22,0.22)', border: '1px solid rgba(249,115,22,0.5)',  color: '#fb923c' },
+  'Minced (Keema)': { background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.5)',  color: '#a78bfa' },
+  'Sent to Grill':  { background: 'rgba(34,197,94,0.18)',  border: '1px solid rgba(34,197,94,0.45)', color: '#4ade80' },
 };
 const ACTION_INACTIVE: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)',
@@ -163,10 +169,10 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
       style: { background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c' },
     },
     {
-      label: 'Raw Unmarinated Left',
-      value: fmt2(bal.rawUnmarinatedLeft),
+      label: 'Raw Unprocessed Left',
+      value: fmt2(bal.rawUnprocessedLeft),
       unit: u,
-      style: bal.rawUnmarinatedLeft < 0
+      style: bal.rawUnprocessedLeft < 0
         ? { background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }
         : { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
     },
@@ -178,10 +184,18 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
         ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
         : { background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80' },
     },
+    {
+      label: 'Total Keema Stock',
+      value: fmt2(bal.totalKeema),
+      unit: u,
+      style: bal.totalKeema <= 0
+        ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
+        : { background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa' },
+    },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2.5">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
       {cards.map((c) => (
         <div key={c.label} className="rounded-xl p-3 text-center" style={c.style}>
           <p className="text-xs font-medium opacity-70 mb-1 leading-tight">{c.label}</p>
@@ -438,12 +452,12 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
           {/* Action toggle */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Action Type</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['Marinated', 'Sent to Grill'] as MeatAction[]).map((a) => (
+            <div className="grid grid-cols-3 gap-2">
+              {(['Marinated', 'Minced (Keema)', 'Sent to Grill'] as MeatAction[]).map((a) => (
                 <button key={a} onClick={() => setAction(a)}
                   className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
                   style={action === a ? ACTION_ACTIVE[a] : ACTION_INACTIVE}>
-                  {a === 'Marinated' ? '🧂 Marinated' : '🔥 Sent to Grill'}
+                  {a === 'Marinated' ? '🧂 Marinated' : a === 'Minced (Keema)' ? '🥩 Minced (Keema)' : '🔥 Sent to Grill'}
                 </button>
               ))}
             </div>
