@@ -6,12 +6,15 @@ import { toast } from 'sonner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+type PurchaseCategory = 'Meats' | 'Groceries & Supplies' | 'Custom';
+
 interface PurchaseEntry {
   id: string;
-  date: string;     // yyyy-MM-dd
-  time: string;     // HH:mm
+  date: string;              // yyyy-MM-dd
+  time: string;              // HH:mm
   itemName: string;
-  quantity: string; // free-text: "5 kg", "2 L"
+  category: PurchaseCategory;
+  quantity: string;          // formatted: "5 kg", "2 L"
   rate: number;
   totalCost: number;
 }
@@ -26,6 +29,14 @@ interface MeatEntry {
   action: MeatAction;
   quantity: string;
 }
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const MEAT_ITEMS       = ['Chicken', 'Mutton', 'Pork', 'Fish'] as const;
+const GROCERY_ITEMS    = ['Cooking Oil', 'Salt', 'Rice', 'Vegetables', 'Spices', 'Gas Cylinder'] as const;
+const UNIT_OPTIONS     = ['kg', 'L', 'pcs', 'packets', 'bags', 'custom'] as const;
+const CUSTOM_SENTINEL  = '__custom__';
+const CUSTOM_UNIT      = 'custom';
 
 // ── LocalStorage ─────────────────────────────────────────────────────────────
 
@@ -47,7 +58,7 @@ const saveMeat = (d: MeatEntry[]) => localStorage.setItem(MEAT_KEY, JSON.stringi
 const todayStr = () => format(new Date(), 'yyyy-MM-dd');
 const timeStr  = () => format(new Date(), 'HH:mm');
 
-/** Extract leading numeric value: "5 kg" → 5, "40 skewers" → 40 */
+/** Extract leading numeric value: "5 kg" → 5 */
 const parseQty = (s: string): number => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
 
 /** Strip leading number to get unit: "5 kg" → "kg" */
@@ -55,20 +66,20 @@ const extractUnit = (s: string): string => s.replace(/^[\d.]+\s*/, '').trim();
 
 const norm = (s: string) => s.trim().toLowerCase();
 
-// Default meat items always in the pool
-const DEFAULT_MEATS = ['Chicken', 'Mutton', 'Fish', 'Pork'];
-
-/** Build the dropdown pool: defaults + unique item names from today's purchases */
+/**
+ * Meat pool = DEFAULT_MEATS + any items from today's purchases that are
+ * in the Meats category (case-insensitive dedup).
+ */
 const buildMeatPool = (purchases: PurchaseEntry[]): string[] => {
   const today = todayStr();
-  const fromPurchases = purchases
-    .filter((p) => p.date === today)
-    .map((p) => p.itemName.trim())
-    .filter(Boolean);
-  const seen = new Set(DEFAULT_MEATS.map(norm));
-  const pool = [...DEFAULT_MEATS];
-  for (const name of fromPurchases) {
-    if (!seen.has(norm(name))) { pool.push(name); seen.add(norm(name)); }
+  const seen  = new Set(MEAT_ITEMS.map(norm));
+  const pool  = [...MEAT_ITEMS] as string[];
+
+  for (const p of purchases) {
+    if (p.date === today && p.category === 'Meats') {
+      const key = norm(p.itemName);
+      if (!seen.has(key)) { pool.push(p.itemName.trim()); seen.add(key); }
+    }
   }
   return pool;
 };
@@ -81,7 +92,7 @@ interface MeatBalance {
   unit: string;
 }
 
-/** Live balance for one meat item derived from purchases + meat log */
+/** Live balance for one meat item */
 const calcBalance = (
   item: string,
   purchases: PurchaseEntry[],
@@ -89,15 +100,14 @@ const calcBalance = (
 ): MeatBalance => {
   const today = todayStr();
 
-  const purchased = purchases
-    .filter((p) => p.date === today && norm(p.itemName) === norm(item));
+  const purchased    = purchases.filter((p) => p.date === today && norm(p.itemName) === norm(item));
   const rawPurchased = purchased.reduce((s, p) => s + parseQty(p.quantity), 0);
-  const unit = purchased[0] ? extractUnit(purchased[0].quantity) : 'kg';
+  const unit         = purchased[0] ? extractUnit(purchased[0].quantity) : 'kg';
 
-  const todayMeat = meatEntries.filter((e) => e.date === today && norm(e.meatItem) === norm(item));
-  const totalMarinated   = todayMeat.filter((e) => e.action === 'Marinated')
+  const todayMeat      = meatEntries.filter((e) => e.date === today && norm(e.meatItem) === norm(item));
+  const totalMarinated = todayMeat.filter((e) => e.action === 'Marinated')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
-  const totalMinced      = todayMeat.filter((e) => e.action === 'Minced (Keema)')
+  const totalMinced    = todayMeat.filter((e) => e.action === 'Minced (Keema)')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
   const totalSentToGrill = todayMeat.filter((e) => e.action === 'Sent to Grill')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
@@ -139,14 +149,22 @@ const addBtnStyle: React.CSSProperties = {
 const TH = 'text-left py-2 pr-3 text-xs font-medium text-white/35 whitespace-nowrap';
 const TD = 'py-2.5 pr-3 text-sm';
 
+const Chevron = () => (
+  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/30">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  </div>
+);
+
 const ACTION_BADGE: Record<MeatAction, React.CSSProperties> = {
   'Marinated':      { background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.4)',  color: '#fb923c' },
-  'Minced (Keema)': { background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.4)',  color: '#a78bfa' },
+  'Minced (Keema)': { background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.4)', color: '#a78bfa' },
   'Sent to Grill':  { background: 'rgba(34,197,94,0.15)',  border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80' },
 };
 const ACTION_ACTIVE: Record<MeatAction, React.CSSProperties> = {
   'Marinated':      { background: 'rgba(249,115,22,0.22)', border: '1px solid rgba(249,115,22,0.5)',  color: '#fb923c' },
-  'Minced (Keema)': { background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.5)',  color: '#a78bfa' },
+  'Minced (Keema)': { background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.5)', color: '#a78bfa' },
   'Sent to Grill':  { background: 'rgba(34,197,94,0.18)',  border: '1px solid rgba(34,197,94,0.45)', color: '#4ade80' },
 };
 const ACTION_INACTIVE: React.CSSProperties = {
@@ -158,20 +176,18 @@ const ACTION_INACTIVE: React.CSSProperties = {
 // ── Balance Cards ─────────────────────────────────────────────────────────────
 
 const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
-  const u = bal.unit || 'kg';
+  const u    = bal.unit || 'kg';
   const fmt2 = (n: number) => +n.toFixed(2);
 
   const cards = [
     {
       label: 'Total Raw Purchased',
       value: fmt2(bal.rawPurchased),
-      unit: u,
       style: { background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c' },
     },
     {
       label: 'Raw Unprocessed Left',
       value: fmt2(bal.rawUnprocessedLeft),
-      unit: u,
       style: bal.rawUnprocessedLeft < 0
         ? { background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }
         : { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
@@ -179,7 +195,6 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
     {
       label: 'Ready for Grill',
       value: fmt2(bal.readyForGrill),
-      unit: u,
       style: bal.readyForGrill <= 0
         ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
         : { background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80' },
@@ -187,7 +202,6 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
     {
       label: 'Total Keema Stock',
       value: fmt2(bal.totalKeema),
-      unit: u,
       style: bal.totalKeema <= 0
         ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
         : { background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa' },
@@ -200,7 +214,7 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
         <div key={c.label} className="rounded-xl p-3 text-center" style={c.style}>
           <p className="text-xs font-medium opacity-70 mb-1 leading-tight">{c.label}</p>
           <p className="text-xl font-black">{c.value}</p>
-          <p className="text-xs font-semibold opacity-60">{c.unit}</p>
+          <p className="text-xs font-semibold opacity-60">{u}</p>
         </div>
       ))}
     </div>
@@ -215,11 +229,32 @@ interface PurchasesTabProps {
 }
 
 const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
-  const [itemName,   setItemName]   = useState('');
-  const [quantity,   setQuantity]   = useState('');
+  // Item selection
+  const [selectedItem, setSelectedItem] = useState<string>(MEAT_ITEMS[0]);
+  const [customItem,   setCustomItem]   = useState('');
+  const isCustomItem = selectedItem === CUSTOM_SENTINEL;
+
+  // Quantity split
+  const [qtyValue,    setQtyValue]    = useState('');
+  const [qtyUnit,     setQtyUnit]     = useState<string>('kg');
+  const [customUnit,  setCustomUnit]  = useState('');
+  const isCustomUnit = qtyUnit === CUSTOM_UNIT;
+
+  // Rate / cost
   const [rate,       setRate]       = useState('');
   const [totalCost,  setTotalCost]  = useState('');
   const [costEdited, setCostEdited] = useState(false);
+
+  // Derive display values
+  const resolvedItem = isCustomItem ? customItem.trim() : selectedItem;
+  const resolvedUnit = isCustomUnit ? customUnit.trim() || 'unit' : qtyUnit;
+
+  // Determine category from selected item
+  const resolvedCategory = (): PurchaseCategory => {
+    if (isCustomItem) return 'Custom';
+    if ((MEAT_ITEMS as readonly string[]).includes(selectedItem)) return 'Meats';
+    return 'Groceries & Supplies';
+  };
 
   const autoCalc = (qty: string, r: string) => {
     const n = parseFloat(qty); const rv = parseFloat(r);
@@ -227,38 +262,49 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
   };
 
   const handleQtyChange = (v: string) => {
-    setQuantity(v);
+    setQtyValue(v);
     if (!costEdited) setTotalCost(autoCalc(v, rate));
   };
   const handleRateChange = (v: string) => {
     setRate(v);
-    if (!costEdited) setTotalCost(autoCalc(quantity, v));
+    if (!costEdited) setTotalCost(autoCalc(qtyValue, v));
   };
   const handleCostChange = (v: string) => { setTotalCost(v); setCostEdited(true); };
 
   const reset = () => {
-    setItemName(''); setQuantity(''); setRate(''); setTotalCost(''); setCostEdited(false);
+    setSelectedItem(MEAT_ITEMS[0]);
+    setCustomItem('');
+    setQtyValue('');
+    setQtyUnit('kg');
+    setCustomUnit('');
+    setRate('');
+    setTotalCost('');
+    setCostEdited(false);
   };
 
   const handleAdd = () => {
-    if (!itemName.trim()) return toast.error('Item name is required');
-    if (!quantity.trim()) return toast.error('Quantity is required');
+    if (!resolvedItem) return toast.error('Item name is required');
+    if (!qtyValue.trim() || parseFloat(qtyValue) <= 0) return toast.error('Enter a valid quantity');
     const r = parseFloat(rate);
     const c = parseFloat(totalCost);
     if (isNaN(r) || r < 0) return toast.error('Enter a valid rate');
     if (isNaN(c) || c < 0) return toast.error('Enter a valid total cost');
+
     onPurchaseAdded({
       id: crypto.randomUUID(),
-      date: todayStr(), time: timeStr(),
-      itemName: itemName.trim(),
-      quantity: quantity.trim(),
-      rate: r, totalCost: c,
+      date: todayStr(),
+      time: timeStr(),
+      itemName: resolvedItem,
+      category: resolvedCategory(),
+      quantity: `${parseFloat(qtyValue)} ${resolvedUnit}`,
+      rate: r,
+      totalCost: c,
     });
     reset();
     toast.success('Purchase logged');
   };
 
-  const today = todayStr();
+  const today        = todayStr();
   const todayEntries = purchases.filter((e) => e.date === today);
   const todayTotal   = todayEntries.reduce((s, e) => s + e.totalCost, 0);
 
@@ -269,43 +315,133 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
         <h3 className="text-sm font-semibold text-orange-400/90 mb-4 flex items-center gap-2">
           <DollarSign size={15} /> Log Kitchen Purchase
         </h3>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          {/* Item Name — grouped dropdown */}
+          <div className="sm:col-span-2 space-y-2">
+            <label className="text-xs font-medium text-white/40 block">Item Name</label>
+            <div className="relative">
+              <select
+                value={selectedItem}
+                onChange={(e) => { setSelectedItem(e.target.value); setCustomItem(''); }}
+                className={selectCls}
+              >
+                <optgroup label="Meats">
+                  {MEAT_ITEMS.map((m) => (
+                    <option key={m} value={m} className="bg-[#0f1929] text-white">{m}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Groceries &amp; Supplies">
+                  {GROCERY_ITEMS.map((g) => (
+                    <option key={g} value={g} className="bg-[#0f1929] text-white">{g}</option>
+                  ))}
+                </optgroup>
+                <option value={CUSTOM_SENTINEL} className="bg-[#0f1929] text-orange-300">
+                  Custom Item...
+                </option>
+              </select>
+              <Chevron />
+            </div>
+            {/* Custom item text input */}
+            {isCustomItem && (
+              <input
+                value={customItem}
+                onChange={(e) => setCustomItem(e.target.value)}
+                placeholder="Enter item name"
+                className={inputCls}
+                autoFocus
+              />
+            )}
+          </div>
+
+          {/* Quantity — value + unit side by side */}
           <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Item Name</label>
-            <input value={itemName} onChange={(e) => setItemName(e.target.value)}
-              placeholder="e.g. Cooking Oil, Chicken, Salt" className={inputCls} />
-          </div>
-          <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Quantity</label>
-            <input value={quantity} onChange={(e) => handleQtyChange(e.target.value)}
-              placeholder="e.g. 5 kg, 2 L, 3 packets" inputMode="decimal" className={inputCls} />
+            <div className="flex gap-2">
+              <input
+                value={qtyValue}
+                onChange={(e) => handleQtyChange(e.target.value)}
+                placeholder="e.g. 5"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                className={`${inputCls} flex-1`}
+              />
+              <div className="relative w-36 flex-shrink-0">
+                <select
+                  value={qtyUnit}
+                  onChange={(e) => setQtyUnit(e.target.value)}
+                  className={selectCls}
+                >
+                  {UNIT_OPTIONS.map((u) => (
+                    <option key={u} value={u} className="bg-[#0f1929] text-white">
+                      {u === CUSTOM_UNIT ? 'custom...' : u}
+                    </option>
+                  ))}
+                </select>
+                <Chevron />
+              </div>
+            </div>
+            {/* Custom unit input */}
+            {isCustomUnit && (
+              <input
+                value={customUnit}
+                onChange={(e) => setCustomUnit(e.target.value)}
+                placeholder="Enter unit (e.g. skewers)"
+                className={`${inputCls} mt-2`}
+              />
+            )}
           </div>
+
+          {/* Rate */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Rate / Price per Unit (Rs.)</label>
-            <input value={rate} onChange={(e) => handleRateChange(e.target.value)}
-              placeholder="e.g. 180" type="number" inputMode="decimal" min="0" className={inputCls} />
+            <input
+              value={rate}
+              onChange={(e) => handleRateChange(e.target.value)}
+              placeholder="e.g. 180"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              className={inputCls}
+            />
           </div>
-          <div className="sm:col-span-2">
+
+          {/* Total Cost */}
+          <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">
               Total Cost (Rs.)
               <span className="ml-2 text-orange-400/55 font-normal">auto-calculated · editable</span>
             </label>
-            <input value={totalCost} onChange={(e) => handleCostChange(e.target.value)}
+            <input
+              value={totalCost}
+              onChange={(e) => handleCostChange(e.target.value)}
               onFocus={() => setCostEdited(true)}
-              placeholder="e.g. 900" type="number" inputMode="decimal" min="0" className={inputCls} />
+              placeholder="e.g. 900"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              className={inputCls}
+            />
           </div>
         </div>
-        <button onClick={handleAdd}
+
+        <button
+          onClick={handleAdd}
           className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110"
-          style={addBtnStyle}>
+          style={addBtnStyle}
+        >
           <Plus size={15} /> Log Kitchen Purchase
         </button>
       </div>
 
       {/* Today's total banner */}
       {todayEntries.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-          style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}>
+        <div
+          className="flex items-center justify-between px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
+        >
           <span className="text-sm text-white/55">Today's total spend</span>
           <span className="text-sm font-bold text-orange-400">
             Rs. {todayTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -321,17 +457,19 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/8">
-                  <th className={TH}>Item Name</th>
+                  <th className={TH}>Item</th>
+                  <th className={TH}>Category</th>
                   <th className={TH}>Quantity</th>
                   <th className={TH}>Rate (Rs.)</th>
                   <th className={TH}>Total (Rs.)</th>
-                  <th className={TH}>Logged Time</th>
+                  <th className={TH}>Time</th>
                 </tr>
               </thead>
               <tbody>
                 {todayEntries.map((e) => (
                   <tr key={e.id} className="border-b border-white/5 last:border-0">
                     <td className={`${TD} text-white/85 font-medium`}>{e.itemName}</td>
+                    <td className={`${TD} text-white/40 text-xs`}>{e.category}</td>
                     <td className={`${TD} text-white/55`}>{e.quantity}</td>
                     <td className={`${TD} text-white/55`}>{e.rate.toLocaleString()}</td>
                     <td className={`${TD} font-semibold text-orange-400/90`}>
@@ -366,11 +504,11 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
   const [action,       setAction]       = useState<MeatAction>('Marinated');
   const [quantity,     setQuantity]     = useState('');
 
-  // Keep selectedItem valid if pool changes (new purchase added while on this tab)
+  // Keep selectedItem valid if pool changes
   const effectiveItem = pool.includes(selectedItem) ? selectedItem : pool[0];
 
-  const bal = calcBalance(effectiveItem, purchases, meatEntries);
-  const enteredQty = parseQty(quantity);
+  const bal         = calcBalance(effectiveItem, purchases, meatEntries);
+  const enteredQty  = parseQty(quantity);
   const grillWarning =
     action === 'Sent to Grill' &&
     quantity.trim() !== '' &&
@@ -380,11 +518,12 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
   const handleAdd = () => {
     if (!effectiveItem) return toast.error('Select a meat item');
     if (!quantity.trim()) return toast.error('Quantity is required');
-    if (parseQty(quantity) <= 0) return toast.error('Enter a valid quantity');
+    if (enteredQty <= 0) return toast.error('Enter a valid quantity');
 
     onMeatAdded({
       id: crypto.randomUUID(),
-      date: todayStr(), time: timeStr(),
+      date: todayStr(),
+      time: timeStr(),
       meatItem: effectiveItem,
       action,
       quantity: quantity.trim(),
@@ -393,29 +532,31 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
     toast.success('Meat action recorded');
   };
 
-  const today = todayStr();
+  const today        = todayStr();
   const todayEntries = meatEntries.filter((e) => e.date === today);
 
   return (
     <div className="space-y-5">
 
-      {/* Live balance cards for the selected item */}
+      {/* Live balance cards */}
       <div style={{ ...CARD, padding: '1rem' }}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest">
             Live Inventory Balance
           </h3>
-          {/* Item selector shown here for immediate context */}
-          <select
-            value={effectiveItem}
-            onChange={(e) => setSelectedItem(e.target.value)}
-            className="text-xs font-semibold rounded-lg px-2 py-1 bg-white/5 border border-white/10
-              text-orange-400 focus:outline-none cursor-pointer"
-          >
-            {pool.map((item) => (
-              <option key={item} value={item} className="bg-[#0f1929] text-white">{item}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={effectiveItem}
+              onChange={(e) => setSelectedItem(e.target.value)}
+              className="text-xs font-semibold rounded-lg px-2 py-1 pr-6 bg-white/5 border border-white/10
+                text-orange-400 focus:outline-none cursor-pointer appearance-none"
+            >
+              {pool.map((item) => (
+                <option key={item} value={item} className="bg-[#0f1929] text-white">{item}</option>
+              ))}
+            </select>
+            <Chevron />
+          </div>
         </div>
         <BalanceCards bal={bal} />
       </div>
@@ -427,7 +568,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
         </h3>
 
         <div className="space-y-3">
-          {/* Meat Item dropdown — synced with balance selector */}
+          {/* Meat item — synced with balance selector above */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Meat Item</label>
             <div className="relative">
@@ -440,23 +581,21 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
                   <option key={item} value={item} className="bg-[#0f1929] text-white">{item}</option>
                 ))}
               </select>
-              {/* Chevron */}
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/30">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <Chevron />
             </div>
           </div>
 
-          {/* Action toggle */}
+          {/* Action toggle — 3 buttons */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Action Type</label>
             <div className="grid grid-cols-3 gap-2">
               {(['Marinated', 'Minced (Keema)', 'Sent to Grill'] as MeatAction[]).map((a) => (
-                <button key={a} onClick={() => setAction(a)}
+                <button
+                  key={a}
+                  onClick={() => setAction(a)}
                   className="py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
-                  style={action === a ? ACTION_ACTIVE[a] : ACTION_INACTIVE}>
+                  style={action === a ? ACTION_ACTIVE[a] : ACTION_INACTIVE}
+                >
                   {a === 'Marinated' ? '🧂 Marinated' : a === 'Minced (Keema)' ? '🥩 Minced (Keema)' : '🔥 Sent to Grill'}
                 </button>
               ))}
@@ -466,33 +605,40 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
           {/* Quantity */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Quantity</label>
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)}
+            <input
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
               placeholder="e.g. 5 kg, 40 skewers"
-              inputMode="decimal" className={inputCls} />
+              inputMode="decimal"
+              className={inputCls}
+            />
 
             {/* Soft warning — Sent to Grill exceeds ready balance */}
             {grillWarning && (
-              <div className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
+              <div
+                className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}
+              >
                 <AlertTriangle size={13} className="text-yellow-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-yellow-400/90">
                   Entered quantity ({enteredQty} {bal.unit}) exceeds "Ready for Grill"
-                  ({+bal.readyForGrill.toFixed(2)} {bal.unit}).
-                  Check your marination log.
+                  ({+bal.readyForGrill.toFixed(2)} {bal.unit}). Check your marination log.
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        <button onClick={handleAdd}
+        <button
+          onClick={handleAdd}
           className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110"
-          style={addBtnStyle}>
+          style={addBtnStyle}
+        >
           <Plus size={15} /> Record Meat Action
         </button>
       </div>
 
-      {/* Today's meat log table */}
+      {/* Today's meat log */}
       {todayEntries.length > 0 ? (
         <div style={CARD} className="overflow-hidden">
           <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">Today's Meat Log</h3>
@@ -547,7 +693,6 @@ const TAB_INACTIVE: React.CSSProperties = {
 };
 
 const KitchenPortal = () => {
-  // ── Shared state lifted here so both tabs stay in sync ──
   const [purchases,   setPurchases]   = useState<PurchaseEntry[]>(loadPurchases);
   const [meatEntries, setMeatEntries] = useState<MeatEntry[]>(loadMeat);
   const [activeTab,   setActiveTab]   = useState<KitchenTab>('purchases');
@@ -570,8 +715,10 @@ const KitchenPortal = () => {
 
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl flex-shrink-0"
-            style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)' }}>
+          <div
+            className="p-2.5 rounded-xl flex-shrink-0"
+            style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)' }}
+          >
             <ChefHat size={20} className="text-orange-400" />
           </div>
           <div>
@@ -582,14 +729,18 @@ const KitchenPortal = () => {
 
         {/* Sub-tabs */}
         <div className="flex gap-2">
-          <button onClick={() => setActiveTab('purchases')}
+          <button
+            onClick={() => setActiveTab('purchases')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
-            style={activeTab === 'purchases' ? TAB_ACTIVE : TAB_INACTIVE}>
+            style={activeTab === 'purchases' ? TAB_ACTIVE : TAB_INACTIVE}
+          >
             <DollarSign size={14} /> Daily Expenses
           </button>
-          <button onClick={() => setActiveTab('meat')}
+          <button
+            onClick={() => setActiveTab('meat')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
-            style={activeTab === 'meat' ? TAB_ACTIVE : TAB_INACTIVE}>
+            style={activeTab === 'meat' ? TAB_ACTIVE : TAB_INACTIVE}
+          >
             <Flame size={14} /> Meat Tracker
           </button>
         </div>

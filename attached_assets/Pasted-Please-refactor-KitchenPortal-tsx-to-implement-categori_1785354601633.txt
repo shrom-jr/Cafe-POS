@@ -1,0 +1,30 @@
+Please refactor KitchenPortal.tsx to implement categorized purchases, standardized quantity inputs, and bug-free meat inventory balance tracking.
+
+### 1. Daily Expenses (Purchases Tab Refactor)
+- Replace the free-text "Item Name" input with a Dropdown Selector grouped by category:
+  - Meats: "Chicken", "Mutton", "Pork", "Fish"
+  - Groceries & Supplies: "Cooking Oil", "Salt", "Rice", "Vegetables", "Spices", "Gas Cylinder"
+  - Option: "Custom Item..." (Selecting this reveals a free-text input field for manual item names).
+- Split the Quantity input into two clean fields:
+  1. Quantity Value: strict numeric input (`type="number"` with `inputMode="decimal"`).
+  2. Unit Dropdown: dropdown with options ["kg", "L", "pcs", "packets", "bags", "custom"].
+- Auto-calculate Total Cost = Quantity Value × Rate (editable manually).
+- Format and store the quantity as a clean string (e.g., "5 kg", "2 L") to keep table logs consistent.
+
+### 2. Meat Tracker (Linked Data & Calculations)
+- Dropdown selector for Meat Item should ONLY populate meat-category items logged in today's purchases (plus standard options: Chicken, Mutton, Pork, Fish).
+- Use case-insensitive, normalized string matching (`trim().toLowerCase()`) so item matching and math aggregation never fail due to formatting or spacing differences.
+- 3 Action Toggles:
+  - 🧂 Marinated (Orange badge)
+  - 🥩 Minced (Keema) (Purple badge)
+  - 🔥 Sent to Grill (Green badge)
+- 4 Live Inventory Cards for the selected meat item:
+  - Total Raw Purchased: Sum of all purchase entries for the selected meat.
+  - Raw Unprocessed Left: Purchased - (Marinated + Minced)
+  - Ready for Grill: Marinated - Sent to Grill
+  - Total Keema Stock: Total Minced logged today.
+
+### 3. Visual & UX Standards
+- Retain dark theme with orange (#f97316) highlights.
+- Keep table views clean, showing standardized quantities (e.g., "5 kg") and timestamps.
+- Preserve soft warning if "Sent to Grill" quantity exceeds "Ready for Grill" balance.
