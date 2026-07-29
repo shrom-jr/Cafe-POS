@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import AppLayout from '@/components/ui/AppLayout';
-import { Plus, ChefHat, DollarSign, Flame, AlertTriangle } from 'lucide-react';
+import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -233,9 +233,10 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
 interface PurchasesTabProps {
   purchases: PurchaseEntry[];
   onPurchaseAdded: (entry: PurchaseEntry) => void;
+  onPurchaseDeleted: (id: string) => void;
 }
 
-const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
+const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: PurchasesTabProps) => {
   // Item selection
   const [selectedItem, setSelectedItem] = useState<string>(MEAT_ITEMS[0]);
   const [customItem,   setCustomItem]   = useState('');
@@ -470,6 +471,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
                   <th className={TH}>Rate (Rs.)</th>
                   <th className={TH}>Total (Rs.)</th>
                   <th className={TH}>Time</th>
+                  <th className={TH}></th>
                 </tr>
               </thead>
               <tbody>
@@ -483,6 +485,19 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
                       {e.totalCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </td>
                     <td className={`${TD} text-white/35 text-xs`}>{e.time}</td>
+                    <td className={TD}>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this purchase record?')) {
+                            onPurchaseDeleted(e.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg transition-colors hover:bg-red-500/15 text-white/20 hover:text-red-400"
+                        title="Delete purchase"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -502,9 +517,10 @@ interface MeatTrackerTabProps {
   purchases: PurchaseEntry[];
   meatEntries: MeatEntry[];
   onMeatAdded: (entry: MeatEntry) => void;
+  onMeatDeleted: (id: string) => void;
 }
 
-const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabProps) => {
+const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: MeatTrackerTabProps) => {
   const pool = buildMeatPool(purchases);
 
   const [selectedItem,  setSelectedItem]  = useState<string>(pool[0]);
@@ -694,6 +710,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
                   <th className={TH}>Action</th>
                   <th className={TH}>Quantity</th>
                   <th className={TH}>Timestamp</th>
+                  <th className={TH}></th>
                 </tr>
               </thead>
               <tbody>
@@ -708,6 +725,19 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
                     </td>
                     <td className={`${TD} text-white/55`}>{e.quantity}</td>
                     <td className={`${TD} text-white/35 text-xs`}>{e.time}</td>
+                    <td className={TD}>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this meat action?')) {
+                            onMeatDeleted(e.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg transition-colors hover:bg-red-500/15 text-white/20 hover:text-red-400"
+                        title="Delete meat action"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -753,6 +783,18 @@ const KitchenPortal = () => {
     saveMeat(updated);
   };
 
+  const handlePurchaseDeleted = (id: string) => {
+    const updated = purchases.filter((p) => p.id !== id);
+    setPurchases(updated);
+    savePurchases(updated);
+  };
+
+  const handleMeatDeleted = (id: string) => {
+    const updated = meatEntries.filter((e) => e.id !== id);
+    setMeatEntries(updated);
+    saveMeat(updated);
+  };
+
   return (
     <AppLayout title="Kitchen Portal">
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
@@ -791,13 +833,14 @@ const KitchenPortal = () => {
 
         {/* Content */}
         {activeTab === 'purchases' && (
-          <PurchasesTab purchases={purchases} onPurchaseAdded={handlePurchaseAdded} />
+          <PurchasesTab purchases={purchases} onPurchaseAdded={handlePurchaseAdded} onPurchaseDeleted={handlePurchaseDeleted} />
         )}
         {activeTab === 'meat' && (
           <MeatTrackerTab
             purchases={purchases}
             meatEntries={meatEntries}
             onMeatAdded={handleMeatAdded}
+            onMeatDeleted={handleMeatDeleted}
           />
         )}
 
