@@ -32,11 +32,18 @@ interface MeatEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MEAT_ITEMS       = ['Chicken', 'Mutton', 'Pork', 'Fish'] as const;
-const GROCERY_ITEMS    = ['Cooking Oil', 'Salt', 'Rice', 'Vegetables', 'Spices', 'Gas Cylinder'] as const;
-const UNIT_OPTIONS     = ['kg', 'L', 'pcs', 'packets', 'bags', 'custom'] as const;
-const CUSTOM_SENTINEL  = '__custom__';
-const CUSTOM_UNIT      = 'custom';
+const MEAT_ITEMS        = ['Chicken', 'Mutton', 'Pork', 'Fish'] as const;
+const GROCERY_ITEMS     = ['Cooking Oil', 'Salt', 'Rice', 'Vegetables', 'Spices', 'Gas Cylinder'] as const;
+const UNIT_OPTIONS      = ['kg', 'L', 'pcs', 'packets', 'bags', 'custom'] as const;
+const MEAT_UNIT_OPTIONS = ['kg', 'pcs', 'skewers', 'custom'] as const;
+const CUSTOM_SENTINEL   = '__custom__';
+const CUSTOM_UNIT       = 'custom';
+
+/** Infer category from item name when the stored category field is missing (legacy entries). */
+const inferCategory = (itemName: string): PurchaseCategory =>
+  (MEAT_ITEMS as readonly string[]).some((m) => norm(m) === norm(itemName))
+    ? 'Meats'
+    : 'Groceries & Supplies';
 
 // ── LocalStorage ─────────────────────────────────────────────────────────────
 
@@ -469,7 +476,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded }: PurchasesTabProps) => {
                 {todayEntries.map((e) => (
                   <tr key={e.id} className="border-b border-white/5 last:border-0">
                     <td className={`${TD} text-white/85 font-medium`}>{e.itemName}</td>
-                    <td className={`${TD} text-white/40 text-xs`}>{e.category}</td>
+                    <td className={`${TD} text-white/40 text-xs`}>{e.category ?? inferCategory(e.itemName)}</td>
                     <td className={`${TD} text-white/55`}>{e.quantity}</td>
                     <td className={`${TD} text-white/55`}>{e.rate.toLocaleString()}</td>
                     <td className={`${TD} font-semibold text-orange-400/90`}>
@@ -500,25 +507,35 @@ interface MeatTrackerTabProps {
 const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabProps) => {
   const pool = buildMeatPool(purchases);
 
-  const [selectedItem, setSelectedItem] = useState<string>(pool[0]);
-  const [action,       setAction]       = useState<MeatAction>('Marinated');
-  const [quantity,     setQuantity]     = useState('');
+  const [selectedItem,  setSelectedItem]  = useState<string>(pool[0]);
+  const [action,        setAction]        = useState<MeatAction>('Marinated');
+  const [meatQtyValue,  setMeatQtyValue]  = useState('');
+  const [meatQtyUnit,   setMeatQtyUnit]   = useState<string>('kg');
+  const [meatCustomUnit,setMeatCustomUnit]= useState('');
+
+  const isCustomMeatUnit = meatQtyUnit === CUSTOM_UNIT;
+  const resolvedMeatUnit = isCustomMeatUnit ? (meatCustomUnit.trim() || 'unit') : meatQtyUnit;
 
   // Keep selectedItem valid if pool changes
   const effectiveItem = pool.includes(selectedItem) ? selectedItem : pool[0];
 
-  const bal         = calcBalance(effectiveItem, purchases, meatEntries);
-  const enteredQty  = parseQty(quantity);
+  const bal        = calcBalance(effectiveItem, purchases, meatEntries);
+  const enteredQty = parseFloat(meatQtyValue) || 0;
   const grillWarning =
     action === 'Sent to Grill' &&
-    quantity.trim() !== '' &&
+    meatQtyValue.trim() !== '' &&
     enteredQty > 0 &&
     enteredQty > bal.readyForGrill;
 
+  const resetQty = () => {
+    setMeatQtyValue('');
+    setMeatQtyUnit('kg');
+    setMeatCustomUnit('');
+  };
+
   const handleAdd = () => {
     if (!effectiveItem) return toast.error('Select a meat item');
-    if (!quantity.trim()) return toast.error('Quantity is required');
-    if (enteredQty <= 0) return toast.error('Enter a valid quantity');
+    if (!meatQtyValue.trim() || enteredQty <= 0) return toast.error('Enter a valid quantity');
 
     onMeatAdded({
       id: crypto.randomUUID(),
@@ -526,9 +543,9 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
       time: timeStr(),
       meatItem: effectiveItem,
       action,
-      quantity: quantity.trim(),
+      quantity: `${enteredQty} ${resolvedMeatUnit}`,
     });
-    setQuantity('');
+    resetQty();
     toast.success('Meat action recorded');
   };
 
@@ -602,16 +619,43 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
             </div>
           </div>
 
-          {/* Quantity */}
+          {/* Quantity — value + unit */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Quantity</label>
-            <input
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="e.g. 5 kg, 40 skewers"
-              inputMode="decimal"
-              className={inputCls}
-            />
+            <div className="flex gap-2">
+              <input
+                value={meatQtyValue}
+                onChange={(e) => setMeatQtyValue(e.target.value)}
+                placeholder="e.g. 5"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                className={`${inputCls} flex-1`}
+              />
+              <div className="relative w-36 flex-shrink-0">
+                <select
+                  value={meatQtyUnit}
+                  onChange={(e) => setMeatQtyUnit(e.target.value)}
+                  className={selectCls}
+                >
+                  {MEAT_UNIT_OPTIONS.map((u) => (
+                    <option key={u} value={u} className="bg-[#0f1929] text-white">
+                      {u === CUSTOM_UNIT ? 'custom...' : u}
+                    </option>
+                  ))}
+                </select>
+                <Chevron />
+              </div>
+            </div>
+            {/* Custom unit input */}
+            {isCustomMeatUnit && (
+              <input
+                value={meatCustomUnit}
+                onChange={(e) => setMeatCustomUnit(e.target.value)}
+                placeholder="Enter unit (e.g. portions)"
+                className={`${inputCls} mt-2`}
+              />
+            )}
 
             {/* Soft warning — Sent to Grill exceeds ready balance */}
             {grillWarning && (
@@ -621,7 +665,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded }: MeatTrackerTabP
               >
                 <AlertTriangle size={13} className="text-yellow-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-yellow-400/90">
-                  Entered quantity ({enteredQty} {bal.unit}) exceeds "Ready for Grill"
+                  Entered quantity ({enteredQty} {resolvedMeatUnit}) exceeds "Ready for Grill"
                   ({+bal.readyForGrill.toFixed(2)} {bal.unit}). Check your marination log.
                 </p>
               </div>
