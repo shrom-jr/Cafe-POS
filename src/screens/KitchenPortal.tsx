@@ -97,35 +97,33 @@ const buildMeatPool = (purchases: PurchaseEntry[]): string[] => {
 
 interface MeatBalance {
   rawPurchased: number;
-  rawUnprocessedLeft: number;
+  totalMarinated: number;
   readyForGrill: number;
   totalKeema: number;
   unit: string;
 }
 
-/** Live balance for one meat item */
+/** All-time cumulative balance for one meat item (ignores date — carries across midnight) */
 const calcBalance = (
   item: string,
   purchases: PurchaseEntry[],
   meatEntries: MeatEntry[],
 ): MeatBalance => {
-  const today = todayStr();
+  const allPurchases = purchases.filter((p) => norm(p.itemName) === norm(item));
+  const rawPurchased = allPurchases.reduce((s, p) => s + parseQty(p.quantity), 0);
+  const unit         = allPurchases[0] ? extractUnit(allPurchases[0].quantity) : 'kg';
 
-  const purchased    = purchases.filter((p) => p.date === today && norm(p.itemName) === norm(item));
-  const rawPurchased = purchased.reduce((s, p) => s + parseQty(p.quantity), 0);
-  const unit         = purchased[0] ? extractUnit(purchased[0].quantity) : 'kg';
-
-  const todayMeat      = meatEntries.filter((e) => e.date === today && norm(e.meatItem) === norm(item));
-  const totalMarinated = todayMeat.filter((e) => e.action === 'Marinated')
+  const allMeat        = meatEntries.filter((e) => norm(e.meatItem) === norm(item));
+  const totalMarinated = allMeat.filter((e) => e.action === 'Marinated')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
-  const totalMinced    = todayMeat.filter((e) => e.action === 'Minced (Keema)')
+  const totalMinced    = allMeat.filter((e) => e.action === 'Minced (Keema)')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
-  const totalSentToGrill = todayMeat.filter((e) => e.action === 'Sent to Grill')
+  const totalSentToGrill = allMeat.filter((e) => e.action === 'Sent to Grill')
     .reduce((s, e) => s + parseQty(e.quantity), 0);
 
   return {
     rawPurchased,
-    rawUnprocessedLeft: rawPurchased - totalMarinated - totalMinced,
+    totalMarinated,
     readyForGrill: totalMarinated - totalSentToGrill,
     totalKeema: totalMinced,
     unit,
@@ -197,11 +195,9 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
       style: { background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c' },
     },
     {
-      label: 'Raw Unprocessed Left',
-      value: fmt2(bal.rawUnprocessedLeft),
-      style: bal.rawUnprocessedLeft < 0
-        ? { background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }
-        : { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
+      label: 'Total Marinated',
+      value: fmt2(bal.totalMarinated),
+      style: { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
     },
     {
       label: 'Ready for Grill',
@@ -389,7 +385,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
               value={entryDate}
               max={todayStr()}
               onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              className={inputCls}
+              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+              className={`${inputCls} w-56 cursor-pointer`}
             />
           </div>
 
@@ -617,15 +614,15 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
   const bal        = calcBalance(effectiveItem, purchases, meatEntries);
   const enteredQty = parseFloat(meatQtyValue) || 0;
 
-  // Hard stock checks — computed for both the warning banner and submission guard
+  // Hard stock checks — all-time cumulative values, no date filter
   const availableForAction =
-    action === 'Sent to Grill' ? bal.readyForGrill : bal.rawUnprocessedLeft;
+    action === 'Sent to Grill' ? bal.readyForGrill : bal.rawPurchased;
   const stockExceeded =
     meatQtyValue.trim() !== '' &&
     enteredQty > 0 &&
     enteredQty > availableForAction;
   const stockLabel =
-    action === 'Sent to Grill' ? 'Ready for Grill' : 'Raw Unprocessed Left';
+    action === 'Sent to Grill' ? 'Ready for Grill' : 'Total Raw Purchased';
 
   const resetQty = () => {
     setMeatQtyValue('');
@@ -697,7 +694,8 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
               value={entryDate}
               max={todayStr()}
               onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              className={inputCls}
+              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+              className={`${inputCls} w-56 cursor-pointer`}
             />
           </div>
 
