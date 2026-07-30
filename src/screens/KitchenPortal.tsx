@@ -385,7 +385,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
               value={entryDate}
               max={todayStr()}
               onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+              onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
               className={`${inputCls} w-56 cursor-pointer`}
             />
           </div>
@@ -694,7 +694,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
               value={entryDate}
               max={todayStr()}
               onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+              onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
               className={`${inputCls} w-56 cursor-pointer`}
             />
           </div>
