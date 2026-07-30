@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, parseISO, subDays } from 'date-fns';
 import AppLayout from '@/components/ui/AppLayout';
-import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ const CARD: React.CSSProperties = {
 };
 
 const inputCls =
-  'w-full px-3 py-2.5 rounded-xl text-sm text-white/90 placeholder:text-white/25 ' +
+  'w-full px-3 py-2.5 rounded-xl text-sm text-white/90 placeholder:text-slate-400 ' +
   'focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500/40 ' +
   'transition-colors h-11 bg-white/5 border border-white/10';
 
@@ -155,7 +155,7 @@ const addBtnStyle: React.CSSProperties = {
   color: '#fb923c',
 };
 
-const TH = 'text-left py-2 pr-3 text-xs font-medium text-white/35 whitespace-nowrap';
+const TH = 'text-left py-2 pr-3 text-xs font-medium text-slate-300 whitespace-nowrap';
 const TD = 'py-2.5 pr-3 text-sm';
 
 const Chevron = () => (
@@ -178,8 +178,8 @@ const ACTION_ACTIVE: Record<MeatAction, React.CSSProperties> = {
 };
 const ACTION_INACTIVE: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  color: 'rgba(255,255,255,0.35)',
+  border: '1px solid rgb(51,65,85)',
+  color: 'rgb(203,213,225)',
 };
 
 // ── Balance Cards ─────────────────────────────────────────────────────────────
@@ -237,8 +237,8 @@ const FB_ACTIVE: React.CSSProperties = {
 };
 const FB_INACTIVE: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  color: 'rgba(255,255,255,0.4)',
+  border: '1px solid rgb(51,65,85)',
+  color: 'rgb(203,213,225)',
 };
 
 const DateFilterBar = ({ viewDate, onChange }: { viewDate: string; onChange: (d: string) => void }) => {
@@ -260,14 +260,17 @@ const DateFilterBar = ({ viewDate, onChange }: { viewDate: string; onChange: (d:
       >
         Yesterday
       </button>
-      <input
-        type="date"
-        value={viewDate}
-        max={today}
-        onChange={(e) => e.target.value && onChange(e.target.value)}
-        className="px-2.5 py-1.5 rounded-lg text-xs text-white/60 bg-white/5 border border-white/10
-          focus:outline-none focus:ring-1 focus:ring-orange-500/40 cursor-pointer"
-      />
+      <div className="relative flex items-center">
+        <Calendar className="pointer-events-none absolute left-2 text-orange-400 w-3.5 h-3.5 z-10" />
+        <input
+          type="date"
+          value={viewDate}
+          max={today}
+          onChange={(e) => e.target.value && onChange(e.target.value)}
+          className="pl-7 pr-2.5 py-1.5 rounded-lg text-xs text-slate-200 bg-white/5 border border-slate-700
+            focus:outline-none focus:ring-1 focus:ring-orange-500/40 cursor-pointer [color-scheme:dark]"
+        />
+      </div>
     </div>
   );
 };
@@ -372,27 +375,30 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           <DollarSign size={15} /> Log Kitchen Purchase
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
 
           {/* Date — for backdated logging */}
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-white/40 block mb-1.5">
+          <div className="max-w-[200px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">
               Date
-              <span className="ml-2 text-white/25 font-normal">defaults to today · change for late entries</span>
+              <span className="ml-2 text-slate-400 font-normal">defaults to today</span>
             </label>
-            <input
-              type="date"
-              value={entryDate}
-              max={todayStr()}
-              onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
-              className={`${inputCls} w-56 cursor-pointer`}
-            />
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 w-5 h-5 z-10" />
+              <input
+                type="date"
+                value={entryDate}
+                max={todayStr()}
+                onChange={(e) => e.target.value && setEntryDate(e.target.value)}
+                onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
+                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark]`}
+              />
+            </div>
           </div>
 
           {/* Item Name — grouped dropdown */}
-          <div className="sm:col-span-2 space-y-2">
-            <label className="text-xs font-medium text-white/40 block">Item Name</label>
+          <div className="max-w-[280px] space-y-2">
+            <label className="text-xs font-medium text-slate-300 block">Item Name</label>
             <div className="relative">
               <select
                 value={selectedItem}
@@ -415,7 +421,6 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
               </select>
               <Chevron />
             </div>
-            {/* Custom item text input */}
             {isCustomItem && (
               <input
                 value={customItem}
@@ -428,8 +433,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Quantity — value + unit side by side */}
-          <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Quantity</label>
+          <div className="max-w-[220px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">Quantity</label>
             <div className="flex gap-2">
               <input
                 value={qtyValue}
@@ -438,9 +443,9 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
                 type="number"
                 inputMode="decimal"
                 min="0"
-                className={`${inputCls} flex-1`}
+                className={`${inputCls} flex-1 min-w-0`}
               />
-              <div className="relative w-36 flex-shrink-0">
+              <div className="relative w-24 flex-shrink-0">
                 <select
                   value={qtyUnit}
                   onChange={(e) => setQtyUnit(e.target.value)}
@@ -455,7 +460,6 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
                 <Chevron />
               </div>
             </div>
-            {/* Custom unit input */}
             {isCustomUnit && (
               <input
                 value={customUnit}
@@ -467,8 +471,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Rate */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Rate / Price per Unit (Rs.)</label>
+          <div className="max-w-[180px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">Rate / Price per Unit (Rs.)</label>
             <input
               value={rate}
               onChange={(e) => handleRateChange(e.target.value)}
@@ -481,10 +485,10 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Total Cost */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">
+          <div className="max-w-[180px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">
               Total Cost (Rs.)
-              <span className="ml-2 text-orange-400/55 font-normal">auto-calculated · editable</span>
+              <span className="ml-2 text-orange-400/80 font-normal">auto-calc</span>
             </label>
             <input
               value={totalCost}
@@ -501,7 +505,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
 
         <button
           onClick={handleAdd}
-          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110"
+          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-fit max-w-[220px]"
           style={addBtnStyle}
         >
           <Plus size={15} /> Log Kitchen Purchase
@@ -682,26 +686,29 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           <Flame size={15} /> Record Meat Action
         </h3>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           {/* Date — for backdated logging */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">
+          <div className="max-w-[200px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">
               Date
-              <span className="ml-2 text-white/25 font-normal">defaults to today · change for late entries</span>
+              <span className="ml-2 text-slate-400 font-normal">defaults to today</span>
             </label>
-            <input
-              type="date"
-              value={entryDate}
-              max={todayStr()}
-              onChange={(e) => e.target.value && setEntryDate(e.target.value)}
-              onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
-              className={`${inputCls} w-56 cursor-pointer`}
-            />
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 w-5 h-5 z-10" />
+              <input
+                type="date"
+                value={entryDate}
+                max={todayStr()}
+                onChange={(e) => e.target.value && setEntryDate(e.target.value)}
+                onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
+                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark]`}
+              />
+            </div>
           </div>
 
           {/* Action toggle — 3 buttons */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Action Type</label>
+          <div className="sm:col-span-2 lg:col-span-2">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">Action Type</label>
             <div className="grid grid-cols-3 gap-2">
               {(['Marinated', 'Minced (Keema)', 'Sent to Grill'] as MeatAction[]).map((a) => (
                 <button
@@ -717,8 +724,8 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           </div>
 
           {/* Quantity — value + unit */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Quantity</label>
+          <div className="max-w-[220px]">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">Quantity</label>
             <div className="flex gap-2">
               <input
                 value={meatQtyValue}
@@ -729,7 +736,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
                 min="0"
                 className={`${inputCls} flex-1`}
               />
-              <div className="relative w-36 flex-shrink-0">
+              <div className="relative w-24 flex-shrink-0">
                 <select
                   value={meatQtyUnit}
                   onChange={(e) => setMeatQtyUnit(e.target.value)}
@@ -772,7 +779,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
 
         <button
           onClick={handleAdd}
-          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110"
+          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-fit max-w-[220px]"
           style={addBtnStyle}
         >
           <Plus size={15} /> Record Meat Action
