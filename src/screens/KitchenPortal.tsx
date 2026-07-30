@@ -492,10 +492,11 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
                             onPurchaseDeleted(e.id);
                           }
                         }}
-                        className="p-1.5 rounded-lg transition-colors hover:bg-red-500/15 text-white/20 hover:text-red-400"
+                        className="flex items-center justify-center w-8 h-8 rounded-xl transition-all
+                          text-white/30 hover:text-red-400 hover:bg-red-500/20 active:scale-90"
                         title="Delete purchase"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
@@ -537,11 +538,16 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
 
   const bal        = calcBalance(effectiveItem, purchases, meatEntries);
   const enteredQty = parseFloat(meatQtyValue) || 0;
-  const grillWarning =
-    action === 'Sent to Grill' &&
+
+  // Hard stock checks — computed for both the warning banner and submission guard
+  const availableForAction =
+    action === 'Sent to Grill' ? bal.readyForGrill : bal.rawUnprocessedLeft;
+  const stockExceeded =
     meatQtyValue.trim() !== '' &&
     enteredQty > 0 &&
-    enteredQty > bal.readyForGrill;
+    enteredQty > availableForAction;
+  const stockLabel =
+    action === 'Sent to Grill' ? 'Ready for Grill' : 'Raw Unprocessed Left';
 
   const resetQty = () => {
     setMeatQtyValue('');
@@ -552,6 +558,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
   const handleAdd = () => {
     if (!effectiveItem) return toast.error('Select a meat item');
     if (!meatQtyValue.trim() || enteredQty <= 0) return toast.error('Enter a valid quantity');
+    if (stockExceeded) return toast.error('Insufficient stock available for this action.');
 
     onMeatAdded({
       id: crypto.randomUUID(),
@@ -601,23 +608,6 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
         </h3>
 
         <div className="space-y-3">
-          {/* Meat item — synced with balance selector above */}
-          <div>
-            <label className="text-xs font-medium text-white/40 block mb-1.5">Meat Item</label>
-            <div className="relative">
-              <select
-                value={effectiveItem}
-                onChange={(e) => setSelectedItem(e.target.value)}
-                className={selectCls}
-              >
-                {pool.map((item) => (
-                  <option key={item} value={item} className="bg-[#0f1929] text-white">{item}</option>
-                ))}
-              </select>
-              <Chevron />
-            </div>
-          </div>
-
           {/* Action toggle — 3 buttons */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Action Type</label>
@@ -673,16 +663,16 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
               />
             )}
 
-            {/* Soft warning — Sent to Grill exceeds ready balance */}
-            {grillWarning && (
+            {/* Hard block — quantity exceeds available stock */}
+            {stockExceeded && (
               <div
                 className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}
+                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}
               >
-                <AlertTriangle size={13} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-400/90">
-                  Entered quantity ({enteredQty} {resolvedMeatUnit}) exceeds "Ready for Grill"
-                  ({+bal.readyForGrill.toFixed(2)} {bal.unit}). Check your marination log.
+                <AlertTriangle size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-400/90">
+                  Insufficient stock. Entered {enteredQty} {resolvedMeatUnit} but only{' '}
+                  {+availableForAction.toFixed(2)} {bal.unit} available ({stockLabel}).
                 </p>
               </div>
             )}
@@ -732,10 +722,11 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
                             onMeatDeleted(e.id);
                           }
                         }}
-                        className="p-1.5 rounded-lg transition-colors hover:bg-red-500/15 text-white/20 hover:text-red-400"
+                        className="flex items-center justify-center w-8 h-8 rounded-xl transition-all
+                          text-white/30 hover:text-red-400 hover:bg-red-500/20 active:scale-90"
                         title="Delete meat action"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
