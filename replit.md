@@ -106,6 +106,9 @@ Cashier / Time
   - Recipes: link menu items to ingredients; shows auto-calculated item cost (Σ qty × costPerUnit)
   - Stock: search bar, sort low first, Adjust Stock modal, Today's Usage summary, Movement History (collapsible, 50 most recent)
 
+## Firebase
+Real-time sync uses Firebase Realtime Database. Credentials are hardcoded in `src/firebase.js` (project: `sbamboosekuwa`, Asia-Southeast1 region). No additional secrets are required to run the app.
+
 ## Running the App
 Port 5000 via `npm run dev`. Server: `host: "0.0.0.0"`, `allowedHosts: true`.
 
