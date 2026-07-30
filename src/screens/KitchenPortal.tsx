@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import AppLayout from '@/components/ui/AppLayout';
 import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -62,8 +62,12 @@ const saveMeat = (d: MeatEntry[]) => localStorage.setItem(MEAT_KEY, JSON.stringi
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
-const todayStr = () => format(new Date(), 'yyyy-MM-dd');
-const timeStr  = () => format(new Date(), 'HH:mm');
+const todayStr     = () => format(new Date(), 'yyyy-MM-dd');
+const yesterdayStr = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
+const timeStr      = () => format(new Date(), 'HH:mm');
+
+/** Format a yyyy-MM-dd string for display: "July 29, 2026" */
+const fmtDisplayDate = (d: string) => format(parseISO(d), 'MMMM d, yyyy');
 
 /** Extract leading numeric value: "5 kg" → 5 */
 const parseQty = (s: string): number => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
@@ -228,6 +232,50 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
   );
 };
 
+// ── Date Filter Bar ───────────────────────────────────────────────────────────
+
+const FB_ACTIVE: React.CSSProperties = {
+  background: 'rgba(249,115,22,0.2)',
+  border: '1px solid rgba(249,115,22,0.35)',
+  color: '#fb923c',
+};
+const FB_INACTIVE: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  color: 'rgba(255,255,255,0.4)',
+};
+
+const DateFilterBar = ({ viewDate, onChange }: { viewDate: string; onChange: (d: string) => void }) => {
+  const today     = todayStr();
+  const yesterday = yesterdayStr();
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <button
+        onClick={() => onChange(today)}
+        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+        style={viewDate === today ? FB_ACTIVE : FB_INACTIVE}
+      >
+        Today
+      </button>
+      <button
+        onClick={() => onChange(yesterday)}
+        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+        style={viewDate === yesterday ? FB_ACTIVE : FB_INACTIVE}
+      >
+        Yesterday
+      </button>
+      <input
+        type="date"
+        value={viewDate}
+        max={today}
+        onChange={(e) => e.target.value && onChange(e.target.value)}
+        className="px-2.5 py-1.5 rounded-lg text-xs text-white/60 bg-white/5 border border-white/10
+          focus:outline-none focus:ring-1 focus:ring-orange-500/40 cursor-pointer"
+      />
+    </div>
+  );
+};
+
 // ── Tab 1: Daily Kitchen Expenses ─────────────────────────────────────────────
 
 interface PurchasesTabProps {
@@ -252,6 +300,10 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
   const [rate,       setRate]       = useState('');
   const [totalCost,  setTotalCost]  = useState('');
   const [costEdited, setCostEdited] = useState(false);
+
+  // Entry date (for backdated logging) + view date (for filtering the table)
+  const [entryDate, setEntryDate] = useState(todayStr);
+  const [viewDate,  setViewDate]  = useState(todayStr);
 
   // Derive display values
   const resolvedItem = isCustomItem ? customItem.trim() : selectedItem;
@@ -288,6 +340,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
     setRate('');
     setTotalCost('');
     setCostEdited(false);
+    setEntryDate(todayStr());
   };
 
   const handleAdd = () => {
@@ -300,7 +353,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
 
     onPurchaseAdded({
       id: crypto.randomUUID(),
-      date: todayStr(),
+      date: entryDate,
       time: timeStr(),
       itemName: resolvedItem,
       category: resolvedCategory(),
@@ -312,9 +365,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
     toast.success('Purchase logged');
   };
 
-  const today        = todayStr();
-  const todayEntries = purchases.filter((e) => e.date === today);
-  const todayTotal   = todayEntries.reduce((s, e) => s + e.totalCost, 0);
+  const viewEntries = purchases.filter((e) => e.date === viewDate);
+  const viewTotal   = viewEntries.reduce((s, e) => s + e.totalCost, 0);
 
   return (
     <div className="space-y-5">
@@ -325,6 +377,21 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          {/* Date — for backdated logging */}
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-white/40 block mb-1.5">
+              Date
+              <span className="ml-2 text-white/25 font-normal">defaults to today · change for late entries</span>
+            </label>
+            <input
+              type="date"
+              value={entryDate}
+              max={todayStr()}
+              onChange={(e) => e.target.value && setEntryDate(e.target.value)}
+              className={inputCls}
+            />
+          </div>
 
           {/* Item Name — grouped dropdown */}
           <div className="sm:col-span-2 space-y-2">
@@ -444,27 +511,32 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
         </button>
       </div>
 
-      {/* Today's total banner */}
-      {todayEntries.length > 0 && (
+      {/* Date filter bar */}
+      <DateFilterBar viewDate={viewDate} onChange={setViewDate} />
+
+      {/* Spend total for viewed date */}
+      {viewEntries.length > 0 && (
         <div
           className="flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}
         >
-          <span className="text-sm text-white/55">Today's total spend</span>
+          <span className="text-sm text-white/55">Total spend · {fmtDisplayDate(viewDate)}</span>
           <span className="text-sm font-bold text-orange-400">
-            Rs. {todayTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            Rs. {viewTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </span>
         </div>
       )}
 
-      {/* Today's table */}
-      {todayEntries.length > 0 ? (
+      {/* Purchases table */}
+      {viewEntries.length > 0 ? (
         <div style={CARD} className="overflow-hidden">
-          <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">Today's Purchases</h3>
-          <div className="overflow-x-auto">
+          <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">
+            Purchases for {fmtDisplayDate(viewDate)}
+          </h3>
+          <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/8">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-white/8" style={{ background: '#0b1220' }}>
                   <th className={TH}>Item</th>
                   <th className={TH}>Category</th>
                   <th className={TH}>Quantity</th>
@@ -475,7 +547,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
                 </tr>
               </thead>
               <tbody>
-                {todayEntries.map((e) => (
+                {viewEntries.map((e) => (
                   <tr key={e.id} className="border-b border-white/5 last:border-0">
                     <td className={`${TD} text-white/85 font-medium`}>{e.itemName}</td>
                     <td className={`${TD} text-white/40 text-xs`}>{e.category ?? inferCategory(e.itemName)}</td>
@@ -506,7 +578,9 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
         </div>
       ) : (
-        <div className="text-center py-14 text-white/25 text-sm">No purchases logged today.</div>
+        <div className="text-center py-14 text-white/25 text-sm">
+          No purchases logged for {fmtDisplayDate(viewDate)}.
+        </div>
       )}
     </div>
   );
@@ -529,6 +603,10 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
   const [meatQtyValue,  setMeatQtyValue]  = useState('');
   const [meatQtyUnit,   setMeatQtyUnit]   = useState<string>('kg');
   const [meatCustomUnit,setMeatCustomUnit]= useState('');
+
+  // Entry date (for backdated logging) + view date (for filtering the log table)
+  const [entryDate, setEntryDate] = useState(todayStr);
+  const [viewDate,  setViewDate]  = useState(todayStr);
 
   const isCustomMeatUnit = meatQtyUnit === CUSTOM_UNIT;
   const resolvedMeatUnit = isCustomMeatUnit ? (meatCustomUnit.trim() || 'unit') : meatQtyUnit;
@@ -553,6 +631,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
     setMeatQtyValue('');
     setMeatQtyUnit('kg');
     setMeatCustomUnit('');
+    setEntryDate(todayStr());
   };
 
   const handleAdd = () => {
@@ -562,7 +641,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
 
     onMeatAdded({
       id: crypto.randomUUID(),
-      date: todayStr(),
+      date: entryDate,
       time: timeStr(),
       meatItem: effectiveItem,
       action,
@@ -572,8 +651,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
     toast.success('Meat action recorded');
   };
 
-  const today        = todayStr();
-  const todayEntries = meatEntries.filter((e) => e.date === today);
+  const viewEntries = meatEntries.filter((e) => e.date === viewDate);
 
   return (
     <div className="space-y-5">
@@ -608,6 +686,21 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
         </h3>
 
         <div className="space-y-3">
+          {/* Date — for backdated logging */}
+          <div>
+            <label className="text-xs font-medium text-white/40 block mb-1.5">
+              Date
+              <span className="ml-2 text-white/25 font-normal">defaults to today · change for late entries</span>
+            </label>
+            <input
+              type="date"
+              value={entryDate}
+              max={todayStr()}
+              onChange={(e) => e.target.value && setEntryDate(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+
           {/* Action toggle — 3 buttons */}
           <div>
             <label className="text-xs font-medium text-white/40 block mb-1.5">Action Type</label>
@@ -688,14 +781,19 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
         </button>
       </div>
 
-      {/* Today's meat log */}
-      {todayEntries.length > 0 ? (
+      {/* Date filter bar */}
+      <DateFilterBar viewDate={viewDate} onChange={setViewDate} />
+
+      {/* Meat log table */}
+      {viewEntries.length > 0 ? (
         <div style={CARD} className="overflow-hidden">
-          <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">Today's Meat Log</h3>
-          <div className="overflow-x-auto">
+          <h3 className="text-xs font-semibold text-white/35 uppercase tracking-widest mb-3">
+            Meat Log for {fmtDisplayDate(viewDate)}
+          </h3>
+          <div className="max-h-[320px] overflow-y-auto overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/8">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-white/8" style={{ background: '#0b1220' }}>
                   <th className={TH}>Meat Item</th>
                   <th className={TH}>Action</th>
                   <th className={TH}>Quantity</th>
@@ -704,7 +802,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
                 </tr>
               </thead>
               <tbody>
-                {todayEntries.map((e) => (
+                {viewEntries.map((e) => (
                   <tr key={e.id} className="border-b border-white/5 last:border-0">
                     <td className={`${TD} text-white/85 font-medium`}>{e.meatItem}</td>
                     <td className={TD}>
@@ -736,7 +834,9 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           </div>
         </div>
       ) : (
-        <div className="text-center py-14 text-white/25 text-sm">No meat actions logged today.</div>
+        <div className="text-center py-14 text-white/25 text-sm">
+          No meat actions logged for {fmtDisplayDate(viewDate)}.
+        </div>
       )}
     </div>
   );
