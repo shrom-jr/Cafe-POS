@@ -188,40 +188,50 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
   const u    = bal.unit || 'kg';
   const fmt2 = (n: number) => +n.toFixed(2);
 
-  const cards = [
+  const cards: {
+    label: string;
+    value: number;
+    containerStyle: React.CSSProperties;
+    labelCls?: string;
+    valueCls?: string;
+  }[] = [
     {
       label: 'Total Raw Purchased',
       value: fmt2(bal.rawPurchased),
-      style: { background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c' },
+      containerStyle: { background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c' },
     },
     {
       label: 'Total Marinated',
       value: fmt2(bal.totalMarinated),
-      style: { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
+      containerStyle: { background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' },
     },
     {
       label: 'Ready for Grill',
       value: fmt2(bal.readyForGrill),
-      style: bal.readyForGrill <= 0
+      containerStyle: bal.readyForGrill <= 0
         ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
-        : { background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80' },
+        : { background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)' },
+      labelCls: bal.readyForGrill > 0 ? 'text-emerald-200' : undefined,
+      valueCls: bal.readyForGrill > 0 ? 'text-emerald-400 font-bold' : undefined,
     },
     {
       label: 'Total Keema Stock',
       value: fmt2(bal.totalKeema),
-      style: bal.totalKeema <= 0
+      containerStyle: bal.totalKeema <= 0
         ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
-        : { background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa' },
+        : { background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)' },
+      labelCls: bal.totalKeema > 0 ? 'text-slate-200' : undefined,
+      valueCls: bal.totalKeema > 0 ? 'text-indigo-400 font-bold' : undefined,
     },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
       {cards.map((c) => (
-        <div key={c.label} className="rounded-xl p-3 text-center" style={c.style}>
-          <p className="text-xs font-medium opacity-70 mb-1 leading-tight">{c.label}</p>
-          <p className="text-xl font-black">{c.value}</p>
-          <p className="text-xs font-semibold opacity-60">{u}</p>
+        <div key={c.label} className="rounded-xl p-3 text-center" style={c.containerStyle}>
+          <p className={`text-xs font-medium mb-1 leading-tight ${c.labelCls ?? 'opacity-70'}`}>{c.label}</p>
+          <p className={`text-xl ${c.valueCls ?? 'font-black'}`}>{c.value}</p>
+          <p className="text-xs font-semibold text-slate-300">{u}</p>
         </div>
       ))}
     </div>
@@ -375,10 +385,10 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           <DollarSign size={15} /> Log Kitchen Purchase
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div className="flex flex-wrap items-end gap-4">
 
           {/* Date — for backdated logging */}
-          <div className="max-w-[200px]">
+          <div className="w-44">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">
               Date
               <span className="ml-2 text-slate-400 font-normal">defaults to today</span>
@@ -391,13 +401,13 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
                 max={todayStr()}
                 onChange={(e) => e.target.value && setEntryDate(e.target.value)}
                 onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
-                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark]`}
+                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-0`}
               />
             </div>
           </div>
 
           {/* Item Name — grouped dropdown */}
-          <div className="max-w-[280px] space-y-2">
+          <div className="w-52 space-y-2">
             <label className="text-xs font-medium text-slate-300 block">Item Name</label>
             <div className="relative">
               <select
@@ -433,7 +443,7 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Quantity — value + unit side by side */}
-          <div className="max-w-[220px]">
+          <div className="w-44">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">Quantity</label>
             <div className="flex gap-2">
               <input
@@ -471,8 +481,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Rate */}
-          <div className="max-w-[180px]">
-            <label className="text-xs font-medium text-slate-300 block mb-1.5">Rate / Price per Unit (Rs.)</label>
+          <div className="w-32">
+            <label className="text-xs font-medium text-slate-300 block mb-1.5">Rate / Price (Rs.)</label>
             <input
               value={rate}
               onChange={(e) => handleRateChange(e.target.value)}
@@ -485,10 +495,10 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Total Cost */}
-          <div className="max-w-[180px]">
+          <div className="w-32">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">
-              Total Cost (Rs.)
-              <span className="ml-2 text-orange-400/80 font-normal">auto-calc</span>
+              Total (Rs.)
+              <span className="ml-1.5 text-orange-400/80 font-normal">auto-calc</span>
             </label>
             <input
               value={totalCost}
@@ -501,15 +511,15 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
               className={inputCls}
             />
           </div>
-        </div>
 
-        <button
-          onClick={handleAdd}
-          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-fit max-w-[220px]"
-          style={addBtnStyle}
-        >
-          <Plus size={15} /> Log Kitchen Purchase
-        </button>
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-auto shrink-0"
+            style={addBtnStyle}
+          >
+            <Plus size={15} /> Log Purchase
+          </button>
+        </div>
       </div>
 
       {/* Date filter bar */}
@@ -686,9 +696,9 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           <Flame size={15} /> Record Meat Action
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div className="flex flex-wrap items-end gap-4">
           {/* Date — for backdated logging */}
-          <div className="max-w-[200px]">
+          <div className="w-44">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">
               Date
               <span className="ml-2 text-slate-400 font-normal">defaults to today</span>
@@ -701,13 +711,13 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
                 max={todayStr()}
                 onChange={(e) => e.target.value && setEntryDate(e.target.value)}
                 onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* cross-origin iframe */ } }}
-                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark]`}
+                className={`${inputCls} pl-10 cursor-pointer [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-0`}
               />
             </div>
           </div>
 
           {/* Action toggle — 3 buttons */}
-          <div className="sm:col-span-2 lg:col-span-2">
+          <div className="flex-1 min-w-[280px]">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">Action Type</label>
             <div className="grid grid-cols-3 gap-2">
               {(['Marinated', 'Minced (Keema)', 'Sent to Grill'] as MeatAction[]).map((a) => (
@@ -724,7 +734,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           </div>
 
           {/* Quantity — value + unit */}
-          <div className="max-w-[220px]">
+          <div className="w-44">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">Quantity</label>
             <div className="flex gap-2">
               <input
@@ -734,7 +744,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
                 type="number"
                 inputMode="decimal"
                 min="0"
-                className={`${inputCls} flex-1`}
+                className={`${inputCls} flex-1 min-w-0`}
               />
               <div className="relative w-24 flex-shrink-0">
                 <select
@@ -775,15 +785,15 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
               </div>
             )}
           </div>
-        </div>
 
-        <button
-          onClick={handleAdd}
-          className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-fit max-w-[220px]"
-          style={addBtnStyle}
-        >
-          <Plus size={15} /> Record Meat Action
-        </button>
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 hover:brightness-110 w-auto shrink-0"
+            style={addBtnStyle}
+          >
+            <Plus size={15} /> Record Meat Action
+          </button>
+        </div>
       </div>
 
       {/* Date filter bar */}
