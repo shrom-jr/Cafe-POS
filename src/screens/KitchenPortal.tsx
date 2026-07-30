@@ -209,19 +209,19 @@ const BalanceCards = ({ bal }: { bal: MeatBalance }) => {
       label: 'Ready for Grill',
       value: fmt2(bal.readyForGrill),
       containerStyle: bal.readyForGrill <= 0
-        ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
+        ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)' }
         : { background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)' },
-      labelCls: bal.readyForGrill > 0 ? 'text-emerald-200' : undefined,
-      valueCls: bal.readyForGrill > 0 ? 'text-emerald-400 font-bold' : undefined,
+      labelCls: 'text-emerald-300',
+      valueCls: 'text-emerald-400 font-bold',
     },
     {
       label: 'Total Keema Stock',
       value: fmt2(bal.totalKeema),
       containerStyle: bal.totalKeema <= 0
-        ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: 'rgba(255,255,255,0.3)' }
+        ? { background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)' }
         : { background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)' },
-      labelCls: bal.totalKeema > 0 ? 'text-slate-200' : undefined,
-      valueCls: bal.totalKeema > 0 ? 'text-indigo-400 font-bold' : undefined,
+      labelCls: 'text-indigo-300',
+      valueCls: 'text-indigo-400 font-bold',
     },
   ];
 
@@ -278,7 +278,7 @@ const DateFilterBar = ({ viewDate, onChange }: { viewDate: string; onChange: (d:
           max={today}
           onChange={(e) => e.target.value && onChange(e.target.value)}
           className="pl-7 pr-2.5 py-1.5 rounded-lg text-xs text-slate-200 bg-white/5 border border-slate-700
-            focus:outline-none focus:ring-1 focus:ring-orange-500/40 cursor-pointer [color-scheme:dark]"
+            focus:outline-none focus:ring-1 focus:ring-orange-500/40 cursor-pointer [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-0"
         />
       </div>
     </div>
@@ -717,7 +717,7 @@ const MeatTrackerTab = ({ purchases, meatEntries, onMeatAdded, onMeatDeleted }: 
           </div>
 
           {/* Action toggle — 3 buttons */}
-          <div className="flex-1 min-w-[280px]">
+          <div className="w-auto max-w-[420px]">
             <label className="text-xs font-medium text-slate-300 block mb-1.5">Action Type</label>
             <div className="grid grid-cols-3 gap-2">
               {(['Marinated', 'Minced (Keema)', 'Sent to Grill'] as MeatAction[]).map((a) => (
