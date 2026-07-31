@@ -3,6 +3,7 @@ import { format, parseISO, subDays } from 'date-fns';
 import AppLayout from '@/components/ui/AppLayout';
 import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,13 +48,7 @@ const inferCategory = (itemName: string): PurchaseCategory =>
 
 // ── LocalStorage ─────────────────────────────────────────────────────────────
 
-const PURCHASE_KEY = 'kitchen_purchases';
-const MEAT_KEY     = 'kitchen_meat_tracker';
-
-const loadPurchases = (): PurchaseEntry[] => {
-  try { return JSON.parse(localStorage.getItem(PURCHASE_KEY) || '[]'); } catch { return []; }
-};
-const savePurchases = (d: PurchaseEntry[]) => localStorage.setItem(PURCHASE_KEY, JSON.stringify(d));
+const MEAT_KEY = 'kitchen_meat_tracker';
 
 const loadMeat = (): MeatEntry[] => {
   try { return JSON.parse(localStorage.getItem(MEAT_KEY) || '[]'); } catch { return []; }
@@ -873,26 +868,20 @@ const TAB_INACTIVE: React.CSSProperties = {
 };
 
 const KitchenPortal = () => {
-  const [purchases,   setPurchases]   = useState<PurchaseEntry[]>(loadPurchases);
+  const purchases         = useKitchenPurchasesStore((s) => s.purchases);
+  const addPurchase       = useKitchenPurchasesStore((s) => s.addPurchase);
+  const deletePurchaseKP  = useKitchenPurchasesStore((s) => s.deletePurchase);
+
   const [meatEntries, setMeatEntries] = useState<MeatEntry[]>(loadMeat);
   const [activeTab,   setActiveTab]   = useState<KitchenTab>('purchases');
 
-  const handlePurchaseAdded = (entry: PurchaseEntry) => {
-    const updated = [entry, ...purchases];
-    setPurchases(updated);
-    savePurchases(updated);
-  };
+  const handlePurchaseAdded   = (entry: PurchaseEntry) => addPurchase(entry);
+  const handlePurchaseDeleted = (id: string) => deletePurchaseKP(id);
 
   const handleMeatAdded = (entry: MeatEntry) => {
     const updated = [entry, ...meatEntries];
     setMeatEntries(updated);
     saveMeat(updated);
-  };
-
-  const handlePurchaseDeleted = (id: string) => {
-    const updated = purchases.filter((p) => p.id !== id);
-    setPurchases(updated);
-    savePurchases(updated);
   };
 
   const handleMeatDeleted = (id: string) => {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Package, ShoppingCart, UtensilsCrossed, Receipt, Activity, X } from 'lucide-react';
 import { PackagedStockTab } from './inventory/PackagedStockTab';
-import { GrocerySection }   from './inventory/GrocerySection';
+import { KitchenGroceriesTab } from './inventory/KitchenGroceriesTab';
 import { PurchasesSection } from './inventory/PurchasesSection';
 import { MovementsSection } from './inventory/MovementsSection';
 
@@ -170,7 +170,7 @@ export const InventorySection = () => {
       )}
 
       {activePillar === 'kitchen' && (
-        <GrocerySection />
+        <KitchenGroceriesTab />
       )}
 
       {activePillar === 'meat-prep' && (
