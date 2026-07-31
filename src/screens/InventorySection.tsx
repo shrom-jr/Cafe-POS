@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Package, Receipt, Activity, X } from 'lucide-react';
+import { Package, Receipt, Activity, X, ClipboardList } from 'lucide-react';
 import { PackagedStockTab } from './inventory/PackagedStockTab';
 import { PurchasesSection } from './inventory/PurchasesSection';
 import { MovementsSection } from './inventory/MovementsSection';
+import { BarRestockAudit } from './inventory/BarRestockAudit';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PillarTab = 'bar-stock';
-type SecondaryView = 'purchases' | 'movements' | null;
+type SecondaryView = 'purchases' | 'movements' | 'bar-audit' | null;
 
 interface PillarDef {
   id:    PillarTab;
@@ -20,16 +21,6 @@ interface PillarDef {
 const PILLARS: PillarDef[] = [
   { id: 'bar-stock', label: 'Packaged & Bar Stock', Icon: Package },
 ];
-
-// ── Shared card style (matches KitchenPortal / AdminPanel dark theme) ─────────
-
-const CARD_STYLE: React.CSSProperties = {
-  background: 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: '1rem',
-  padding: '2rem',
-};
-
 
 // ── Slide-over drawer wrapper ─────────────────────────────────────────────────
 
@@ -48,7 +39,7 @@ const Drawer = ({ title, onClose, children }: DrawerProps) => (
     />
     {/* Panel */}
     <div
-      className="relative flex flex-col w-full max-w-2xl h-full overflow-hidden shadow-2xl"
+      className="relative flex flex-col w-full max-w-3xl h-full overflow-hidden shadow-2xl"
       style={{ background: 'linear-gradient(160deg, #0d1626 0%, #080f1a 100%)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
     >
       {/* Drawer header */}
@@ -69,13 +60,42 @@ const Drawer = ({ title, onClose, children }: DrawerProps) => (
   </div>
 );
 
+// ── Secondary button helper ───────────────────────────────────────────────────
+
+interface SecBtnProps {
+  id: SecondaryView;
+  active: SecondaryView;
+  label: string;
+  Icon: React.ComponentType<{ size?: number }>;
+  activeStyle: React.CSSProperties;
+  onClick: (id: SecondaryView) => void;
+}
+
+const SecBtn = ({ id, active, label, Icon, activeStyle, onClick }: SecBtnProps) => {
+  const isActive = active === id;
+  return (
+    <button
+      onClick={() => onClick(isActive ? null : id)}
+      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+        isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+      }`}
+      style={isActive
+        ? activeStyle
+        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }
+      }
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export const InventorySection = () => {
-  const [activePillar,       setActivePillar]       = useState<PillarTab>('bar-stock');
+  const [activePillar,        setActivePillar]        = useState<PillarTab>('bar-stock');
   const [activeSecondaryView, setActiveSecondaryView] = useState<SecondaryView>(null);
 
-  const openSecondary  = (v: SecondaryView) => setActiveSecondaryView(v);
   const closeSecondary = () => setActiveSecondaryView(null);
 
   return (
@@ -108,7 +128,6 @@ export const InventorySection = () => {
               >
                 <Icon size={14} />
                 <span className="hidden sm:inline">{label}</span>
-                {/* Mobile: icon-only label */}
                 <span className="sm:hidden text-xs">{label.split(' ')[0]}</span>
               </button>
             );
@@ -116,44 +135,36 @@ export const InventorySection = () => {
         </div>
 
         {/* Secondary action buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => openSecondary(activeSecondaryView === 'purchases' ? null : 'purchases')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-              activeSecondaryView === 'purchases'
-                ? 'text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            style={activeSecondaryView === 'purchases'
-              ? { background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.35)', color: '#fb923c' }
-              : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }
-            }
-          >
-            <Receipt size={13} />
-            Purchases Ledger
-          </button>
-          <button
-            onClick={() => openSecondary(activeSecondaryView === 'movements' ? null : 'movements')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-              activeSecondaryView === 'movements'
-                ? 'text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            style={activeSecondaryView === 'movements'
-              ? { background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' }
-              : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }
-            }
-          >
-            <Activity size={13} />
-            Stock Movements
-          </button>
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <SecBtn
+            id="purchases"
+            active={activeSecondaryView}
+            label="Purchases Ledger"
+            Icon={Receipt}
+            activeStyle={{ background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.35)', color: '#fb923c' }}
+            onClick={setActiveSecondaryView}
+          />
+          <SecBtn
+            id="movements"
+            active={activeSecondaryView}
+            label="Stock Movements"
+            Icon={Activity}
+            activeStyle={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' }}
+            onClick={setActiveSecondaryView}
+          />
+          <SecBtn
+            id="bar-audit"
+            active={activeSecondaryView}
+            label="Bar Restock Audit"
+            Icon={ClipboardList}
+            activeStyle={{ background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399' }}
+            onClick={setActiveSecondaryView}
+          />
         </div>
       </div>
 
       {/* ── Pillar content ────────────────────────────────────────────────── */}
-      {activePillar === 'bar-stock' && (
-        <PackagedStockTab />
-      )}
+      {activePillar === 'bar-stock' && <PackagedStockTab />}
 
       {/* ── Secondary slide-over drawers ──────────────────────────────────── */}
       {activeSecondaryView === 'purchases' && (
@@ -165,6 +176,12 @@ export const InventorySection = () => {
       {activeSecondaryView === 'movements' && (
         <Drawer title="Stock Movements" onClose={closeSecondary}>
           <MovementsSection />
+        </Drawer>
+      )}
+
+      {activeSecondaryView === 'bar-audit' && (
+        <Drawer title="Bar Restock Audit" onClose={closeSecondary}>
+          <BarRestockAudit />
         </Drawer>
       )}
     </div>

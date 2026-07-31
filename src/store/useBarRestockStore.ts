@@ -46,6 +46,7 @@ const persist = (data: BarRestockEntry[]) =>
 interface BarRestockStoreState {
   entries: BarRestockEntry[];
   addEntry:    (entry: BarRestockEntry) => void;
+  updateEntry: (id: string, patch: Partial<Omit<BarRestockEntry, 'id'>>) => void;
   deleteEntry: (id: string) => void;
 }
 
@@ -54,6 +55,12 @@ export const useBarRestockStore = create<BarRestockStoreState>((set, get) => ({
 
   addEntry: (entry) => {
     const updated = [entry, ...get().entries];
+    persist(updated);
+    set({ entries: updated });
+  },
+
+  updateEntry: (id, patch) => {
+    const updated = get().entries.map((e) => e.id === id ? { ...e, ...patch } : e);
     persist(updated);
     set({ entries: updated });
   },
