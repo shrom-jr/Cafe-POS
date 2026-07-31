@@ -10,7 +10,7 @@ import {
   format, parseISO, subDays,
   startOfWeek, startOfMonth, differenceInCalendarDays,
 } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import type { PurchaseEntry } from '@/store/useKitchenPurchasesStore';
@@ -67,6 +67,21 @@ const getDayCount = (range: string, dates: string[]): number => {
   if (dates.length === 0) return 1;
   const sorted = [...dates].sort();
   return Math.max(1, differenceInCalendarDays(now, parseISO(sorted[0])) + 1);
+};
+
+// ── CSV export helper ─────────────────────────────────────────────────────────
+
+const exportCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
+  const escape = (v: string | number) => {
+    const s = String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -174,6 +189,15 @@ const KitchenExpensesView = () => {
     toast.success('Entry deleted');
   };
 
+  const handleExport = () => {
+    const label = range === 'Pick Date' ? pickDate : range.replace(/\s+/g, '-');
+    exportCSV(
+      `kitchen-expenses-${label}.csv`,
+      ['Date', 'Time', 'Item', 'Category', 'Quantity', 'Rate (Rs.)', 'Total Cost (Rs.)'],
+      sorted.map((p) => [p.date, p.time, p.itemName, p.category ?? '', p.quantity, p.rate, p.totalCost]),
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Range selector */}
@@ -266,7 +290,19 @@ const KitchenExpensesView = () => {
       <div style={CARD}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold text-white/80">Purchase Audit Log</p>
-          <p className="text-[11px] text-white/25">{filtered.length} entries · {range}</p>
+          <div className="flex items-center gap-3">
+            {sorted.length > 0 && (
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd' }}
+                title="Export to CSV"
+              >
+                <Download size={12} /> Export CSV
+              </button>
+            )}
+            <p className="text-[11px] text-white/25">{filtered.length} entries · {range}</p>
+          </div>
         </div>
         {sorted.length === 0 ? (
           <p className="text-center py-12 text-white/20 text-sm">No purchases in this period</p>
@@ -386,6 +422,14 @@ const MeatAnalyticsView = () => {
     toast.success('Entry deleted');
   };
 
+  const handleExport = () => {
+    exportCSV(
+      `meat-analytics-${range.replace(/\s+/g, '-')}.csv`,
+      ['Date', 'Time', 'Logged By', 'Meat Item', 'Action Type', 'Quantity (kg)'],
+      sortedMeat.map((e) => [e.date, e.time, e.loggedBy ?? 'Kitchen', e.meatItem, e.action, e.quantity]),
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Range selector */}
@@ -490,7 +534,19 @@ const MeatAnalyticsView = () => {
       <div style={CARD}>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold text-white/80">Meat Action Audit Log</p>
-          <p className="text-[11px] text-white/25">{sortedMeat.length} actions · {range}</p>
+          <div className="flex items-center gap-3">
+            {sortedMeat.length > 0 && (
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd' }}
+                title="Export to CSV"
+              >
+                <Download size={12} /> Export CSV
+              </button>
+            )}
+            <p className="text-[11px] text-white/25">{sortedMeat.length} actions · {range}</p>
+          </div>
         </div>
         {sortedMeat.length === 0 ? (
           <p className="text-center py-12 text-white/20 text-sm">No meat actions in this period</p>
