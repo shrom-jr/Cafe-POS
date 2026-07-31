@@ -1,0 +1,60 @@
+### Task: Consolidate Kitchen & Meat Oversight into a Visual "Kitchen & Meat Analytics" Report and Clean Up Inventory Tab
+
+We are refining the Admin Panel architecture:
+1. Admin Inventory should be 100% dedicated to shelf/packaged stock (Packaged & Bar Stock).
+2. Kitchen Groceries and Meat Prep move entirely into a visual, infographic-rich "Kitchen & Meat Analytics" report under the Reports section.
+3. Admins will no longer have manual entry forms for kitchen/meat items—they will analyze visual reports powered by live data logged by kitchen staff in the Kitchen Portal.
+
+---
+
+### Step 1: Clean Up `src/screens/InventorySection.tsx`
+- Remove the `Kitchen Groceries` and `Meat Prep Logs` tabs/sub-components from the Admin Inventory section.
+- Keep Admin Inventory focused on `Packaged & Bar Stock` (and existing bar ledger/movements).
+
+---
+
+### Step 2: Create `src/screens/reports/KitchenReportTab.tsx`
+Create a new comprehensive report component integrated into the `Reports` section, subscribing live to both `useKitchenPurchasesStore` and `useMeatTrackerStore`.
+
+#### 1. Header Sub-Toggle Switch:
+Provide two prominent toggle buttons at the top of the tab:
+- `[ 🛒 Kitchen Expenses ]`
+- `[ 🥩 Meat Analytics ]`
+
+---
+
+#### 2. Sub-Toggle View 1: `[ 🛒 Kitchen Expenses ]`
+- **Global Filters**: Date range selector (`Today`, `Yesterday`, `This Week`, `This Month`, `All Time`, `Pick Date`).
+- **4 Stat Summary Cards (Top Banner)**:
+  1. `Total Kitchen Spend` (Rs.)
+  2. `Total Purchases` (Number of entries recorded)
+  3. `Top Expense Item` (Item name & total Rs. spent)
+  4. `Avg Daily Spend` (Rs./day for selected range)
+- **Visual Infographics & Analytics**:
+  - 📊 **Top Purchased Items (Bar Chart / Visual Bars)**: Rank top items by spend (e.g. Chicken, Cooking Oil, Dairy, Gas).
+  - 🥧 **Category Spend Breakdown (Visual Donut/Distribution)**: Percentage split across categories (`Meats`, `Vegetables`, `Dairy`, `Groceries`, `Gas/Supplies`).
+- **Read-Only Audit Table**:
+  - Filterable table showing purchases logged by kitchen staff: `Date & Time`, `Item`, `Category`, `Quantity`, `Rate (Rs.)`, `Total Cost (Rs.)`, and a `Trash Icon` for admin entry deletion/corrections.
+  - No `+ Log Purchase` buttons here (staff logs in Kitchen Portal).
+
+---
+
+#### 3. Sub-Toggle View 2: `[ 🥩 Meat Analytics ]`
+- **Global Filters**: Date range selector (`Today`, `Yesterday`, `This Week`, `This Month`, `All Time`).
+- **4 Stat Summary Cards (Top Banner)**:
+  1. `Total Raw Purchased` (kg across all meats)
+  2. `Total Marinated` (kg)
+  3. `Total Keema Made` (kg)
+  4. `Total Sent to Grill` (kg)
+- **Visual Infographics & Analytics**:
+  - 🔄 **Meat Transformation Breakdown (Visual Progress / Yield Bars)**: Breakdown per meat item (Chicken, Mutton, Buff) showing total raw stock transformed into `Marinated`, `Keema`, and `Sent to Grill`.
+  - ⚖️ **Purchase vs. Grill Reconciliation Card**: Comparison box showing `Total Bought (kg)` vs `Total Sent to Grill (kg)` to monitor kitchen yield and spot inventory variance.
+- **Read-Only Audit Table**:
+  - Filterable history table of staff prep entries: `Date & Time`, `Logged By`, `Meat Item`, `Action Type Badge` (Marinated / Minced / Sent to Grill), `Quantity (kg)`, and a `Trash Icon` for admin corrections.
+
+---
+
+### Step 3: Wire into Reports Section & Verify
+- Ensure `KitchenReportTab` is mounted cleanly inside `src/screens/ReportsSection.tsx` (or as a primary report tab).
+- Ensure dark mode styling matches the existing admin design (`bg-slate-900`, `border-slate-800`, badge accents).
+- Verify zero TypeScript or build errors.

@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { Package, ShoppingCart, UtensilsCrossed, Receipt, Activity, X } from 'lucide-react';
+import { Package, Receipt, Activity, X } from 'lucide-react';
 import { PackagedStockTab } from './inventory/PackagedStockTab';
-import { KitchenGroceriesTab } from './inventory/KitchenGroceriesTab';
 import { PurchasesSection } from './inventory/PurchasesSection';
 import { MovementsSection } from './inventory/MovementsSection';
-import { MeatPrepLogsTab } from './inventory/MeatPrepLogsTab';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PillarTab = 'bar-stock' | 'kitchen' | 'meat-prep';
+type PillarTab = 'bar-stock';
 type SecondaryView = 'purchases' | 'movements' | null;
 
 interface PillarDef {
@@ -20,9 +18,7 @@ interface PillarDef {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PILLARS: PillarDef[] = [
-  { id: 'bar-stock', label: 'Packaged & Bar Stock', Icon: Package          },
-  { id: 'kitchen',   label: 'Kitchen Groceries',    Icon: ShoppingCart     },
-  { id: 'meat-prep', label: 'Meat Prep Logs',        Icon: UtensilsCrossed },
+  { id: 'bar-stock', label: 'Packaged & Bar Stock', Icon: Package },
 ];
 
 // ── Shared card style (matches KitchenPortal / AdminPanel dark theme) ─────────
@@ -157,14 +153,6 @@ export const InventorySection = () => {
       {/* ── Pillar content ────────────────────────────────────────────────── */}
       {activePillar === 'bar-stock' && (
         <PackagedStockTab />
-      )}
-
-      {activePillar === 'kitchen' && (
-        <KitchenGroceriesTab />
-      )}
-
-      {activePillar === 'meat-prep' && (
-        <MeatPrepLogsTab />
       )}
 
       {/* ── Secondary slide-over drawers ──────────────────────────────────── */}

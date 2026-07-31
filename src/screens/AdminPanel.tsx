@@ -4,6 +4,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import AppLayout from '@/components/ui/AppLayout';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import { InventorySection } from '@/screens/InventorySection';
+import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { toast } from 'sonner';
 import {
@@ -69,6 +70,7 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('bill');
+  const [reportView,    setReportView]    = useState<'sales' | 'kitchen'>('sales');
   const settings = usePOSStore((s) => s.settings);
 
   // Hard RBAC guard — belt-and-suspenders on top of the route-level RequireAdmin.
@@ -216,7 +218,31 @@ const AdminPanel = () => {
             {activeTab === 'dashboard' && <DashboardSection />}
             {activeTab === 'menu'      && <MenuSection />}
             {activeTab === 'tables'    && <TablesSection />}
-            {activeTab === 'reports'   && <ReportsSection />}
+            {activeTab === 'reports'   && (
+              <div className="space-y-5">
+                {/* Report type toggle */}
+                <div className="flex gap-2 flex-wrap border-b border-white/[0.06] pb-4">
+                  {([
+                    { id: 'sales',   label: '📊 Sales Reports' },
+                    { id: 'kitchen', label: '🍳 Kitchen & Meat Analytics' },
+                  ] as { id: 'sales' | 'kitchen'; label: string }[]).map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => setReportView(id)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
+                      style={reportView === id
+                        ? { background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.35)', color: '#93c5fd' }
+                        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
+                      }
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {reportView === 'sales'   && <ReportsSection />}
+                {reportView === 'kitchen' && <KitchenReportTab />}
+              </div>
+            )}
             {activeTab === 'inventory' && <InventorySection />}
             {activeTab === 'settings'  && (
               <div className="space-y-6">
