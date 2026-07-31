@@ -1,0 +1,28 @@
+### Task: Unify and Polish Packaged & Bar Stock Tab (Remove Mapping Clutter)
+
+Please create a new clean component `src/screens/inventory/PackagedStockTab.tsx` and use it inside `src/screens/InventorySection.tsx` under the "Packaged & Bar Stock" tab. Completely replace the old stacked AlcoholSection, BeverageSection, and CigaretteSection files and remove all standalone "POS Menu Item Mappings" card blocks.
+
+#### Requirements:
+
+1. **Top Summary Cards**:
+   - Render 3 sleek high-contrast metric cards at the top:
+     - **Total Stock Value** (e.g., sum of Rs. value across liquor, drinks, cigarettes)
+     - **Low Stock Items** (count of items at or below min stock threshold)
+     - **Today's Deductions** (total auto-deductions triggered by POS sales today)
+
+2. **Unified Data Table with Filter Pills**:
+   - Provide category filter pills: `All`, `Alcohol`, `Beverages`, `Cigarettes`.
+   - Render a single clean table containing all products across all three categories.
+   - Table columns: `Product Name`, `Category`, `Current Stock` (formatted with units like ml/btl, crates/pcs, packets/sticks), `Min Stock Alert`, `Status`, and `Actions`.
+
+3. **Eliminate "POS Menu Item Mappings" Clutter**:
+   - REMOVE all standalone "POS Menu Item Mappings" card containers completely from the UI.
+   - Under the `Actions` column in the main table, add a sleek `Link` or `Settings` icon button labeled "Map POS Item" (or icon-only tooltip). Clicking it opens a clean dialog modal to view or set the POS item deduction mapping for that specific product.
+
+4. **Integration in InventorySection.tsx**:
+   - Import `PackagedStockTab` in `InventorySection.tsx` and render it as the sole content for the 'packaged' active tab.
+   - Ensure dark theme visual parity using Tailwind slate/zinc colors and Lucide icons.
+
+5. **Strict Rules**:
+   - Maintain full compatibility with `useInventoryStore.ts` and `db.ts` recipe deduction logic.
+   - DO NOT alter backend schemas or delete recipe mapping capabilities—only refine how mappings are accessed in the UI.

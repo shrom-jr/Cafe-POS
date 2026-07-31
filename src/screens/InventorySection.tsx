@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Package, ShoppingCart, UtensilsCrossed, Receipt, Activity, X } from 'lucide-react';
-import { AlcoholSection }   from './inventory/AlcoholSection';
-import { BeverageSection }  from './inventory/BeverageSection';
-import { CigaretteSection } from './inventory/CigaretteSection';
+import { PackagedStockTab } from './inventory/PackagedStockTab';
 import { GrocerySection }   from './inventory/GrocerySection';
 import { PurchasesSection } from './inventory/PurchasesSection';
 import { MovementsSection } from './inventory/MovementsSection';
@@ -168,11 +166,7 @@ export const InventorySection = () => {
 
       {/* ── Pillar content ────────────────────────────────────────────────── */}
       {activePillar === 'bar-stock' && (
-        <div className="space-y-5">
-          <AlcoholSection />
-          <BeverageSection />
-          <CigaretteSection />
-        </div>
+        <PackagedStockTab />
       )}
 
       {activePillar === 'kitchen' && (
