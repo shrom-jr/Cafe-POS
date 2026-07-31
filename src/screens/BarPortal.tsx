@@ -1,23 +1,575 @@
+import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { GlassWater, PackagePlus, Trash2, TrendingDown, TrendingUp, BarChart3, ShoppingBag } from 'lucide-react';
 import AppLayout from '@/components/ui/AppLayout';
-import { GlassWater } from 'lucide-react';
+import { useInventoryStore } from '@/store/useInventoryStore';
+import { useBarRestockStore, BarRestockEntry } from '@/store/useBarRestockStore';
+import { useStaffStore } from '@/store/useStaffStore';
+import { InvProductType } from '@/types/pos';
+import { fmt } from '@/utils/format';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const todayStr = () => format(new Date(), 'yyyy-MM-dd');
+const timeStr  = () => format(new Date(), 'HH:mm');
+const fmtTime  = (ts: number) => format(new Date(ts), 'hh:mm a');
+
+// ── Unified product descriptor ────────────────────────────────────────────────
+
+interface BarProduct {
+  id: string;
+  name: string;
+  productType: InvProductType;
+  qtyUnit: string;
+}
+
+// ── Category styling ──────────────────────────────────────────────────────────
+
+const TYPE_META: Record<InvProductType, { label: string; bg: string; border: string; text: string }> = {
+  alcohol:   { label: 'Alcohol',   bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.3)',   text: '#f87171' },
+  beverage:  { label: 'Beverage',  bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.3)',  text: '#60a5fa' },
+  cigarette: { label: 'Cigarette', bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.3)',  text: '#fbbf24' },
+};
+
+const ENTRY_TYPE_META = {
+  'Restock':    { icon: TrendingUp,   bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.3)',  text: '#34d399' },
+  'Spill/Loss': { icon: TrendingDown, bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.3)',   text: '#f87171' },
+};
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatCard({
+  label, value, sub, icon: Icon, color,
+}: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color: string;
+}) {
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-3 rounded-xl flex-1 min-w-0"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <div
+        className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg"
+        style={{ background: `${color}20`, border: `1px solid ${color}40` }}
+      >
+        <Icon size={16} style={{ color }} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-white/45 uppercase tracking-wide truncate">{label}</p>
+        <p className="text-lg font-bold text-white/90 leading-tight">{value}</p>
+        {sub && <p className="text-[10px] text-white/35 truncate">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+function CategoryBadge({ productType }: { productType: InvProductType }) {
+  const m = TYPE_META[productType];
+  return (
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+      style={{ background: m.bg, border: `1px solid ${m.border}`, color: m.text }}
+    >
+      {m.label}
+    </span>
+  );
+}
+
+function EntryTypeBadge({ entryType }: { entryType: 'Restock' | 'Spill/Loss' }) {
+  const m = ENTRY_TYPE_META[entryType];
+  return (
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+      style={{ background: m.bg, border: `1px solid ${m.border}`, color: m.text }}
+    >
+      {entryType}
+    </span>
+  );
+}
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
 
 const BarPortal = () => {
+  // ── Store data ──
+  const alcoholProducts   = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts  = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts = useInventoryStore((s) => s.cigaretteProducts);
+  const { entries, addEntry, deleteEntry } = useBarRestockStore();
+  const currentUser = useStaffStore((s) => s.currentUser);
+
+  // ── Form state ──
+  const [productId,  setProductId]  = useState('');
+  const [entryType,  setEntryType]  = useState<'Restock' | 'Spill/Loss'>('Restock');
+  const [qty,        setQty]        = useState('');
+  const [totalCost,  setTotalCost]  = useState('');
+  const [supplier,   setSupplier]   = useState('');
+
+  // ── Unified product list (active only) ──
+  const allProducts = useMemo<BarProduct[]>(() => [
+    ...alcoholProducts
+      .filter((p) => p.status === 'active')
+      .map((p) => ({ id: p.id, name: p.name, productType: 'alcohol'   as InvProductType, qtyUnit: 'bottles' })),
+    ...beverageProducts
+      .filter((p) => p.status === 'active')
+      .map((p) => ({ id: p.id, name: p.name, productType: 'beverage'  as InvProductType, qtyUnit: 'pcs'     })),
+    ...cigaretteProducts
+      .filter((p) => p.status === 'active')
+      .map((p) => ({ id: p.id, name: p.name, productType: 'cigarette' as InvProductType, qtyUnit: 'packets' })),
+  ], [alcoholProducts, beverageProducts, cigaretteProducts]);
+
+  const selectedProduct = allProducts.find((p) => p.id === productId) ?? null;
+
+  // ── Today's entries ──
+  const today        = todayStr();
+  const todayEntries = useMemo(
+    () => entries.filter((e) => e.date === today),
+    [entries, today],
+  );
+
+  // ── Stats ──
+  const totalSpend  = useMemo(
+    () => todayEntries.filter((e) => e.entryType === 'Restock').reduce((s, e) => s + e.totalCost, 0),
+    [todayEntries],
+  );
+  const uniqueItems = useMemo(
+    () => new Set(todayEntries.map((e) => e.productId)).size,
+    [todayEntries],
+  );
+
+  // ── Submit ──
+  const handleSubmit = () => {
+    if (!selectedProduct) { toast.error('Select a product first'); return; }
+    const qtyNum = Number(qty);
+    if (!qty || qtyNum <= 0) { toast.error('Enter a valid quantity'); return; }
+
+    // Compute signed base-unit change
+    let baseUnitChange = 0;
+    if (selectedProduct.productType === 'alcohol') {
+      const prod = alcoholProducts.find((p) => p.id === productId);
+      if (!prod) return;
+      baseUnitChange = qtyNum * prod.bottleSizeMl;
+    } else if (selectedProduct.productType === 'beverage') {
+      baseUnitChange = qtyNum;
+    } else {
+      const prod = cigaretteProducts.find((p) => p.id === productId);
+      if (!prod) return;
+      baseUnitChange = qtyNum * prod.sticksPerPacket;
+    }
+    if (entryType === 'Spill/Loss') baseUnitChange = -baseUnitChange;
+
+    // Apply to inventory
+    const invStore = useInventoryStore.getState();
+    const movType  = entryType === 'Restock' ? 'Purchase' : 'Waste';
+    const reason   = entryType === 'Spill/Loss' ? 'Spill/Loss logged via Bar Portal' : undefined;
+
+    if (selectedProduct.productType === 'alcohol') {
+      invStore.adjustAlcohol({ productId, changeMl: baseUnitChange, type: movType, reason: reason ?? '' });
+    } else if (selectedProduct.productType === 'beverage') {
+      invStore.adjustBeverage({ productId, changePieces: baseUnitChange, type: movType, reason: reason ?? '' });
+    } else {
+      invStore.adjustCigarette({ productId, changeSticks: baseUnitChange, type: movType, reason: reason ?? '' });
+    }
+
+    // Save log entry
+    const entry: BarRestockEntry = {
+      id:             crypto.randomUUID(),
+      date:           today,
+      timestamp:      Date.now(),
+      productType:    selectedProduct.productType,
+      productId,
+      productName:    selectedProduct.name,
+      entryType,
+      qty:            qtyNum,
+      qtyUnit:        selectedProduct.qtyUnit,
+      baseUnitChange,
+      totalCost:      entryType === 'Restock' ? (Number(totalCost) || 0) : 0,
+      supplier:       supplier.trim(),
+      loggedBy:       currentUser?.name ?? 'Staff',
+    };
+    addEntry(entry);
+
+    toast.success(`${entryType} logged — ${selectedProduct.name} ×${qtyNum}`);
+    setQty('');
+    setTotalCost('');
+    setSupplier('');
+  };
+
+  // ── Delete (reverses stock) ──
+  const handleDelete = (entry: BarRestockEntry) => {
+    const reversal = -entry.baseUnitChange;
+    const invStore = useInventoryStore.getState();
+
+    if (entry.productType === 'alcohol') {
+      invStore.adjustAlcohol({ productId: entry.productId, changeMl: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
+    } else if (entry.productType === 'beverage') {
+      invStore.adjustBeverage({ productId: entry.productId, changePieces: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
+    } else {
+      invStore.adjustCigarette({ productId: entry.productId, changeSticks: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
+    }
+
+    deleteEntry(entry.id);
+    toast.success('Entry removed and stock corrected');
+  };
+
+  // ── Input style ──
+  const inputStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    color: 'rgba(255,255,255,0.85)',
+    outline: 'none',
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 14,
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.45)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: 6,
+    display: 'block',
+  };
+
+  // ── Render ──
   return (
     <AppLayout title="Bar Portal">
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <div
-          className="flex items-center justify-center w-20 h-20 rounded-2xl"
-          style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}
-        >
-          <GlassWater size={36} style={{ color: '#818cf8' }} />
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        {/* ── Stat Cards ── */}
+        <div className="flex gap-3 flex-wrap">
+          <StatCard
+            label="Today's Entries"
+            value={todayEntries.length}
+            sub={todayEntries.length === 1 ? '1 log entry' : `${todayEntries.length} log entries`}
+            icon={BarChart3}
+            color="#818cf8"
+          />
+          <StatCard
+            label="Total Spend Today"
+            value={`Rs. ${fmt(totalSpend)}`}
+            sub="Restocks only"
+            icon={ShoppingBag}
+            color="#34d399"
+          />
+          <StatCard
+            label="Items Updated"
+            value={uniqueItems}
+            sub={uniqueItems === 1 ? 'unique product' : 'unique products'}
+            icon={GlassWater}
+            color="#60a5fa"
+          />
         </div>
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-white/90 mb-1">Bar Portal</h2>
-          <p className="text-sm text-white/40">Coming soon — bar order management will appear here.</p>
+
+        {/* ── Main Content: Form + Ledger ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 items-start">
+
+          {/* ── Log Entry Form ── */}
+          <div
+            className="rounded-xl p-5 space-y-4 flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center justify-center w-7 h-7 rounded-lg"
+                style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}
+              >
+                <PackagePlus size={14} style={{ color: '#818cf8' }} />
+              </div>
+              <span className="text-sm font-semibold text-white/80">Log Bar Entry</span>
+            </div>
+
+            {/* Product select */}
+            <div>
+              <label style={labelStyle}>Product</label>
+              <select
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">— Select a product —</option>
+                {(['alcohol', 'beverage', 'cigarette'] as InvProductType[]).map((type) => {
+                  const items = allProducts.filter((p) => p.productType === type);
+                  if (items.length === 0) return null;
+                  return (
+                    <optgroup key={type} label={TYPE_META[type].label}>
+                      {items.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+              {allProducts.length === 0 && (
+                <p className="mt-1.5 text-xs text-white/30">
+                  No active bar products found. Add them in Admin → Inventory.
+                </p>
+              )}
+            </div>
+
+            {/* Entry type toggle */}
+            <div>
+              <label style={labelStyle}>Entry Type</label>
+              <div
+                className="flex rounded-lg p-1 gap-1"
+                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                {(['Restock', 'Spill/Loss'] as const).map((t) => {
+                  const active = entryType === t;
+                  const m = ENTRY_TYPE_META[t];
+                  const Icon = m.icon;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setEntryType(t)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all"
+                      style={active ? {
+                        background: m.bg,
+                        border: `1px solid ${m.border}`,
+                        color: m.text,
+                      } : {
+                        color: 'rgba(255,255,255,0.35)',
+                      }}
+                    >
+                      <Icon size={13} />
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label style={labelStyle}>
+                Quantity
+                {selectedProduct && (
+                  <span className="ml-1.5 text-white/30 normal-case font-normal tracking-normal">
+                    ({selectedProduct.qtyUnit})
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Cost + Supplier — only for Restock */}
+            {entryType === 'Restock' && (
+              <>
+                <div>
+                  <label style={labelStyle}>Total Cost (Rs.)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                    value={totalCost}
+                    onChange={(e) => setTotalCost(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    Supplier / Payment Source
+                    <span className="ml-1 text-white/25 font-normal tracking-normal normal-case">optional</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Cash, Credit, Supplier name…"
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              className="w-full py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95 hover:brightness-110"
+              style={{
+                background: entryType === 'Restock'
+                  ? 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(185,28,28,0.8) 100%)',
+                color: '#fff',
+                border: entryType === 'Restock'
+                  ? '1px solid rgba(16,185,129,0.5)'
+                  : '1px solid rgba(239,68,68,0.5)',
+              }}
+            >
+              + Log {entryType}
+            </button>
+          </div>
+
+          {/* ── Today's Ledger ── */}
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            {/* Ledger header */}
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <span className="text-sm font-semibold text-white/70">Today's Restocks</span>
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}
+              >
+                {today}
+              </span>
+            </div>
+
+            {/* Ledger body */}
+            {todayEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16">
+                <GlassWater size={32} className="text-white/15" />
+                <p className="text-sm text-white/30 font-medium">No entries logged today</p>
+                <p className="text-xs text-white/20">Use the form to log restocks or losses</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.05]">
+                {/* Table header */}
+                <div
+                  className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  {['Item', 'Type', 'Qty', 'Cost', 'Logged By', ''].map((h) => (
+                    <span key={h} className="text-[10px] font-semibold text-white/30 uppercase tracking-wide">{h}</span>
+                  ))}
+                </div>
+
+                {todayEntries.map((entry) => (
+                  <LedgerRow key={entry.id} entry={entry} onDelete={handleDelete} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>
   );
 };
+
+// ── Ledger Row ────────────────────────────────────────────────────────────────
+
+function LedgerRow({
+  entry,
+  onDelete,
+}: {
+  entry: BarRestockEntry;
+  onDelete: (e: BarRestockEntry) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  const handleDeleteClick = () => {
+    if (!confirming) { setConfirming(true); setTimeout(() => setConfirming(false), 3000); return; }
+    onDelete(entry);
+  };
+
+  return (
+    <div className="px-4 py-3">
+      {/* Mobile layout */}
+      <div className="sm:hidden space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-white/85">{entry.productName}</span>
+            <CategoryBadge productType={entry.productType} />
+            <EntryTypeBadge entryType={entry.entryType} />
+          </div>
+          <button
+            onClick={handleDeleteClick}
+            className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all active:scale-95"
+            style={confirming ? {
+              background: 'rgba(239,68,68,0.2)',
+              border: '1px solid rgba(239,68,68,0.4)',
+              color: '#f87171',
+            } : {
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.35)',
+            }}
+          >
+            <Trash2 size={11} />
+            {confirming ? 'Confirm?' : ''}
+          </button>
+        </div>
+        <div className="flex gap-3 text-xs text-white/45">
+          <span>{entry.qty} {entry.qtyUnit}</span>
+          {entry.totalCost > 0 && <span>Rs. {fmt(entry.totalCost)}</span>}
+          {entry.supplier && <span>· {entry.supplier}</span>}
+          <span>· {entry.loggedBy}</span>
+          <span>· {fmtTime(entry.timestamp)}</span>
+        </div>
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-center">
+        {/* Item */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white/85 truncate">{entry.productName}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <CategoryBadge productType={entry.productType} />
+              {entry.supplier && (
+                <span className="text-[10px] text-white/30">{entry.supplier}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Entry type */}
+        <EntryTypeBadge entryType={entry.entryType} />
+
+        {/* Qty */}
+        <span className="text-sm text-white/70 text-right whitespace-nowrap">
+          {entry.qty} <span className="text-white/35 text-xs">{entry.qtyUnit}</span>
+        </span>
+
+        {/* Cost */}
+        <span className="text-sm text-white/70 text-right whitespace-nowrap min-w-[80px]">
+          {entry.totalCost > 0 ? `Rs. ${fmt(entry.totalCost)}` : <span className="text-white/25">—</span>}
+        </span>
+
+        {/* Logged by + time */}
+        <div className="text-right">
+          <p className="text-xs text-white/55 font-medium">{entry.loggedBy}</p>
+          <p className="text-[10px] text-white/30">{fmtTime(entry.timestamp)}</p>
+        </div>
+
+        {/* Delete */}
+        <button
+          onClick={handleDeleteClick}
+          className="flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-semibold transition-all active:scale-95 whitespace-nowrap"
+          style={confirming ? {
+            background: 'rgba(239,68,68,0.2)',
+            border: '1px solid rgba(239,68,68,0.4)',
+            color: '#f87171',
+          } : {
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.3)',
+          }}
+        >
+          <Trash2 size={11} />
+          {confirming ? 'Confirm?' : 'Remove'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default BarPortal;
