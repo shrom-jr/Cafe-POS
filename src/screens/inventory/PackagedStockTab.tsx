@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useInventoryStore } from '@/store/useInventoryStore';
-import { usePOSStore } from '@/store/usePOSStore';
 import {
   AlcoholProduct, BeverageProduct, CigaretteProduct,
   InvProductType, InvMovementType,
@@ -13,7 +12,7 @@ import { LowBadge, StatusBadge } from './components';
 import { toast } from 'sonner';
 import {
   Plus, Save, X, ShoppingCart, SlidersHorizontal, Edit3, Trash2,
-  Link2, TrendingDown, AlertTriangle, Coins,
+  TrendingDown, AlertTriangle, Coins,
   Wine, GlassWater, Cigarette,
 } from 'lucide-react';
 
@@ -48,162 +47,82 @@ interface UnifiedRow {
 // ── Formatters ────────────────────────────────────────────────────────────────
 
 function fmtAlcohol(p: AlcoholProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const btl = p.currentStockMl / p.bottleSizeMl;
-  const minBtl = p.minStockMl / p.bottleSizeMl;
+  const fullBtl = Math.floor(p.currentStockMl / p.bottleSizeMl);
+  const remMl   = p.currentStockMl % p.bottleSizeMl;
+  const minBtl  = Math.floor(p.minStockMl / p.bottleSizeMl);
+  const minRemMl = p.minStockMl % p.bottleSizeMl;
+
+  const stockStr = fullBtl === 0
+    ? `${remMl} ml`
+    : remMl === 0
+      ? `${fullBtl} btl`
+      : `${fullBtl} btl + ${remMl} ml`;
+
+  const minStr = minBtl === 0
+    ? `${minRemMl} ml`
+    : minRemMl === 0
+      ? `${minBtl} btl`
+      : `${minBtl} btl + ${minRemMl} ml`;
+
   return {
-    stockPrimary: `${p.currentStockMl.toLocaleString()} ml`,
-    stockSecondary: `${Number.isInteger(btl) ? btl : btl.toFixed(1)} btl`,
-    minDisplay: `${Number.isInteger(minBtl) ? minBtl : minBtl.toFixed(1)} btl`,
+    stockPrimary:   stockStr,
+    stockSecondary: `${p.currentStockMl.toLocaleString()} ml total`,
+    minDisplay:     minStr,
     isLow: p.status === 'active' && p.currentStockMl <= p.minStockMl,
   };
 }
 
 function fmtBeverage(p: BeverageProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const crates = Math.floor(p.currentStock / p.piecesPerCarton);
-  const rem = p.currentStock % p.piecesPerCarton;
-  const minCrates = Math.round(p.minStock / p.piecesPerCarton);
-  const stockStr = crates === 0 ? `${rem} pcs`
-    : rem === 0 ? `${crates} crates`
-    : `${crates} crates +${rem}`;
+  const crates   = Math.floor(p.currentStock / p.piecesPerCarton);
+  const remPcs   = p.currentStock % p.piecesPerCarton;
+  const minCrates = Math.floor(p.minStock / p.piecesPerCarton);
+  const minRemPcs = p.minStock % p.piecesPerCarton;
+
+  const stockStr = crates === 0
+    ? `${remPcs} pcs`
+    : remPcs === 0
+      ? `${crates} crates`
+      : `${crates} crates + ${remPcs} pcs`;
+
+  const minStr = minCrates === 0
+    ? `${minRemPcs} pcs`
+    : minRemPcs === 0
+      ? `${minCrates} crates`
+      : `${minCrates} crates + ${minRemPcs} pcs`;
+
   return {
-    stockPrimary: stockStr,
-    stockSecondary: `${p.currentStock} pcs`,
-    minDisplay: `${minCrates} crates`,
+    stockPrimary:   stockStr,
+    stockSecondary: `${p.currentStock} pcs total`,
+    minDisplay:     minStr,
     isLow: p.status === 'active' && p.currentStock <= p.minStock,
   };
 }
 
 function fmtCigarette(p: CigaretteProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const pkts = Math.floor(p.currentSticks / p.sticksPerPacket);
-  const rem = p.currentSticks % p.sticksPerPacket;
-  const minPkts = Math.round(p.minSticks / p.sticksPerPacket);
-  const stockStr = pkts === 0 ? `${rem} sticks`
-    : rem === 0 ? `${pkts} packets`
-    : `${pkts} pkts +${rem}`;
+  const pkts    = Math.floor(p.currentSticks / p.sticksPerPacket);
+  const remStks = p.currentSticks % p.sticksPerPacket;
+  const minPkts    = Math.floor(p.minSticks / p.sticksPerPacket);
+  const minRemStks = p.minSticks % p.sticksPerPacket;
+
+  const stockStr = pkts === 0
+    ? `${remStks} sticks`
+    : remStks === 0
+      ? `${pkts} packets`
+      : `${pkts} packets + ${remStks} sticks`;
+
+  const minStr = minPkts === 0
+    ? `${minRemStks} sticks`
+    : minRemStks === 0
+      ? `${minPkts} packets`
+      : `${minPkts} packets + ${minRemStks} sticks`;
+
   return {
-    stockPrimary: stockStr,
-    stockSecondary: `${p.currentSticks} sticks`,
-    minDisplay: `${minPkts} packets`,
+    stockPrimary:   stockStr,
+    stockSecondary: `${p.currentSticks} sticks total`,
+    minDisplay:     minStr,
     isLow: p.status === 'active' && p.currentSticks <= p.minSticks,
   };
 }
-
-// ── Map POS Item Dialog ───────────────────────────────────────────────────────
-
-interface MapDialogProps {
-  productId: string;
-  productType: InvProductType;
-  productName: string;
-  unit: string;
-  onClose: () => void;
-}
-
-const MapPOSItemDialog = ({ productId, productType, productName, unit, onClose }: MapDialogProps) => {
-  const invMappings   = useInventoryStore((s) => s.invMappings);
-  const addMapping    = useInventoryStore((s) => s.addMapping);
-  const deleteMapping = useInventoryStore((s) => s.deleteMapping);
-  const menuItems     = usePOSStore((s) => s.menuItems);
-
-  const [menuItemId, setMenuItemId] = useState('');
-  const [deductQty,  setDeductQty]  = useState('');
-
-  const myMappings = invMappings.filter(
-    (m) => m.productType === productType && m.productId === productId
-  );
-  const getMenuName = (id: string) => menuItems.find((m) => m.id === id)?.name ?? id;
-
-  const handleAdd = () => {
-    if (!menuItemId) return toast.error('Select a menu item');
-    const qty = parseFloat(deductQty);
-    if (isNaN(qty) || qty <= 0) return toast.error(`Enter a valid deduct quantity (${unit})`);
-    if (myMappings.find((m) => m.menuItemId === menuItemId))
-      return toast.error('Mapping already exists for this menu item');
-    addMapping({ productType, productId, menuItemId, deductQty: qty });
-    toast.success('Mapping added');
-    setMenuItemId(''); setDeductQty('');
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="relative w-full max-w-lg rounded-2xl p-6 shadow-2xl z-10"
-        style={{ background: 'linear-gradient(160deg,#0f1929 0%,#0b1220 100%)', border: '1px solid rgba(255,255,255,0.09)' }}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <h3 className="text-sm font-semibold text-white/90 flex items-center gap-2">
-              <Link2 size={14} className="text-violet-400" />
-              Map POS Item — {productName}
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Each mapped menu item deducts <strong className="text-slate-300">{unit}</strong> from this product per sale.
-            </p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors">
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Add mapping row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
-          <div className="sm:col-span-2">
-            <label className={LABEL}>Menu Item (POS)</label>
-            <select className={SELECT} value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}>
-              <option value="">Select menu item…</option>
-              {menuItems.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={LABEL}>Deduct per sale ({unit})</label>
-            <input className={INPUT} type="number" min="0.01" step="any"
-              placeholder={unit === 'ml' ? '90' : '1'}
-              value={deductQty} onChange={(e) => setDeductQty(e.target.value)} />
-          </div>
-        </div>
-        <button
-          onClick={handleAdd}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:brightness-110 transition-all mb-5"
-        >
-          <Plus size={13} /> Add Mapping
-        </button>
-
-        {/* Existing mappings */}
-        {myMappings.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-3">
-            No mappings yet — add one above to enable automatic stock deduction on sale.
-          </p>
-        ) : (
-          <div className="rounded-xl overflow-hidden border border-white/[0.06]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-slate-400">Menu Item</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium text-slate-400">Deducted / Sale</th>
-                  <th className="w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {myMappings.map((m) => (
-                  <tr key={m.id} className="border-b border-white/[0.04] last:border-0">
-                    <td className="py-2 px-3 text-white/80">{getMenuName(m.menuItemId)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-300">{m.deductQty} {unit}</td>
-                    <td className="py-2 px-3">
-                      <button className={BTN_DANGER} onClick={() => { deleteMapping(m.id); toast.success('Mapping removed'); }}>
-                        <Trash2 size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ── Alcohol Forms ─────────────────────────────────────────────────────────────
 
@@ -489,10 +408,6 @@ const CAT_BADGE: Record<InvProductType, string> = {
 const CAT_LABEL: Record<InvProductType, string> = {
   alcohol: 'Alcohol', beverage: 'Beverage', cigarette: 'Cigarette',
 };
-const CAT_UNIT: Record<InvProductType, string> = {
-  alcohol: 'ml', beverage: 'pcs', cigarette: 'sticks',
-};
-
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const PackagedStockTab = () => {
@@ -506,7 +421,6 @@ export const PackagedStockTab = () => {
 
   const [catFilter, setCatFilter] = useState<CatFilter>('all');
   const [form,      setForm]      = useState<FormState | null>(null);
-  const [mapTarget, setMapTarget] = useState<{ id: string; type: InvProductType; name: string } | null>(null);
 
   const closeForm = () => setForm(null);
 
@@ -723,17 +637,10 @@ export const PackagedStockTab = () => {
                     <td className={`${TD} hidden sm:table-cell`}><StatusBadge status={(row.raw as { status: 'active' | 'inactive' }).status} /></td>
                     <td className={TD}>
                       <div className="flex items-center gap-0.5">
-                        <button className={BTN_BUY}    title="Purchase stock"   onClick={() => handleBuy(row)}> <ShoppingCart size={14} /></button>
-                        <button className={BTN_ADJUST} title="Adjust stock"     onClick={() => handleAdj(row)}> <SlidersHorizontal size={14} /></button>
-                        <button className={BTN_EDIT}   title="Edit product"     onClick={() => handleEdit(row)}><Edit3 size={14} /></button>
-                        <button
-                          title="Map POS item"
-                          onClick={() => setMapTarget({ id: row.id, type: row.category, name: row.name })}
-                          className="inline-flex items-center gap-1.5 p-1.5 rounded-lg text-white/30 hover:text-violet-400 hover:bg-violet-400/10 transition-colors"
-                        >
-                          <Link2 size={14} />
-                        </button>
-                        <button className={BTN_DANGER} title="Delete product"   onClick={() => handleDelete(row)}><Trash2 size={14} /></button>
+                        <button className={BTN_BUY}    title="Purchase stock" onClick={() => handleBuy(row)}> <ShoppingCart size={14} /></button>
+                        <button className={BTN_ADJUST} title="Adjust stock"    onClick={() => handleAdj(row)}> <SlidersHorizontal size={14} /></button>
+                        <button className={BTN_EDIT}   title="Edit product"    onClick={() => handleEdit(row)}><Edit3 size={14} /></button>
+                        <button className={BTN_DANGER} title="Delete product"  onClick={() => handleDelete(row)}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -744,16 +651,6 @@ export const PackagedStockTab = () => {
         </div>
       )}
 
-      {/* ── Map POS Item dialog ───────────────────────────────────────────── */}
-      {mapTarget && (
-        <MapPOSItemDialog
-          productId={mapTarget.id}
-          productType={mapTarget.type}
-          productName={mapTarget.name}
-          unit={CAT_UNIT[mapTarget.type]}
-          onClose={() => setMapTarget(null)}
-        />
-      )}
     </div>
   );
 };
