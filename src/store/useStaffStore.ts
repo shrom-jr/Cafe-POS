@@ -1,16 +1,22 @@
 import { create } from 'zustand';
-import { StaffUser } from '@/types/staff';
+import { StaffUser, DEFAULT_PERMISSIONS } from '@/types/staff';
 
 const STAFF_KEY        = 'pos_staff_users';
 const SESSION_KEY      = 'pos_current_user_id';
 const SESSION_USER_KEY = 'pos_current_user';   // full object — survives HMR & refresh
+
+/** Backfill `permissions` for accounts created before this field existed. */
+function migrateUser(u: StaffUser): StaffUser {
+  if (u.permissions) return u;
+  return { ...u, permissions: DEFAULT_PERMISSIONS[u.role] ?? DEFAULT_PERMISSIONS.WAITER };
+}
 
 function loadUsers(): StaffUser[] {
   try {
     const d = localStorage.getItem(STAFF_KEY);
     if (!d) return [];
     const parsed: StaffUser[] = JSON.parse(d);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(migrateUser) : [];
   } catch { return []; }
 }
 
@@ -66,7 +72,9 @@ export const useStaffStore = create<StaffState>((set, get) => {
 
   return {
     users,
-    setUsers: (users) => {
+    setUsers: (incoming) => {
+      // Migrate any accounts that predate the permissions field
+      const users = incoming.map(migrateUser);
       // Persist non-empty lists to localStorage so the login screen renders
       // immediately on the next page load (before the Firebase listener fires).
       // Never persist an empty array — that would wipe a valid cache if Firebase

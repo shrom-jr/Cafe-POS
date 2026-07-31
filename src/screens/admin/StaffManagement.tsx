@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStaffStore } from '@/store/useStaffStore';
-import { StaffUser, Role } from '@/types/staff';
+import { StaffUser, Role, StaffPermissions, DEFAULT_PERMISSIONS } from '@/types/staff';
 import { Plus, Trash2, Edit3, X, Save, Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -15,6 +15,18 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
 
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
+};
+
+// Permission display config
+type PermKey = keyof StaffPermissions;
+const PERM_CONFIG: { key: PermKey; label: string; badge: string; color: string; border: string }[] = [
+  { key: 'pos',     label: 'POS & Tables',    badge: 'POS',     color: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
+  { key: 'kitchen', label: 'Kitchen Portal',  badge: 'Kitchen', color: 'rgba(249,115,22,0.18)',  border: 'rgba(249,115,22,0.35)'  },
+  { key: 'bar',     label: 'Bar Portal',      badge: 'Bar',     color: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
+  { key: 'admin',   label: 'Admin Panel',     badge: 'Admin',   color: 'rgba(168,85,247,0.18)', border: 'rgba(168,85,247,0.35)' },
+];
+const PERM_TEXT: Record<PermKey, string> = {
+  pos: '#60a5fa', kitchen: '#fb923c', bar: '#34d399', admin: '#c084fc',
 };
 
 const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
@@ -35,8 +47,20 @@ const StaffModal = ({
   const [pin, setPin]         = useState(existing?.pin ?? '');
   const [showPin, setShowPin] = useState(false);
   const [active, setActive]   = useState(existing?.active ?? true);
+  const [perms, setPerms]     = useState<StaffPermissions>(
+    existing?.permissions ?? DEFAULT_PERMISSIONS['WAITER']
+  );
 
   const isEdit = !!existing;
+
+  /** Selecting a role preset snaps permissions to defaults for that role. */
+  const handleRoleSelect = (r: Role) => {
+    setRole(r);
+    setPerms(DEFAULT_PERMISSIONS[r]);
+  };
+
+  const togglePerm = (key: PermKey) =>
+    setPerms((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleSave = () => {
     if (!name.trim()) return toast.error('Name is required');
@@ -46,10 +70,10 @@ const StaffModal = ({
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) return toast.error('PIN must be exactly 4 digits');
 
     if (isEdit) {
-      updateUser(existing.id, { name: name.trim(), email: trimmedEmail, role, pin, active });
+      updateUser(existing.id, { name: name.trim(), email: trimmedEmail, role, pin, active, permissions: perms });
       toast.success('Staff member updated');
     } else {
-      addUser({ name: name.trim(), email: trimmedEmail, role, pin, active: true });
+      addUser({ name: name.trim(), email: trimmedEmail, role, pin, active: true, permissions: perms });
       toast.success('Staff member added');
     }
     onClose();
@@ -87,24 +111,71 @@ const StaffModal = ({
             />
           </div>
 
-          {/* Role */}
+          {/* Role — quick presets */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Role</label>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              Role <span className="text-white/25 font-normal">(sets default permissions)</span>
+            </label>
             <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => {
                 const c = ROLE_COLORS[r];
-                const active = role === r;
+                const isActive = role === r;
                 return (
                   <button
                     key={r}
-                    onClick={() => setRole(r)}
+                    onClick={() => handleRoleSelect(r)}
                     className="py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
-                    style={active
+                    style={isActive
                       ? { background: c.bg, border: `1px solid ${c.border}`, color: c.text }
                       : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
                     }
                   >
                     {ROLE_LABEL[r]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Feature Permissions */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              Feature Permissions <span className="text-white/25 font-normal">(override individually)</span>
+            </label>
+            <div className="space-y-2">
+              {PERM_CONFIG.map(({ key, label, color, border }) => {
+                const checked = perms[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => togglePerm(key)}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+                    style={checked
+                      ? { background: color, border: `1px solid ${border}` }
+                      : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }
+                    }
+                  >
+                    {/* Checkbox indicator */}
+                    <span
+                      className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                      style={checked
+                        ? { background: border, border: `1px solid ${border}` }
+                        : { background: 'transparent', border: '1px solid rgba(255,255,255,0.18)' }
+                      }
+                    >
+                      {checked && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </span>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: checked ? PERM_TEXT[key] : 'rgba(255,255,255,0.4)' }}
+                    >
+                      {label}
+                    </span>
                   </button>
                 );
               })}
@@ -279,6 +350,26 @@ const DeleteConfirm = ({
   );
 };
 
+// ── Permission Badges ─────────────────────────────────────────────────────────
+const PermissionBadges = ({ user }: { user: StaffUser }) => {
+  const perms = user.permissions ?? DEFAULT_PERMISSIONS[user.role];
+  const active = PERM_CONFIG.filter((p) => perms[p.key]);
+  if (active.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1.5">
+      {active.map(({ key, badge, color, border }) => (
+        <span
+          key={key}
+          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-tight"
+          style={{ background: color, border: `1px solid ${border}`, color: PERM_TEXT[key] }}
+        >
+          {badge}
+        </span>
+      ))}
+    </div>
+  );
+};
+
 // ── Staff Row ────────────────────────────────────────────────────────────────
 const StaffRow = ({ user }: { user: StaffUser }) => {
   const [modal, setModal] = useState<'edit' | 'reset' | 'delete' | null>(null);
@@ -320,6 +411,7 @@ const StaffRow = ({ user }: { user: StaffUser }) => {
             </span>
             <span className="text-xs text-white/25 font-mono tracking-[0.3em]">{'•'.repeat(4)}</span>
           </div>
+          <PermissionBadges user={user} />
         </div>
 
         {/* Actions */}
