@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { StaffUser, Role } from '@/types/staff';
+import { getFirstPermittedRoute } from '@/utils/permissions';
 import { Lock, ArrowLeft, Mail, RotateCcw, Loader2 } from 'lucide-react';
 import { writePinReset } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
@@ -156,7 +157,7 @@ const PinModal = ({
     if (next.length === 4) {
       const ok = login(user.id, next);
       if (ok) {
-        window.history.replaceState(null, '', user.role === 'ADMIN' ? '/admin' : '/');
+        window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
       } else {
         setShake(true);
         setShowError(true);
@@ -173,7 +174,7 @@ const PinModal = ({
     if (pinRef.current.length !== 4) return;
     const ok = login(user.id, pinRef.current);
     if (ok) {
-      window.history.replaceState(null, '', user.role === 'ADMIN' ? '/admin' : '/');
+      window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
     } else {
       setShake(true); setShowError(true);
       setTimeout(() => { setShake(false); setPin(''); setTimeout(() => setShowError(false), 200); }, 600);

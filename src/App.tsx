@@ -10,27 +10,32 @@ import PaymentScreen from '@/screens/PaymentScreen';
 import BillHistory from '@/screens/BillHistory';
 import AdminPanel from '@/screens/AdminPanel';
 import KitchenPortal from '@/screens/KitchenPortal';
+import BarPortal from '@/screens/BarPortal';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { subscribeToStaff } from '@/utils/firebaseSync';
 import OfflineBanner from '@/components/OfflineBanner';
+import { StaffPermissions } from '@/types/staff';
+import { getFirstPermittedRoute } from '@/utils/permissions';
 
-/** Redirects non-admin users away from /admin to / */
-const RequireAdmin = ({ children }: { children: React.ReactNode }) => {
+/**
+ * Permission-based route guard.
+ * Redirects to the first route the user actually has access to when
+ * they try to visit a page they lack permission for.
+ */
+const RequirePermission = ({
+  perm,
+  children,
+}: {
+  perm: keyof StaffPermissions;
+  children: React.ReactNode;
+}) => {
   const currentUser = useStaffStore((s) => s.currentUser);
-  if (!currentUser || currentUser.role !== 'ADMIN') {
-    return <Navigate to="/" replace />;
-  }
-  return <>{children}</>;
-};
-
-/** Redirects non-kitchen users away from /kitchen */
-const RequireKitchen = ({ children }: { children: React.ReactNode }) => {
-  const currentUser = useStaffStore((s) => s.currentUser);
-  if (!currentUser || currentUser.role !== 'KITCHEN') {
-    return <Navigate to="/" replace />;
+  if (!currentUser || !currentUser.permissions[perm]) {
+    const fallback = currentUser ? getFirstPermittedRoute(currentUser.permissions) : '/';
+    return <Navigate to={fallback} replace />;
   }
   return <>{children}</>;
 };
@@ -78,20 +83,60 @@ const App = () => {
           ) : (
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
-                {/* Kitchen users go straight to their portal */}
+                {/* Tables / POS — requires pos permission */}
                 <Route
                   path="/"
-                  element={currentUser?.role === 'KITCHEN'
-                    ? <Navigate to="/kitchen" replace />
-                    : <TableOverview />}
+                  element={
+                    <RequirePermission perm="pos">
+                      <TableOverview />
+                    </RequirePermission>
+                  }
                 />
                 <Route path="/order/:tableId" element={<OrderScreen />} />
                 <Route path="/review/:tableId" element={<ReviewScreen />} />
                 {/* UNUSED ROUTE - DO NOT USE */}
                 <Route path="/payment/:tableId" element={<PaymentScreen />} />
-                <Route path="/history" element={<BillHistory />} />
-                <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
-                <Route path="/kitchen" element={<RequireKitchen><KitchenPortal /></RequireKitchen>} />
+
+                {/* History — requires pos permission */}
+                <Route
+                  path="/history"
+                  element={
+                    <RequirePermission perm="pos">
+                      <BillHistory />
+                    </RequirePermission>
+                  }
+                />
+
+                {/* Admin — requires admin permission */}
+                <Route
+                  path="/admin"
+                  element={
+                    <RequirePermission perm="admin">
+                      <AdminPanel />
+                    </RequirePermission>
+                  }
+                />
+
+                {/* Kitchen Portal — requires kitchen permission */}
+                <Route
+                  path="/kitchen"
+                  element={
+                    <RequirePermission perm="kitchen">
+                      <KitchenPortal />
+                    </RequirePermission>
+                  }
+                />
+
+                {/* Bar Portal — requires bar permission */}
+                <Route
+                  path="/bar"
+                  element={
+                    <RequirePermission perm="bar">
+                      <BarPortal />
+                    </RequirePermission>
+                  }
+                />
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

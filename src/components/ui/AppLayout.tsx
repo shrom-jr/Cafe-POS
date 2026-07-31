@@ -2,21 +2,18 @@ import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStaffStore } from '@/store/useStaffStore';
 import { Role } from '@/types/staff';
+import { StaffPermissions } from '@/types/staff';
 import { LogOut } from 'lucide-react';
 
-const ALL_NAV = [
-  { path: '/',        label: 'Tables'  },
-  { path: '/history', label: 'History' },
-  { path: '/admin',   label: 'Admin'   },
+/** Navigation items ordered by display priority.
+ *  Each item maps to a specific permission key. */
+const PERM_NAV: { path: string; label: string; perm: keyof StaffPermissions }[] = [
+  { path: '/',        label: 'Tables',          perm: 'pos'     },
+  { path: '/history', label: 'History',         perm: 'pos'     },
+  { path: '/kitchen', label: 'Kitchen Portal',  perm: 'kitchen' },
+  { path: '/bar',     label: 'Bar Portal',      perm: 'bar'     },
+  { path: '/admin',   label: 'Admin',           perm: 'admin'   },
 ];
-
-// Which tabs each role can see
-const ROLE_TABS: Record<Role, string[]> = {
-  WAITER:  ['/'],
-  CASHIER: ['/', '/history'],
-  ADMIN:   ['/', '/history', '/admin'],
-  KITCHEN: [], // Kitchen users see no nav — they land on the dedicated /kitchen portal
-};
 
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
@@ -43,8 +40,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
   const currentUser = useStaffStore((s) => s.currentUser);
   const logout      = useStaffStore((s) => s.logout);
 
-  const allowedPaths = currentUser ? ROLE_TABS[currentUser.role] : [];
-  const navItems = ALL_NAV.filter((n) => allowedPaths.includes(n.path));
+  // Filter nav to only the tabs this user has permission for
+  const navItems = currentUser
+    ? PERM_NAV.filter((n) => currentUser.permissions[n.perm])
+    : [];
 
   const handleSwitchUser = () => {
     logout();
@@ -89,7 +88,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
       <button
         key={path}
         onClick={() => navigate(path)}
-        data-testid={`nav-${label.toLowerCase()}`}
+        data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
         className={NAV_BTN_BASE}
         style={active ? {
           background: 'rgba(59,130,246,0.22)',
@@ -133,7 +132,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
                 <button
                   key={path}
                   onClick={() => navigate(path)}
-                  data-testid={`nav-${label.toLowerCase()}`}
+                  data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
                   className="relative px-4 my-2 flex items-center text-sm font-semibold rounded-md transition-all duration-200 select-none active:scale-95"
                   style={active ? {
                     background: 'rgba(59,130,246,0.22)',
@@ -167,7 +166,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
               {userBadge}
             </div>
           </div>
-          {/* Row 2: nav tabs (horizontally scrollable) — hidden when role has no nav items */}
+          {/* Row 2: nav tabs (horizontally scrollable) — hidden when user has no nav items */}
           {tabs.length > 0 && (
             <div
               className="flex items-center gap-2 px-3 pb-2.5 overflow-x-auto no-scrollbar"
