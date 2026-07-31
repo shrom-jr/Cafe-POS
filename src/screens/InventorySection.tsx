@@ -4,6 +4,7 @@ import { PackagedStockTab } from './inventory/PackagedStockTab';
 import { KitchenGroceriesTab } from './inventory/KitchenGroceriesTab';
 import { PurchasesSection } from './inventory/PurchasesSection';
 import { MovementsSection } from './inventory/MovementsSection';
+import { MeatPrepLogsTab } from './inventory/MeatPrepLogsTab';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,17 +34,6 @@ const CARD_STYLE: React.CSSProperties = {
   padding: '2rem',
 };
 
-// ── Placeholder for Meat Prep Logs (Step 2.4 will replace this) ──────────────
-
-const MeatPrepPlaceholder = () => (
-  <div style={CARD_STYLE} className="flex flex-col items-center justify-center py-16 gap-3">
-    <UtensilsCrossed size={32} className="text-slate-600" />
-    <p className="text-slate-400 text-sm font-medium">Meat Prep Logs</p>
-    <p className="text-slate-600 text-xs text-center max-w-xs">
-      Full meat prep tracking coming in Step 2.4. Marination, mincing and grill dispatch logs will appear here.
-    </p>
-  </div>
-);
 
 // ── Slide-over drawer wrapper ─────────────────────────────────────────────────
 
@@ -174,7 +164,7 @@ export const InventorySection = () => {
       )}
 
       {activePillar === 'meat-prep' && (
-        <MeatPrepPlaceholder />
+        <MeatPrepLogsTab />
       )}
 
       {/* ── Secondary slide-over drawers ──────────────────────────────────── */}

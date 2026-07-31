@@ -4,6 +4,8 @@ import AppLayout from '@/components/ui/AppLayout';
 import { Plus, ChefHat, DollarSign, Flame, AlertTriangle, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
+import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
+import type { MeatEntry, MeatAction } from '@/store/useMeatTrackerStore';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,17 +20,6 @@ interface PurchaseEntry {
   quantity: string;          // formatted: "5 kg", "2 L"
   rate: number;
   totalCost: number;
-}
-
-type MeatAction = 'Marinated' | 'Minced (Keema)' | 'Sent to Grill';
-
-interface MeatEntry {
-  id: string;
-  date: string;
-  time: string;
-  meatItem: string;
-  action: MeatAction;
-  quantity: string;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -46,14 +37,6 @@ const inferCategory = (itemName: string): PurchaseCategory =>
     ? 'Meats'
     : 'Groceries & Supplies';
 
-// ── LocalStorage ─────────────────────────────────────────────────────────────
-
-const MEAT_KEY = 'kitchen_meat_tracker';
-
-const loadMeat = (): MeatEntry[] => {
-  try { return JSON.parse(localStorage.getItem(MEAT_KEY) || '[]'); } catch { return []; }
-};
-const saveMeat = (d: MeatEntry[]) => localStorage.setItem(MEAT_KEY, JSON.stringify(d));
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -872,23 +855,17 @@ const KitchenPortal = () => {
   const addPurchase       = useKitchenPurchasesStore((s) => s.addPurchase);
   const deletePurchaseKP  = useKitchenPurchasesStore((s) => s.deletePurchase);
 
-  const [meatEntries, setMeatEntries] = useState<MeatEntry[]>(loadMeat);
-  const [activeTab,   setActiveTab]   = useState<KitchenTab>('purchases');
+  const meatEntries    = useMeatTrackerStore((s) => s.meatEntries);
+  const addMeatEntry   = useMeatTrackerStore((s) => s.addMeatEntry);
+  const deleteMeatEntry = useMeatTrackerStore((s) => s.deleteMeatEntry);
+
+  const [activeTab, setActiveTab] = useState<KitchenTab>('purchases');
 
   const handlePurchaseAdded   = (entry: PurchaseEntry) => addPurchase(entry);
   const handlePurchaseDeleted = (id: string) => deletePurchaseKP(id);
 
-  const handleMeatAdded = (entry: MeatEntry) => {
-    const updated = [entry, ...meatEntries];
-    setMeatEntries(updated);
-    saveMeat(updated);
-  };
-
-  const handleMeatDeleted = (id: string) => {
-    const updated = meatEntries.filter((e) => e.id !== id);
-    setMeatEntries(updated);
-    saveMeat(updated);
-  };
+  const handleMeatAdded   = (entry: MeatEntry) => addMeatEntry(entry);
+  const handleMeatDeleted = (id: string) => deleteMeatEntry(id);
 
   return (
     <AppLayout title="Kitchen Portal">
