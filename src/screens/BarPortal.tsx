@@ -225,6 +225,13 @@ const BarPortal = () => {
     fontSize: 14,
   };
 
+  // Native <select> needs colorScheme so the browser renders the popup in dark
+  // mode; option styles below are a cross-browser fallback.
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    colorScheme: 'dark',
+  };
+
   const labelStyle: React.CSSProperties = {
     fontSize: 11,
     fontWeight: 600,
@@ -290,16 +297,28 @@ const BarPortal = () => {
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                style={inputStyle}
+                style={selectStyle}
               >
-                <option value="">— Select a product —</option>
+                <option value="" style={{ background: '#1e293b', color: '#e2e8f0' }}>
+                  — Select a product —
+                </option>
                 {(['alcohol', 'beverage', 'cigarette'] as InvProductType[]).map((type) => {
                   const items = allProducts.filter((p) => p.productType === type);
                   if (items.length === 0) return null;
                   return (
-                    <optgroup key={type} label={TYPE_META[type].label}>
+                    <optgroup
+                      key={type}
+                      label={TYPE_META[type].label}
+                      style={{ background: '#0f172a', color: '#94a3b8' }}
+                    >
                       {items.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
+                        <option
+                          key={p.id}
+                          value={p.id}
+                          style={{ background: '#1e293b', color: '#f1f5f9' }}
+                        >
+                          {p.name}
+                        </option>
                       ))}
                     </optgroup>
                   );
