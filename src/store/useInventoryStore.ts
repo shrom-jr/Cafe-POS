@@ -15,14 +15,22 @@ function getLS<T>(key: string, fallback: T): T {
 function setLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
-// Seeds on first run only (key absent from localStorage). Never overwrites existing data.
-function getWithSeed<T>(key: string, seed: T): T {
+// Seeds when localStorage key is absent OR stored value is an empty array.
+// Writes the seed back to localStorage immediately so all consumers see it on load.
+function getWithSeed<T extends unknown[]>(key: string, seed: T): T {
   try {
-    const d = localStorage.getItem(key);
-    if (d !== null) return JSON.parse(d);
+    const raw = localStorage.getItem(key);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as T;
+      // Stored value is [] or invalid — fall through to seed
+    }
     localStorage.setItem(key, JSON.stringify(seed));
     return seed;
-  } catch { return seed; }
+  } catch {
+    localStorage.setItem(key, JSON.stringify(seed));
+    return seed;
+  }
 }
 
 // ── Default seed products (shown on first launch; user can edit/delete freely) ─
