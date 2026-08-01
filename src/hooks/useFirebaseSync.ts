@@ -176,27 +176,30 @@ export function useFirebaseSync() {
         }
       },
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
-        const currentProducts = useInventoryStore.getState().alcoholProducts;
+        // Always mark loaded so the push-to-Firebase effect can run.
         hasLoadedAlcoholProducts.current = true;
-
+        // Empty remote means Firebase node doesn't exist yet — keep local state
+        // intact so adjust* stock values aren't overwritten with [].
+        if (remoteProducts.length === 0) return;
+        const currentProducts = useInventoryStore.getState().alcoholProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteAlcoholProductsUpdate.current = true;
           setAlcoholProducts(remoteProducts);
         }
       },
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
-        const currentProducts = useInventoryStore.getState().beverageProducts;
         hasLoadedBeverageProducts.current = true;
-
+        if (remoteProducts.length === 0) return;
+        const currentProducts = useInventoryStore.getState().beverageProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteBeverageProductsUpdate.current = true;
           setBeverageProducts(remoteProducts);
         }
       },
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
-        const currentProducts = useInventoryStore.getState().cigaretteProducts;
         hasLoadedCigaretteProducts.current = true;
-
+        if (remoteProducts.length === 0) return;
+        const currentProducts = useInventoryStore.getState().cigaretteProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteCigaretteProductsUpdate.current = true;
           setCigaretteProducts(remoteProducts);

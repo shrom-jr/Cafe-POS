@@ -125,20 +125,14 @@ interface InventoryState {
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useInventoryStore = create<InventoryState>((set, get) => ({
   alcoholProducts:   getWithSeed(INV_KEYS.alcohol,    SEED_ALCOHOL),
-  setAlcoholProducts: (products) => {
-    setLS(INV_KEYS.alcohol, products);
-    set({ alcoholProducts: products });
-  },
+  // setAlcohol/Beverage/CigaretteProducts are called ONLY by Firebase sync.
+  // They must NOT write localStorage — adjust* and add* actions own persistence.
+  // Writing here would let stale Firebase data corrupt localStorage on reload.
+  setAlcoholProducts:   (products) => set({ alcoholProducts: products }),
   beverageProducts:  getWithSeed(INV_KEYS.beverages,  SEED_BEVERAGES),
-  setBeverageProducts: (products) => {
-    setLS(INV_KEYS.beverages, products);
-    set({ beverageProducts: products });
-  },
+  setBeverageProducts:  (products) => set({ beverageProducts: products }),
   cigaretteProducts: getWithSeed(INV_KEYS.cigarettes, SEED_CIGARETTES),
-  setCigaretteProducts: (products) => {
-    setLS(INV_KEYS.cigarettes, products);
-    set({ cigaretteProducts: products });
-  },
+  setCigaretteProducts: (products) => set({ cigaretteProducts: products }),
   groceryPurchases:  getLS(INV_KEYS.grocery,    []),
   setGroceryPurchases: (purchases) => set({ groceryPurchases: purchases }),
   invMovements:      getLS(INV_KEYS.movements,  []),

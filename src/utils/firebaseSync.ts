@@ -251,25 +251,30 @@ export function subscribeToAreaOrder(store: FirebaseSyncStore) {
 // Subscribe to Live Alcohol Products
 export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "alcoholProducts"), (snapshot) => {
-    // Guard: if Firebase has no node yet, keep local state — never overwrite with [].
-    if (!snapshot.exists()) return;
-    store.setAlcoholProducts(toArray(snapshot.val()) as AlcoholProduct[]);
+    // When Firebase node is absent we pass [] so the hook marks hasLoaded=true
+    // and the push-to-Firebase effect can fire, seeding the remote node.
+    // The hook handler guards against overwriting non-empty local state with [].
+    store.setAlcoholProducts(
+      snapshot.exists() ? (toArray(snapshot.val()) as AlcoholProduct[]) : []
+    );
   });
 }
 
 // Subscribe to Live Beverage Products
 export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "beverageProducts"), (snapshot) => {
-    if (!snapshot.exists()) return;
-    store.setBeverageProducts(toArray(snapshot.val()) as BeverageProduct[]);
+    store.setBeverageProducts(
+      snapshot.exists() ? (toArray(snapshot.val()) as BeverageProduct[]) : []
+    );
   });
 }
 
 // Subscribe to Live Cigarette Products
 export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "cigaretteProducts"), (snapshot) => {
-    if (!snapshot.exists()) return;
-    store.setCigaretteProducts(toArray(snapshot.val()) as CigaretteProduct[]);
+    store.setCigaretteProducts(
+      snapshot.exists() ? (toArray(snapshot.val()) as CigaretteProduct[]) : []
+    );
   });
 }
 
