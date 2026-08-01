@@ -1,0 +1,29 @@
+### Permanent Architectural Fix: Firebase RTDB as Single Source of Truth for Inventory
+
+We wiped the database to start fresh. We need a clean, robust data architecture where Firebase Realtime Database (RTDB) is the SINGLE master authority for inventory state. `localStorage` must NOT overwrite Firebase data or maintain conflicting state.
+
+#### Core Architectural Requirements:
+
+1. **Auto-Seed Empty Database**:
+   - In `useFirebaseSync.ts` / startup initialization: Check if Firebase RTDB nodes `/alcoholProducts`, `/beverageProducts`, and `/cigaretteProducts` exist.
+   - If missing or empty: Immediately push the master seed default items to Firebase RTDB:
+     - **Vodka** (Alcohol, 750ml, currentStock: 0)
+     - **Pepsi** (Beverage, 24pcs/carton, currentStock: 0)
+     - **Surya** (Cigarette, 25 sticks/packet, currentStock: 0)
+   - Do NOT store or read `[]` empty defaults from `localStorage` that block seeding.
+
+2. **Unidirectional Sync (Firebase -> Zustand Store -> UI)**:
+   - Configure real-time database listeners on `/alcoholProducts`, `/beverageProducts`, and `/cigaretteProducts`.
+   - When Firebase fires snapshot updates, update the Zustand `useInventoryStore` memory state.
+   - Remove any `localStorage` setters from real-time sync listeners that overwrite local stock with stale data.
+
+3. **Atomic Restock & Movement Logging**:
+   - In restock/loss logging actions (`adjustAlcohol`, `adjustBeverage`, `adjustCigarette`):
+     - Dynamically calculate new stock based on user input (`currentStock + restockQty` or `currentStock - lossQty`).
+     - Update **BOTH** the target product's `currentStock` under its Firebase node (`/{category}Products/{productId}/currentStock`) **AND** append the audit log entry to `/invMovements`.
+
+4. **Verification**:
+   - `Packaged & Bar Stock` table and `Bar Portal` dropdown must instantly display Vodka, Pepsi, Surya upon app launch.
+   - Logging any restock quantity on a product must dynamically update its `currentStock` in Firebase RTDB, reflect in the Admin table, recalculate `Total Stock Value`, and add an audit record under `Purchases Ledger`.
+
+Zero TypeScript errors, clean HMR execution, no infinite sync loops.

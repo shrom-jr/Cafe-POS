@@ -1,5 +1,10 @@
 import { ref, onValue, set } from "firebase/database";
 import { db } from "../firebase";
+import {
+  SEED_ALCOHOL,
+  SEED_BEVERAGES,
+  SEED_CIGARETTES,
+} from "../store/useInventoryStore";
 import type {
   Order,
   CafeTable,

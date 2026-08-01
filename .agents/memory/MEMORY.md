@@ -2,3 +2,4 @@
 - [Dynamic Pillars Architecture](dynamic-pillars.md) — pillars are a persisted string[] in store/db, not a hardcoded union; CategoryPillar = string
 - [Firebase Database Singleton](firebase-database-singleton.md) — connection telemetry must reuse the app's configured db instance to avoid duplicate database initialization
 - [Staff Firebase sync](staff-firebase-sync.md) — setUsers must persist to localStorage; subscribeToStaff must default active:true; never seed defaults back to Firebase
+- [Firebase Inventory Source of Truth](firebase-inventory-source-of-truth.md) — alcohol/beverage/cigarette products and invMovements must never be read from or written to localStorage; Firebase is the single master

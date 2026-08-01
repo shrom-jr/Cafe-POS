@@ -15,42 +15,22 @@ function getLS<T>(key: string, fallback: T): T {
 function setLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
-// Seeds when localStorage key is absent OR stored value is an empty array.
-// Writes the seed back to localStorage immediately so all consumers see it on load.
-function getWithSeed<T extends unknown[]>(key: string, seed: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw !== null) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed as T;
-      // Stored value is [] or invalid — fall through to seed
-    }
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
-  } catch {
-    localStorage.setItem(key, JSON.stringify(seed));
-    return seed;
-  }
-}
 
-// ── Default seed products (shown on first launch; user can edit/delete freely) ─
-const SEED_ALCOHOL: AlcoholProduct[] = [
-  { id: 'seed-vodka-001',   name: 'Vodka',  bottleSizeMl: 750, currentStockMl: 0, minStockMl: 750,  status: 'active' },
+// ── Master seed products — Firebase is seeded with these when its nodes are absent ─
+// Exported so useFirebaseSync can push them directly to Firebase on empty-DB startup.
+export const SEED_ALCOHOL: AlcoholProduct[] = [
+  { id: 'seed-vodka-001', name: 'Vodka', bottleSizeMl: 750, currentStockMl: 0, minStockMl: 750, status: 'active' },
 ];
-const SEED_BEVERAGES: BeverageProduct[] = [
-  { id: 'seed-pepsi-001',   name: 'Pepsi',  piecesPerCarton: 24, currentStock: 0, minStock: 5,  status: 'active' },
+export const SEED_BEVERAGES: BeverageProduct[] = [
+  { id: 'seed-pepsi-001', name: 'Pepsi', piecesPerCarton: 24, currentStock: 0, minStock: 5, status: 'active' },
 ];
-const SEED_CIGARETTES: CigaretteProduct[] = [
-  { id: 'seed-surya-001',   name: 'Surya',  sticksPerPacket: 25, currentSticks: 0, minSticks: 25, status: 'active' },
+export const SEED_CIGARETTES: CigaretteProduct[] = [
+  { id: 'seed-surya-001', name: 'Surya', sticksPerPacket: 25, currentSticks: 0, minSticks: 25, status: 'active' },
 ];
 
 const INV_KEYS = {
-  alcohol:    'inv_alcohol',
-  beverages:  'inv_beverages',
-  cigarettes: 'inv_cigarettes',
-  grocery:    'inv_grocery',
-  movements:  'inv_movements',
-  mappings:   'inv_mappings',
+  grocery:   'inv_grocery',
+  mappings:  'inv_mappings',
 };
 
 // ── State interface ───────────────────────────────────────────────────────────
@@ -124,32 +104,34 @@ interface InventoryState {
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useInventoryStore = create<InventoryState>((set, get) => ({
-  alcoholProducts:   getWithSeed(INV_KEYS.alcohol,    SEED_ALCOHOL),
-  // setAlcohol/Beverage/CigaretteProducts are called ONLY by Firebase sync.
-  // They must NOT write localStorage — adjust* and add* actions own persistence.
-  // Writing here would let stale Firebase data corrupt localStorage on reload.
+  // Firebase is the single source of truth for products and movements.
+  // Initialize as empty arrays — Firebase subscription populates them on connect
+  // (or seeds them if the nodes are absent). Never read these from localStorage.
+  alcoholProducts:   [],
   setAlcoholProducts:   (products) => set({ alcoholProducts: products }),
-  beverageProducts:  getWithSeed(INV_KEYS.beverages,  SEED_BEVERAGES),
+  beverageProducts:  [],
   setBeverageProducts:  (products) => set({ beverageProducts: products }),
-  cigaretteProducts: getWithSeed(INV_KEYS.cigarettes, SEED_CIGARETTES),
+  cigaretteProducts: [],
   setCigaretteProducts: (products) => set({ cigaretteProducts: products }),
-  groceryPurchases:  getLS(INV_KEYS.grocery,    []),
-  setGroceryPurchases: (purchases) => set({ groceryPurchases: purchases }),
-  invMovements:      getLS(INV_KEYS.movements,  []),
+  invMovements:      [],
   setInvMovements:   (movements) => set({ invMovements: movements }),
-  invMappings:       getLS(INV_KEYS.mappings,   []),
+  // Grocery purchases and mappings use localStorage as a secondary cache.
+  groceryPurchases:  getLS(INV_KEYS.grocery,  []),
+  setGroceryPurchases: (purchases) => set({ groceryPurchases: purchases }),
+  invMappings:       getLS(INV_KEYS.mappings, []),
   setInvMappings:    (mappings) => set({ invMappings: mappings }),
 
   // ── ALCOHOL ──────────────────────────────────────────────────────────────
+  // NOTE: No localStorage writes here. Firebase is the single source of truth
+  // for product state. The push effects in useFirebaseSync push Zustand state
+  // changes to Firebase, which then fans back to all connected clients.
   addAlcohol: (p) => set((s) => {
     const products = [...s.alcoholProducts, { ...p, id: crypto.randomUUID() }];
-    setLS(INV_KEYS.alcohol, products);
     return { alcoholProducts: products };
   }),
 
   updateAlcohol: (id, u) => set((s) => {
     const products = s.alcoholProducts.map((p) => p.id === id ? { ...p, ...u } : p);
-    setLS(INV_KEYS.alcohol, products);
     return { alcoholProducts: products };
   }),
 
@@ -158,7 +140,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const mappings = s.invMappings.filter(
       (m) => !(m.productType === 'alcohol' && m.productId === id)
     );
-    setLS(INV_KEYS.alcohol, products);
     setLS(INV_KEYS.mappings, mappings);
     return { alcoholProducts: products, invMappings: mappings };
   }),
@@ -167,7 +148,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const product = s.alcoholProducts.find((p) => p.id === productId);
     if (!product) return {};
     const addMl = bottles * product.bottleSizeMl;
-    let products = s.alcoholProducts.map((p) =>
+    const products = s.alcoholProducts.map((p) =>
       p.id === productId
         ? { ...p, currentStockMl: p.currentStockMl + addMl, ...(costPerBottle ? { costPerBottle } : {}) }
         : p
@@ -186,8 +167,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.alcohol, products);
-    setLS(INV_KEYS.movements, movements);
     return { alcoholProducts: products, invMovements: movements };
   }),
 
@@ -211,21 +190,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.alcohol, products);
-    setLS(INV_KEYS.movements, movements);
     return { alcoholProducts: products, invMovements: movements };
   }),
 
   // ── BEVERAGE ─────────────────────────────────────────────────────────────
   addBeverage: (p) => set((s) => {
     const products = [...s.beverageProducts, { ...p, id: crypto.randomUUID() }];
-    setLS(INV_KEYS.beverages, products);
     return { beverageProducts: products };
   }),
 
   updateBeverage: (id, u) => set((s) => {
     const products = s.beverageProducts.map((p) => p.id === id ? { ...p, ...u } : p);
-    setLS(INV_KEYS.beverages, products);
     return { beverageProducts: products };
   }),
 
@@ -234,7 +209,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const mappings = s.invMappings.filter(
       (m) => !(m.productType === 'beverage' && m.productId === id)
     );
-    setLS(INV_KEYS.beverages, products);
     setLS(INV_KEYS.mappings, mappings);
     return { beverageProducts: products, invMappings: mappings };
   }),
@@ -265,8 +239,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.beverages, products);
-    setLS(INV_KEYS.movements, movements);
     return { beverageProducts: products, invMovements: movements };
   }),
 
@@ -290,21 +262,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.beverages, products);
-    setLS(INV_KEYS.movements, movements);
     return { beverageProducts: products, invMovements: movements };
   }),
 
   // ── CIGARETTE ────────────────────────────────────────────────────────────
   addCigarette: (p) => set((s) => {
     const products = [...s.cigaretteProducts, { ...p, id: crypto.randomUUID() }];
-    setLS(INV_KEYS.cigarettes, products);
     return { cigaretteProducts: products };
   }),
 
   updateCigarette: (id, u) => set((s) => {
     const products = s.cigaretteProducts.map((p) => p.id === id ? { ...p, ...u } : p);
-    setLS(INV_KEYS.cigarettes, products);
     return { cigaretteProducts: products };
   }),
 
@@ -313,7 +281,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const mappings = s.invMappings.filter(
       (m) => !(m.productType === 'cigarette' && m.productId === id)
     );
-    setLS(INV_KEYS.cigarettes, products);
     setLS(INV_KEYS.mappings, mappings);
     return { cigaretteProducts: products, invMappings: mappings };
   }),
@@ -344,8 +311,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.cigarettes, products);
-    setLS(INV_KEYS.movements, movements);
     return { cigaretteProducts: products, invMovements: movements };
   }),
 
@@ -369,8 +334,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       timestamp: Date.now(),
     };
     const movements = [...s.invMovements, movement];
-    setLS(INV_KEYS.cigarettes, products);
-    setLS(INV_KEYS.movements, movements);
     return { cigaretteProducts: products, invMovements: movements };
   }),
 
@@ -484,10 +447,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (newMovements.length === 0) return;
 
     const movements = [...s.invMovements, ...newMovements];
-    setLS(INV_KEYS.alcohol,    updatedAlcohol);
-    setLS(INV_KEYS.beverages,  updatedBeverages);
-    setLS(INV_KEYS.cigarettes, updatedCigarettes);
-    setLS(INV_KEYS.movements,  movements);
     set({
       alcoholProducts:   updatedAlcohol,
       beverageProducts:  updatedBeverages,
