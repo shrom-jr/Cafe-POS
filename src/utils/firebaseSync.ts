@@ -251,6 +251,8 @@ export function subscribeToAreaOrder(store: FirebaseSyncStore) {
 // Subscribe to Live Alcohol Products
 export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "alcoholProducts"), (snapshot) => {
+    // Guard: if Firebase has no node yet, keep local state — never overwrite with [].
+    if (!snapshot.exists()) return;
     store.setAlcoholProducts(toArray(snapshot.val()) as AlcoholProduct[]);
   });
 }
@@ -258,6 +260,7 @@ export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
 // Subscribe to Live Beverage Products
 export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "beverageProducts"), (snapshot) => {
+    if (!snapshot.exists()) return;
     store.setBeverageProducts(toArray(snapshot.val()) as BeverageProduct[]);
   });
 }
@@ -265,6 +268,7 @@ export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
 // Subscribe to Live Cigarette Products
 export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "cigaretteProducts"), (snapshot) => {
+    if (!snapshot.exists()) return;
     store.setCigaretteProducts(toArray(snapshot.val()) as CigaretteProduct[]);
   });
 }
