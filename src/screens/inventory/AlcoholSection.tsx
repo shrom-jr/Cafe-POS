@@ -21,7 +21,7 @@ const EMPTY_PF = {
   name: '',
   bottleSizeMl: '750',
   currentStockBottles: '0',
-  minStockBottles: '3',
+  minStockBottles: '',
   costPerBottle: '',
   status: 'active' as 'active' | 'inactive',
 };
@@ -52,16 +52,16 @@ const ProductForm = ({ editProduct, onClose }: ProductFormProps) => {
 
   const bsz = parseFloat(form.bottleSizeMl);
   const csb = parseFloat(form.currentStockBottles);
-  const msb = parseFloat(form.minStockBottles);
+  const msb = form.minStockBottles === '' ? 0 : parseFloat(form.minStockBottles);
 
   const currentMlPreview = !isNaN(bsz) && !isNaN(csb) && bsz > 0 ? csb * bsz : null;
-  const minMlPreview     = !isNaN(bsz) && !isNaN(msb) && bsz > 0 ? msb * bsz : null;
+  const minMlPreview     = !isNaN(bsz) && msb > 0 && bsz > 0 ? msb * bsz : null;
 
   const handleSave = () => {
     if (!form.name.trim())           return toast.error('Name is required');
     if (isNaN(bsz) || bsz <= 0)     return toast.error('Bottle size must be greater than 0');
     if (isNaN(csb) || csb < 0)      return toast.error('Current stock must be 0 or more');
-    if (isNaN(msb) || msb < 0)      return toast.error('Min stock must be 0 or more');
+    if (!isNaN(msb) && msb < 0)     return toast.error('Min stock must be 0 or more');
     const cpu = form.costPerBottle !== '' ? parseFloat(form.costPerBottle) : undefined;
     if (cpu !== undefined && (isNaN(cpu) || cpu < 0)) return toast.error('Invalid cost per bottle');
 
@@ -118,8 +118,8 @@ const ProductForm = ({ editProduct, onClose }: ProductFormProps) => {
 
         {/* Min Stock Alert */}
         <div>
-          <label className={LABEL}>Min Stock Alert (bottles) *</label>
-          <input className={INPUT} type="number" min="0" step="0.5" placeholder="3"
+          <label className={LABEL}>Min Stock Alert (bottles)</label>
+          <input className={INPUT} type="number" min="0" step="0.5" placeholder="e.g. 3 (optional)"
             value={form.minStockBottles} onChange={f('minStockBottles')} />
           {minMlPreview !== null && (
             <p className="text-xs text-muted-foreground/60 mt-1">

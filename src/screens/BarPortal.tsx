@@ -145,6 +145,27 @@ const BarPortal = () => {
 
   const selectedProduct = allProducts.find((p) => p.id === productId) ?? null;
 
+  // ── Unit cost for auto-calculating Total Cost as user types qty ──
+  // Returns cost per qty-unit (bottle / piece / packet) or null if not set.
+  const unitCost = useMemo<number | null>(() => {
+    if (!selectedProduct) return null;
+    if (selectedProduct.productType === 'alcohol') {
+      const p = alcoholProducts.find((p) => p.id === productId);
+      return p?.costPerBottle ?? null;
+    }
+    if (selectedProduct.productType === 'beverage') {
+      const p = beverageProducts.find((p) => p.id === productId);
+      if (!p?.costPerCarton || p.piecesPerCarton <= 0) return null;
+      // qty is in pieces; cost is per carton → derive cost per piece
+      return p.costPerCarton / p.piecesPerCarton;
+    }
+    if (selectedProduct.productType === 'cigarette') {
+      const p = cigaretteProducts.find((p) => p.id === productId);
+      return p?.costPerPacket ?? null;
+    }
+    return null;
+  }, [selectedProduct, productId, alcoholProducts, beverageProducts, cigaretteProducts]);
+
   // ── Today's entries ──
   const today        = todayStr();
   const todayEntries = useMemo(
@@ -416,7 +437,17 @@ const BarPortal = () => {
                 step="1"
                 placeholder="0"
                 value={qty}
-                onChange={(e) => setQty(e.target.value)}
+                onChange={(e) => {
+                  const newQty = e.target.value;
+                  setQty(newQty);
+                  // Auto-fill Total Cost when a unit cost is available
+                  if (unitCost !== null && entryType === 'Restock') {
+                    const qtyNum = parseFloat(newQty);
+                    setTotalCost(!isNaN(qtyNum) && qtyNum > 0
+                      ? String(Math.round(qtyNum * unitCost))
+                      : '');
+                  }
+                }}
                 style={inputStyle}
               />
             </div>

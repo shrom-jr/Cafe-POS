@@ -20,7 +20,7 @@ function fmtCigStock(sticks: number, sticksPerPacket: number) {
 
 // ── Product Form ──────────────────────────────────────────────────────────────
 const EMPTY_PF = {
-  name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '2',
+  name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '',
   costPerPacket: '', status: 'active' as 'active' | 'inactive',
 };
 
@@ -61,8 +61,8 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct;
     if (isNaN(spp) || spp <= 0) return toast.error('Sticks per packet must be > 0');
     const cp = parseFloat(form.currentPackets);
     if (isNaN(cp) || cp < 0) return toast.error('Current stock is required (0 or more)');
-    const mp = parseFloat(form.minPackets);
-    if (isNaN(mp) || mp < 0) return toast.error('Min stock must be 0 or more');
+    const mp = form.minPackets === '' ? 0 : parseFloat(form.minPackets);
+    if (!isNaN(mp) && mp < 0) return toast.error('Min stock must be 0 or more');
     const cpp = form.costPerPacket !== '' ? parseFloat(form.costPerPacket) : undefined;
     if (cpp !== undefined && (isNaN(cpp) || cpp < 0)) return toast.error('Invalid cost per packet');
 
@@ -102,8 +102,8 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: CigaretteProduct;
           )}
         </div>
         <div>
-          <label className={LABEL}>Min Stock Alert (packets) *</label>
-          <input className={INPUT} type="number" min="0" step="1" placeholder="2" value={form.minPackets} onChange={f('minPackets')} />
+          <label className={LABEL}>Min Stock Alert (packets)</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="e.g. 2 (optional)" value={form.minPackets} onChange={f('minPackets')} />
         </div>
         <div>
           <label className={LABEL}>Cost per Packet (optional)</label>

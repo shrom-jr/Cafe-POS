@@ -135,17 +135,18 @@ const AlcoholAddEditForm = ({ edit, onClose }: { edit?: AlcoholProduct; onClose:
     currentStockBottles: String(edit.currentStockMl / edit.bottleSizeMl),
     minStockBottles: String(edit.minStockMl / edit.bottleSizeMl),
     costPerBottle: edit.costPerBottle !== undefined ? String(edit.costPerBottle) : '',
-  } : { name: '', bottleSizeMl: '750', currentStockBottles: '0', minStockBottles: '3', costPerBottle: '', status: 'active' as const };
+  } : { name: '', bottleSizeMl: '750', currentStockBottles: '0', minStockBottles: '', costPerBottle: '', status: 'active' as const };
 
   const [f, setF] = useState(init);
   const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
 
   const handleSave = () => {
-    const bsz = parseFloat(f.bottleSizeMl), csb = parseFloat(f.currentStockBottles), msb = parseFloat(f.minStockBottles);
+    const bsz = parseFloat(f.bottleSizeMl), csb = parseFloat(f.currentStockBottles);
+    const msb = f.minStockBottles === '' ? 0 : parseFloat(f.minStockBottles);
     if (!f.name.trim())         return toast.error('Name required');
     if (isNaN(bsz) || bsz <= 0) return toast.error('Bottle size must be > 0');
     if (isNaN(csb) || csb < 0)  return toast.error('Current stock must be ≥ 0');
-    if (isNaN(msb) || msb < 0)  return toast.error('Min stock must be ≥ 0');
+    if (!isNaN(msb) && msb < 0)  return toast.error('Min stock must be ≥ 0');
     const cpu = f.costPerBottle !== '' ? parseFloat(f.costPerBottle) : undefined;
     if (cpu !== undefined && isNaN(cpu)) return toast.error('Invalid cost');
     const data = { name: f.name.trim(), bottleSizeMl: Math.round(bsz), currentStockMl: Math.round(csb * bsz), minStockMl: Math.round(msb * bsz), costPerBottle: cpu, status: f.status as 'active' | 'inactive' };
@@ -161,7 +162,7 @@ const AlcoholAddEditForm = ({ edit, onClose }: { edit?: AlcoholProduct; onClose:
         <div className="col-span-2 sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Ruslan Vodka" value={f.name} onChange={upd('name')} autoFocus /></div>
         <div><label className={LABEL}>Bottle Size (ml) *</label><input className={INPUT} type="number" min="1" value={f.bottleSizeMl} onChange={upd('bottleSizeMl')} /></div>
         <div><label className={LABEL}>Current Stock (btl) *</label><input className={INPUT} type="number" min="0" step="0.5" value={f.currentStockBottles} onChange={upd('currentStockBottles')} /></div>
-        <div><label className={LABEL}>Min Stock (btl) *</label><input className={INPUT} type="number" min="0" step="0.5" value={f.minStockBottles} onChange={upd('minStockBottles')} /></div>
+        <div><label className={LABEL}>Min Stock (btl)</label><input className={INPUT} type="number" min="0" step="0.5" placeholder="optional" value={f.minStockBottles} onChange={upd('minStockBottles')} /></div>
         <div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerBottle} onChange={upd('costPerBottle')} /></div>
       </div>
       <div className="flex gap-2 mt-4">
@@ -230,15 +231,16 @@ const BeverageAddEditForm = ({ edit, onClose }: { edit?: BeverageProduct; onClos
     currentStock: String(Math.floor(edit.currentStock / edit.piecesPerCarton)),
     minStock: String(Math.round(edit.minStock / edit.piecesPerCarton)),
     costPerCarton: edit.costPerCarton !== undefined ? String(edit.costPerCarton) : '',
-  } : { name: '', piecesPerCarton: '24', currentStock: '', minStock: '2', costPerCarton: '', status: 'active' as const };
+  } : { name: '', piecesPerCarton: '24', currentStock: '', minStock: '', costPerCarton: '', status: 'active' as const };
   const [f, setF] = useState(init);
   const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
   const handleSave = () => {
-    const ppc = parseFloat(f.piecesPerCarton), cs = parseFloat(f.currentStock), ms = parseFloat(f.minStock);
+    const ppc = parseFloat(f.piecesPerCarton), cs = parseFloat(f.currentStock);
+    const ms = f.minStock === '' ? 0 : parseFloat(f.minStock);
     if (!f.name.trim())         return toast.error('Name required');
     if (isNaN(ppc) || ppc <= 0) return toast.error('Pieces per carton must be > 0');
     if (isNaN(cs) || cs < 0)   return toast.error('Current stock must be ≥ 0');
-    if (isNaN(ms) || ms < 0)   return toast.error('Min stock must be ≥ 0');
+    if (!isNaN(ms) && ms < 0)   return toast.error('Min stock must be ≥ 0');
     const cpc = f.costPerCarton !== '' ? parseFloat(f.costPerCarton) : undefined;
     const ppcR = Math.round(ppc);
     const data = { name: f.name.trim(), piecesPerCarton: ppcR, currentStock: Math.round(cs) * ppcR, minStock: Math.round(ms) * ppcR, costPerCarton: cpc && !isNaN(cpc) ? cpc : undefined, status: f.status as 'active' | 'inactive' };
@@ -253,7 +255,7 @@ const BeverageAddEditForm = ({ edit, onClose }: { edit?: BeverageProduct; onClos
         <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Pepsi" value={f.name} onChange={upd('name')} autoFocus /></div>
         <div><label className={LABEL}>Pcs/Carton *</label><input className={INPUT} type="number" min="1" value={f.piecesPerCarton} onChange={upd('piecesPerCarton')} /></div>
         <div><label className={LABEL}>Current (cartons) *</label><input className={INPUT} type="number" min="0" step="1" value={f.currentStock} onChange={upd('currentStock')} /></div>
-        <div><label className={LABEL}>Min (cartons) *</label><input className={INPUT} type="number" min="0" step="1" value={f.minStock} onChange={upd('minStock')} /></div>
+        <div><label className={LABEL}>Min (cartons)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={f.minStock} onChange={upd('minStock')} /></div>
         <div><label className={LABEL}>Cost/Carton</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerCarton} onChange={upd('costPerCarton')} /></div>
       </div>
       <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
@@ -319,15 +321,16 @@ const CigaretteAddEditForm = ({ edit, onClose }: { edit?: CigaretteProduct; onCl
     currentPackets: String(Math.floor(edit.currentSticks / edit.sticksPerPacket)),
     minPackets: String(Math.round(edit.minSticks / edit.sticksPerPacket)),
     costPerPacket: edit.costPerPacket !== undefined ? String(edit.costPerPacket) : '',
-  } : { name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '2', costPerPacket: '', status: 'active' as const };
+  } : { name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '', costPerPacket: '', status: 'active' as const };
   const [f, setF] = useState(init);
   const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
   const handleSave = () => {
-    const spp = parseFloat(f.sticksPerPacket), cp = parseFloat(f.currentPackets), mp = parseFloat(f.minPackets);
+    const spp = parseFloat(f.sticksPerPacket), cp = parseFloat(f.currentPackets);
+    const mp = f.minPackets === '' ? 0 : parseFloat(f.minPackets);
     if (!f.name.trim())         return toast.error('Name required');
     if (isNaN(spp) || spp <= 0) return toast.error('Sticks per packet must be > 0');
     if (isNaN(cp) || cp < 0)   return toast.error('Current stock must be ≥ 0');
-    if (isNaN(mp) || mp < 0)   return toast.error('Min stock must be ≥ 0');
+    if (!isNaN(mp) && mp < 0)   return toast.error('Min stock must be ≥ 0');
     const cpp = f.costPerPacket !== '' ? parseFloat(f.costPerPacket) : undefined;
     const sppR = Math.round(spp);
     const data = { name: f.name.trim(), sticksPerPacket: sppR, currentSticks: Math.round(cp) * sppR, minSticks: Math.round(mp) * sppR, costPerPacket: cpp && !isNaN(cpp) ? cpp : undefined, status: f.status as 'active' | 'inactive' };
@@ -342,7 +345,7 @@ const CigaretteAddEditForm = ({ edit, onClose }: { edit?: CigaretteProduct; onCl
         <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Surya Classic" value={f.name} onChange={upd('name')} autoFocus /></div>
         <div><label className={LABEL}>Sticks/Packet *</label><input className={INPUT} type="number" min="1" value={f.sticksPerPacket} onChange={upd('sticksPerPacket')} /></div>
         <div><label className={LABEL}>Current (packets) *</label><input className={INPUT} type="number" min="0" step="1" value={f.currentPackets} onChange={upd('currentPackets')} /></div>
-        <div><label className={LABEL}>Min (packets) *</label><input className={INPUT} type="number" min="0" step="1" value={f.minPackets} onChange={upd('minPackets')} /></div>
+        <div><label className={LABEL}>Min (packets)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={f.minPackets} onChange={upd('minPackets')} /></div>
         <div><label className={LABEL}>Cost/Packet</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerPacket} onChange={upd('costPerPacket')} /></div>
       </div>
       <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>

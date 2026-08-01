@@ -20,7 +20,7 @@ function fmtBevStock(pieces: number, piecesPerCarton: number) {
 
 // ── Product Form ──────────────────────────────────────────────────────────────
 const EMPTY_PF = {
-  name: '', piecesPerCarton: '24', currentStock: '', minStock: '2',
+  name: '', piecesPerCarton: '24', currentStock: '', minStock: '',
   costPerCarton: '', status: 'active' as 'active' | 'inactive',
 };
 
@@ -60,8 +60,8 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; 
     if (isNaN(ppc) || ppc <= 0) return toast.error('Pieces per carton must be > 0');
     const cs = parseFloat(form.currentStock);
     if (isNaN(cs) || cs < 0) return toast.error('Current stock is required (0 or more)');
-    const min = parseFloat(form.minStock);
-    if (isNaN(min) || min < 0) return toast.error('Min stock must be 0 or more');
+    const min = form.minStock === '' ? 0 : parseFloat(form.minStock);
+    if (!isNaN(min) && min < 0) return toast.error('Min stock must be 0 or more');
     const cpc = form.costPerCarton !== '' ? parseFloat(form.costPerCarton) : undefined;
     if (cpc !== undefined && (isNaN(cpc) || cpc < 0)) return toast.error('Invalid cost per carton');
 
@@ -101,8 +101,8 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; 
           )}
         </div>
         <div>
-          <label className={LABEL}>Min Stock Alert (cartons/crates) *</label>
-          <input className={INPUT} type="number" min="0" step="1" placeholder="2" value={form.minStock} onChange={f('minStock')} />
+          <label className={LABEL}>Min Stock Alert (cartons/crates)</label>
+          <input className={INPUT} type="number" min="0" step="1" placeholder="e.g. 2 (optional)" value={form.minStock} onChange={f('minStock')} />
         </div>
         <div>
           <label className={LABEL}>Cost per Carton/Crate (optional)</label>
