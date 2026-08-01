@@ -217,6 +217,26 @@ const BarPortal = () => {
       invStore.adjustCigarette({ productId, changeSticks: baseUnitChange, type: movType, reason: reason ?? '' });
     }
 
+    // Auto-update master product cost price from this restock
+    // unitCost = totalCost / qty (per bottle / per piece / per packet)
+    if (entryType === 'Restock') {
+      const totalCostNum = Number(totalCost);
+      if (totalCostNum > 0 && qtyNum > 0) {
+        const perUnitCost = totalCostNum / qtyNum;
+        if (selectedProduct.productType === 'alcohol') {
+          invStore.updateAlcohol(productId, { costPerBottle: perUnitCost });
+        } else if (selectedProduct.productType === 'beverage') {
+          // qty is in pieces; store cost as per carton
+          const prod = beverageProducts.find((p) => p.id === productId);
+          if (prod) {
+            invStore.updateBeverage(productId, { costPerCarton: perUnitCost * prod.piecesPerCarton });
+          }
+        } else if (selectedProduct.productType === 'cigarette') {
+          invStore.updateCigarette(productId, { costPerPacket: perUnitCost });
+        }
+      }
+    }
+
     // Save log entry
     const entry: BarRestockEntry = {
       id:             crypto.randomUUID(),

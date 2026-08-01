@@ -58,11 +58,8 @@ function fmtAlcohol(p: AlcoholProduct): Pick<UnifiedRow, 'stockPrimary' | 'stock
       ? `${fullBtl} btl`
       : `${fullBtl} btl + ${remMl} ml`;
 
-  const minStr = minBtl === 0
-    ? `${minRemMl} ml`
-    : minRemMl === 0
-      ? `${minBtl} btl`
-      : `${minBtl} btl + ${minRemMl} ml`;
+  // Always display in btl — never raw ml
+  const minStr = `${minBtl} btl`;
 
   return {
     stockPrimary:   stockStr,
@@ -84,11 +81,8 @@ function fmtBeverage(p: BeverageProduct): Pick<UnifiedRow, 'stockPrimary' | 'sto
       ? `${crates} crates`
       : `${crates} crates + ${remPcs} pcs`;
 
-  const minStr = minCrates === 0
-    ? `${minRemPcs} pcs`
-    : minRemPcs === 0
-      ? `${minCrates} crates`
-      : `${minCrates} crates + ${minRemPcs} pcs`;
+  // Always display in crates — never raw pcs
+  const minStr = `${minCrates} crates`;
 
   return {
     stockPrimary:   stockStr,
@@ -110,11 +104,8 @@ function fmtCigarette(p: CigaretteProduct): Pick<UnifiedRow, 'stockPrimary' | 's
       ? `${pkts} packets`
       : `${pkts} packets + ${remStks} sticks`;
 
-  const minStr = minPkts === 0
-    ? `${minRemStks} sticks`
-    : minRemStks === 0
-      ? `${minPkts} packets`
-      : `${minPkts} packets + ${minRemStks} sticks`;
+  // Always display in packets — never raw sticks
+  const minStr = `${minPkts} packets`;
 
   return {
     stockPrimary:   stockStr,
@@ -430,9 +421,10 @@ export const PackagedStockTab = () => {
   // ── Summary metrics ──────────────────────────────────────────────────────
 
   const totalValue = useMemo(() => {
+    // Use fractional units (not Math.floor) so partial cartons/packets still contribute
     const alc = alcoholProducts.reduce((s, p) => s + (p.currentStockMl / p.bottleSizeMl) * (p.costPerBottle ?? 0), 0);
-    const bev = beverageProducts.reduce((s, p) => s + Math.floor(p.currentStock / p.piecesPerCarton) * (p.costPerCarton ?? 0), 0);
-    const cig = cigaretteProducts.reduce((s, p) => s + Math.floor(p.currentSticks / p.sticksPerPacket) * (p.costPerPacket ?? 0), 0);
+    const bev = beverageProducts.reduce((s, p) => s + (p.currentStock / p.piecesPerCarton) * (p.costPerCarton ?? 0), 0);
+    const cig = cigaretteProducts.reduce((s, p) => s + (p.currentSticks / p.sticksPerPacket) * (p.costPerPacket ?? 0), 0);
     return alc + bev + cig;
   }, [alcoholProducts, beverageProducts, cigaretteProducts]);
 
