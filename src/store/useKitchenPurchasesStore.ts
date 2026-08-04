@@ -42,6 +42,7 @@ const persist = (data: PurchaseEntry[]) =>
 
 interface KitchenPurchasesStore {
   purchases: PurchaseEntry[];
+  setPurchases:   (entries: PurchaseEntry[]) => void;
   addPurchase:    (entry: PurchaseEntry) => void;
   deletePurchase: (id: string) => void;
   updatePurchase: (id: string, patch: Partial<Omit<PurchaseEntry, 'id'>>) => void;
@@ -49,6 +50,11 @@ interface KitchenPurchasesStore {
 
 export const useKitchenPurchasesStore = create<KitchenPurchasesStore>((set, get) => ({
   purchases: load(),
+
+  setPurchases: (entries) => {
+    persist(entries);
+    set({ purchases: entries });
+  },
 
   addPurchase: (entry) => {
     const updated = [entry, ...get().purchases];

@@ -17,6 +17,8 @@ import type {
   InvMenuMapping,
   InventoryMovement,
 } from "../types/pos";
+import type { PurchaseEntry } from "../store/useKitchenPurchasesStore";
+import type { MeatEntry } from "../store/useMeatTrackerStore";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[]) => void;
@@ -345,5 +347,37 @@ export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
   return onValue(ref(db, "tables"), (snapshot) => {
     const cleanTables = toArray(snapshot.val()) as CafeTable[];
     callback(cleanTables);
+  });
+}
+
+// Push Kitchen Purchases
+export async function pushKitchenPurchasesToFirebase(purchases: PurchaseEntry[]) {
+  try {
+    await set(ref(db, "kitchenPurchases"), JSON.parse(JSON.stringify(purchases || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Kitchen Purchases Push FAILED]:", error);
+  }
+}
+
+// Subscribe to Live Kitchen Purchases
+export function subscribeToKitchenPurchases(callback: (purchases: PurchaseEntry[]) => void) {
+  return onValue(ref(db, "kitchenPurchases"), (snapshot) => {
+    callback(toArray(snapshot.val()) as PurchaseEntry[]);
+  });
+}
+
+// Push Meat Entries
+export async function pushMeatEntriesToFirebase(entries: MeatEntry[]) {
+  try {
+    await set(ref(db, "meatEntries"), JSON.parse(JSON.stringify(entries || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Meat Entries Push FAILED]:", error);
+  }
+}
+
+// Subscribe to Live Meat Entries
+export function subscribeToMeatEntries(callback: (entries: MeatEntry[]) => void) {
+  return onValue(ref(db, "meatEntries"), (snapshot) => {
+    callback(toArray(snapshot.val()) as MeatEntry[]);
   });
 }

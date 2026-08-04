@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { usePOSStore } from "@/store/usePOSStore";
 import { useStaffStore } from "@/store/useStaffStore";
 import { useInventoryStore } from "@/store/useInventoryStore";
+import { useKitchenPurchasesStore } from "@/store/useKitchenPurchasesStore";
+import { useMeatTrackerStore } from "@/store/useMeatTrackerStore";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -18,6 +20,8 @@ import {
   subscribeToInvMovements,
   subscribeToInvMappings,
   subscribeToStaff,
+  subscribeToKitchenPurchases,
+  subscribeToMeatEntries,
   pushOrdersToFirebase,
   pushTablesToFirebase,
   pushPaymentsToFirebase,
@@ -33,6 +37,8 @@ import {
   pushInvMovementsToFirebase,
   pushInvMappingsToFirebase,
   pushStaffToFirebase,
+  pushKitchenPurchasesToFirebase,
+  pushMeatEntriesToFirebase,
 } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
@@ -51,6 +57,8 @@ export function useFirebaseSync() {
   const groceryPurchases = useInventoryStore((s) => s.groceryPurchases);
   const invMovements = useInventoryStore((s) => s.invMovements);
   const invMappings = useInventoryStore((s) => s.invMappings);
+  const kitchenPurchases = useKitchenPurchasesStore((s) => s.purchases);
+  const meatEntries = useMeatTrackerStore((s) => s.meatEntries);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
   const setPayments = usePOSStore((s) => s.setPayments);
@@ -66,6 +74,8 @@ export function useFirebaseSync() {
   const setGroceryPurchases = useInventoryStore((s) => s.setGroceryPurchases);
   const setInvMovements = useInventoryStore((s) => s.setInvMovements);
   const setInvMappings = useInventoryStore((s) => s.setInvMappings);
+  const setKitchenPurchases = useKitchenPurchasesStore((s) => s.setPurchases);
+  const setMeatEntries = useMeatTrackerStore((s) => s.setMeatEntries);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
@@ -82,6 +92,8 @@ export function useFirebaseSync() {
   const isRemoteGroceryPurchasesUpdate = useRef(false);
   const isRemoteInvMovementsUpdate = useRef(false);
   const isRemoteInvMappingsUpdate = useRef(false);
+  const isRemoteKitchenPurchasesUpdate = useRef(false);
+  const isRemoteMeatEntriesUpdate = useRef(false);
   const hasLoadedOrders = useRef(false);
   const hasLoadedTables = useRef(false);
   const hasLoadedPayments = useRef(false);
@@ -97,6 +109,8 @@ export function useFirebaseSync() {
   const hasLoadedGroceryPurchases = useRef(false);
   const hasLoadedInvMovements = useRef(false);
   const hasLoadedInvMappings = useRef(false);
+  const hasLoadedKitchenPurchases = useRef(false);
+  const hasLoadedMeatEntries = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
   useEffect(() => {
@@ -228,6 +242,24 @@ export function useFirebaseSync() {
       },
     };
 
+    const unsubscribeKitchenPurchases = subscribeToKitchenPurchases((remote) => {
+      hasLoadedKitchenPurchases.current = true;
+      const current = useKitchenPurchasesStore.getState().purchases;
+      if (JSON.stringify(current) !== JSON.stringify(remote)) {
+        isRemoteKitchenPurchasesUpdate.current = true;
+        setKitchenPurchases(remote);
+      }
+    });
+
+    const unsubscribeMeatEntries = subscribeToMeatEntries((remote) => {
+      hasLoadedMeatEntries.current = true;
+      const current = useMeatTrackerStore.getState().meatEntries;
+      if (JSON.stringify(current) !== JSON.stringify(remote)) {
+        isRemoteMeatEntriesUpdate.current = true;
+        setMeatEntries(remote);
+      }
+    });
+
     const unsubscribePayments = subscribeToPayments(store);
     const unsubscribeSettings = subscribeToSettings(store);
     const unsubscribeMenuItems = subscribeToMenuItems(store);
@@ -268,6 +300,8 @@ export function useFirebaseSync() {
       unsubscribeInvMovements();
       unsubscribeInvMappings();
       unsubscribeStaff();
+      unsubscribeKitchenPurchases();
+      unsubscribeMeatEntries();
     };
   }, [
     setOrders,
@@ -285,6 +319,8 @@ export function useFirebaseSync() {
     setGroceryPurchases,
     setInvMovements,
     setInvMappings,
+    setKitchenPurchases,
+    setMeatEntries,
   ]);
 
   // 2. Push Local Order Changes to Cloud
@@ -436,4 +472,24 @@ export function useFirebaseSync() {
     }
     pushStaffToFirebase(users);
   }, [users]);
+
+  // 17. Push Local Kitchen Purchases to Cloud
+  useEffect(() => {
+    if (!hasLoadedKitchenPurchases.current) return;
+    if (isRemoteKitchenPurchasesUpdate.current) {
+      isRemoteKitchenPurchasesUpdate.current = false;
+      return;
+    }
+    pushKitchenPurchasesToFirebase(kitchenPurchases);
+  }, [kitchenPurchases]);
+
+  // 18. Push Local Meat Entries to Cloud
+  useEffect(() => {
+    if (!hasLoadedMeatEntries.current) return;
+    if (isRemoteMeatEntriesUpdate.current) {
+      isRemoteMeatEntriesUpdate.current = false;
+      return;
+    }
+    pushMeatEntriesToFirebase(meatEntries);
+  }, [meatEntries]);
 }

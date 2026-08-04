@@ -38,12 +38,18 @@ const persist = (data: MeatEntry[]) =>
 
 interface MeatTrackerStore {
   meatEntries: MeatEntry[];
+  setMeatEntries:  (entries: MeatEntry[]) => void;
   addMeatEntry:    (entry: MeatEntry) => void;
   deleteMeatEntry: (id: string) => void;
 }
 
 export const useMeatTrackerStore = create<MeatTrackerStore>((set, get) => ({
   meatEntries: load(),
+
+  setMeatEntries: (entries) => {
+    persist(entries);
+    set({ meatEntries: entries });
+  },
 
   addMeatEntry: (entry) => {
     const updated = [entry, ...get().meatEntries];
