@@ -4,15 +4,13 @@ import { toast } from 'sonner';
 import { GlassWater, PackagePlus, Trash2, TrendingDown, TrendingUp, BarChart3, ShoppingBag, Plus, X } from 'lucide-react';
 import AppLayout from '@/components/ui/AppLayout';
 import { useInventoryStore } from '@/store/useInventoryStore';
-import { useBarRestockStore, BarRestockEntry } from '@/store/useBarRestockStore';
 import { useStaffStore } from '@/store/useStaffStore';
-import { InvProductType } from '@/types/pos';
+import { InventoryMovement, InvProductType } from '@/types/pos';
 import { fmt } from '@/utils/format';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const todayStr = () => format(new Date(), 'yyyy-MM-dd');
-const timeStr  = () => format(new Date(), 'HH:mm');
 const fmtTime  = (ts: number) => format(new Date(ts), 'hh:mm a');
 
 // ── Unified product descriptor ────────────────────────────────────────────────
@@ -21,7 +19,7 @@ interface BarProduct {
   id: string;
   name: string;
   productType: InvProductType;
-  qtyUnit: string;
+  qtyUnit: string;    // 'bottles' | 'pcs' | 'packets'
 }
 
 // ── Category styling ──────────────────────────────────────────────────────────
@@ -110,11 +108,13 @@ function EntryTypeBadge({ entryType }: { entryType: 'Restock' | 'Spill/Loss' }) 
 
 const BarPortal = () => {
   // ── Store data ──
-  const alcoholProducts   = useInventoryStore((s) => s.alcoholProducts);
-  const beverageProducts  = useInventoryStore((s) => s.beverageProducts);
-  const cigaretteProducts = useInventoryStore((s) => s.cigaretteProducts);
-  const { entries, addEntry, deleteEntry } = useBarRestockStore();
-  const currentUser = useStaffStore((s) => s.currentUser);
+  const alcoholProducts    = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts   = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts  = useInventoryStore((s) => s.cigaretteProducts);
+  const invMovements       = useInventoryStore((s) => s.invMovements);
+  const addBarMovement     = useInventoryStore((s) => s.addBarMovement);
+  const deleteBarMovement  = useInventoryStore((s) => s.deleteBarMovement);
+  const currentUser        = useStaffStore((s) => s.currentUser);
 
   // ── Form state ──
   const [productId,    setProductId]    = useState('');
@@ -146,40 +146,38 @@ const BarPortal = () => {
   const selectedProduct = allProducts.find((p) => p.id === productId) ?? null;
 
   // ── Unit cost for auto-calculating Total Cost as user types qty ──
-  // Returns cost per qty-unit (bottle / piece / packet) or null if not set.
   const unitCost = useMemo<number | null>(() => {
     if (!selectedProduct) return null;
     if (selectedProduct.productType === 'alcohol') {
-      const p = alcoholProducts.find((p) => p.id === productId);
-      return p?.costPerBottle ?? null;
+      return alcoholProducts.find((p) => p.id === productId)?.costPerBottle ?? null;
     }
     if (selectedProduct.productType === 'beverage') {
       const p = beverageProducts.find((p) => p.id === productId);
       if (!p?.costPerCarton || p.piecesPerCarton <= 0) return null;
-      // qty is in pieces; cost is per carton → derive cost per piece
-      return p.costPerCarton / p.piecesPerCarton;
+      return p.costPerCarton / p.piecesPerCarton;  // cost per piece (qty unit is pieces)
     }
     if (selectedProduct.productType === 'cigarette') {
-      const p = cigaretteProducts.find((p) => p.id === productId);
-      return p?.costPerPacket ?? null;
+      return cigaretteProducts.find((p) => p.id === productId)?.costPerPacket ?? null;
     }
     return null;
   }, [selectedProduct, productId, alcoholProducts, beverageProducts, cigaretteProducts]);
 
-  // ── Today's entries ──
+  // ── Today's bar movements ──
   const today        = todayStr();
   const todayEntries = useMemo(
-    () => entries.filter((e) => e.date === today),
-    [entries, today],
+    () => invMovements.filter(
+      (m) => m.source === 'bar' && format(new Date(m.timestamp), 'yyyy-MM-dd') === today
+    ),
+    [invMovements, today],
   );
 
   // ── Stats ──
   const totalSpend  = useMemo(
-    () => todayEntries.filter((e) => e.entryType === 'Restock').reduce((s, e) => s + e.totalCost, 0),
+    () => todayEntries.filter((m) => m.quantity >= 0).reduce((s, m) => s + (m.totalCost ?? 0), 0),
     [todayEntries],
   );
   const uniqueItems = useMemo(
-    () => new Set(todayEntries.map((e) => e.productId)).size,
+    () => new Set(todayEntries.map((m) => m.productId)).size,
     [todayEntries],
   );
 
@@ -196,7 +194,7 @@ const BarPortal = () => {
       if (!prod) return;
       baseUnitChange = qtyNum * prod.bottleSizeMl;
     } else if (selectedProduct.productType === 'beverage') {
-      baseUnitChange = qtyNum;
+      baseUnitChange = qtyNum;           // qty is already in pieces
     } else {
       const prod = cigaretteProducts.find((p) => p.id === productId);
       if (!prod) return;
@@ -204,56 +202,18 @@ const BarPortal = () => {
     }
     if (entryType === 'Spill/Loss') baseUnitChange = -baseUnitChange;
 
-    // Apply to inventory
-    const invStore = useInventoryStore.getState();
-    const movType  = entryType === 'Restock' ? 'Purchase' : 'Waste';
-    const reason   = entryType === 'Spill/Loss' ? 'Spill/Loss logged via Bar Portal' : undefined;
-
-    if (selectedProduct.productType === 'alcohol') {
-      invStore.adjustAlcohol({ productId, changeMl: baseUnitChange, type: movType, reason: reason ?? '' });
-    } else if (selectedProduct.productType === 'beverage') {
-      invStore.adjustBeverage({ productId, changePieces: baseUnitChange, type: movType, reason: reason ?? '' });
-    } else {
-      invStore.adjustCigarette({ productId, changeSticks: baseUnitChange, type: movType, reason: reason ?? '' });
-    }
-
-    // Auto-update master product cost price from this restock
-    // unitCost = totalCost / qty (per bottle / per piece / per packet)
-    if (entryType === 'Restock') {
-      const totalCostNum = Number(totalCost);
-      if (totalCostNum > 0 && qtyNum > 0) {
-        const perUnitCost = totalCostNum / qtyNum;
-        if (selectedProduct.productType === 'alcohol') {
-          invStore.updateAlcohol(productId, { costPerBottle: perUnitCost });
-        } else if (selectedProduct.productType === 'beverage') {
-          // qty is in pieces; store cost as per carton
-          const prod = beverageProducts.find((p) => p.id === productId);
-          if (prod) {
-            invStore.updateBeverage(productId, { costPerCarton: perUnitCost * prod.piecesPerCarton });
-          }
-        } else if (selectedProduct.productType === 'cigarette') {
-          invStore.updateCigarette(productId, { costPerPacket: perUnitCost });
-        }
-      }
-    }
-
-    // Save log entry
-    const entry: BarRestockEntry = {
-      id:             crypto.randomUUID(),
-      date:           today,
-      timestamp:      Date.now(),
+    addBarMovement({
       productType:    selectedProduct.productType,
       productId,
       productName:    selectedProduct.name,
       entryType,
-      qty:            qtyNum,
-      qtyUnit:        selectedProduct.qtyUnit,
+      containerQty:   qtyNum,
+      containerUnit:  selectedProduct.qtyUnit,
       baseUnitChange,
       totalCost:      entryType === 'Restock' ? (Number(totalCost) || 0) : 0,
       supplier:       supplier.trim(),
       loggedBy:       currentUser?.name ?? 'Staff',
-    };
-    addEntry(entry);
+    });
 
     toast.success(`${entryType} logged — ${selectedProduct.name} ×${qtyNum}`);
     setQty('');
@@ -261,20 +221,9 @@ const BarPortal = () => {
     setSupplier('');
   };
 
-  // ── Delete (reverses stock) ──
-  const handleDelete = (entry: BarRestockEntry) => {
-    const reversal = -entry.baseUnitChange;
-    const invStore = useInventoryStore.getState();
-
-    if (entry.productType === 'alcohol') {
-      invStore.adjustAlcohol({ productId: entry.productId, changeMl: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
-    } else if (entry.productType === 'beverage') {
-      invStore.adjustBeverage({ productId: entry.productId, changePieces: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
-    } else {
-      invStore.adjustCigarette({ productId: entry.productId, changeSticks: reversal, type: 'Correction', reason: 'Entry deleted from Bar Portal' });
-    }
-
-    deleteEntry(entry.id);
+  // ── Delete (reverses stock via deleteBarMovement) ──
+  const handleDelete = (m: InventoryMovement) => {
+    deleteBarMovement(m.id);
     toast.success('Entry removed and stock corrected');
   };
 
@@ -290,8 +239,6 @@ const BarPortal = () => {
     fontSize: 14,
   };
 
-  // Native <select> needs colorScheme so the browser renders the popup in dark
-  // mode; option styles below are a cross-browser fallback.
   const selectStyle: React.CSSProperties = {
     ...inputStyle,
     colorScheme: 'dark',
@@ -460,7 +407,7 @@ const BarPortal = () => {
                 onChange={(e) => {
                   const newQty = e.target.value;
                   setQty(newQty);
-                  // Auto-fill Total Cost when a unit cost is available
+                  // Auto-fill Total Cost when unit cost is available
                   if (unitCost !== null && entryType === 'Restock') {
                     const qtyNum = parseFloat(newQty);
                     setTotalCost(!isNaN(qtyNum) && qtyNum > 0
@@ -559,8 +506,8 @@ const BarPortal = () => {
                   ))}
                 </div>
 
-                {todayEntries.map((entry) => (
-                  <LedgerRow key={entry.id} entry={entry} onDelete={handleDelete} />
+                {todayEntries.map((m) => (
+                  <LedgerRow key={m.id} entry={m} onDelete={handleDelete} />
                 ))}
               </div>
             )}
@@ -587,10 +534,13 @@ function LedgerRow({
   entry,
   onDelete,
 }: {
-  entry: BarRestockEntry;
-  onDelete: (e: BarRestockEntry) => void;
+  entry: InventoryMovement;
+  onDelete: (m: InventoryMovement) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const entryType = entry.quantity >= 0 ? 'Restock' : 'Spill/Loss';
+  const displayQty  = entry.containerQty !== undefined ? Math.abs(entry.containerQty) : Math.abs(entry.quantity);
+  const displayUnit = entry.containerUnit ?? entry.unit;
 
   const handleDeleteClick = () => {
     if (!confirming) { setConfirming(true); setTimeout(() => setConfirming(false), 3000); return; }
@@ -605,7 +555,7 @@ function LedgerRow({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-sm font-semibold text-white/85">{entry.productName}</span>
             <CategoryBadge productType={entry.productType} />
-            <EntryTypeBadge entryType={entry.entryType} />
+            <EntryTypeBadge entryType={entryType} />
           </div>
           <button
             onClick={handleDeleteClick}
@@ -625,10 +575,10 @@ function LedgerRow({
           </button>
         </div>
         <div className="flex gap-3 text-xs text-white/45">
-          <span>{entry.qty} {entry.qtyUnit}</span>
-          {entry.totalCost > 0 && <span>Rs. {fmt(entry.totalCost)}</span>}
+          <span>{displayQty} {displayUnit}</span>
+          {(entry.totalCost ?? 0) > 0 && <span>Rs. {fmt(entry.totalCost!)}</span>}
           {entry.supplier && <span>· {entry.supplier}</span>}
-          <span>· {entry.loggedBy}</span>
+          <span>· {entry.loggedBy ?? 'Staff'}</span>
           <span>· {fmtTime(entry.timestamp)}</span>
         </div>
       </div>
@@ -649,21 +599,21 @@ function LedgerRow({
         </div>
 
         {/* Entry type */}
-        <EntryTypeBadge entryType={entry.entryType} />
+        <EntryTypeBadge entryType={entryType} />
 
         {/* Qty */}
         <span className="text-sm text-white/70 text-right whitespace-nowrap">
-          {entry.qty} <span className="text-white/35 text-xs">{entry.qtyUnit}</span>
+          {displayQty} <span className="text-white/35 text-xs">{displayUnit}</span>
         </span>
 
         {/* Cost */}
         <span className="text-sm text-white/70 text-right whitespace-nowrap min-w-[80px]">
-          {entry.totalCost > 0 ? `Rs. ${fmt(entry.totalCost)}` : <span className="text-white/25">—</span>}
+          {(entry.totalCost ?? 0) > 0 ? `Rs. ${fmt(entry.totalCost!)}` : <span className="text-white/25">—</span>}
         </span>
 
         {/* Logged by + time */}
         <div className="text-right">
-          <p className="text-xs text-white/55 font-medium">{entry.loggedBy}</p>
+          <p className="text-xs text-white/55 font-medium">{entry.loggedBy ?? 'Staff'}</p>
           <p className="text-[10px] text-white/30">{fmtTime(entry.timestamp)}</p>
         </div>
 
@@ -712,17 +662,14 @@ function QuickAddModal({
   const [initQty,      setInitQty]      = useState('');
   const [initCost,     setInitCost]     = useState('');
 
-  // Auto-focus name on open
   useEffect(() => { nameRef.current?.focus(); }, []);
 
-  // Escape key closes modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Reset unit options when category changes
   const handleCategoryChange = (cat: InvProductType) => {
     setCategory(cat);
     setUnitType(CATEGORY_UNITS[cat][0].value);
@@ -740,10 +687,8 @@ function QuickAddModal({
   const handleSave = () => {
     if (!canSubmit) return;
 
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const now   = Date.now();
-    const inv   = useInventoryStore.getState();
-    const bar   = useBarRestockStore.getState();
+    const now = Date.now();
+    const inv = useInventoryStore.getState();
 
     let newId = '';
 
@@ -760,37 +705,33 @@ function QuickAddModal({
 
     if (!newId) { toast.error('Failed to create product — please try again'); return; }
 
-    // Optional initial restock
-    const initQtyNum = Number(initQty);
+    // Optional initial restock via unified bar movement
+    const initQtyNum  = Number(initQty);
+    const initCostNum = Number(initCost) || 0;
+
     if (initQtyNum > 0) {
-      let baseUnitChange = 0;
       const qtyUnitMap: Record<InvProductType, string> = { alcohol: 'bottles', beverage: 'pcs', cigarette: 'packets' };
 
+      let baseUnitChange = 0;
       if (category === 'alcohol') {
         baseUnitChange = initQtyNum * itemsPerUnit;
-        useInventoryStore.getState().adjustAlcohol({ productId: newId, changeMl: baseUnitChange, type: 'Purchase', reason: '' });
       } else if (category === 'beverage') {
         baseUnitChange = initQtyNum;
-        useInventoryStore.getState().adjustBeverage({ productId: newId, changePieces: baseUnitChange, type: 'Purchase', reason: '' });
       } else {
         baseUnitChange = initQtyNum * itemsPerUnit;
-        useInventoryStore.getState().adjustCigarette({ productId: newId, changeSticks: baseUnitChange, type: 'Purchase', reason: '' });
       }
 
-      bar.addEntry({
-        id:             crypto.randomUUID(),
-        date:           today,
-        timestamp:      now,
-        productType:    category,
-        productId:      newId,
-        productName:    displayName,
-        entryType:      'Restock',
-        qty:            initQtyNum,
-        qtyUnit:        qtyUnitMap[category],
+      useInventoryStore.getState().addBarMovement({
+        productType:   category,
+        productId:     newId,
+        productName:   displayName,
+        entryType:     'Restock',
+        containerQty:  initQtyNum,
+        containerUnit: qtyUnitMap[category],
         baseUnitChange,
-        totalCost:      Number(initCost) || 0,
-        supplier:       '',
-        loggedBy:       currentUser?.name ?? 'Staff',
+        totalCost:     initCostNum,
+        supplier:      '',
+        loggedBy:      currentUser?.name ?? 'Staff',
       });
     }
 
@@ -817,13 +758,11 @@ function QuickAddModal({
   const optStyle: React.CSSProperties = { background: '#1e293b', color: '#f1f5f9' };
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Panel */}
       <div
         className="w-full max-w-md rounded-2xl p-6 space-y-5"
         style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}

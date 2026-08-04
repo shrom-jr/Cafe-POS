@@ -208,6 +208,12 @@ export interface InventoryMovement {
   supplier?: string;
   notes?: string;             // human-readable purchase details, e.g. "12 bottles × 750ml"
   timestamp: number;
+  // ── Unified audit fields ──────────────────────────────────────────────────
+  totalCost?: number;         // NPR cost for restock/purchase entries
+  loggedBy?: string;          // staff member who logged this entry
+  source?: 'bar' | 'inventory'; // origin: bar portal vs direct inventory form
+  containerQty?: number;      // display qty in container units (bottles / crates / packets)
+  containerUnit?: string;     // 'btl' | 'crates' | 'packets' | 'pcs' | 'sticks'
 }
 
 export interface InvMenuMapping {

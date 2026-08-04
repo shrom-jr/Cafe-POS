@@ -88,6 +88,28 @@ interface InventoryState {
     productId: string; changeSticks: number; type: InvMovementType; reason: string;
   }) => void;
 
+  // ── Bar Portal unified movements ──
+  addBarMovement: (args: {
+    productType: InvProductType;
+    productId: string;
+    productName: string;
+    entryType: 'Restock' | 'Spill/Loss';
+    containerQty: number;
+    containerUnit: string;
+    baseUnitChange: number;   // signed: positive = stock in, negative = stock out
+    totalCost: number;
+    supplier: string;
+    loggedBy: string;
+  }) => void;
+  updateBarMovement: (args: {
+    id: string;
+    containerQty: number;
+    newBaseUnitChange: number;
+    totalCost: number;
+    supplier: string;
+  }) => void;
+  deleteBarMovement: (id: string) => void;
+
   // ── Grocery ──
   addGroceryPurchase:    (p: Omit<GroceryPurchase, 'id'>) => void;
   deleteGroceryPurchase: (id: string) => void;
@@ -148,9 +170,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const product = s.alcoholProducts.find((p) => p.id === productId);
     if (!product) return {};
     const addMl = bottles * product.bottleSizeMl;
+    // Auto-sync cost price if cost was provided
+    const updatedCost = costPerBottle ? { costPerBottle } : {};
     const products = s.alcoholProducts.map((p) =>
       p.id === productId
-        ? { ...p, currentStockMl: p.currentStockMl + addMl, ...(costPerBottle ? { costPerBottle } : {}) }
+        ? { ...p, currentStockMl: p.currentStockMl + addMl, ...updatedCost }
         : p
     );
     const movement: InventoryMovement = {
@@ -165,6 +189,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       supplier,
       notes: `${bottles} bottle${bottles !== 1 ? 's' : ''} × ${product.bottleSizeMl}ml`,
       timestamp: Date.now(),
+      source: 'inventory',
+      containerQty: bottles,
+      containerUnit: 'btl',
     };
     const movements = [...s.invMovements, movement];
     return { alcoholProducts: products, invMovements: movements };
@@ -213,17 +240,29 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     return { beverageProducts: products, invMappings: mappings };
   }),
 
-  purchaseBeverage: ({ productId, purchaseUnit, qty, supplier, invoiceNo }) => set((s) => {
+  purchaseBeverage: ({ productId, purchaseUnit, qty, supplier, invoiceNo, cost }) => set((s) => {
     const product = s.beverageProducts.find((p) => p.id === productId);
     if (!product) return {};
     let addPieces = qty;
     let notes = `${qty} piece${qty !== 1 ? 's' : ''}`;
+    let containerQty = qty;
+    let containerUnit = 'pcs';
     if (purchaseUnit === 'carton') {
       addPieces = qty * product.piecesPerCarton;
-      notes = `${qty} carton${qty !== 1 ? 's' : ''} × ${product.piecesPerCarton} pcs = ${addPieces} pcs`;
+      notes = `${qty} crate${qty !== 1 ? 's' : ''} × ${product.piecesPerCarton} pcs = ${addPieces} pcs`;
+      containerQty = qty;
+      containerUnit = 'crates';
     }
+    // Auto-sync cost price from total cost supplied
+    const costPerCarton = cost && cost > 0 && qty > 0
+      ? (purchaseUnit === 'carton'
+          ? cost / qty
+          : (cost / qty) * product.piecesPerCarton)
+      : undefined;
     const products = s.beverageProducts.map((p) =>
-      p.id === productId ? { ...p, currentStock: p.currentStock + addPieces } : p
+      p.id === productId
+        ? { ...p, currentStock: p.currentStock + addPieces, ...(costPerCarton ? { costPerCarton } : {}) }
+        : p
     );
     const movement: InventoryMovement = {
       id: crypto.randomUUID(),
@@ -237,6 +276,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       supplier,
       notes,
       timestamp: Date.now(),
+      source: 'inventory',
+      containerQty,
+      containerUnit,
     };
     const movements = [...s.invMovements, movement];
     return { beverageProducts: products, invMovements: movements };
@@ -285,17 +327,29 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     return { cigaretteProducts: products, invMappings: mappings };
   }),
 
-  purchaseCigarette: ({ productId, purchaseUnit, qty, supplier, invoiceNo }) => set((s) => {
+  purchaseCigarette: ({ productId, purchaseUnit, qty, supplier, invoiceNo, cost }) => set((s) => {
     const product = s.cigaretteProducts.find((p) => p.id === productId);
     if (!product) return {};
     let addSticks = qty;
     let notes = `${qty} stick${qty !== 1 ? 's' : ''}`;
+    let containerQty = qty;
+    let containerUnit = 'sticks';
     if (purchaseUnit === 'packet') {
       addSticks = qty * product.sticksPerPacket;
       notes = `${qty} packet${qty !== 1 ? 's' : ''} × ${product.sticksPerPacket} sticks = ${addSticks} sticks`;
+      containerQty = qty;
+      containerUnit = 'packets';
     }
+    // Auto-sync cost price from total cost supplied
+    const costPerPacket = cost && cost > 0 && qty > 0
+      ? (purchaseUnit === 'packet'
+          ? cost / qty
+          : (cost / qty) * product.sticksPerPacket)
+      : undefined;
     const products = s.cigaretteProducts.map((p) =>
-      p.id === productId ? { ...p, currentSticks: p.currentSticks + addSticks } : p
+      p.id === productId
+        ? { ...p, currentSticks: p.currentSticks + addSticks, ...(costPerPacket ? { costPerPacket } : {}) }
+        : p
     );
     const movement: InventoryMovement = {
       id: crypto.randomUUID(),
@@ -309,6 +363,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       supplier,
       notes,
       timestamp: Date.now(),
+      source: 'inventory',
+      containerQty,
+      containerUnit,
     };
     const movements = [...s.invMovements, movement];
     return { cigaretteProducts: products, invMovements: movements };
@@ -361,6 +418,152 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const mappings = s.invMappings.filter((m) => m.id !== id);
     setLS(INV_KEYS.mappings, mappings);
     return { invMappings: mappings };
+  }),
+
+  // ── BAR PORTAL UNIFIED MOVEMENTS ─────────────────────────────────────────
+  addBarMovement: ({ productType, productId, productName, entryType, containerQty, containerUnit, baseUnitChange, totalCost, supplier, loggedBy }) => set((s) => {
+    const baseUnit = productType === 'alcohol' ? 'ml' : productType === 'beverage' ? 'pcs' : 'sticks';
+    const movType = entryType === 'Restock' ? 'Purchase' : 'Waste';
+
+    // Update product stock + auto-sync cost price
+    let updatedAlcohol   = s.alcoholProducts;
+    let updatedBeverages = s.beverageProducts;
+    let updatedCigarettes = s.cigaretteProducts;
+
+    if (productType === 'alcohol') {
+      const costPatch = entryType === 'Restock' && totalCost > 0 && containerQty > 0
+        ? { costPerBottle: totalCost / containerQty } : {};
+      updatedAlcohol = s.alcoholProducts.map((p) =>
+        p.id === productId
+          ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + baseUnitChange), ...costPatch }
+          : p
+      );
+    } else if (productType === 'beverage') {
+      const prod = s.beverageProducts.find((p) => p.id === productId);
+      let costPatch: Partial<typeof s.beverageProducts[0]> = {};
+      if (entryType === 'Restock' && totalCost > 0 && containerQty > 0 && prod) {
+        // containerUnit can be 'pcs' or 'crates'; store always uses costPerCarton
+        const cpc = containerUnit === 'crates'
+          ? totalCost / containerQty
+          : (totalCost / containerQty) * prod.piecesPerCarton;
+        costPatch = { costPerCarton: cpc };
+      }
+      updatedBeverages = s.beverageProducts.map((p) =>
+        p.id === productId
+          ? { ...p, currentStock: Math.max(0, p.currentStock + baseUnitChange), ...costPatch }
+          : p
+      );
+    } else {
+      const costPatch = entryType === 'Restock' && totalCost > 0 && containerQty > 0
+        ? { costPerPacket: totalCost / containerQty } : {};
+      updatedCigarettes = s.cigaretteProducts.map((p) =>
+        p.id === productId
+          ? { ...p, currentSticks: Math.max(0, p.currentSticks + baseUnitChange), ...costPatch }
+          : p
+      );
+    }
+
+    const movement: InventoryMovement = {
+      id:           crypto.randomUUID(),
+      productType,
+      productId,
+      productName,
+      quantity:     baseUnitChange,
+      unit:         baseUnit,
+      type:         movType,
+      supplier:     supplier || undefined,
+      notes:        entryType === 'Spill/Loss' ? 'Spill/Loss via Bar Portal' : undefined,
+      timestamp:    Date.now(),
+      totalCost:    totalCost > 0 ? totalCost : undefined,
+      loggedBy:     loggedBy || undefined,
+      source:       'bar',
+      containerQty,
+      containerUnit,
+    };
+
+    return {
+      alcoholProducts:   updatedAlcohol,
+      beverageProducts:  updatedBeverages,
+      cigaretteProducts: updatedCigarettes,
+      invMovements:      [...s.invMovements, movement],
+    };
+  }),
+
+  updateBarMovement: ({ id, containerQty, newBaseUnitChange, totalCost, supplier }) => set((s) => {
+    const existing = s.invMovements.find((m) => m.id === id);
+    if (!existing) return {};
+
+    const delta = newBaseUnitChange - existing.quantity;
+
+    let updatedAlcohol   = s.alcoholProducts;
+    let updatedBeverages = s.beverageProducts;
+    let updatedCigarettes = s.cigaretteProducts;
+
+    if (Math.abs(delta) > 0.001) {
+      if (existing.productType === 'alcohol') {
+        updatedAlcohol = s.alcoholProducts.map((p) =>
+          p.id === existing.productId
+            ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + delta) } : p
+        );
+      } else if (existing.productType === 'beverage') {
+        updatedBeverages = s.beverageProducts.map((p) =>
+          p.id === existing.productId
+            ? { ...p, currentStock: Math.max(0, p.currentStock + delta) } : p
+        );
+      } else {
+        updatedCigarettes = s.cigaretteProducts.map((p) =>
+          p.id === existing.productId
+            ? { ...p, currentSticks: Math.max(0, p.currentSticks + delta) } : p
+        );
+      }
+    }
+
+    const movements = s.invMovements.map((m) =>
+      m.id === id
+        ? { ...m, quantity: newBaseUnitChange, containerQty, totalCost: totalCost > 0 ? totalCost : undefined, supplier: supplier || undefined }
+        : m
+    );
+
+    return {
+      alcoholProducts:   updatedAlcohol,
+      beverageProducts:  updatedBeverages,
+      cigaretteProducts: updatedCigarettes,
+      invMovements:      movements,
+    };
+  }),
+
+  deleteBarMovement: (id) => set((s) => {
+    const existing = s.invMovements.find((m) => m.id === id);
+    if (!existing) return {};
+
+    // Reverse the stock effect of this movement
+    let updatedAlcohol   = s.alcoholProducts;
+    let updatedBeverages = s.beverageProducts;
+    let updatedCigarettes = s.cigaretteProducts;
+
+    if (existing.productType === 'alcohol') {
+      updatedAlcohol = s.alcoholProducts.map((p) =>
+        p.id === existing.productId
+          ? { ...p, currentStockMl: Math.max(0, p.currentStockMl - existing.quantity) } : p
+      );
+    } else if (existing.productType === 'beverage') {
+      updatedBeverages = s.beverageProducts.map((p) =>
+        p.id === existing.productId
+          ? { ...p, currentStock: Math.max(0, p.currentStock - existing.quantity) } : p
+      );
+    } else {
+      updatedCigarettes = s.cigaretteProducts.map((p) =>
+        p.id === existing.productId
+          ? { ...p, currentSticks: Math.max(0, p.currentSticks - existing.quantity) } : p
+      );
+    }
+
+    return {
+      alcoholProducts:   updatedAlcohol,
+      beverageProducts:  updatedBeverages,
+      cigaretteProducts: updatedCigarettes,
+      invMovements:      s.invMovements.filter((m) => m.id !== id),
+    };
   }),
 
   // ── POS INTEGRATION ──────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useInventoryStore } from '@/store/useInventoryStore';
-import { useBarRestockStore } from '@/store/useBarRestockStore';
-import { InvProductType } from '@/types/pos';
+import { InventoryMovement, InvProductType } from '@/types/pos';
 import { CARD, CARD_SM, TH, TD } from './styles';
 import { ProdTypeBadge, TypeBadge } from './components';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
@@ -10,27 +9,51 @@ import { fmt } from '@/utils/format';
 
 type FilterType = 'all' | InvProductType;
 
-// ── Normalised row — unifies InventoryMovement purchases + BarRestockEntry ──
+// ── Qty formatter — container units first, raw in parentheses ────────────────
+
+function fmtPurchaseQty(m: InventoryMovement): { primary: string; secondary: string | null } {
+  const abs = Math.abs(m.quantity);
+  const sign = m.quantity >= 0 ? '+' : '−';
+
+  if (m.containerQty !== undefined && m.containerUnit) {
+    const cAbs = Math.abs(m.containerQty);
+    const rawStr = `${abs.toLocaleString()} ${m.unit}`;
+    const containerStr = `${sign}${cAbs} ${m.containerUnit}`;
+    return {
+      primary:   containerStr,
+      secondary: containerStr === `${sign}${rawStr}` ? null : rawStr,
+    };
+  }
+
+  // Legacy: notes often contain human description e.g. "12 bottles × 750ml"
+  if (m.notes) {
+    return { primary: `${sign} ${m.notes}`, secondary: null };
+  }
+
+  return { primary: `${sign}${abs.toLocaleString()} ${m.unit}`, secondary: null };
+}
+
+// ── Normalised row ────────────────────────────────────────────────────────────
 
 interface NormRow {
   id:          string;
   timestamp:   number;
   productName: string;
   productType: InvProductType;
-  logType:     string;     // 'Purchase' or 'Restock'
-  details:     string;     // notes / display qty detail
+  logType:     string;
+  details:     string;
   supplier:    string;
-  reference:   string;     // invoice (inv movements only)
-  qtyDisplay:  string;     // e.g. "+1500 ml" or "+5 bottles"
-  totalCost:   number;     // 0 if not recorded
-  loggedBy:    string;     // '' for raw inv movements
-  source:      'inventory' | 'bar';
+  reference:   string;
+  qtyPrimary:  string;
+  qtySec:      string | null;
+  totalCost:   number;
+  loggedBy:    string;
+  source:      string;
 }
 
 export const PurchasesSection = () => {
   const movements        = useInventoryStore((s) => s.invMovements);
   const groceryPurchases = useInventoryStore((s) => s.groceryPurchases);
-  const barEntries       = useBarRestockStore((s) => s.entries);
 
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -39,64 +62,48 @@ export const PurchasesSection = () => {
   const weekStart  = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }).getTime(), []);
   const monthStart = useMemo(() => startOfMonth(new Date()).getTime(), []);
 
-  // Normalise inventory movements (Purchase type only)
-  const normMovements = useMemo<NormRow[]>(() =>
+  // All Purchase-type invMovements (inventory forms) + bar Restock movements
+  const normRows = useMemo<NormRow[]>(() =>
     movements
-      .filter((m) => m.type === 'Purchase')
-      .map((m) => ({
-        id:          m.id,
-        timestamp:   m.timestamp,
-        productName: m.productName,
-        productType: m.productType,
-        logType:     'Purchase',
-        details:     m.notes ?? '',
-        supplier:    m.supplier ?? '',
-        reference:   m.reference ?? '',
-        qtyDisplay:  `+${m.quantity.toLocaleString()} ${m.unit}`,
-        totalCost:   0,
-        loggedBy:    '',
-        source:      'inventory',
-      })),
+      .filter((m) => m.type === 'Purchase' || (m.source === 'bar' && m.quantity > 0))
+      .map((m): NormRow => {
+        const { primary, secondary } = fmtPurchaseQty(m);
+        const logType = m.source === 'bar' ? 'Bar Restock' : 'Purchase';
+        return {
+          id:          m.id,
+          timestamp:   m.timestamp,
+          productName: m.productName,
+          productType: m.productType,
+          logType,
+          details:     m.notes ?? '',
+          supplier:    m.supplier ?? '',
+          reference:   m.reference ?? '',
+          qtyPrimary:  primary,
+          qtySec:      secondary,
+          totalCost:   m.totalCost ?? 0,
+          loggedBy:    m.loggedBy ?? '',
+          source:      m.source ?? 'inventory',
+        };
+      }),
   [movements]);
-
-  // Normalise bar restock entries (Restock type only — spills are not "purchases")
-  const normBar = useMemo<NormRow[]>(() =>
-    barEntries
-      .filter((e) => e.entryType === 'Restock')
-      .map((e) => ({
-        id:          e.id,
-        timestamp:   e.timestamp,
-        productName: e.productName,
-        productType: e.productType,
-        logType:     'Restock',
-        details:     `${e.qty} ${e.qtyUnit}`,
-        supplier:    e.supplier,
-        reference:   '',
-        qtyDisplay:  `+${e.qty} ${e.qtyUnit}`,
-        totalCost:   e.totalCost,
-        loggedBy:    e.loggedBy,
-        source:      'bar',
-      })),
-  [barEntries]);
 
   // Merge, filter, sort
   const purchases = useMemo(() => {
-    let list = [...normMovements, ...normBar];
+    let list = [...normRows];
     if (typeFilter !== 'all') list = list.filter((r) => r.productType === typeFilter);
     if (dateFilter === 'today') list = list.filter((r) => r.timestamp >= todayStart);
     if (dateFilter === 'week')  list = list.filter((r) => r.timestamp >= weekStart);
     if (dateFilter === 'month') list = list.filter((r) => r.timestamp >= monthStart);
     return list.sort((a, b) => b.timestamp - a.timestamp);
-  }, [normMovements, normBar, typeFilter, dateFilter, todayStart, weekStart, monthStart]);
+  }, [normRows, typeFilter, dateFilter, todayStart, weekStart, monthStart]);
 
-  // Stats from merged list (unfiltered)
-  const allMerged = useMemo(() => [...normMovements, ...normBar], [normMovements, normBar]);
+  // Stats from full list (unfiltered)
   const stats = useMemo(() => {
-    const todayCount = allMerged.filter((r) => r.timestamp >= todayStart).length;
-    const weekCount  = allMerged.filter((r) => r.timestamp >= weekStart).length;
-    const monthCount = allMerged.filter((r) => r.timestamp >= monthStart).length;
-    return { total: allMerged.length, todayCount, weekCount, monthCount };
-  }, [allMerged, todayStart, weekStart, monthStart]);
+    const todayCount  = normRows.filter((r) => r.timestamp >= todayStart).length;
+    const weekCount   = normRows.filter((r) => r.timestamp >= weekStart).length;
+    const monthCount  = normRows.filter((r) => r.timestamp >= monthStart).length;
+    return { total: normRows.length, todayCount, weekCount, monthCount };
+  }, [normRows, todayStart, weekStart, monthStart]);
 
   const FILTERS: { id: FilterType; label: string }[] = [
     { id: 'all',       label: 'All' },
@@ -209,7 +216,8 @@ export const PurchasesSection = () => {
                       {r.loggedBy || <span className="text-muted-foreground/40">—</span>}
                     </td>
                     <td className={`${TD} text-right font-mono font-semibold text-green-400 whitespace-nowrap`}>
-                      {r.qtyDisplay}
+                      <p>{r.qtyPrimary}</p>
+                      {r.qtySec && <p className="text-[10px] text-muted-foreground/50 font-normal">({r.qtySec})</p>}
                     </td>
                   </tr>
                 ))}

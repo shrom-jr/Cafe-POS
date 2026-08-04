@@ -35,6 +35,33 @@ const DATE_OPTIONS: { id: DateFilter; label: string }[] = [
 
 const PAGE_SIZE = 50;
 
+// ── Display-unit formatter ────────────────────────────────────────────────────
+// Returns container-unit primary string + muted raw secondary.
+// Alcohol → btl  |  Beverage → crates  |  Cigarette → packets
+function fmtQty(m: InventoryMovement): { primary: string; secondary: string | null } {
+  const abs  = Math.abs(m.quantity);
+  const sign = m.quantity >= 0 ? '+' : '−';
+
+  // New movements carry explicit container qty
+  if (m.containerQty !== undefined && m.containerUnit) {
+    const cAbs  = Math.abs(m.containerQty);
+    const raw   = `${abs.toLocaleString()} ${m.unit}`;
+    const cont  = `${sign}${cAbs} ${m.containerUnit}`;
+    return {
+      primary:   cont,
+      secondary: cont === `${sign}${raw}` ? null : raw,
+    };
+  }
+
+  // Legacy purchase movements: notes carries human-readable text
+  if (m.notes && (m.type === 'Purchase' || m.source === 'bar')) {
+    return { primary: `${sign} ${m.notes}`, secondary: null };
+  }
+
+  // Raw fallback (adjustments / sales / corrections)
+  return { primary: `${sign}${abs.toLocaleString()} ${m.unit}`, secondary: null };
+}
+
 export const MovementsSection = () => {
   const movements = useInventoryStore((s) => s.invMovements);
 
@@ -139,26 +166,32 @@ export const MovementsSection = () => {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((m: InventoryMovement) => (
-                  <tr key={m.id} className="border-b border-white/[0.04] last:border-0">
-                    <td className={`${TD} text-xs whitespace-nowrap`}>
-                      <p className="text-muted-foreground">{format(m.timestamp, 'dd MMM yyyy')}</p>
-                      <p className="text-muted-foreground/50">{format(m.timestamp, 'HH:mm')}</p>
-                    </td>
-                    <td className={`${TD} font-medium text-foreground`}>{m.productName}</td>
-                    <td className={`${TD} hidden sm:table-cell`}><ProdTypeBadge type={m.productType} /></td>
-                    <td className={TD}><TypeBadge type={m.type} /></td>
-                    <td className={`${TD} text-right font-mono font-semibold ${m.quantity >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {m.quantity >= 0 ? '+' : ''}{m.quantity.toLocaleString()} {m.unit}
-                    </td>
-                    <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[100px]`}>
-                      <span className="truncate block">{m.supplier ? `${m.supplier}` : ''}{m.reference ? ` ${m.reference}` : ''|| '—'}</span>
-                    </td>
-                    <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[140px]`}>
-                      <span className="truncate block">{m.reason ?? m.notes ?? '—'}</span>
-                    </td>
-                  </tr>
-                ))}
+                {visible.map((m: InventoryMovement) => {
+                  const { primary, secondary } = fmtQty(m);
+                  return (
+                    <tr key={m.id} className="border-b border-white/[0.04] last:border-0">
+                      <td className={`${TD} text-xs whitespace-nowrap`}>
+                        <p className="text-muted-foreground">{format(m.timestamp, 'dd MMM yyyy')}</p>
+                        <p className="text-muted-foreground/50">{format(m.timestamp, 'HH:mm')}</p>
+                      </td>
+                      <td className={`${TD} font-medium text-foreground`}>{m.productName}</td>
+                      <td className={`${TD} hidden sm:table-cell`}><ProdTypeBadge type={m.productType} /></td>
+                      <td className={TD}><TypeBadge type={m.type} /></td>
+                      <td className={`${TD} text-right font-mono font-semibold ${m.quantity >= 0 ? 'text-green-400' : 'text-red-400'} whitespace-nowrap`}>
+                        <p>{primary}</p>
+                        {secondary && (
+                          <p className="text-[10px] text-muted-foreground/50 font-normal">({secondary})</p>
+                        )}
+                      </td>
+                      <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[100px]`}>
+                        <span className="truncate block">{m.supplier ? `${m.supplier}` : ''}{m.reference ? ` ${m.reference}` : '' || '—'}</span>
+                      </td>
+                      <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[140px]`}>
+                        <span className="truncate block">{m.reason ?? (m.source === 'bar' ? m.notes : undefined) ?? '—'}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -190,7 +223,7 @@ export const MovementsSection = () => {
 
       {movements.length > 0 && (
         <p className="text-xs text-muted-foreground/50 text-center">
-          Movement history is permanent and cannot be deleted.
+          Inventory movement history is permanent. Bar portal entries can be corrected via Bar Restock Audit.
         </p>
       )}
     </div>

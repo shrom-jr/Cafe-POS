@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { Trash2, Pencil, X, Check, GlassWater, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { useBarRestockStore, BarRestockEntry } from '@/store/useBarRestockStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
-import { InvProductType } from '@/types/pos';
+import { InventoryMovement, InvProductType } from '@/types/pos';
 import { fmt } from '@/utils/format';
 import {
   CARD, CARD_SM, TH, TD, INPUT, LABEL, BTN_DANGER, BTN_EDIT,
@@ -13,7 +12,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type ProdFilter = 'all' | InvProductType;
+type ProdFilter  = 'all' | InvProductType;
 type EntryFilter = 'all' | 'Restock' | 'Spill/Loss';
 type DateFilter  = 'all' | 'today' | 'week' | 'month';
 
@@ -40,18 +39,32 @@ const EntryBadge = ({ t }: { t: 'Restock' | 'Spill/Loss' }) => (
   </span>
 );
 
+// Derive entry type from movement quantity sign
+const entryTypeOf = (m: InventoryMovement): 'Restock' | 'Spill/Loss' =>
+  m.quantity >= 0 ? 'Restock' : 'Spill/Loss';
+
+// Human-display qty and unit from movement
+function displayQty(m: InventoryMovement): { qty: number; unit: string } {
+  return {
+    qty:  m.containerQty !== undefined ? Math.abs(m.containerQty) : Math.abs(m.quantity),
+    unit: m.containerUnit ?? m.unit,
+  };
+}
+
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 
 interface EditModalProps {
-  entry: BarRestockEntry;
-  onSave:  (newQty: number, newCost: number, newSupplier: string) => void;
+  entry:   InventoryMovement;
+  onSave:  (newContainerQty: number, newCost: number, newSupplier: string) => void;
   onClose: () => void;
 }
 
 const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
-  const [qty,      setQty]      = useState(String(entry.qty));
-  const [cost,     setCost]     = useState(String(entry.totalCost));
-  const [supplier, setSupplier] = useState(entry.supplier);
+  const { qty: initQty, unit: qtyUnit } = displayQty(entry);
+  const [qty,      setQty]      = useState(String(initQty));
+  const [cost,     setCost]     = useState(String(entry.totalCost ?? 0));
+  const [supplier, setSupplier] = useState(entry.supplier ?? '');
+  const isRestock = entryTypeOf(entry) === 'Restock';
 
   const handleSave = () => {
     const qNum = Number(qty);
@@ -69,7 +82,7 @@ const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-white/90">Edit Entry</h3>
-            <p className="text-xs text-white/40 mt-0.5">{entry.productName} · {entry.entryType}</p>
+            <p className="text-xs text-white/40 mt-0.5">{entry.productName} · {entryTypeOf(entry)}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
             <X size={15} />
@@ -79,7 +92,7 @@ const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
         <div className="space-y-3">
           <div>
             <label className={LABEL}>
-              Quantity <span className="text-white/30">({entry.qtyUnit})</span>
+              Quantity <span className="text-white/30">({qtyUnit})</span>
             </label>
             <input
               type="number" min="0.01" step="any"
@@ -89,7 +102,7 @@ const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
             />
           </div>
 
-          {entry.entryType === 'Restock' && (
+          {isRestock && (
             <>
               <div>
                 <label className={LABEL}>Total Cost (Rs.)</label>
@@ -167,38 +180,47 @@ const FilterBar = <T extends string>({
 const PAGE_SIZE = 50;
 
 export const BarRestockAudit = () => {
-  const { entries, updateEntry, deleteEntry } = useBarRestockStore();
+  const movements          = useInventoryStore((s) => s.invMovements);
+  const updateBarMovement  = useInventoryStore((s) => s.updateBarMovement);
+  const deleteBarMovement  = useInventoryStore((s) => s.deleteBarMovement);
 
-  const [prodFilter,  setProdFilter]  = useState<ProdFilter>('all');
-  const [entryFilter, setEntryFilter] = useState<EntryFilter>('all');
-  const [dateFilter,  setDateFilter]  = useState<DateFilter>('all');
-  const [search,      setSearch]      = useState('');
-  const [page,        setPage]        = useState(1);
-  const [editingEntry, setEditingEntry] = useState<BarRestockEntry | null>(null);
-  const [deletingId,   setDeletingId]  = useState<string | null>(null);
+  const [prodFilter,   setProdFilter]   = useState<ProdFilter>('all');
+  const [entryFilter,  setEntryFilter]  = useState<EntryFilter>('all');
+  const [dateFilter,   setDateFilter]   = useState<DateFilter>('all');
+  const [search,       setSearch]       = useState('');
+  const [page,         setPage]         = useState(1);
+  const [editingEntry, setEditingEntry] = useState<InventoryMovement | null>(null);
+  const [deletingId,   setDeletingId]   = useState<string | null>(null);
 
   const todayStart = useMemo(() => startOfDay(new Date()).getTime(), []);
   const weekStart  = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }).getTime(), []);
   const monthStart = useMemo(() => startOfMonth(new Date()).getTime(), []);
 
+  // Bar-sourced movements only
+  const barMovements = useMemo(
+    () => movements.filter((m) => m.source === 'bar'),
+    [movements],
+  );
+
   // ── Filtered & sorted list ──
   const filtered = useMemo(() => {
-    let list = [...entries];
-    if (prodFilter  !== 'all') list = list.filter((e) => e.productType === prodFilter);
-    if (entryFilter !== 'all') list = list.filter((e) => e.entryType   === entryFilter);
-    if (dateFilter === 'today') list = list.filter((e) => e.timestamp >= todayStart);
-    if (dateFilter === 'week')  list = list.filter((e) => e.timestamp >= weekStart);
-    if (dateFilter === 'month') list = list.filter((e) => e.timestamp >= monthStart);
+    let list = [...barMovements];
+    if (prodFilter !== 'all') list = list.filter((m) => m.productType === prodFilter);
+    if (entryFilter === 'Restock')    list = list.filter((m) => m.quantity >= 0);
+    if (entryFilter === 'Spill/Loss') list = list.filter((m) => m.quantity < 0);
+    if (dateFilter === 'today') list = list.filter((m) => m.timestamp >= todayStart);
+    if (dateFilter === 'week')  list = list.filter((m) => m.timestamp >= weekStart);
+    if (dateFilter === 'month') list = list.filter((m) => m.timestamp >= monthStart);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((e) =>
-        e.productName.toLowerCase().includes(q) ||
-        e.loggedBy.toLowerCase().includes(q) ||
-        (e.supplier ?? '').toLowerCase().includes(q)
+      list = list.filter((m) =>
+        m.productName.toLowerCase().includes(q) ||
+        (m.loggedBy ?? '').toLowerCase().includes(q) ||
+        (m.supplier ?? '').toLowerCase().includes(q)
       );
     }
     return list.sort((a, b) => b.timestamp - a.timestamp);
-  }, [entries, prodFilter, entryFilter, dateFilter, search, todayStart, weekStart, monthStart]);
+  }, [barMovements, prodFilter, entryFilter, dateFilter, search, todayStart, weekStart, monthStart]);
 
   // Reset page on filter change
   useMemo(() => setPage(1), [prodFilter, entryFilter, dateFilter, search]);
@@ -206,48 +228,40 @@ export const BarRestockAudit = () => {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // ── Stats (over full entries, not filtered) ──
+  // ── Stats (over all bar movements) ──
   const stats = useMemo(() => {
-    const restocks   = entries.filter((e) => e.entryType === 'Restock');
-    const spills     = entries.filter((e) => e.entryType === 'Spill/Loss');
-    const todaySpend = restocks
-      .filter((e) => e.timestamp >= todayStart)
-      .reduce((s, e) => s + e.totalCost, 0);
+    const restocks    = barMovements.filter((m) => m.quantity >= 0);
+    const spills      = barMovements.filter((m) => m.quantity < 0);
+    const todaySpend  = restocks
+      .filter((m) => m.timestamp >= todayStart)
+      .reduce((s, m) => s + (m.totalCost ?? 0), 0);
     return {
-      total:      entries.length,
-      restocks:   restocks.length,
-      spills:     spills.length,
+      total:     barMovements.length,
+      restocks:  restocks.length,
+      spills:    spills.length,
       todaySpend,
     };
-  }, [entries, todayStart]);
-
-  // ── Apply stock change to inventory ──
-  const applyInventoryChange = (entry: BarRestockEntry, changeSigned: number) => {
-    const inv = useInventoryStore.getState();
-    if (entry.productType === 'alcohol') {
-      inv.adjustAlcohol({ productId: entry.productId, changeMl: changeSigned, type: 'Correction', reason: 'Admin correction via Bar Audit' });
-    } else if (entry.productType === 'beverage') {
-      inv.adjustBeverage({ productId: entry.productId, changePieces: changeSigned, type: 'Correction', reason: 'Admin correction via Bar Audit' });
-    } else {
-      inv.adjustCigarette({ productId: entry.productId, changeSticks: changeSigned, type: 'Correction', reason: 'Admin correction via Bar Audit' });
-    }
-  };
+  }, [barMovements, todayStart]);
 
   // ── Edit save ──
-  const handleSaveEdit = (newQty: number, newCost: number, newSupplier: string) => {
+  const handleSaveEdit = (newContainerQty: number, newCost: number, newSupplier: string) => {
     if (!editingEntry) return;
 
-    // Compute new base unit change proportionally (preserves sign for Spill/Loss)
-    const newBaseUnitChange = (newQty / editingEntry.qty) * editingEntry.baseUnitChange;
-    const delta = newBaseUnitChange - editingEntry.baseUnitChange;
+    const oldContainerQty = editingEntry.containerQty !== undefined
+      ? Math.abs(editingEntry.containerQty)
+      : Math.abs(editingEntry.quantity);
 
-    if (Math.abs(delta) > 0.001) applyInventoryChange(editingEntry, delta);
+    const sign = editingEntry.quantity >= 0 ? 1 : -1;
+    const newBaseUnitChange = oldContainerQty > 0
+      ? sign * (newContainerQty / oldContainerQty) * Math.abs(editingEntry.quantity)
+      : sign * newContainerQty;
 
-    updateEntry(editingEntry.id, {
-      qty:            newQty,
-      baseUnitChange: newBaseUnitChange,
-      totalCost:      newCost,
-      supplier:       newSupplier,
+    updateBarMovement({
+      id:               editingEntry.id,
+      containerQty:     newContainerQty,
+      newBaseUnitChange,
+      totalCost:        newCost,
+      supplier:         newSupplier,
     });
 
     toast.success('Entry updated and stock corrected');
@@ -255,11 +269,9 @@ export const BarRestockAudit = () => {
   };
 
   // ── Delete ──
-  const handleDelete = (entry: BarRestockEntry) => {
-    if (deletingId !== entry.id) { setDeletingId(entry.id); return; }
-    // Reverse the original stock change
-    applyInventoryChange(entry, -entry.baseUnitChange);
-    deleteEntry(entry.id);
+  const handleDelete = (m: InventoryMovement) => {
+    if (deletingId !== m.id) { setDeletingId(m.id); return; }
+    deleteBarMovement(m.id);
     setDeletingId(null);
     toast.success('Entry removed and stock reversed');
   };
@@ -318,10 +330,10 @@ export const BarRestockAudit = () => {
         <div className="flex flex-wrap gap-2 items-center">
           <FilterBar<ProdFilter>
             options={[
-              { id: 'all', label: 'All Categories' },
-              { id: 'alcohol',   label: 'Alcohol'   },
-              { id: 'beverage',  label: 'Beverage'  },
-              { id: 'cigarette', label: 'Cigarette' },
+              { id: 'all',       label: 'All Categories' },
+              { id: 'alcohol',   label: 'Alcohol'        },
+              { id: 'beverage',  label: 'Beverage'       },
+              { id: 'cigarette', label: 'Cigarette'      },
             ]}
             value={prodFilter}
             onChange={setProdFilter}
@@ -360,7 +372,7 @@ export const BarRestockAudit = () => {
       {/* ── Audit table ── */}
       {visible.length === 0 ? (
         <div className={`${CARD} text-center py-12 text-muted-foreground text-sm`}>
-          {entries.length === 0
+          {barMovements.length === 0
             ? 'No bar restock entries recorded yet.'
             : 'No entries match the selected filters.'}
         </div>
@@ -382,71 +394,73 @@ export const BarRestockAudit = () => {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((entry: BarRestockEntry) => {
-                  const isDeleting = deletingId === entry.id;
+                {visible.map((m: InventoryMovement) => {
+                  const isDeleting = deletingId === m.id;
+                  const et = entryTypeOf(m);
+                  const { qty, unit } = displayQty(m);
                   return (
                     <tr
-                      key={entry.id}
+                      key={m.id}
                       className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors"
                     >
                       {/* Date & Time */}
                       <td className={`${TD} text-xs whitespace-nowrap`}>
-                        <p className="text-muted-foreground">{format(entry.timestamp, 'dd MMM yyyy')}</p>
-                        <p className="text-muted-foreground/50">{format(entry.timestamp, 'hh:mm a')}</p>
+                        <p className="text-muted-foreground">{format(m.timestamp, 'dd MMM yyyy')}</p>
+                        <p className="text-muted-foreground/50">{format(m.timestamp, 'hh:mm a')}</p>
                       </td>
 
                       {/* Item */}
                       <td className={`${TD} font-medium text-foreground max-w-[140px]`}>
-                        <span className="truncate block">{entry.productName}</span>
+                        <span className="truncate block">{m.productName}</span>
                       </td>
 
                       {/* Category */}
                       <td className={`${TD} hidden sm:table-cell`}>
-                        <ProdBadge type={entry.productType} />
+                        <ProdBadge type={m.productType} />
                       </td>
 
                       {/* Entry type */}
                       <td className={TD}>
-                        <EntryBadge t={entry.entryType} />
+                        <EntryBadge t={et} />
                       </td>
 
-                      {/* Qty */}
+                      {/* Qty — container unit primary, raw secondary */}
                       <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
-                        <span className={entry.entryType === 'Restock' ? 'text-green-400' : 'text-red-400'}>
-                          {entry.entryType === 'Restock' ? '+' : '-'}{entry.qty}
+                        <span className={et === 'Restock' ? 'text-green-400' : 'text-red-400'}>
+                          {et === 'Restock' ? '+' : '−'}{qty}
                         </span>{' '}
-                        <span className="text-muted-foreground/60">{entry.qtyUnit}</span>
+                        <span className="text-muted-foreground/60">{unit}</span>
                       </td>
 
                       {/* Cost */}
                       <td className={`${TD} hidden md:table-cell text-muted-foreground`}>
-                        {entry.totalCost > 0
-                          ? <span className="text-foreground font-medium">Rs. {fmt(entry.totalCost)}</span>
+                        {(m.totalCost ?? 0) > 0
+                          ? <span className="text-foreground font-medium">Rs. {fmt(m.totalCost!)}</span>
                           : <span className="text-muted-foreground/40">—</span>}
                       </td>
 
                       {/* Supplier */}
                       <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[110px]`}>
-                        <span className="truncate block">{entry.supplier || '—'}</span>
+                        <span className="truncate block">{m.supplier || '—'}</span>
                       </td>
 
                       {/* Logged By */}
                       <td className={`${TD} hidden lg:table-cell text-muted-foreground text-xs`}>
-                        {entry.loggedBy}
+                        {m.loggedBy || '—'}
                       </td>
 
                       {/* Actions */}
                       <td className={`${TD} text-right whitespace-nowrap`}>
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => { setDeletingId(null); setEditingEntry(entry); }}
+                            onClick={() => { setDeletingId(null); setEditingEntry(m); }}
                             className={BTN_EDIT}
                             title="Edit entry"
                           >
                             <Pencil size={13} />
                           </button>
                           <button
-                            onClick={() => handleDelete(entry)}
+                            onClick={() => handleDelete(m)}
                             className={`${BTN_DANGER} ${isDeleting ? '!text-red-400 !bg-red-400/10' : ''}`}
                             title={isDeleting ? 'Click again to confirm delete' : 'Delete entry'}
                           >
@@ -501,9 +515,9 @@ export const BarRestockAudit = () => {
         </div>
       )}
 
-      {entries.length > 0 && (
+      {barMovements.length > 0 && (
         <p className="text-xs text-muted-foreground/50 text-center">
-          Deleting or editing an entry automatically corrects the live inventory stock.
+          Deleting or editing an entry automatically corrects live inventory stock.
         </p>
       )}
     </div>

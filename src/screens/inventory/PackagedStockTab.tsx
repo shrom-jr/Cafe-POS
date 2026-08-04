@@ -256,20 +256,34 @@ const BeverageAddEditForm = ({ edit, onClose }: { edit?: BeverageProduct; onClos
 
 const BeverageBuyForm = ({ p, onClose }: { p: BeverageProduct; onClose: () => void }) => {
   const purchaseBeverage = useInventoryStore((s) => s.purchaseBeverage);
-  const [unit, setUnit] = useState<'piece' | 'carton'>('carton'); const [qty, setQty] = useState(''); const [supplier, setSupplier] = useState(''); const [invoice, setInvoice] = useState('');
+  const [unit, setUnit] = useState<'piece' | 'carton'>('carton');
+  const [qty, setQty] = useState('');
+  const [cost, setCost] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const [invoice, setInvoice] = useState('');
   const addPcs = !isNaN(parseFloat(qty)) && parseFloat(qty) > 0 ? (unit === 'piece' ? parseFloat(qty) : parseFloat(qty) * p.piecesPerCarton) : null;
+  const unitCostPreview = useMemo(() => {
+    const q = parseFloat(qty), c = parseFloat(cost);
+    if (!isNaN(q) && q > 0 && !isNaN(c) && c > 0) {
+      const perCarton = unit === 'carton' ? c / q : (c / q) * p.piecesPerCarton;
+      return `Rs. ${perCarton.toLocaleString(undefined, { maximumFractionDigits: 0 })}/crate`;
+    }
+    return null;
+  }, [qty, cost, unit, p.piecesPerCarton]);
   const handleSave = () => {
     const q = parseFloat(qty);
     if (isNaN(q) || q <= 0) return toast.error('Enter quantity');
-    purchaseBeverage({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined });
-    toast.success(`+${addPcs?.toLocaleString()} pieces added`); onClose();
+    const c = cost !== '' ? parseFloat(cost) : undefined;
+    purchaseBeverage({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: c && !isNaN(c) ? c : undefined });
+    toast.success(`+${addPcs?.toLocaleString()} pcs added${unitCostPreview ? ` · cost synced` : ''}`); onClose();
   };
   return (
     <div className={`${CARD} border-green-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.piecesPerCarton} pcs/carton)</span></h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className={LABEL}>Unit</label><select className={SELECT} value={unit} onChange={(e) => setUnit(e.target.value as 'piece' | 'carton')}><option value="carton">Carton ({p.piecesPerCarton} pcs)</option><option value="piece">Piece</option></select></div>
+      <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.piecesPerCarton} pcs/crate)</span></h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div><label className={LABEL}>Unit</label><select className={SELECT} value={unit} onChange={(e) => setUnit(e.target.value as 'piece' | 'carton')}><option value="carton">Crate ({p.piecesPerCarton} pcs)</option><option value="piece">Piece</option></select></div>
         <div><label className={LABEL}>Quantity *</label><input className={INPUT} type="number" min="1" step="1" placeholder="5" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />{addPcs !== null && <p className="text-xs text-green-400/80 mt-0.5">+{addPcs.toLocaleString()} pcs</p>}</div>
+        <div><label className={LABEL}>Total Cost (Rs.)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={cost} onChange={(e) => setCost(e.target.value)} />{unitCostPreview && <p className="text-xs text-blue-400/80 mt-0.5">{unitCostPreview}</p>}</div>
         <div><label className={LABEL}>Supplier</label><input className={INPUT} placeholder="optional" value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
         <div><label className={LABEL}>Invoice #</label><input className={INPUT} placeholder="optional" value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div>
       </div>
@@ -346,20 +360,34 @@ const CigaretteAddEditForm = ({ edit, onClose }: { edit?: CigaretteProduct; onCl
 
 const CigaretteBuyForm = ({ p, onClose }: { p: CigaretteProduct; onClose: () => void }) => {
   const purchaseCigarette = useInventoryStore((s) => s.purchaseCigarette);
-  const [unit, setUnit] = useState<'stick' | 'packet'>('packet'); const [qty, setQty] = useState(''); const [supplier, setSupplier] = useState(''); const [invoice, setInvoice] = useState('');
+  const [unit, setUnit] = useState<'stick' | 'packet'>('packet');
+  const [qty, setQty] = useState('');
+  const [cost, setCost] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const [invoice, setInvoice] = useState('');
   const addSticks = !isNaN(parseFloat(qty)) && parseFloat(qty) > 0 ? (unit === 'stick' ? parseFloat(qty) : parseFloat(qty) * p.sticksPerPacket) : null;
+  const unitCostPreview = useMemo(() => {
+    const q = parseFloat(qty), c = parseFloat(cost);
+    if (!isNaN(q) && q > 0 && !isNaN(c) && c > 0) {
+      const perPacket = unit === 'packet' ? c / q : (c / q) * p.sticksPerPacket;
+      return `Rs. ${perPacket.toLocaleString(undefined, { maximumFractionDigits: 0 })}/packet`;
+    }
+    return null;
+  }, [qty, cost, unit, p.sticksPerPacket]);
   const handleSave = () => {
     const q = parseFloat(qty);
     if (isNaN(q) || q <= 0) return toast.error('Enter quantity');
-    purchaseCigarette({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined });
-    toast.success(`+${addSticks?.toLocaleString()} sticks added`); onClose();
+    const c = cost !== '' ? parseFloat(cost) : undefined;
+    purchaseCigarette({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: c && !isNaN(c) ? c : undefined });
+    toast.success(`+${addSticks?.toLocaleString()} sticks added${unitCostPreview ? ` · cost synced` : ''}`); onClose();
   };
   return (
     <div className={`${CARD} border-green-500/15`}>
       <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.sticksPerPacket} sticks/packet)</span></h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div><label className={LABEL}>Unit</label><select className={SELECT} value={unit} onChange={(e) => setUnit(e.target.value as 'stick' | 'packet')}><option value="packet">Packet ({p.sticksPerPacket} sticks)</option><option value="stick">Stick</option></select></div>
         <div><label className={LABEL}>Quantity *</label><input className={INPUT} type="number" min="1" step="1" placeholder="10" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />{addSticks !== null && <p className="text-xs text-green-400/80 mt-0.5">+{addSticks.toLocaleString()} sticks</p>}</div>
+        <div><label className={LABEL}>Total Cost (Rs.)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={cost} onChange={(e) => setCost(e.target.value)} />{unitCostPreview && <p className="text-xs text-blue-400/80 mt-0.5">{unitCostPreview}</p>}</div>
         <div><label className={LABEL}>Supplier</label><input className={INPUT} placeholder="optional" value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
         <div><label className={LABEL}>Invoice #</label><input className={INPUT} placeholder="optional" value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div>
       </div>
