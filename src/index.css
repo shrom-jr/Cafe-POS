@@ -279,3 +279,27 @@
   }
 
 }
+/* Custom Dark Theme Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 rgba(15, 23, 42, 0.6);
+}
