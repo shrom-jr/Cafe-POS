@@ -37,23 +37,24 @@ const ENTRY_TYPE_META = {
 
 // ── Alcohol portion sizes ─────────────────────────────────────────────────────
 
-type PortionKey = 'full' | 'half' | 'quarter' | 'mini';
+type PortionKey = 'liter' | 'full' | 'half' | 'quarter' | 'mini';
 
 interface PortionOption {
   label: string;
   factor: number | null; // null = fixed ml
-  mlFixed?: number;      // for mini (330 ml regardless of bottle size)
+  mlFixed?: number;      // fixed ml regardless of bottle size (mini, liter)
   containerUnit: string;
 }
 
 const ALCOHOL_PORTIONS: Record<PortionKey, PortionOption> = {
-  full:    { label: 'Full Btl',  factor: 1.0,  containerUnit: 'bottles'  },
-  half:    { label: 'Half Btl',  factor: 0.5,  containerUnit: 'half btl' },
-  quarter: { label: '¼ Bottle',  factor: 0.25, containerUnit: 'qtr btl'  },
-  mini:    { label: 'Mini',      factor: null, mlFixed: 330, containerUnit: 'mini' },
+  liter:   { label: '1 Liter',   factor: null, mlFixed: 1000, containerUnit: '1L btl'   },
+  full:    { label: 'Full Btl',  factor: 1.0,  containerUnit: 'bottles'                 },
+  half:    { label: 'Half Btl',  factor: 0.5,  containerUnit: 'half btl'                },
+  quarter: { label: '¼ Bottle',  factor: 0.25, containerUnit: 'qtr btl'                 },
+  mini:    { label: 'Mini',      factor: null, mlFixed: 330,  containerUnit: 'mini'      },
 };
 
-const PORTION_KEYS: PortionKey[] = ['full', 'half', 'quarter', 'mini'];
+const PORTION_KEYS: PortionKey[] = ['liter', 'full', 'half', 'quarter', 'mini'];
 
 // ── Quick-Add helpers ─────────────────────────────────────────────────────────
 
@@ -243,10 +244,18 @@ const BarPortal = () => {
     let baseUnitChange = 0;
     let resolvedContainerUnit = selectedProduct.qtyUnit;
 
+    // sizeMultiplier = ratio of this portion's ml to one full bottle's ml.
+    // Used by the store to normalize costPerBottle back to a full-bottle basis.
+    let sizeMultiplier = 1;
+
     if (selectedProduct.productType === 'alcohol') {
-      // portionMl already accounts for the selected portion size
+      const alcProd = alcoholProducts.find((p) => p.id === productId);
+      if (!alcProd) return;
       baseUnitChange = qtyNum * portionMl;
       resolvedContainerUnit = ALCOHOL_PORTIONS[portionKey].containerUnit;
+      if (alcProd.bottleSizeMl > 0) {
+        sizeMultiplier = portionMl / alcProd.bottleSizeMl;
+      }
     } else if (selectedProduct.productType === 'beverage') {
       baseUnitChange = qtyNum;           // qty is already in pieces
     } else {
@@ -267,6 +276,7 @@ const BarPortal = () => {
       totalCost:      entryType === 'Restock' ? (Number(totalCost) || 0) : 0,
       supplier:       supplier.trim(),
       loggedBy:       currentUser?.name ?? 'Staff',
+      sizeMultiplier,
     });
 
     toast.success(`${entryType} logged — ${selectedProduct.name} ×${qtyNum}`);
@@ -447,7 +457,7 @@ const BarPortal = () => {
               <div>
                 <label style={labelStyle}>Size / Portion</label>
                 <div
-                  className="grid grid-cols-4 gap-1 rounded-lg p-1"
+                  className="grid grid-cols-5 gap-1 rounded-lg p-1"
                   style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
                 >
                   {PORTION_KEYS.map((key) => {

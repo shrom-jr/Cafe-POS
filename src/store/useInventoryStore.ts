@@ -100,6 +100,8 @@ interface InventoryState {
     totalCost: number;
     supplier: string;
     loggedBy: string;
+    /** portionMl / bottleSizeMl — used to normalize costPerBottle back to full-bottle basis */
+    sizeMultiplier?: number;
   }) => void;
   updateBarMovement: (args: {
     id: string;
@@ -421,7 +423,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   }),
 
   // ── BAR PORTAL UNIFIED MOVEMENTS ─────────────────────────────────────────
-  addBarMovement: ({ productType, productId, productName, entryType, containerQty, containerUnit, baseUnitChange, totalCost, supplier, loggedBy }) => set((s) => {
+  addBarMovement: ({ productType, productId, productName, entryType, containerQty, containerUnit, baseUnitChange, totalCost, supplier, loggedBy, sizeMultiplier = 1 }) => set((s) => {
     const baseUnit = productType === 'alcohol' ? 'ml' : productType === 'beverage' ? 'pcs' : 'sticks';
     const movType = entryType === 'Restock' ? 'Purchase' : 'Waste';
 
@@ -431,8 +433,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     let updatedCigarettes = s.cigaretteProducts;
 
     if (productType === 'alcohol') {
+      // Normalize cost back to a full-bottle (1.0×) basis regardless of portion size:
+      //   normalizedCostPerBottle = totalCost / (containerQty × sizeMultiplier)
+      // e.g. 2 × half-bottles @ Rs 400 total → 400 / (2 × 0.5) = Rs 400 per full bottle ✓
+      const effectiveMult = sizeMultiplier > 0 ? sizeMultiplier : 1;
       const costPatch = entryType === 'Restock' && totalCost > 0 && containerQty > 0
-        ? { costPerBottle: totalCost / containerQty } : {};
+        ? { costPerBottle: totalCost / (containerQty * effectiveMult) } : {};
       updatedAlcohol = s.alcoholProducts.map((p) =>
         p.id === productId
           ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + baseUnitChange), ...costPatch }
@@ -499,13 +505,31 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     let updatedBeverages = s.beverageProducts;
     let updatedCigarettes = s.cigaretteProducts;
 
-    if (Math.abs(delta) > 0.001) {
-      if (existing.productType === 'alcohol') {
-        updatedAlcohol = s.alcoholProducts.map((p) =>
-          p.id === existing.productId
-            ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + delta) } : p
-        );
-      } else if (existing.productType === 'beverage') {
+    if (existing.productType === 'alcohol') {
+      // Combine stock-delta and cost-normalization in one pass.
+      // Derive the portion's sizeMultiplier from the stored movement:
+      //   mlPerContainer = |original baseUnitChange| / |original containerQty|
+      //   sizeMultiplier = mlPerContainer / bottleSizeMl
+      // This preserves the original portion size even when only cost is being edited.
+      updatedAlcohol = s.alcoholProducts.map((p) => {
+        if (p.id !== existing.productId) return p;
+        const patch: Partial<AlcoholProduct> = {};
+        if (Math.abs(delta) > 0.001) {
+          patch.currentStockMl = Math.max(0, p.currentStockMl + delta);
+        }
+        // Only update cost for restocks (positive quantity) when cost is provided
+        if (existing.quantity > 0 && totalCost > 0 && containerQty > 0 && p.bottleSizeMl > 0) {
+          const origContainerQty = Math.abs(existing.containerQty ?? 1);
+          const mlPerContainer   = origContainerQty > 0
+            ? Math.abs(existing.quantity) / origContainerQty
+            : p.bottleSizeMl;
+          const sm = mlPerContainer / p.bottleSizeMl;
+          if (sm > 0) patch.costPerBottle = totalCost / (containerQty * sm);
+        }
+        return { ...p, ...patch };
+      });
+    } else if (Math.abs(delta) > 0.001) {
+      if (existing.productType === 'beverage') {
         updatedBeverages = s.beverageProducts.map((p) =>
           p.id === existing.productId
             ? { ...p, currentStock: Math.max(0, p.currentStock + delta) } : p
