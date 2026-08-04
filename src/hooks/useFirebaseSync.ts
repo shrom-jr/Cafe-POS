@@ -1,12 +1,7 @@
 import { useEffect, useRef } from "react";
 import { usePOSStore } from "@/store/usePOSStore";
 import { useStaffStore } from "@/store/useStaffStore";
-import {
-  useInventoryStore,
-  SEED_ALCOHOL,
-  SEED_BEVERAGES,
-  SEED_CIGARETTES,
-} from "@/store/useInventoryStore";
+import { useInventoryStore } from "@/store/useInventoryStore";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -182,14 +177,6 @@ export function useFirebaseSync() {
       },
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
         hasLoadedAlcoholProducts.current = true;
-        if (remoteProducts.length === 0) {
-          // Firebase node is absent (fresh/wiped DB) — seed it with master defaults.
-          // Mark as remote so the push effect doesn't create a second write.
-          isRemoteAlcoholProductsUpdate.current = true;
-          setAlcoholProducts(SEED_ALCOHOL);
-          pushAlcoholProductsToFirebase(SEED_ALCOHOL);
-          return;
-        }
         const currentProducts = useInventoryStore.getState().alcoholProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteAlcoholProductsUpdate.current = true;
@@ -198,12 +185,6 @@ export function useFirebaseSync() {
       },
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
         hasLoadedBeverageProducts.current = true;
-        if (remoteProducts.length === 0) {
-          isRemoteBeverageProductsUpdate.current = true;
-          setBeverageProducts(SEED_BEVERAGES);
-          pushBeverageProductsToFirebase(SEED_BEVERAGES);
-          return;
-        }
         const currentProducts = useInventoryStore.getState().beverageProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteBeverageProductsUpdate.current = true;
@@ -212,12 +193,6 @@ export function useFirebaseSync() {
       },
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
         hasLoadedCigaretteProducts.current = true;
-        if (remoteProducts.length === 0) {
-          isRemoteCigaretteProductsUpdate.current = true;
-          setCigaretteProducts(SEED_CIGARETTES);
-          pushCigaretteProductsToFirebase(SEED_CIGARETTES);
-          return;
-        }
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteCigaretteProductsUpdate.current = true;

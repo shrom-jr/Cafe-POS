@@ -16,17 +16,11 @@ function setLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
-// ── Master seed products — Firebase is seeded with these when its nodes are absent ─
-// Exported so useFirebaseSync can push them directly to Firebase on empty-DB startup.
-export const SEED_ALCOHOL: AlcoholProduct[] = [
-  { id: 'seed-vodka-001', name: 'Vodka', bottleSizeMl: 750, currentStockMl: 0, minStockMl: 750, status: 'active' },
-];
-export const SEED_BEVERAGES: BeverageProduct[] = [
-  { id: 'seed-pepsi-001', name: 'Pepsi', piecesPerCarton: 24, currentStock: 0, minStock: 5, status: 'active' },
-];
-export const SEED_CIGARETTES: CigaretteProduct[] = [
-  { id: 'seed-surya-001', name: 'Surya', sticksPerPacket: 25, currentSticks: 0, minSticks: 25, status: 'active' },
-];
+// ── Seed constants removed — app starts with a clean slate.
+// Exported as empty arrays so any remaining imports continue to compile.
+export const SEED_ALCOHOL: AlcoholProduct[] = [];
+export const SEED_BEVERAGES: BeverageProduct[] = [];
+export const SEED_CIGARETTES: CigaretteProduct[] = [];
 
 const INV_KEYS = {
   grocery:   'inv_grocery',
