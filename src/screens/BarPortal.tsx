@@ -143,8 +143,9 @@ const BarPortal = () => {
   const [qty,          setQty]          = useState('');
   const [totalCost,    setTotalCost]    = useState('');
   const [supplier,     setSupplier]     = useState('');
-  const [portionKey,   setPortionKey]   = useState<PortionKey>('full');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [portionKey,          setPortionKey]          = useState<PortionKey>('full');
+  const [isCostEditedByUser,  setIsCostEditedByUser]  = useState(false);
+  const [showAddModal,        setShowAddModal]         = useState(false);
 
   // ── Quick-add callback ──
   const handleProductCreated = (newId: string) => {
@@ -184,8 +185,11 @@ const BarPortal = () => {
     return null;
   }, [selectedProduct, productId, alcoholProducts, beverageProducts, cigaretteProducts]);
 
-  // ── Reset portion to full when product changes ──
-  useEffect(() => { setPortionKey('full'); }, [productId]);
+  // ── Reset portion + dirty flag when product changes ──
+  useEffect(() => {
+    setPortionKey('full');
+    setIsCostEditedByUser(false);
+  }, [productId]);
 
   // ── Portion-aware ml per container unit ──
   const portionMl = useMemo<number>(() => {
@@ -206,9 +210,9 @@ const BarPortal = () => {
     return unitCost * (portionMl / prod.bottleSizeMl);
   }, [selectedProduct, productId, unitCost, portionMl, alcoholProducts]);
 
-  // ── Re-auto-fill total cost when portion changes (if qty already entered) ──
+  // ── Re-auto-fill total cost when portion changes (only when user hasn't overridden) ──
   useEffect(() => {
-    if (effectiveUnitCost === null || entryType !== 'Restock' || !qty) return;
+    if (isCostEditedByUser || effectiveUnitCost === null || entryType !== 'Restock' || !qty) return;
     const qtyNum = parseFloat(qty);
     if (!isNaN(qtyNum) && qtyNum > 0) {
       setTotalCost(String(Math.round(qtyNum * effectiveUnitCost)));
@@ -283,6 +287,7 @@ const BarPortal = () => {
     setQty('');
     setTotalCost('');
     setSupplier('');
+    setIsCostEditedByUser(false);
   };
 
   // ── Delete (reverses stock via deleteBarMovement) ──
@@ -514,8 +519,8 @@ const BarPortal = () => {
                 onChange={(e) => {
                   const newQty = e.target.value;
                   setQty(newQty);
-                  // Auto-fill Total Cost when effective unit cost is available
-                  if (effectiveUnitCost !== null && entryType === 'Restock') {
+                  // Auto-fill Total Cost only when user hasn't manually overridden it
+                  if (!isCostEditedByUser && effectiveUnitCost !== null && entryType === 'Restock') {
                     const qtyNum = parseFloat(newQty);
                     setTotalCost(!isNaN(qtyNum) && qtyNum > 0
                       ? String(Math.round(qtyNum * effectiveUnitCost))
@@ -551,9 +556,28 @@ const BarPortal = () => {
                     step="1"
                     placeholder="0"
                     value={totalCost}
-                    onChange={(e) => setTotalCost(e.target.value)}
-                    style={inputStyle}
+                    onChange={(e) => {
+                      setTotalCost(e.target.value);
+                      setIsCostEditedByUser(true);
+                    }}
+                    style={{
+                      ...inputStyle,
+                      borderColor: isCostEditedByUser
+                        ? 'rgba(251,191,36,0.45)'
+                        : 'rgba(255,255,255,0.1)',
+                    }}
                   />
+                  {totalCost !== '' && (
+                    <p className="mt-1.5 text-[11px] leading-snug" style={{
+                      color: isCostEditedByUser
+                        ? 'rgba(251,191,36,0.75)'
+                        : 'rgba(255,255,255,0.3)',
+                    }}>
+                      {isCostEditedByUser
+                        ? '✏️ Custom cost entered. This will update the item\'s master base price upon saving.'
+                        : '💡 Auto-filled from last unit price. Override if today\'s bill is different.'}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label style={labelStyle}>
