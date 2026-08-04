@@ -1,0 +1,398 @@
+Populate our POS menu store (src/store/useMenuStore.ts or initial seed data/Firebase) with the following complete restaurant menu for S Bamboo Cottage & Sekuwa Corner. 
+
+Ensure every item is assigned a unique ID, item name, price (in Rs.), category, and availability set to true.
+
+--- MENU DATA START ---
+
+[HOT BEVERAGES]
+- Tea (Black) - Rs. 30
+- Tea (Milk) - Rs. 60
+- Tea (Lemon) - Rs. 40
+- Tea (Masala) - Rs. 70
+- Coffee (Black) - Rs. 80
+- Coffee (Milk) - Rs. 120
+- Hot Lemon - Rs. 80
+- Hot Lemon with Ginger & Honey - Rs. 170
+- Hot Chocolate - Rs. 250
+
+[COLD BEVERAGES]
+- Coke - Rs. 100
+- Fanta - Rs. 100
+- Sprite - Rs. 100
+- Pepsi - Rs. 100
+- Mountain Dew - Rs. 100
+- Slice - Rs. 100
+- Sweet Lassi - Rs. 150
+- Banana Lassi - Rs. 180
+- Watermelon Juice - Rs. 150
+- Iced Tea - Rs. 130
+- Chocolate Milkshake - Rs. 250
+- Cold Coffee (Black) - Rs. 130
+- Cold Coffee (Milk) - Rs. 150
+- Red Bull - Rs. 200
+- Xtreme Energy Drink - Rs. 250
+
+[BURGERS & SANDWICHES]
+- Veg Burger - Rs. 150
+- Chicken Burger - Rs. 180
+- Crunchy Chicken Burger - Rs. 200
+- Cheese Sandwich - Rs. 225
+- Chicken Sandwich - Rs. 250
+- Special Club Sandwich - Rs. 300
+
+[SOUPS]
+- Nepali Soup (Veg) - Rs. 200
+- Nepali Soup (Non-Veg) - Rs. 250
+- Hot & Sour Soup (Veg) - Rs. 280
+- Hot & Sour Soup (Non-Veg) - Rs. 300
+- Veg Soup - Rs. 200
+- Creamy Chicken Mushroom Soup - Rs. 280
+- Mutton Khutta Soup - Rs. 450
+
+[SIZZLERS]
+- Veg Sizzler - Rs. 350
+- Fish Sizzler - Rs. 400
+- Chicken Sizzler - Rs. 450
+
+[CHHOILA]
+- Chhoila Chicken - Rs. 300
+- Chhoila Mutton - Rs. 450
+- Chhoila Buff - Rs. 280
+- Chhoila Pork - Rs. 280
+- Mushroom Chhoila - Rs. 230
+
+[CHEF'S SPECIAL]
+- Piro Aalu Paneer - Rs. 280
+- Mustang Aalu - Rs. 270
+- Jhaneko Sekuwa (Chicken) - Rs. 400
+- Jhaneko Sekuwa (Buff) - Rs. 400
+- Jhaneko Sekuwa (Pork) - Rs. 400
+- Jhaneko Sekuwa (Mutton) - Rs. 650
+- Pork Dameko - Rs. 300
+- Timmur Chicken - Rs. 350
+- Special Biryani (Non-Veg) - Rs. 500
+- Whole Grill Fish - Rs. 600
+- Hyakula Dameko - Rs. 600
+- Newari Platter - Rs. 700
+- Special Bamboo Platter (Small) - Rs. 450
+- Special Bamboo Platter (Large) - Rs. 700
+
+[FISH DISHES]
+- Fish Fingers - Rs. 270
+- Fish Fry - Rs. 300
+- Fish & Chips - Rs. 450
+- Steamed Whole Fish - Rs. 550
+- Grilled Whole Fish - Rs. 600
+
+[VEGETARIAN SNACKS]
+- Masala Papad - Rs. 150
+- Veg Pakoda - Rs. 180
+- Paneer Pakoda - Rs. 280
+- Onion Pakoda - Rs. 200
+- Aalu Jeera - Rs. 180
+- French Fries - Rs. 180
+- Aalu Sadheko - Rs. 180
+- Seasonal Green Bhatmas Sadheko - Rs. 200
+- Chips Chilli - Rs. 200
+- Crispy Aalu - Rs. 200
+- Boiled Corn - Rs. 200
+- Chiura Bhatmas Sadheko - Rs. 230
+- Mixed Veg (Boiled) - Rs. 225
+- Green Corn Sadheko - Rs. 250
+- Cheese Balls - Rs. 280
+- Mushroom Chilli - Rs. 280
+- Paneer Chilli - Rs. 290
+- Tofu (Fry) - Rs. 200
+- Tofu (Chilli) - Rs. 250
+
+[NON-VEGETARIAN SNACKS]
+- Mutton Head (Fry) - Rs. 450
+- Mutton Head (Sadheko) - Rs. 460
+- Mutton Rajkhani (Poleko & Sadheko) - Rs. 550
+- Mutton Hyakula (Dameko & Sadheko) - Rs. 600
+- Mutton (Tash) - Rs. 550
+- Mutton (Bhuttan) - Rs. 380
+- Chicken Sadheko - Rs. 270
+- Chicken Chilli - Rs. 280
+- Boiled Chicken - Rs. 280
+- Chicken Lollipop - Rs. 300
+- Chicken Drumstick - Rs. 300
+- Dragon Chicken - Rs. 400
+- Polpal Chicken - Rs. 360
+- Nepali Chicken - Rs. 350
+- Hot & Spicy Chicken Wings - Rs. 300
+- Chicken (Pangra) - Rs. 350
+- Buff Sukuti Sadheko - Rs. 300
+- Timmur Pork - Rs. 350
+
+[OUR PLATTERS]
+- MoMo Platter (Small) - Rs. 350
+- MoMo Platter (Large) - Rs. 550
+- Newari Platter (Small) - Rs. 400
+- Newari Platter (Large) - Rs. 700
+- Special Bamboo Platter (Small) - Rs. 450
+- Special Bamboo Platter (Large) - Rs. 700
+
+[THUKPA]
+- Thukpa Veg - Rs. 160
+- Thukpa Egg - Rs. 180
+- Thukpa Buff - Rs. 180
+- Thukpa Chicken - Rs. 200
+- Thukpa Pork - Rs. 200
+- Thukpa Mixed - Rs. 250
+
+[CHOWMEIN]
+- Chowmein Veg - Rs. 150
+- Chowmein Chicken - Rs. 180
+- Chowmein Buff - Rs. 170
+- Chowmein Pork - Rs. 180
+- Chowmein Mixed - Rs. 250
+
+[KEEMA NOODLES]
+- Keema Noodles (Chicken) - Rs. 235
+- Keema Noodles (Buff) - Rs. 225
+- Current Noodles (Veg) - Rs. 150
+- Current Noodles (Egg) - Rs. 250
+
+[MOMO]
+- Veg Steam Momo - Rs. 150
+- Veg Jhol Momo - Rs. 170
+- Veg Sadheko Momo - Rs. 200
+- Veg Fry Momo - Rs. 150
+- Veg Kothey Momo - Rs. 160
+- Veg Chilli Momo - Rs. 220
+- Buff Steam Momo - Rs. 160
+- Buff Jhol Momo - Rs. 190
+- Buff Sadheko Momo - Rs. 240
+- Buff Fry Momo - Rs. 190
+- Buff Kothey Momo - Rs. 170
+- Buff Chilli Momo - Rs. 270
+- Chicken Steam Momo - Rs. 180
+- Chicken Jhol Momo - Rs. 200
+- Chicken Sadheko Momo - Rs. 250
+- Chicken Fry Momo - Rs. 200
+- Chicken Kothey Momo - Rs. 190
+- Chicken Chilli Momo - Rs. 280
+
+[BIRYANI]
+- Veg Biryani - Rs. 300
+- Chicken Biryani - Rs. 400
+- Mutton Biryani - Rs. 500
+
+[MAIN CURRIES]
+- Mixed Veg Curry - Rs. 200
+- Egg Curry - Rs. 200
+- Chicken Curry - Rs. 250
+- Mutton Curry - Rs. 400
+- Chicken Butter Masala - Rs. 300
+- Paneer Butter Masala - Rs. 280
+- Matar Paneer - Rs. 240
+
+[RICE SIDES]
+- Rice (Plain) - Rs. 80
+- Rice (Butter) - Rs. 100
+- Rice (Jeera) - Rs. 110
+
+[TRADITIONAL NEPALI KHANA SETS]
+- Veg Khana Set - Rs. 325
+- Chicken Khana Set - Rs. 400
+- Mutton Khana Set - Rs. 550
+- Fish Khana Set - Rs. 450
+
+[PIZZA]
+- Margherita Pizza - Rs. 350
+- Smokey Chicken Pizza - Rs. 450
+- Sausage Salami Pizza - Rs. 500
+- Veg Pizza - Rs. 380
+- Mixed Pizza - Rs. 550
+
+[ROLLS]
+- Katti Roll (Veg) - Rs. 200
+- Katti Roll (Non-Veg) - Rs. 280
+- Spring Roll (Veg) - Rs. 200
+- Spring Roll (Non-Veg) - Rs. 280
+
+[CHOPSUEY]
+- Chinese Chopsuey - Rs. 240
+- American Chopsuey - Rs. 250
+
+[KHAJA SETS]
+- Khaja Set (Veg) - Rs. 280
+- Khaja Set (Buff) - Rs. 330
+- Khaja Set (Pork) - Rs. 330
+- Khaja Set (Chicken) - Rs. 350
+- Khaja Set (Pangra) - Rs. 400
+- Khaja Set (Bhutan) - Rs. 400
+
+[SPECIAL SEKUWA ITEMS]
+- Chicken Sekuwa (200 Grams) - Rs. 300
+- Chicken Sekuwa (500 Grams) - Rs. 650
+- Chicken Sekuwa (1 Kg) - Rs. 1300
+- Pork Sekuwa (200 Grams) - Rs. 300
+- Pork Sekuwa (500 Grams) - Rs. 650
+- Pork Sekuwa (1 Kg) - Rs. 1300
+- Buff Sekuwa (200 Grams) - Rs. 300
+- Buff Sekuwa (500 Grams) - Rs. 650
+- Buff Sekuwa (1 Kg) - Rs. 1300
+- Chicken Wings Sekuwa (200 Grams) - Rs. 350
+- Chicken Wings Sekuwa (500 Grams) - Rs. 680
+- Chicken Wings Sekuwa (1 Kg) - Rs. 1350
+- Mutton Sekuwa (200 Grams) - Rs. 600
+- Mutton Sekuwa (500 Grams) - Rs. 1350
+- Mutton Sekuwa (1 Kg) - Rs. 2700
+- Paneer Sekuwa (200 Grams) - Rs. 300
+- Mutton Kalejo (200 Grams) - Rs. 550
+- Whole Fish Poleko - Rs. 600
+
+[SEKUWA SETS]
+- Sekuwa Set (Chicken) - Rs. 300
+- Sekuwa Set (Mutton) - Rs. 450
+- Sekuwa Set (Buff) - Rs. 300
+- Sekuwa Set (Pork) - Rs. 300
+- Sekuwa Set (Chicken Wing) - Rs. 400
+
+[BEERS]
+- Mini Gorkha - Rs. 270
+- Mini Tuborg - Rs. 290
+- Gorkha Strong - Rs. 480
+- Gorkha Pilsner - Rs. 550
+- Gorkha Craft - Rs. 575
+- Tuborg - Rs. 600
+- Carlsberg - Rs. 650
+
+[WINES]
+- Big Master - Rs. 1250
+- Divine - Rs. 1250
+- Robertson - Rs. 2300
+- J.P. Chenet - Rs. 2800
+
+[DOMESTIC SPIRITS]
+- Mustang (60 ml) - Rs. 150
+- Mustang (90 ml) - Rs. 220
+- Mustang (Quarter / 180 ml) - Rs. 390
+- Mustang (Half / 375 ml) - Rs. 780
+- Mustang (Full / 750 ml) - Rs. 1500
+- Golden Oak (60 ml) - Rs. 160
+- Golden Oak (90 ml) - Rs. 240
+- Golden Oak (Quarter / 180 ml) - Rs. 450
+- Golden Oak (Half / 375 ml) - Rs. 800
+- Golden Oak (Full / 750 ml) - Rs. 1550
+- Black Oak (60 ml) - Rs. 180
+- Black Oak (90 ml) - Rs. 260
+- Black Oak (Quarter / 180 ml) - Rs. 480
+- Black Oak (Half / 375 ml) - Rs. 950
+- Black Oak (Full / 750 ml) - Rs. 1800
+- Highlander (60 ml) - Rs. 160
+- Highlander (90 ml) - Rs. 240
+- Highlander (Quarter / 180 ml) - Rs. 450
+- Highlander (Half / 375 ml) - Rs. 800
+- Highlander (Full / 750 ml) - Rs. 1550
+- 8848 Vodka (60 ml) - Rs. 300
+- 8848 Vodka (90 ml) - Rs. 450
+- 8848 Vodka (Quarter / 180 ml) - Rs. 850
+- 8848 Vodka (Half / 375 ml) - Rs. 1600
+- 8848 Vodka (Full / 750 ml) - Rs. 3050
+- Ruslan Vodka (60 ml) - Rs. 300
+- Ruslan Vodka (90 ml) - Rs. 425
+- Ruslan Vodka (Quarter / 180 ml) - Rs. 800
+- Ruslan Vodka (Half / 375 ml) - Rs. 1550
+- Ruslan Vodka (Full / 750 ml) - Rs. 2950
+- NUDE Vodka (60 ml) - Rs. 300
+- NUDE Vodka (90 ml) - Rs. 450
+- NUDE Vodka (Quarter / 180 ml) - Rs. 850
+- NUDE Vodka (Half / 375 ml) - Rs. 1600
+- NUDE Vodka (Full / 750 ml) - Rs. 3050
+- Signature Green (60 ml) - Rs. 325
+- Signature Green (90 ml) - Rs. 480
+- Signature Green (Quarter / 180 ml) - Rs. 900
+- Signature Green (Half / 375 ml) - Rs. 1650
+- Signature Green (Full / 750 ml) - Rs. 3200
+- Signature Red (60 ml) - Rs. 350
+- Signature Red (90 ml) - Rs. 500
+- Signature Red (Quarter / 180 ml) - Rs. 960
+- Signature Red (Half / 375 ml) - Rs. 1800
+- Signature Red (Full / 750 ml) - Rs. 3400
+- Old Durbar Red (60 ml) - Rs. 380
+- Old Durbar Red (90 ml) - Rs. 550
+- Old Durbar Red (Quarter / 180 ml) - Rs. 1050
+- Old Durbar Red (Half / 375 ml) - Rs. 2000
+- Old Durbar Red (Full / 750 ml) - Rs. 3850
+- Old Durbar Black (60 ml) - Rs. 480
+- Old Durbar Black (90 ml) - Rs. 700
+- Old Durbar Black (Quarter / 180 ml) - Rs. 1350
+- Old Durbar Black (Half / 375 ml) - Rs. 2500
+- Old Durbar Black (Full / 750 ml) - Rs. 4750
+- Gurkhas & Guns (60 ml) - Rs. 400
+- Gurkhas & Guns (90 ml) - Rs. 600
+- Gurkhas & Guns (Quarter / 180 ml) - Rs. 1050
+- Gurkhas & Guns (Half / 375 ml) - Rs. 2050
+- Gurkhas & Guns (Full / 750 ml) - Rs. 3950
+- Yarchagumba (60 ml) - Rs. 1350
+- Yarchagumba (90 ml) - Rs. 2200
+- Yarchagumba (Quarter / 180 ml) - Rs. 4400
+- Yarchagumba (Half / 375 ml) - Rs. 8000
+- Yarchagumba (Full / 750 ml) - Rs. 14500
+
+[IMPORTED SPIRITS]
+- Red Label (30 ml) - Rs. 500
+- Red Label (60 ml) - Rs. 900
+- Red Label (90 ml) - Rs. 1300
+- Red Label (Quarter / 180 ml) - Rs. 2350
+- Red Label (Half / 375 ml) - Rs. 4300
+- Red Label (Full / 750 ml) - Rs. 8500
+- Black Label (30 ml) - Rs. 550
+- Black Label (60 ml) - Rs. 980
+- Black Label (90 ml) - Rs. 1450
+- Black Label (Quarter / 180 ml) - Rs. 2750
+- Black Label (Half / 375 ml) - Rs. 5000
+- Black Label (Full / 750 ml) - Rs. 9800
+- Double Black (30 ml) - Rs. 700
+- Double Black (60 ml) - Rs. 1150
+- Double Black (90 ml) - Rs. 2200
+- Double Black (Quarter / 180 ml) - Rs. 4400
+- Double Black (Half / 375 ml) - Rs. 8000
+- Double Black (Full / 750 ml) - Rs. 14500
+- Jack Daniel's (30 ml) - Rs. 525
+- Jack Daniel's (60 ml) - Rs. 950
+- Jack Daniel's (90 ml) - Rs. 1350
+- Jack Daniel's (Quarter / 180 ml) - Rs. 2250
+- Jack Daniel's (Half / 375 ml) - Rs. 4600
+- Jack Daniel's (Full / 750 ml) - Rs. 9000
+- Chivas Regal (30 ml) - Rs. 550
+- Chivas Regal (60 ml) - Rs. 980
+- Chivas Regal (90 ml) - Rs. 1450
+- Chivas Regal (Quarter / 180 ml) - Rs. 2750
+- Chivas Regal (Half / 375 ml) - Rs. 5000
+- Chivas Regal (Full / 750 ml) - Rs. 9800
+- Jameson (30 ml) - Rs. 600
+- Jameson (60 ml) - Rs. 1050
+- Jameson (90 ml) - Rs. 1600
+- Jameson (Quarter / 180 ml) - Rs. 2850
+- Jameson (Half / 375 ml) - Rs. 5250
+- Jameson (Full / 750 ml) - Rs. 10500
+- Absolut Vodka (30 ml) - Rs. 525
+- Absolut Vodka (60 ml) - Rs. 975
+- Absolut Vodka (90 ml) - Rs. 1375
+- Absolut Vodka (Quarter / 180 ml) - Rs. 2625
+- Absolut Vodka (Half / 375 ml) - Rs. 4750
+- Absolut Vodka (Full / 750 ml) - Rs. 9500
+
+[HOOKAH]
+- Hookah Regular Mint - Rs. 350
+- Hookah Regular Double Apple - Rs. 380
+- Hookah Regular Lady Killer - Rs. 400
+- Hookah Cloud Mint - Rs. 500
+- Hookah Cloud Double Apple - Rs. 550
+- Hookah Cloud Lady Killer - Rs. 600
+- Hookah Coil (Normal) - Rs. 50
+- Hookah Coil (Coconut) - Rs. 120
+
+[CIGARETTES]
+- Surya Red - Rs. 30
+- Surya Light - Rs. 30
+- Surya Arctic - Rs. 30
+- Shikhar Ice - Rs. 25
+
+--- MENU DATA END ---
+
+Please save these items into state and persist them to Firebase so that all POS screens render these exact categories and items instantly.
