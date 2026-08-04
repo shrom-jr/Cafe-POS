@@ -433,40 +433,55 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     let updatedCigarettes = s.cigaretteProducts;
 
     if (productType === 'alcohol') {
-      // Normalize cost back to a full-bottle (1.0×) basis regardless of portion size:
-      //   normalizedCostPerBottle = totalCost / (containerQty × sizeMultiplier)
-      // e.g. 2 × half-bottles @ Rs 400 total → 400 / (2 × 0.5) = Rs 400 per full bottle ✓
-      const effectiveMult = sizeMultiplier > 0 ? sizeMultiplier : 1;
-      const costPatch = entryType === 'Restock' && totalCost > 0 && containerQty > 0
-        ? { costPerBottle: totalCost / (containerQty * effectiveMult) } : {};
-      updatedAlcohol = s.alcoholProducts.map((p) =>
-        p.id === productId
-          ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + baseUnitChange), ...costPatch }
-          : p
-      );
+      updatedAlcohol = s.alcoholProducts.map((p) => {
+        if (p.id !== productId) return p;
+        const newStockMl = Math.max(0, p.currentStockMl + baseUnitChange);
+        // Weighted-average master cost — only on Restock with a valid invoice total.
+        // Formula: ((existingStock × existingCostPerBottle) + invoiceTotal)
+        //          / (existingStock + restockStock)   [both in bottle equivalents]
+        // The raw invoiceTotal is preserved untouched on the movement record.
+        let costPatch: Partial<AlcoholProduct> = {};
+        if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0 && p.bottleSizeMl > 0) {
+          const existingBottles = p.currentStockMl / p.bottleSizeMl;
+          const restockBottles  = baseUnitChange    / p.bottleSizeMl;
+          const totalBottles    = existingBottles + restockBottles;
+          if (totalBottles > 0) {
+            const existingValue   = existingBottles * (p.costPerBottle ?? 0);
+            costPatch = { costPerBottle: (existingValue + totalCost) / totalBottles };
+          }
+        }
+        return { ...p, currentStockMl: newStockMl, ...costPatch };
+      });
     } else if (productType === 'beverage') {
-      const prod = s.beverageProducts.find((p) => p.id === productId);
-      let costPatch: Partial<typeof s.beverageProducts[0]> = {};
-      if (entryType === 'Restock' && totalCost > 0 && containerQty > 0 && prod) {
-        // containerUnit can be 'pcs' or 'crates'; store always uses costPerCarton
-        const cpc = containerUnit === 'crates'
-          ? totalCost / containerQty
-          : (totalCost / containerQty) * prod.piecesPerCarton;
-        costPatch = { costPerCarton: cpc };
-      }
-      updatedBeverages = s.beverageProducts.map((p) =>
-        p.id === productId
-          ? { ...p, currentStock: Math.max(0, p.currentStock + baseUnitChange), ...costPatch }
-          : p
-      );
+      updatedBeverages = s.beverageProducts.map((p) => {
+        if (p.id !== productId) return p;
+        const newStock = Math.max(0, p.currentStock + baseUnitChange);
+        // Weighted-average master cost in piece units, converted back to per-carton.
+        let costPatch: Partial<BeverageProduct> = {};
+        if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0 && p.piecesPerCarton > 0) {
+          const existingPcs           = p.currentStock;
+          const totalPcs              = existingPcs + baseUnitChange;
+          const existingCostPerPiece  = p.costPerCarton ? p.costPerCarton / p.piecesPerCarton : 0;
+          const weightedCostPerPiece  = (existingPcs * existingCostPerPiece + totalCost) / totalPcs;
+          costPatch = { costPerCarton: weightedCostPerPiece * p.piecesPerCarton };
+        }
+        return { ...p, currentStock: newStock, ...costPatch };
+      });
     } else {
-      const costPatch = entryType === 'Restock' && totalCost > 0 && containerQty > 0
-        ? { costPerPacket: totalCost / containerQty } : {};
-      updatedCigarettes = s.cigaretteProducts.map((p) =>
-        p.id === productId
-          ? { ...p, currentSticks: Math.max(0, p.currentSticks + baseUnitChange), ...costPatch }
-          : p
-      );
+      updatedCigarettes = s.cigaretteProducts.map((p) => {
+        if (p.id !== productId) return p;
+        const newSticks = Math.max(0, p.currentSticks + baseUnitChange);
+        // Weighted-average master cost in stick units, converted back to per-packet.
+        let costPatch: Partial<CigaretteProduct> = {};
+        if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0 && p.sticksPerPacket > 0) {
+          const existingSticks        = p.currentSticks;
+          const totalSticks           = existingSticks + baseUnitChange;
+          const existingCostPerStick  = p.costPerPacket ? p.costPerPacket / p.sticksPerPacket : 0;
+          const weightedCostPerStick  = (existingSticks * existingCostPerStick + totalCost) / totalSticks;
+          costPatch = { costPerPacket: weightedCostPerStick * p.sticksPerPacket };
+        }
+        return { ...p, currentSticks: newSticks, ...costPatch };
+      });
     }
 
     const movement: InventoryMovement = {
