@@ -35,6 +35,26 @@ const ENTRY_TYPE_META = {
   'Spill/Loss': { icon: TrendingDown, bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.3)',   text: '#f87171' },
 };
 
+// ── Alcohol portion sizes ─────────────────────────────────────────────────────
+
+type PortionKey = 'full' | 'half' | 'quarter' | 'mini';
+
+interface PortionOption {
+  label: string;
+  factor: number | null; // null = fixed ml
+  mlFixed?: number;      // for mini (330 ml regardless of bottle size)
+  containerUnit: string;
+}
+
+const ALCOHOL_PORTIONS: Record<PortionKey, PortionOption> = {
+  full:    { label: 'Full Btl',  factor: 1.0,  containerUnit: 'bottles'  },
+  half:    { label: 'Half Btl',  factor: 0.5,  containerUnit: 'half btl' },
+  quarter: { label: '¼ Bottle',  factor: 0.25, containerUnit: 'qtr btl'  },
+  mini:    { label: 'Mini',      factor: null, mlFixed: 330, containerUnit: 'mini' },
+};
+
+const PORTION_KEYS: PortionKey[] = ['full', 'half', 'quarter', 'mini'];
+
 // ── Quick-Add helpers ─────────────────────────────────────────────────────────
 
 const toTitleCase = (str: string): string =>
@@ -122,6 +142,7 @@ const BarPortal = () => {
   const [qty,          setQty]          = useState('');
   const [totalCost,    setTotalCost]    = useState('');
   const [supplier,     setSupplier]     = useState('');
+  const [portionKey,   setPortionKey]   = useState<PortionKey>('full');
   const [showAddModal, setShowAddModal] = useState(false);
 
   // ── Quick-add callback ──
@@ -162,6 +183,37 @@ const BarPortal = () => {
     return null;
   }, [selectedProduct, productId, alcoholProducts, beverageProducts, cigaretteProducts]);
 
+  // ── Reset portion to full when product changes ──
+  useEffect(() => { setPortionKey('full'); }, [productId]);
+
+  // ── Portion-aware ml per container unit ──
+  const portionMl = useMemo<number>(() => {
+    if (selectedProduct?.productType !== 'alcohol') return 0;
+    const prod = alcoholProducts.find((p) => p.id === productId);
+    if (!prod) return 0;
+    const portion = ALCOHOL_PORTIONS[portionKey];
+    if (portion.mlFixed !== undefined) return portion.mlFixed;
+    return Math.round(prod.bottleSizeMl * (portion.factor ?? 1));
+  }, [selectedProduct, productId, portionKey, alcoholProducts]);
+
+  // ── Cost per one container unit (portion-adjusted for alcohol) ──
+  const effectiveUnitCost = useMemo<number | null>(() => {
+    if (!selectedProduct || unitCost === null) return null;
+    if (selectedProduct.productType !== 'alcohol') return unitCost;
+    const prod = alcoholProducts.find((p) => p.id === productId);
+    if (!prod || prod.bottleSizeMl <= 0) return unitCost;
+    return unitCost * (portionMl / prod.bottleSizeMl);
+  }, [selectedProduct, productId, unitCost, portionMl, alcoholProducts]);
+
+  // ── Re-auto-fill total cost when portion changes (if qty already entered) ──
+  useEffect(() => {
+    if (effectiveUnitCost === null || entryType !== 'Restock' || !qty) return;
+    const qtyNum = parseFloat(qty);
+    if (!isNaN(qtyNum) && qtyNum > 0) {
+      setTotalCost(String(Math.round(qtyNum * effectiveUnitCost)));
+    }
+  }, [effectiveUnitCost]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Today's bar movements ──
   const today        = todayStr();
   const todayEntries = useMemo(
@@ -189,10 +241,12 @@ const BarPortal = () => {
 
     // Compute signed base-unit change
     let baseUnitChange = 0;
+    let resolvedContainerUnit = selectedProduct.qtyUnit;
+
     if (selectedProduct.productType === 'alcohol') {
-      const prod = alcoholProducts.find((p) => p.id === productId);
-      if (!prod) return;
-      baseUnitChange = qtyNum * prod.bottleSizeMl;
+      // portionMl already accounts for the selected portion size
+      baseUnitChange = qtyNum * portionMl;
+      resolvedContainerUnit = ALCOHOL_PORTIONS[portionKey].containerUnit;
     } else if (selectedProduct.productType === 'beverage') {
       baseUnitChange = qtyNum;           // qty is already in pieces
     } else {
@@ -208,7 +262,7 @@ const BarPortal = () => {
       productName:    selectedProduct.name,
       entryType,
       containerQty:   qtyNum,
-      containerUnit:  selectedProduct.qtyUnit,
+      containerUnit:  resolvedContainerUnit,
       baseUnitChange,
       totalCost:      entryType === 'Restock' ? (Number(totalCost) || 0) : 0,
       supplier:       supplier.trim(),
@@ -388,13 +442,56 @@ const BarPortal = () => {
               </div>
             </div>
 
+            {/* Size / Portion — only for alcohol */}
+            {selectedProduct?.productType === 'alcohol' && (
+              <div>
+                <label style={labelStyle}>Size / Portion</label>
+                <div
+                  className="grid grid-cols-4 gap-1 rounded-lg p-1"
+                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  {PORTION_KEYS.map((key) => {
+                    const p = ALCOHOL_PORTIONS[key];
+                    const active = portionKey === key;
+                    const alcProd = alcoholProducts.find((ap) => ap.id === productId);
+                    const mlDisplay = p.mlFixed !== undefined
+                      ? `${p.mlFixed} ml`
+                      : alcProd
+                        ? `${Math.round(alcProd.bottleSizeMl * (p.factor ?? 1))} ml`
+                        : `×${p.factor ?? ''}`;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setPortionKey(key)}
+                        className="flex flex-col items-center justify-center py-2 rounded-md text-center transition-all"
+                        style={active ? {
+                          background: 'rgba(129,140,248,0.2)',
+                          border: '1px solid rgba(129,140,248,0.4)',
+                          color: '#a5b4fc',
+                        } : {
+                          color: 'rgba(255,255,255,0.35)',
+                          border: '1px solid transparent',
+                        }}
+                      >
+                        <span className="text-[11px] font-semibold leading-tight">{p.label}</span>
+                        <span className="text-[10px] font-normal mt-0.5 opacity-70 leading-tight">{mlDisplay}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Quantity */}
             <div>
               <label style={labelStyle}>
                 Quantity
                 {selectedProduct && (
                   <span className="ml-1.5 text-white/30 normal-case font-normal tracking-normal">
-                    ({selectedProduct.qtyUnit})
+                    ({selectedProduct.productType === 'alcohol'
+                      ? ALCOHOL_PORTIONS[portionKey].containerUnit
+                      : selectedProduct.qtyUnit})
                   </span>
                 )}
               </label>
@@ -407,16 +504,30 @@ const BarPortal = () => {
                 onChange={(e) => {
                   const newQty = e.target.value;
                   setQty(newQty);
-                  // Auto-fill Total Cost when unit cost is available
-                  if (unitCost !== null && entryType === 'Restock') {
+                  // Auto-fill Total Cost when effective unit cost is available
+                  if (effectiveUnitCost !== null && entryType === 'Restock') {
                     const qtyNum = parseFloat(newQty);
                     setTotalCost(!isNaN(qtyNum) && qtyNum > 0
-                      ? String(Math.round(qtyNum * unitCost))
+                      ? String(Math.round(qtyNum * effectiveUnitCost))
                       : '');
                   }
                 }}
                 style={inputStyle}
               />
+              {/* Volume preview — only for alcohol with a valid qty */}
+              {selectedProduct?.productType === 'alcohol' && Number(qty) > 0 && portionMl > 0 && (
+                <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  {entryType === 'Restock' ? 'Adding' : 'Removing'}{' '}
+                  <span style={{ color: '#a5b4fc' }}>
+                    {Number(qty)}× {ALCOHOL_PORTIONS[portionKey].label}
+                  </span>
+                  {' = '}
+                  <span style={{ color: '#34d399' }}>
+                    {Number(qty) * portionMl} ml
+                  </span>
+                  {' total stock'}
+                </p>
+              )}
             </div>
 
             {/* Cost + Supplier — only for Restock */}
