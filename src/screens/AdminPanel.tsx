@@ -8,6 +8,8 @@ import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { ExpensesSection } from '@/screens/admin/ExpensesSection';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
+import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
+import { useInventoryStore } from '@/store/useInventoryStore';
 import { toast } from 'sonner';
 import {
   BarChart3, Coffee, CreditCard, Table2, TrendingUp,
@@ -2108,6 +2110,8 @@ const ReportsSection = () => {
   const categories = usePOSStore((s) => s.categories);
   const settings  = usePOSStore((s) => s.settings);
   const allMaintenanceExpenses = useMaintenanceStore((s) => s.expenses);
+  const kitchenPurchases = useKitchenPurchasesStore((s) => s.purchases);
+  const invMovements = useInventoryStore((s) => s.invMovements);
 
   const [period, setPeriod]         = useState<ReportPeriod>('today');
   const [search, setSearch]         = useState('');
@@ -2149,6 +2153,21 @@ const ReportsSection = () => {
     return ts >= periodStart.getTime() && ts < periodEnd;
   });
   const totalMaintenanceExpenses = periodMaintenanceExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalKitchenPurchases = kitchenPurchases
+    .filter((purchase) => {
+      const ts = new Date(`${purchase.date}T00:00:00`).getTime();
+      return ts >= periodStart.getTime() && ts < periodEnd;
+    })
+    .reduce((s, purchase) => s + purchase.totalCost, 0);
+  const totalBarRestocks = invMovements
+    .filter((movement) =>
+      movement.source === 'bar' &&
+      movement.quantity > 0 &&
+      movement.timestamp >= periodStart.getTime() &&
+      movement.timestamp < periodEnd
+    )
+    .reduce((s, movement) => s + (movement.totalCost ?? 0), 0);
+  const totalOperatingExpenses = totalKitchenPurchases + totalBarRestocks + totalMaintenanceExpenses;
 
   // Summary metrics
   // grossSales  = item subtotals before any discount or tax
@@ -2293,7 +2312,7 @@ const ReportsSection = () => {
           { label: 'Total Revenue',             value: `Rs. ${fmt(totalRevenue)}`,              sub: 'Collected after discounts & tax',      color: 'indigo',  icon: <Receipt size={14} /> },
           { label: 'Discounts Given',           value: `Rs. ${fmt(totalDiscounts)}`,            sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <X size={14} /> },
           { label: 'Maintenance Expenses',      value: `Rs. ${fmt(totalMaintenanceExpenses)}`,  sub: `${periodMaintenanceExpenses.length} expense${periodMaintenanceExpenses.length !== 1 ? 's' : ''} this period`, color: 'red', icon: <Wrench size={14} /> },
-          { label: 'Net Profit',                value: `Rs. ${fmt(totalRevenue - totalMaintenanceExpenses)}`, sub: 'Revenue minus maintenance expenses',   color: totalRevenue - totalMaintenanceExpenses >= 0 ? 'emerald' : 'red', icon: <TrendingUp size={14} /> },
+          { label: 'Net Profit',                value: `Rs. ${fmt(totalRevenue - totalOperatingExpenses)}`, sub: 'Revenue − kitchen, bar & maintenance costs', color: totalRevenue - totalOperatingExpenses >= 0 ? 'emerald' : 'red', icon: <TrendingUp size={14} /> },
         ].map((card, i) => {
           const c = {
             blue:    { b: 'border-blue-500/25',    bg: 'bg-blue-500/[0.08]',    ic: 'text-blue-400',    val: 'text-blue-300' },

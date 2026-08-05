@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Wrench, Edit3, Trash2, Plus } from 'lucide-react';
+import { Wrench, Edit3, Trash2, Plus, Download } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth } from 'date-fns';
 import { fmt } from '@/utils/format';
 import type { MaintenanceExpense, MaintenanceCategory, MaintenancePaymentMethod } from '@/types/pos';
@@ -165,6 +165,31 @@ export const ExpensesSection = () => {
     toast.success('Expense deleted');
   };
 
+  const exportCSV = () => {
+    const escapeCSV = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const headers = ['Date', 'Title', 'Category', 'Amount', 'Payment Method', 'Logged By'];
+    const rows = filtered.map((expense) => [
+      expense.date,
+      expense.title,
+      CATEGORY_LABELS[expense.category],
+      expense.amount,
+      PAYMENT_LABELS[expense.paymentMethod],
+      expense.loggedBy,
+    ]);
+    const csv = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map((row) => row.map(escapeCSV).join(',')),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `maintenance-expenses-${period}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success('Expense CSV exported');
+  };
+
   const changePeriod = (p: Period) => setPeriod(p);
 
   return (
@@ -189,12 +214,20 @@ export const ExpensesSection = () => {
           ))}
         </div>
 
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-        >
-          <Plus size={14} /> Log Maintenance Expense
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/65 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all"
+          >
+            <Download size={14} /> CSV
+          </button>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+          >
+            <Plus size={14} /> Log Maintenance Expense
+          </button>
+        </div>
       </div>
 
       {/* ── Custom date range ── */}
