@@ -150,7 +150,7 @@ const ReviewScreen = () => {
         cafePan:        settings.cafePan,
         tableNumber,
         timestamp:      Date.now(),
-        items:          unpaidItems.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        items:          unpaidItems.map((i) => ({ id: i.id, menuItemId: i.menuItemId, name: i.name, price: i.price, quantity: i.quantity })),
         subtotal:       bill.subtotal,
         discountAmount: bill.discountAmount,
         vatEnabled:     bill.vatEnabled,
@@ -164,7 +164,7 @@ const ReviewScreen = () => {
   };
 
   // ── Payment helpers ───────────────────────────────────────────
-  const tableNumber = table?.number ?? 0;
+  const tableNumber = String(table?.number ?? tableId ?? '');
   const reference = `${settings.cafeName.replace(/\s/g, '')}-T${tableNumber}-B${settings.billCounter + 1}`;
 
   const methods = [

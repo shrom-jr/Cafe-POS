@@ -60,7 +60,6 @@ interface InventoryState {
   deleteBeverage:  (id: string) => void;
   purchaseBeverage: (args: {
     productId: string;
-    purchaseUnit: 'piece' | 'carton';
     qty: number;
     supplier?: string; invoiceNo?: string; cost?: number;
   }) => void;
@@ -236,28 +235,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     return { beverageProducts: products, invMappings: mappings };
   }),
 
-  purchaseBeverage: ({ productId, purchaseUnit, qty, supplier, invoiceNo, cost }) => set((s) => {
+  purchaseBeverage: ({ productId, qty, supplier, invoiceNo, cost }) => set((s) => {
     const product = s.beverageProducts.find((p) => p.id === productId);
     if (!product) return {};
-    let addPieces = qty;
-    let notes = `${qty} piece${qty !== 1 ? 's' : ''}`;
-    let containerQty = qty;
-    let containerUnit = 'pcs';
-    if (purchaseUnit === 'carton') {
-      addPieces = qty * product.piecesPerCarton;
-      notes = `${qty} crate${qty !== 1 ? 's' : ''} × ${product.piecesPerCarton} pcs = ${addPieces} pcs`;
-      containerQty = qty;
-      containerUnit = 'crates';
-    }
-    // Auto-sync cost price from total cost supplied
-    const costPerCarton = cost && cost > 0 && qty > 0
-      ? (purchaseUnit === 'carton'
-          ? cost / qty
-          : (cost / qty) * product.piecesPerCarton)
-      : undefined;
+    const addPieces = qty;
+    const notes = `${qty} ${product.packagingType}${product.sizeLabel ? ` (${product.sizeLabel})` : ''}`;
+    const containerQty = qty;
+    const containerUnit = product.packagingType;
+    const costPerUnit = cost && cost > 0 && qty > 0 ? cost / qty : undefined;
     const products = s.beverageProducts.map((p) =>
       p.id === productId
-        ? { ...p, currentStock: p.currentStock + addPieces, ...(costPerCarton ? { costPerCarton } : {}) }
+        ? { ...p, currentStock: p.currentStock + addPieces, ...(costPerUnit ? { costPerUnit } : {}) }
         : p
     );
     const movement: InventoryMovement = {
@@ -450,14 +438,14 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       updatedBeverages = s.beverageProducts.map((p) => {
         if (p.id !== productId) return p;
         const newStock = Math.max(0, p.currentStock + baseUnitChange);
-        // Weighted-average master cost in piece units, converted back to per-carton.
+        // Weighted-average master cost in individual unit units.
         let costPatch: Partial<BeverageProduct> = {};
-        if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0 && p.piecesPerCarton > 0) {
+        if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0) {
           const existingPcs           = p.currentStock;
           const totalPcs              = existingPcs + baseUnitChange;
-          const existingCostPerPiece  = p.costPerCarton ? p.costPerCarton / p.piecesPerCarton : 0;
+          const existingCostPerPiece  = p.costPerUnit ?? (p.costPerCarton && p.piecesPerCarton ? p.costPerCarton / p.piecesPerCarton : 0);
           const weightedCostPerPiece  = (existingPcs * existingCostPerPiece + totalCost) / totalPcs;
-          costPatch = { costPerCarton: weightedCostPerPiece * p.piecesPerCarton };
+          costPatch = { costPerUnit: weightedCostPerPiece };
         }
         return { ...p, currentStock: newStock, ...costPatch };
       });

@@ -69,6 +69,8 @@ const ProductForm = ({ editProduct, onClose }: { editProduct?: BeverageProduct; 
     const data: Omit<BeverageProduct, 'id'> = {
       name: form.name.trim(),
       status: form.status,
+      category: 'soft-drinks',
+      packagingType: 'pcs',
       piecesPerCarton: ppcR,
       currentStock: Math.round(cs) * ppcR,
       minStock: Math.round(min) * ppcR,
@@ -141,7 +143,7 @@ const PurchaseForm = ({ product, onClose }: { product: BeverageProduct; onClose:
   const handleSave = () => {
     if (isNaN(qty) || qty <= 0) return toast.error('Enter a valid quantity');
     purchaseBeverage({
-      productId: product.id, purchaseUnit: form.purchaseUnit, qty,
+      productId: product.id, qty: form.purchaseUnit === 'piece' ? qty : qty * (product.piecesPerCarton ?? 1),
       supplier: form.supplier.trim() || undefined,
       invoiceNo: form.invoiceNo.trim() || undefined,
     });

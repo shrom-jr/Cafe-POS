@@ -1997,8 +1997,8 @@ const BillingReceiptsSection = () => {
   const sampleVatAmount = settings.vatEnabled ? Math.round(sampleSubtotal * settings.vatRate) : 0;
   const sampleTotal = settings.vatEnabled ? sampleSubtotal + sampleVatAmount : sampleSubtotal;
   const sampleItems = [
-    { menuItemId: '1', name: 'Cappuccino', price: 250, quantity: 2 },
-    { menuItemId: '2', name: 'Croissant', price: 180, quantity: 1 },
+    { id: 'preview-1', menuItemId: '1', name: 'Cappuccino', price: 250, quantity: 2 },
+    { id: 'preview-2', menuItemId: '2', name: 'Croissant', price: 180, quantity: 1 },
   ];
 
   return (

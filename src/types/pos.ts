@@ -151,11 +151,14 @@ export interface Recipe {
 // ── NEW INVENTORY TYPES ──────────────────────────────────────────────────────
 
 export type InvProductType = 'alcohol' | 'beverage' | 'cigarette';
+/** Operational inventory tabs. The productType above is retained for POS mappings. */
+export type InventoryCategory = 'spirits' | 'wine' | 'beer' | 'soft-drinks' | 'cigarettes';
 export type InvMovementType = 'Purchase' | 'Sale' | 'Adjustment' | 'Waste' | 'Correction';
 
 export interface AlcoholProduct {
   id: string;
   name: string;
+  category?: 'spirits' | 'wine';
   bottleSizeMl: number;       // e.g. 750
   currentStockMl: number;     // always stored in ml
   minStockMl: number;         // alert threshold in ml
@@ -166,9 +169,14 @@ export interface AlcoholProduct {
 export interface BeverageProduct {
   id: string;
   name: string;
-  piecesPerCarton: number;    // e.g. 24
+  category?: 'beer' | 'soft-drinks';
+  packagingType: 'btl' | 'can' | 'pcs';
+  sizeLabel?: string;         // e.g. 650ml, 330ml, 250ml
   currentStock: number;       // stored in pieces internally
   minStock: number;           // threshold in pieces internally
+  costPerUnit?: number;
+  /** Legacy fields accepted while older Firebase records are being edited. */
+  piecesPerCarton?: number;
   costPerCarton?: number;
   status: 'active' | 'inactive';
 }
@@ -212,8 +220,8 @@ export interface InventoryMovement {
   totalCost?: number;         // NPR cost for restock/purchase entries
   loggedBy?: string;          // staff member who logged this entry
   source?: 'bar' | 'inventory'; // origin: bar portal vs direct inventory form
-  containerQty?: number;      // display qty in container units (bottles / crates / packets)
-  containerUnit?: string;     // 'btl' | 'crates' | 'packets' | 'pcs' | 'sticks'
+  containerQty?: number;      // display qty in product units (bottles / cans / packets)
+  containerUnit?: string;     // 'btl' | 'can' | 'pcs' | 'packet' | 'sticks'
 }
 
 export interface InvMenuMapping {

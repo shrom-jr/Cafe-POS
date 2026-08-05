@@ -96,15 +96,12 @@ Cashier / Time
 - **Backup** — JSON export/import
 
 ## Inventory System
-- **Types**: `Ingredient` (id, name, unit, quantity, threshold, category?, costPerUnit?), `Recipe`, `RecipeIngredient`, `StockMovement` (id, ingredientId, change, source, timestamp) in `src/types/pos.ts`
-- **Storage**: `pos_ingredients`, `pos_recipes`, `pos_stockMovements` keys in localStorage via `src/storage/db.ts`
-- **State**: `ingredients`, `recipes`, `stockMovements` arrays in `usePOSStore.ts`
-- **Stock deduction**: Fires in `sendToKitchen()` — deducts unsent items and logs a `StockMovement` per ingredient
-- **Manual adjustment**: `adjustStock(id, change, reason)` — updates quantity and logs a `StockMovement`
-- **UI**: `src/screens/InventorySection.tsx` — 3 tabs:
-  - Ingredients: CRUD with category, unit, qty, threshold, costPerUnit; grouped by category
-  - Recipes: link menu items to ingredients; shows auto-calculated item cost (Σ qty × costPerUnit)
-  - Stock: search bar, sort low first, Adjust Stock modal, Today's Usage summary, Movement History (collapsible, 50 most recent)
+- Firebase is the source of truth for `alcoholProducts`, `beverageProducts`, `cigaretteProducts`, and `invMovements`.
+- The Admin Inventory module uses five operational tabs: Spirits (ml), Wine (ml with bottle/glass pours), Beer (direct bottle/can units), Soft Drinks & Mixers (direct bottle/can/piece units), and Cigarettes (sticks; 20 per packet).
+- Unit products use `packagingType` (`btl`, `can`, or `pcs`) and optional `sizeLabel` such as `650ml`, `330ml`, or `250ml`.
+- Restocking packaged products is entered as raw units; carton/case multipliers are not used.
+- `scripts/seedInventory.mjs` resets the Firebase inventory master with categorized products, zero stock, and `minStock = 0`, then clears inventory logs.
+- POS mappings continue to use `alcohol`, `beverage`, and `cigarette` product types; wine is stored in the alcohol collection so bottle and glass deductions share one ml balance.
 
 ## Firebase
 Real-time sync uses Firebase Realtime Database. Credentials are hardcoded in `src/firebase.js` (project: `sbamboosekuwa`, Asia-Southeast1 region). No additional secrets are required to run the app.

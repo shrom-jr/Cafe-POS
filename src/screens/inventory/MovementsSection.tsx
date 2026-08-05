@@ -37,7 +37,7 @@ const PAGE_SIZE = 50;
 
 // ── Display-unit formatter ────────────────────────────────────────────────────
 // Returns container-unit primary string + muted raw secondary.
-// Alcohol → btl  |  Beverage → crates  |  Cigarette → packets
+// Alcohol → btl/ml  |  Beverage → btl/can/pcs  |  Cigarette → packets/sticks
 function fmtQty(m: InventoryMovement): { primary: string; secondary: string | null } {
   const abs  = Math.abs(m.quantity);
   const sign = m.quantity >= 0 ? '+' : '−';
@@ -184,7 +184,7 @@ export const MovementsSection = () => {
                         )}
                       </td>
                       <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[100px]`}>
-                        <span className="truncate block">{m.supplier ? `${m.supplier}` : ''}{m.reference ? ` ${m.reference}` : '' || '—'}</span>
+                        <span className="truncate block">{m.supplier || m.reference ? `${m.supplier ?? ''}${m.reference ? ` ${m.reference}` : ''}` : '—'}</span>
                       </td>
                       <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[140px]`}>
                         <span className="truncate block">{m.reason ?? (m.source === 'bar' ? m.notes : undefined) ?? '—'}</span>

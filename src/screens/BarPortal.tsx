@@ -176,8 +176,7 @@ const BarPortal = () => {
     }
     if (selectedProduct.productType === 'beverage') {
       const p = beverageProducts.find((p) => p.id === productId);
-      if (!p?.costPerCarton || p.piecesPerCarton <= 0) return null;
-      return p.costPerCarton / p.piecesPerCarton;  // cost per piece (qty unit is pieces)
+      return p?.costPerUnit ?? (p?.costPerCarton && p.piecesPerCarton ? p.costPerCarton / p.piecesPerCarton : null);
     }
     if (selectedProduct.productType === 'cigarette') {
       return cigaretteProducts.find((p) => p.id === productId)?.costPerPacket ?? null;
@@ -841,7 +840,7 @@ function QuickAddModal({
       inv.addAlcohol({ name: displayName, bottleSizeMl: itemsPerUnit, currentStockMl: 0, minStockMl: 0, status: 'active' });
       newId = useInventoryStore.getState().alcoholProducts.find((p) => p.name === displayName)?.id ?? '';
     } else if (category === 'beverage') {
-      inv.addBeverage({ name: displayName, piecesPerCarton: itemsPerUnit, currentStock: 0, minStock: 0, status: 'active' });
+      inv.addBeverage({ name: displayName, category: 'soft-drinks', packagingType: 'pcs', currentStock: 0, minStock: 0, status: 'active' });
       newId = useInventoryStore.getState().beverageProducts.find((p) => p.name === displayName)?.id ?? '';
     } else {
       inv.addCigarette({ name: displayName, sticksPerPacket: itemsPerUnit, currentSticks: 0, minSticks: 0, status: 'active' });

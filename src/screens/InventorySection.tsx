@@ -13,7 +13,7 @@ type SecondaryView = 'purchases' | 'movements' | 'bar-audit' | null;
 interface PillarDef {
   id:    PillarTab;
   label: string;
-  Icon:  React.ComponentType<{ size?: number; className?: string }>;
+  Icon:  React.ComponentType<any>;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ interface SecBtnProps {
   id: SecondaryView;
   active: SecondaryView;
   label: string;
-  Icon: React.ComponentType<{ size?: number }>;
+  Icon: React.ComponentType<any>;
   activeStyle: React.CSSProperties;
   onClick: (id: SecondaryView) => void;
 }

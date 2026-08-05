@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import {
-  AlcoholProduct, BeverageProduct, CigaretteProduct,
-  InvProductType, InvMovementType,
+  AlcoholProduct, BeverageProduct, CigaretteProduct, InventoryCategory,
+  InvMovementType,
 } from '@/types/pos';
 import {
   CARD, BTN_PRIMARY, BTN_GHOST, BTN_DANGER, BTN_EDIT, BTN_BUY, BTN_ADJUST,
@@ -12,668 +12,260 @@ import { LowBadge, StatusBadge } from './components';
 import { toast } from 'sonner';
 import {
   Plus, Save, X, ShoppingCart, SlidersHorizontal, Edit3, Trash2,
-  TrendingDown, AlertTriangle, Coins,
-  Wine, GlassWater, Cigarette,
+  Wine, Beer, GlassWater, Cigarette, Martini,
 } from 'lucide-react';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type CatFilter = 'all' | InvProductType;
-
+type Product = AlcoholProduct | BeverageProduct | CigaretteProduct;
 type FormState =
-  | { kind: 'add'; cat: InvProductType }
-  | { kind: 'edit-alcohol';   p: AlcoholProduct }
-  | { kind: 'edit-beverage';  p: BeverageProduct }
+  | { kind: 'add'; category: InventoryCategory }
+  | { kind: 'edit-alcohol'; p: AlcoholProduct }
+  | { kind: 'edit-beverage'; p: BeverageProduct }
   | { kind: 'edit-cigarette'; p: CigaretteProduct }
-  | { kind: 'buy-alcohol';    p: AlcoholProduct }
-  | { kind: 'buy-beverage';   p: BeverageProduct }
-  | { kind: 'buy-cigarette';  p: CigaretteProduct }
-  | { kind: 'adj-alcohol';    p: AlcoholProduct }
-  | { kind: 'adj-beverage';   p: BeverageProduct }
-  | { kind: 'adj-cigarette';  p: CigaretteProduct };
+  | { kind: 'buy-alcohol'; p: AlcoholProduct }
+  | { kind: 'buy-beverage'; p: BeverageProduct }
+  | { kind: 'buy-cigarette'; p: CigaretteProduct }
+  | { kind: 'adjust-alcohol'; p: AlcoholProduct }
+  | { kind: 'adjust-beverage'; p: BeverageProduct }
+  | { kind: 'adjust-cigarette'; p: CigaretteProduct };
 
-interface UnifiedRow {
-  id: string;
-  name: string;
-  category: InvProductType;
-  stockPrimary: string;
-  stockSecondary: string;
-  minDisplay: string;
-  isLow: boolean;
-  status: 'active' | 'inactive';
-  raw: AlcoholProduct | BeverageProduct | CigaretteProduct;
-}
+const TAB_DEFS: Array<{ id: InventoryCategory; label: string; icon: typeof Wine; tone: string }> = [
+  { id: 'spirits', label: 'Spirits', icon: Martini, tone: 'amber' },
+  { id: 'wine', label: 'Wine', icon: Wine, tone: 'rose' },
+  { id: 'beer', label: 'Beer', icon: Beer, tone: 'yellow' },
+  { id: 'soft-drinks', label: 'Soft Drinks & Mixers', icon: GlassWater, tone: 'sky' },
+  { id: 'cigarettes', label: 'Cigarettes', icon: Cigarette, tone: 'orange' },
+];
 
-// ── Formatters ────────────────────────────────────────────────────────────────
-
-function fmtAlcohol(p: AlcoholProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const fullBtl = Math.floor(p.currentStockMl / p.bottleSizeMl);
-  const remMl   = p.currentStockMl % p.bottleSizeMl;
-  const minBtl  = Math.floor(p.minStockMl / p.bottleSizeMl);
-  const minRemMl = p.minStockMl % p.bottleSizeMl;
-
-  const stockStr = fullBtl === 0
-    ? `${remMl} ml`
-    : remMl === 0
-      ? `${fullBtl} btl`
-      : `${fullBtl} btl + ${remMl} ml`;
-
-  // Always display in btl — never raw ml
-  const minStr = `${minBtl} btl`;
-
-  return {
-    stockPrimary:   stockStr,
-    stockSecondary: `${p.currentStockMl.toLocaleString()} ml total`,
-    minDisplay:     minStr,
-    isLow: p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl,
-  };
-}
-
-function fmtBeverage(p: BeverageProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const crates   = Math.floor(p.currentStock / p.piecesPerCarton);
-  const remPcs   = p.currentStock % p.piecesPerCarton;
-  const minCrates = Math.floor(p.minStock / p.piecesPerCarton);
-  const minRemPcs = p.minStock % p.piecesPerCarton;
-
-  const stockStr = crates === 0
-    ? `${remPcs} pcs`
-    : remPcs === 0
-      ? `${crates} crates`
-      : `${crates} crates + ${remPcs} pcs`;
-
-  // Always display in crates — never raw pcs
-  const minStr = `${minCrates} crates`;
-
-  return {
-    stockPrimary:   stockStr,
-    stockSecondary: `${p.currentStock} pcs total`,
-    minDisplay:     minStr,
-    isLow: p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock,
-  };
-}
-
-function fmtCigarette(p: CigaretteProduct): Pick<UnifiedRow, 'stockPrimary' | 'stockSecondary' | 'minDisplay' | 'isLow'> {
-  const pkts    = Math.floor(p.currentSticks / p.sticksPerPacket);
-  const remStks = p.currentSticks % p.sticksPerPacket;
-  const minPkts    = Math.floor(p.minSticks / p.sticksPerPacket);
-  const minRemStks = p.minSticks % p.sticksPerPacket;
-
-  const stockStr = pkts === 0
-    ? `${remStks} sticks`
-    : remStks === 0
-      ? `${pkts} packets`
-      : `${pkts} packets + ${remStks} sticks`;
-
-  // Always display in packets — never raw sticks
-  const minStr = `${minPkts} packets`;
-
-  return {
-    stockPrimary:   stockStr,
-    stockSecondary: `${p.currentSticks} sticks total`,
-    minDisplay:     minStr,
-    isLow: p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks,
-  };
-}
-
-// ── Alcohol Forms ─────────────────────────────────────────────────────────────
-
-const AlcoholAddEditForm = ({ edit, onClose }: { edit?: AlcoholProduct; onClose: () => void }) => {
-  const addAlcohol    = useInventoryStore((s) => s.addAlcohol);
-  const updateAlcohol = useInventoryStore((s) => s.updateAlcohol);
-
-  const init = edit ? {
-    name: edit.name, bottleSizeMl: String(edit.bottleSizeMl), status: edit.status,
-    currentStockBottles: String(edit.currentStockMl / edit.bottleSizeMl),
-    minStockBottles: String(edit.minStockMl / edit.bottleSizeMl),
-    costPerBottle: edit.costPerBottle !== undefined ? String(edit.costPerBottle) : '',
-  } : { name: '', bottleSizeMl: '750', currentStockBottles: '0', minStockBottles: '', costPerBottle: '', status: 'active' as const };
-
-  const [f, setF] = useState(init);
-  const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
-
-  const handleSave = () => {
-    const bsz = parseFloat(f.bottleSizeMl), csb = parseFloat(f.currentStockBottles);
-    const msb = f.minStockBottles === '' ? 0 : parseFloat(f.minStockBottles);
-    if (!f.name.trim())         return toast.error('Name required');
-    if (isNaN(bsz) || bsz <= 0) return toast.error('Bottle size must be > 0');
-    if (isNaN(csb) || csb < 0)  return toast.error('Current stock must be ≥ 0');
-    if (!isNaN(msb) && msb < 0)  return toast.error('Min stock must be ≥ 0');
-    const cpu = f.costPerBottle !== '' ? parseFloat(f.costPerBottle) : undefined;
-    if (cpu !== undefined && isNaN(cpu)) return toast.error('Invalid cost');
-    const data = { name: f.name.trim(), bottleSizeMl: Math.round(bsz), currentStockMl: Math.round(csb * bsz), minStockMl: Math.round(msb * bsz), costPerBottle: cpu, status: f.status as 'active' | 'inactive' };
-    if (edit) { updateAlcohol(edit.id, data); toast.success('Updated'); }
-    else      { addAlcohol(data); toast.success('Product added'); }
-    onClose();
-  };
-
-  return (
-    <div className={`${CARD} border-blue-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : 'Add Alcohol Product'}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="col-span-2 sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Ruslan Vodka" value={f.name} onChange={upd('name')} autoFocus /></div>
-        <div><label className={LABEL}>Bottle Size (ml) *</label><input className={INPUT} type="number" min="1" value={f.bottleSizeMl} onChange={upd('bottleSizeMl')} /></div>
-        <div><label className={LABEL}>Current Stock (btl) *</label><input className={INPUT} type="number" min="0" step="0.5" value={f.currentStockBottles} onChange={upd('currentStockBottles')} /></div>
-        <div><label className={LABEL}>Min Stock (btl)</label><input className={INPUT} type="number" min="0" step="0.5" placeholder="optional" value={f.minStockBottles} onChange={upd('minStockBottles')} /></div>
-        <div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerBottle} onChange={upd('costPerBottle')} /></div>
-      </div>
-      <div className="flex gap-2 mt-4">
-        <button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button>
-        <button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button>
-      </div>
-    </div>
-  );
+const CATEGORY_LABEL: Record<InventoryCategory, string> = {
+  spirits: 'Spirits', wine: 'Wine', beer: 'Beer',
+  'soft-drinks': 'Soft Drinks & Mixers', cigarettes: 'Cigarettes',
 };
 
-const AlcoholBuyForm = ({ p, onClose }: { p: AlcoholProduct; onClose: () => void }) => {
-  const purchaseAlcohol = useInventoryStore((s) => s.purchaseAlcohol);
-  const [bottles, setBottles] = useState(''); const [supplier, setSupplier] = useState(''); const [invoice, setInvoice] = useState(''); const [cost, setCost] = useState('');
-  const handleSave = () => {
-    const b = parseFloat(bottles);
-    if (isNaN(b) || b <= 0) return toast.error('Enter bottle count');
-    const cpu = cost !== '' ? parseFloat(cost) : undefined;
-    purchaseAlcohol({ productId: p.id, bottles: b, supplier: supplier || undefined, invoiceNo: invoice || undefined, costPerBottle: cpu && !isNaN(cpu) ? cpu : undefined });
-    toast.success(`+${(b * p.bottleSizeMl).toLocaleString()} ml added`); onClose();
-  };
-  return (
-    <div className={`${CARD} border-green-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.bottleSizeMl} ml/btl)</span></h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className={LABEL}>Bottles *</label><input className={INPUT} type="number" min="0.5" step="0.5" placeholder="12" value={bottles} onChange={(e) => setBottles(e.target.value)} autoFocus /></div>
-        <div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={cost} onChange={(e) => setCost(e.target.value)} /></div>
-        <div><label className={LABEL}>Supplier</label><input className={INPUT} placeholder="optional" value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
-        <div><label className={LABEL}>Invoice #</label><input className={INPUT} placeholder="optional" value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><ShoppingCart size={14} />Confirm Purchase</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
+const CATEGORY_BADGE: Record<InventoryCategory, string> = {
+  spirits: 'bg-amber-500/15 border-amber-500/20 text-amber-400',
+  wine: 'bg-rose-500/15 border-rose-500/20 text-rose-400',
+  beer: 'bg-yellow-500/15 border-yellow-500/20 text-yellow-400',
+  'soft-drinks': 'bg-sky-500/15 border-sky-500/20 text-sky-400',
+  cigarettes: 'bg-orange-500/15 border-orange-500/20 text-orange-400',
 };
 
-const AlcoholAdjForm = ({ p, onClose }: { p: AlcoholProduct; onClose: () => void }) => {
+const categoryForAlcohol = (p: AlcoholProduct): 'spirits' | 'wine' => p.category === 'wine' ? 'wine' : 'spirits';
+const categoryForBeverage = (p: BeverageProduct): 'beer' | 'soft-drinks' => p.category === 'beer' ? 'beer' : 'soft-drinks';
+const packagingLabel = (p: BeverageProduct) => `${p.packagingType}${p.sizeLabel ? ` · ${p.sizeLabel}` : ''}`;
+
+function mlDisplay(ml: number, bottleSize: number) {
+  const bottles = bottleSize > 0 ? ml / bottleSize : 0;
+  const bottleText = Number.isInteger(bottles) ? String(bottles) : bottles.toFixed(2).replace(/0+$/, '');
+  return `${ml.toLocaleString()} ml · ${bottleText} btl`;
+}
+
+function unitDisplay(p: BeverageProduct, qty: number) {
+  return `${qty.toLocaleString()} ${p.packagingType}`;
+}
+
+function cigaretteDisplay(sticks: number, perPacket: number) {
+  const packets = perPacket > 0 ? sticks / perPacket : 0;
+  const packetText = Number.isInteger(packets) ? String(packets) : packets.toFixed(2).replace(/0+$/, '');
+  return `${sticks.toLocaleString()} sticks · ${packetText} pkt`;
+}
+
+const FormActions = ({ onClose, children }: { onClose: () => void; children: React.ReactNode }) => (
+  <div className="flex gap-2 mt-4">
+    {children}
+    <button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button>
+  </div>
+);
+
+const AlcoholForm = ({ edit, category, onClose }: { edit?: AlcoholProduct; category: 'spirits' | 'wine'; onClose: () => void }) => {
+  const add = useInventoryStore((s) => s.addAlcohol);
+  const update = useInventoryStore((s) => s.updateAlcohol);
+  const initial = edit
+    ? { name: edit.name, bottleSizeMl: String(edit.bottleSizeMl), stockBottles: String(edit.currentStockMl / edit.bottleSizeMl), minBottles: String(edit.minStockMl / edit.bottleSizeMl), cost: edit.costPerBottle === undefined ? '' : String(edit.costPerBottle), status: edit.status }
+    : { name: '', bottleSizeMl: category === 'wine' ? '750' : '750', stockBottles: '0', minBottles: '', cost: '', status: 'active' as const };
+  const [f, setF] = useState(initial);
+  const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
+  const save = () => {
+    const size = Number(f.bottleSizeMl), stock = Number(f.stockBottles), min = f.minBottles === '' ? 0 : Number(f.minBottles);
+    if (!f.name.trim()) return toast.error('Name is required');
+    if (!Number.isFinite(size) || size <= 0) return toast.error('Bottle size must be greater than 0');
+    if (!Number.isFinite(stock) || stock < 0 || !Number.isFinite(min) || min < 0) return toast.error('Stock values must be 0 or greater');
+    const cost = f.cost === '' ? undefined : Number(f.cost);
+    if (cost !== undefined && (!Number.isFinite(cost) || cost < 0)) return toast.error('Invalid cost');
+    const data = { name: f.name.trim(), category, bottleSizeMl: Math.round(size), currentStockMl: stock * size, minStockMl: min * size, costPerBottle: cost, status: f.status as 'active' | 'inactive' };
+    if (edit) update(edit.id, data); else add(data);
+    toast.success(edit ? 'Product updated' : 'Product added'); onClose();
+  };
+  return <div className={`${CARD} border-amber-500/15`}>
+    <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+      <div><label className={LABEL}>Bottle Size (ml) *</label><input className={INPUT} type="number" min="1" value={f.bottleSizeMl} onChange={set('bottleSizeMl')} /></div>
+      <div><label className={LABEL}>Current (btl) *</label><input className={INPUT} type="number" min="0" step="0.01" value={f.stockBottles} onChange={set('stockBottles')} /></div>
+      <div><label className={LABEL}>Min Alert (btl)</label><input className={INPUT} type="number" min="0" step="0.01" value={f.minBottles} onChange={set('minBottles')} /></div>
+      <div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
+    </div>
+    <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
+  </div>;
+};
+
+const BeverageForm = ({ edit, category, onClose }: { edit?: BeverageProduct; category: 'beer' | 'soft-drinks'; onClose: () => void }) => {
+  const add = useInventoryStore((s) => s.addBeverage);
+  const update = useInventoryStore((s) => s.updateBeverage);
+  const initial = edit
+    ? { name: edit.name, packagingType: edit.packagingType, sizeLabel: edit.sizeLabel ?? '', stock: String(edit.currentStock), min: String(edit.minStock), cost: edit.costPerUnit === undefined ? '' : String(edit.costPerUnit), status: edit.status }
+    : { name: '', packagingType: category === 'beer' ? 'btl' as const : 'btl' as const, sizeLabel: category === 'beer' ? '650ml' : '250ml', stock: '0', min: '', cost: '', status: 'active' as const };
+  const [f, setF] = useState(initial);
+  const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
+  const save = () => {
+    const stock = Number(f.stock), min = f.min === '' ? 0 : Number(f.min), cost = f.cost === '' ? undefined : Number(f.cost);
+    if (!f.name.trim()) return toast.error('Name is required');
+    if (!Number.isInteger(stock) || stock < 0 || !Number.isInteger(min) || min < 0) return toast.error('Unit stock values must be whole numbers');
+    if (cost !== undefined && (!Number.isFinite(cost) || cost < 0)) return toast.error('Invalid cost');
+    const data = { name: f.name.trim(), category, packagingType: f.packagingType as 'btl' | 'can' | 'pcs', sizeLabel: f.sizeLabel.trim() || undefined, currentStock: stock, minStock: min, costPerUnit: cost, status: f.status as 'active' | 'inactive' };
+    if (edit) update(edit.id, data); else add(data);
+    toast.success(edit ? 'Product updated' : 'Product added'); onClose();
+  };
+  return <div className={`${CARD} border-sky-500/15`}>
+    <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+      <div><label className={LABEL}>Packaging *</label><select className={SELECT} value={f.packagingType} onChange={set('packagingType')}><option value="btl">Bottle (btl)</option><option value="can">Can</option><option value="pcs">Pieces</option></select></div>
+      <div><label className={LABEL}>Size Label</label><input className={INPUT} placeholder="650ml" value={f.sizeLabel} onChange={set('sizeLabel')} /></div>
+      <div><label className={LABEL}>Current (units) *</label><input className={INPUT} type="number" min="0" step="1" value={f.stock} onChange={set('stock')} /></div>
+      <div><label className={LABEL}>Min Alert (units)</label><input className={INPUT} type="number" min="0" step="1" value={f.min} onChange={set('min')} /></div>
+      <div><label className={LABEL}>Cost/Unit</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
+    </div>
+    <p className="text-xs text-muted-foreground/70 mt-2">Restocking is entered directly as individual bottles, cans, or pieces — no case multiplier.</p>
+    <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
+  </div>;
+};
+
+const CigaretteForm = ({ edit, onClose }: { edit?: CigaretteProduct; onClose: () => void }) => {
+  const add = useInventoryStore((s) => s.addCigarette);
+  const update = useInventoryStore((s) => s.updateCigarette);
+  const initial = edit
+    ? { name: edit.name, packetSize: String(edit.sticksPerPacket), stockPackets: String(edit.currentSticks / edit.sticksPerPacket), minPackets: String(edit.minSticks / edit.sticksPerPacket), cost: edit.costPerPacket === undefined ? '' : String(edit.costPerPacket), status: edit.status }
+    : { name: '', packetSize: '20', stockPackets: '0', minPackets: '', cost: '', status: 'active' as const };
+  const [f, setF] = useState(initial);
+  const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
+  const save = () => {
+    const perPacket = Number(f.packetSize), stock = Number(f.stockPackets), min = f.minPackets === '' ? 0 : Number(f.minPackets), cost = f.cost === '' ? undefined : Number(f.cost);
+    if (!f.name.trim()) return toast.error('Name is required');
+    if (!Number.isInteger(perPacket) || perPacket <= 0 || stock < 0 || min < 0) return toast.error('Enter valid packet and stock values');
+    const data = { name: f.name.trim(), sticksPerPacket: perPacket, currentSticks: stock * perPacket, minSticks: min * perPacket, costPerPacket: cost, status: f.status as 'active' | 'inactive' };
+    if (edit) update(edit.id, data); else add(data);
+    toast.success(edit ? 'Product updated' : 'Product added'); onClose();
+  };
+  return <div className={`${CARD} border-orange-500/15`}>
+    <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : 'Add Cigarette Product'}</h3>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+      <div><label className={LABEL}>Sticks/Packet</label><input className={INPUT} type="number" min="1" step="1" value={f.packetSize} onChange={set('packetSize')} /></div>
+      <div><label className={LABEL}>Current (packets)</label><input className={INPUT} type="number" min="0" step="1" value={f.stockPackets} onChange={set('stockPackets')} /></div>
+      <div><label className={LABEL}>Min Alert (packets)</label><input className={INPUT} type="number" min="0" step="1" value={f.minPackets} onChange={set('minPackets')} /></div>
+      <div><label className={LABEL}>Cost/Packet</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
+    </div>
+    <p className="text-xs text-muted-foreground/70 mt-2">Stock is stored in sticks. One packet converts to {f.packetSize || 20} sticks.</p>
+    <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
+  </div>;
+};
+
+const AlcoholPurchase = ({ p, onClose }: { p: AlcoholProduct; onClose: () => void }) => {
+  const purchase = useInventoryStore((s) => s.purchaseAlcohol);
+  const [qty, setQty] = useState(''), [cost, setCost] = useState(''), [supplier, setSupplier] = useState(''), [invoice, setInvoice] = useState('');
+  const save = () => { const q = Number(qty); if (!q || q <= 0) return toast.error('Enter bottle quantity'); purchase({ productId: p.id, bottles: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, costPerBottle: cost === '' ? undefined : Number(cost) }); toast.success(`+${(q * p.bottleSizeMl).toLocaleString()} ml added`); onClose(); };
+  return <div className={`${CARD} border-green-500/15`}><h3 className="text-sm font-semibold mb-4">Restock — {p.name} <span className="text-xs text-muted-foreground">({p.bottleSizeMl}ml/btl)</span></h3><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div><label className={LABEL}>Bottles *</label><input className={INPUT} type="number" min="0.01" step="0.01" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus /></div><div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} /></div><div><label className={LABEL}>Supplier</label><input className={INPUT} value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div><div><label className={LABEL}>Invoice #</label><input className={INPUT} value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div></div><FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><ShoppingCart size={14} />Confirm Restock</button></FormActions></div>;
+};
+
+const BeveragePurchase = ({ p, onClose }: { p: BeverageProduct; onClose: () => void }) => {
+  const purchase = useInventoryStore((s) => s.purchaseBeverage);
+  const [qty, setQty] = useState(''), [cost, setCost] = useState(''), [supplier, setSupplier] = useState(''), [invoice, setInvoice] = useState('');
+  const save = () => { const q = Number(qty); if (!Number.isInteger(q) || q <= 0) return toast.error(`Enter whole ${p.packagingType} quantity`); purchase({ productId: p.id, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: cost === '' ? undefined : Number(cost) }); toast.success(`+${q} ${p.packagingType} added`); onClose(); };
+  return <div className={`${CARD} border-green-500/15`}><h3 className="text-sm font-semibold mb-4">Restock — {p.name} <span className="text-xs text-muted-foreground">({packagingLabel(p)})</span></h3><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div><label className={LABEL}>Units ({p.packagingType}) *</label><input className={INPUT} type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus /></div><div><label className={LABEL}>Total Cost</label><input className={INPUT} type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} /></div><div><label className={LABEL}>Supplier</label><input className={INPUT} value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div><div><label className={LABEL}>Invoice #</label><input className={INPUT} value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div></div><p className="text-xs text-green-400/70 mt-2">Direct unit restock — no crate or case calculation.</p><FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><ShoppingCart size={14} />Confirm Restock</button></FormActions></div>;
+};
+
+const CigarettePurchase = ({ p, onClose }: { p: CigaretteProduct; onClose: () => void }) => {
+  const purchase = useInventoryStore((s) => s.purchaseCigarette);
+  const [qty, setQty] = useState(''), [cost, setCost] = useState(''), [supplier, setSupplier] = useState(''), [invoice, setInvoice] = useState('');
+  const save = () => { const q = Number(qty); if (!Number.isInteger(q) || q <= 0) return toast.error('Enter whole packet quantity'); purchase({ productId: p.id, purchaseUnit: 'packet', qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: cost === '' ? undefined : Number(cost) }); toast.success(`+${q * p.sticksPerPacket} sticks added`); onClose(); };
+  return <div className={`${CARD} border-green-500/15`}><h3 className="text-sm font-semibold mb-4">Restock — {p.name} <span className="text-xs text-muted-foreground">({p.sticksPerPacket} sticks/packet)</span></h3><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div><label className={LABEL}>Packets *</label><input className={INPUT} type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus /></div><div><label className={LABEL}>Cost/Packet</label><input className={INPUT} type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} /></div><div><label className={LABEL}>Supplier</label><input className={INPUT} value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div><div><label className={LABEL}>Invoice #</label><input className={INPUT} value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div></div><FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><ShoppingCart size={14} />Confirm Restock</button></FormActions></div>;
+};
+
+const Adjustment = ({ p, kind, onClose }: { p: Product; kind: 'alcohol' | 'beverage' | 'cigarette'; onClose: () => void }) => {
   const adjustAlcohol = useInventoryStore((s) => s.adjustAlcohol);
-  const [dir, setDir] = useState<'add' | 'remove'>('add'); const [ml, setMl] = useState(''); const [type, setType] = useState<InvMovementType>('Adjustment'); const [reason, setReason] = useState('');
-  const handleSave = () => {
-    const v = parseFloat(ml);
-    if (isNaN(v) || v <= 0) return toast.error('Enter amount in ml');
-    if (!reason.trim()) return toast.error('Reason required');
-    adjustAlcohol({ productId: p.id, changeMl: dir === 'add' ? v : -v, type, reason: reason.trim() });
-    toast.success('Stock adjusted'); onClose();
-  };
-  return (
-    <div className={`${CARD} border-yellow-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Adjust Stock — {p.name}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className={LABEL}>Direction</label><select className={SELECT} value={dir} onChange={(e) => setDir(e.target.value as 'add' | 'remove')}><option value="add">Increase</option><option value="remove">Decrease</option></select></div>
-        <div><label className={LABEL}>Amount (ml) *</label><input className={INPUT} type="number" min="1" step="any" placeholder="750" value={ml} onChange={(e) => setMl(e.target.value)} autoFocus /></div>
-        <div><label className={LABEL}>Type</label><select className={SELECT} value={type} onChange={(e) => setType(e.target.value as InvMovementType)}><option value="Adjustment">Adjustment</option><option value="Waste">Waste</option><option value="Correction">Correction</option></select></div>
-        <div><label className={LABEL}>Reason *</label><input className={INPUT} placeholder="Required" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />Apply</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-// ── Beverage Forms ────────────────────────────────────────────────────────────
-
-const BeverageAddEditForm = ({ edit, onClose }: { edit?: BeverageProduct; onClose: () => void }) => {
-  const addBeverage    = useInventoryStore((s) => s.addBeverage);
-  const updateBeverage = useInventoryStore((s) => s.updateBeverage);
-  const init = edit ? {
-    name: edit.name, piecesPerCarton: String(edit.piecesPerCarton), status: edit.status,
-    currentStock: String(Math.floor(edit.currentStock / edit.piecesPerCarton)),
-    minStock: String(Math.round(edit.minStock / edit.piecesPerCarton)),
-    costPerCarton: edit.costPerCarton !== undefined ? String(edit.costPerCarton) : '',
-  } : { name: '', piecesPerCarton: '24', currentStock: '', minStock: '', costPerCarton: '', status: 'active' as const };
-  const [f, setF] = useState(init);
-  const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
-  const handleSave = () => {
-    const ppc = parseFloat(f.piecesPerCarton), cs = parseFloat(f.currentStock);
-    const ms = f.minStock === '' ? 0 : parseFloat(f.minStock);
-    if (!f.name.trim())         return toast.error('Name required');
-    if (isNaN(ppc) || ppc <= 0) return toast.error('Pieces per carton must be > 0');
-    if (isNaN(cs) || cs < 0)   return toast.error('Current stock must be ≥ 0');
-    if (!isNaN(ms) && ms < 0)   return toast.error('Min stock must be ≥ 0');
-    const cpc = f.costPerCarton !== '' ? parseFloat(f.costPerCarton) : undefined;
-    const ppcR = Math.round(ppc);
-    const data = { name: f.name.trim(), piecesPerCarton: ppcR, currentStock: Math.round(cs) * ppcR, minStock: Math.round(ms) * ppcR, costPerCarton: cpc && !isNaN(cpc) ? cpc : undefined, status: f.status as 'active' | 'inactive' };
-    if (edit) { updateBeverage(edit.id, data); toast.success('Updated'); }
-    else      { addBeverage(data); toast.success('Product added'); }
-    onClose();
-  };
-  return (
-    <div className={`${CARD} border-sky-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : 'Add Beverage Product'}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Pepsi" value={f.name} onChange={upd('name')} autoFocus /></div>
-        <div><label className={LABEL}>Pcs/Carton *</label><input className={INPUT} type="number" min="1" value={f.piecesPerCarton} onChange={upd('piecesPerCarton')} /></div>
-        <div><label className={LABEL}>Current (cartons) *</label><input className={INPUT} type="number" min="0" step="1" value={f.currentStock} onChange={upd('currentStock')} /></div>
-        <div><label className={LABEL}>Min (cartons)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={f.minStock} onChange={upd('minStock')} /></div>
-        <div><label className={LABEL}>Cost/Carton</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerCarton} onChange={upd('costPerCarton')} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-const BeverageBuyForm = ({ p, onClose }: { p: BeverageProduct; onClose: () => void }) => {
-  const purchaseBeverage = useInventoryStore((s) => s.purchaseBeverage);
-  const [unit, setUnit] = useState<'piece' | 'carton'>('carton');
-  const [qty, setQty] = useState('');
-  const [cost, setCost] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [invoice, setInvoice] = useState('');
-  const addPcs = !isNaN(parseFloat(qty)) && parseFloat(qty) > 0 ? (unit === 'piece' ? parseFloat(qty) : parseFloat(qty) * p.piecesPerCarton) : null;
-  const unitCostPreview = useMemo(() => {
-    const q = parseFloat(qty), c = parseFloat(cost);
-    if (!isNaN(q) && q > 0 && !isNaN(c) && c > 0) {
-      const perCarton = unit === 'carton' ? c / q : (c / q) * p.piecesPerCarton;
-      return `Rs. ${perCarton.toLocaleString(undefined, { maximumFractionDigits: 0 })}/crate`;
-    }
-    return null;
-  }, [qty, cost, unit, p.piecesPerCarton]);
-  const handleSave = () => {
-    const q = parseFloat(qty);
-    if (isNaN(q) || q <= 0) return toast.error('Enter quantity');
-    const c = cost !== '' ? parseFloat(cost) : undefined;
-    purchaseBeverage({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: c && !isNaN(c) ? c : undefined });
-    toast.success(`+${addPcs?.toLocaleString()} pcs added${unitCostPreview ? ` · cost synced` : ''}`); onClose();
-  };
-  return (
-    <div className={`${CARD} border-green-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.piecesPerCarton} pcs/crate)</span></h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div><label className={LABEL}>Unit</label><select className={SELECT} value={unit} onChange={(e) => setUnit(e.target.value as 'piece' | 'carton')}><option value="carton">Crate ({p.piecesPerCarton} pcs)</option><option value="piece">Piece</option></select></div>
-        <div><label className={LABEL}>Quantity *</label><input className={INPUT} type="number" min="1" step="1" placeholder="5" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />{addPcs !== null && <p className="text-xs text-green-400/80 mt-0.5">+{addPcs.toLocaleString()} pcs</p>}</div>
-        <div><label className={LABEL}>Total Cost (Rs.)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={cost} onChange={(e) => setCost(e.target.value)} />{unitCostPreview && <p className="text-xs text-blue-400/80 mt-0.5">{unitCostPreview}</p>}</div>
-        <div><label className={LABEL}>Supplier</label><input className={INPUT} placeholder="optional" value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
-        <div><label className={LABEL}>Invoice #</label><input className={INPUT} placeholder="optional" value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><ShoppingCart size={14} />Confirm Purchase</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-const BeverageAdjForm = ({ p, onClose }: { p: BeverageProduct; onClose: () => void }) => {
   const adjustBeverage = useInventoryStore((s) => s.adjustBeverage);
-  const [dir, setDir] = useState<'add' | 'remove'>('add'); const [pieces, setPieces] = useState(''); const [type, setType] = useState<InvMovementType>('Adjustment'); const [reason, setReason] = useState('');
-  const handleSave = () => {
-    const v = parseFloat(pieces);
-    if (isNaN(v) || v <= 0) return toast.error('Enter piece count');
-    if (!reason.trim()) return toast.error('Reason required');
-    adjustBeverage({ productId: p.id, changePieces: dir === 'add' ? v : -v, type, reason: reason.trim() });
-    toast.success('Stock adjusted'); onClose();
-  };
-  return (
-    <div className={`${CARD} border-yellow-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Adjust Stock — {p.name}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className={LABEL}>Direction</label><select className={SELECT} value={dir} onChange={(e) => setDir(e.target.value as 'add' | 'remove')}><option value="add">Increase</option><option value="remove">Decrease</option></select></div>
-        <div><label className={LABEL}>Pieces *</label><input className={INPUT} type="number" min="1" step="1" placeholder="24" value={pieces} onChange={(e) => setPieces(e.target.value)} autoFocus /></div>
-        <div><label className={LABEL}>Type</label><select className={SELECT} value={type} onChange={(e) => setType(e.target.value as InvMovementType)}><option value="Adjustment">Adjustment</option><option value="Waste">Waste</option><option value="Correction">Correction</option></select></div>
-        <div><label className={LABEL}>Reason *</label><input className={INPUT} placeholder="Required" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />Apply</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-// ── Cigarette Forms ───────────────────────────────────────────────────────────
-
-const CigaretteAddEditForm = ({ edit, onClose }: { edit?: CigaretteProduct; onClose: () => void }) => {
-  const addCigarette    = useInventoryStore((s) => s.addCigarette);
-  const updateCigarette = useInventoryStore((s) => s.updateCigarette);
-  const init = edit ? {
-    name: edit.name, sticksPerPacket: String(edit.sticksPerPacket), status: edit.status,
-    currentPackets: String(Math.floor(edit.currentSticks / edit.sticksPerPacket)),
-    minPackets: String(Math.round(edit.minSticks / edit.sticksPerPacket)),
-    costPerPacket: edit.costPerPacket !== undefined ? String(edit.costPerPacket) : '',
-  } : { name: '', sticksPerPacket: '20', currentPackets: '', minPackets: '', costPerPacket: '', status: 'active' as const };
-  const [f, setF] = useState(init);
-  const upd = (k: keyof typeof init) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
-  const handleSave = () => {
-    const spp = parseFloat(f.sticksPerPacket), cp = parseFloat(f.currentPackets);
-    const mp = f.minPackets === '' ? 0 : parseFloat(f.minPackets);
-    if (!f.name.trim())         return toast.error('Name required');
-    if (isNaN(spp) || spp <= 0) return toast.error('Sticks per packet must be > 0');
-    if (isNaN(cp) || cp < 0)   return toast.error('Current stock must be ≥ 0');
-    if (!isNaN(mp) && mp < 0)   return toast.error('Min stock must be ≥ 0');
-    const cpp = f.costPerPacket !== '' ? parseFloat(f.costPerPacket) : undefined;
-    const sppR = Math.round(spp);
-    const data = { name: f.name.trim(), sticksPerPacket: sppR, currentSticks: Math.round(cp) * sppR, minSticks: Math.round(mp) * sppR, costPerPacket: cpp && !isNaN(cpp) ? cpp : undefined, status: f.status as 'active' | 'inactive' };
-    if (edit) { updateCigarette(edit.id, data); toast.success('Updated'); }
-    else      { addCigarette(data); toast.success('Product added'); }
-    onClose();
-  };
-  return (
-    <div className={`${CARD} border-orange-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">{edit ? `Edit — ${edit.name}` : 'Add Cigarette Product'}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} placeholder="e.g. Surya Classic" value={f.name} onChange={upd('name')} autoFocus /></div>
-        <div><label className={LABEL}>Sticks/Packet *</label><input className={INPUT} type="number" min="1" value={f.sticksPerPacket} onChange={upd('sticksPerPacket')} /></div>
-        <div><label className={LABEL}>Current (packets) *</label><input className={INPUT} type="number" min="0" step="1" value={f.currentPackets} onChange={upd('currentPackets')} /></div>
-        <div><label className={LABEL}>Min (packets)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={f.minPackets} onChange={upd('minPackets')} /></div>
-        <div><label className={LABEL}>Cost/Packet</label><input className={INPUT} type="number" min="0" step="any" placeholder="optional" value={f.costPerPacket} onChange={upd('costPerPacket')} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-const CigaretteBuyForm = ({ p, onClose }: { p: CigaretteProduct; onClose: () => void }) => {
-  const purchaseCigarette = useInventoryStore((s) => s.purchaseCigarette);
-  const [unit, setUnit] = useState<'stick' | 'packet'>('packet');
-  const [qty, setQty] = useState('');
-  const [cost, setCost] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [invoice, setInvoice] = useState('');
-  const addSticks = !isNaN(parseFloat(qty)) && parseFloat(qty) > 0 ? (unit === 'stick' ? parseFloat(qty) : parseFloat(qty) * p.sticksPerPacket) : null;
-  const unitCostPreview = useMemo(() => {
-    const q = parseFloat(qty), c = parseFloat(cost);
-    if (!isNaN(q) && q > 0 && !isNaN(c) && c > 0) {
-      const perPacket = unit === 'packet' ? c / q : (c / q) * p.sticksPerPacket;
-      return `Rs. ${perPacket.toLocaleString(undefined, { maximumFractionDigits: 0 })}/packet`;
-    }
-    return null;
-  }, [qty, cost, unit, p.sticksPerPacket]);
-  const handleSave = () => {
-    const q = parseFloat(qty);
-    if (isNaN(q) || q <= 0) return toast.error('Enter quantity');
-    const c = cost !== '' ? parseFloat(cost) : undefined;
-    purchaseCigarette({ productId: p.id, purchaseUnit: unit, qty: q, supplier: supplier || undefined, invoiceNo: invoice || undefined, cost: c && !isNaN(c) ? c : undefined });
-    toast.success(`+${addSticks?.toLocaleString()} sticks added${unitCostPreview ? ` · cost synced` : ''}`); onClose();
-  };
-  return (
-    <div className={`${CARD} border-green-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Purchase Stock — {p.name} <span className="text-muted-foreground font-normal text-xs">({p.sticksPerPacket} sticks/packet)</span></h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div><label className={LABEL}>Unit</label><select className={SELECT} value={unit} onChange={(e) => setUnit(e.target.value as 'stick' | 'packet')}><option value="packet">Packet ({p.sticksPerPacket} sticks)</option><option value="stick">Stick</option></select></div>
-        <div><label className={LABEL}>Quantity *</label><input className={INPUT} type="number" min="1" step="1" placeholder="10" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />{addSticks !== null && <p className="text-xs text-green-400/80 mt-0.5">+{addSticks.toLocaleString()} sticks</p>}</div>
-        <div><label className={LABEL}>Total Cost (Rs.)</label><input className={INPUT} type="number" min="0" step="1" placeholder="optional" value={cost} onChange={(e) => setCost(e.target.value)} />{unitCostPreview && <p className="text-xs text-blue-400/80 mt-0.5">{unitCostPreview}</p>}</div>
-        <div><label className={LABEL}>Supplier</label><input className={INPUT} placeholder="optional" value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
-        <div><label className={LABEL}>Invoice #</label><input className={INPUT} placeholder="optional" value={invoice} onChange={(e) => setInvoice(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><ShoppingCart size={14} />Confirm Purchase</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
-};
-
-const CigaretteAdjForm = ({ p, onClose }: { p: CigaretteProduct; onClose: () => void }) => {
   const adjustCigarette = useInventoryStore((s) => s.adjustCigarette);
-  const [dir, setDir] = useState<'add' | 'remove'>('add'); const [sticks, setSticks] = useState(''); const [type, setType] = useState<InvMovementType>('Adjustment'); const [reason, setReason] = useState('');
-  const handleSave = () => {
-    const v = parseFloat(sticks);
-    if (isNaN(v) || v <= 0) return toast.error('Enter stick count');
-    if (!reason.trim()) return toast.error('Reason required');
-    adjustCigarette({ productId: p.id, changeSticks: dir === 'add' ? v : -v, type, reason: reason.trim() });
+  const [direction, setDirection] = useState<'add' | 'remove'>('add'), [amount, setAmount] = useState(''), [type, setType] = useState<InvMovementType>('Adjustment'), [reason, setReason] = useState('');
+  const unit = kind === 'alcohol' ? 'ml' : kind === 'beverage' ? (p as BeverageProduct).packagingType : 'sticks';
+  const save = () => {
+    const q = Number(amount); if (!q || q <= 0 || !reason.trim()) return toast.error('Enter an amount and reason');
+    const signed = direction === 'add' ? q : -q;
+    if (kind === 'alcohol') adjustAlcohol({ productId: p.id, changeMl: signed, type, reason: reason.trim() });
+    else if (kind === 'beverage') adjustBeverage({ productId: p.id, changePieces: signed, type, reason: reason.trim() });
+    else adjustCigarette({ productId: p.id, changeSticks: signed, type, reason: reason.trim() });
     toast.success('Stock adjusted'); onClose();
   };
-  return (
-    <div className={`${CARD} border-yellow-500/15`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">Adjust Stock — {p.name}</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className={LABEL}>Direction</label><select className={SELECT} value={dir} onChange={(e) => setDir(e.target.value as 'add' | 'remove')}><option value="add">Increase</option><option value="remove">Decrease</option></select></div>
-        <div><label className={LABEL}>Sticks *</label><input className={INPUT} type="number" min="1" step="1" placeholder="20" value={sticks} onChange={(e) => setSticks(e.target.value)} autoFocus /></div>
-        <div><label className={LABEL}>Type</label><select className={SELECT} value={type} onChange={(e) => setType(e.target.value as InvMovementType)}><option value="Adjustment">Adjustment</option><option value="Waste">Waste</option><option value="Correction">Correction</option></select></div>
-        <div><label className={LABEL}>Reason *</label><input className={INPUT} placeholder="Required" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2 mt-4"><button className={BTN_PRIMARY} onClick={handleSave}><Save size={14} />Apply</button><button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button></div>
-    </div>
-  );
+  return <div className={`${CARD} border-yellow-500/15`}><h3 className="text-sm font-semibold mb-4">Adjust Stock — {p.name}</h3><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div><label className={LABEL}>Direction</label><select className={SELECT} value={direction} onChange={(e) => setDirection(e.target.value as 'add' | 'remove')}><option value="add">Increase</option><option value="remove">Decrease</option></select></div><div><label className={LABEL}>Amount ({unit}) *</label><input className={INPUT} type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /></div><div><label className={LABEL}>Type</label><select className={SELECT} value={type} onChange={(e) => setType(e.target.value as InvMovementType)}><option value="Adjustment">Adjustment</option><option value="Waste">Waste</option><option value="Correction">Correction</option></select></div><div><label className={LABEL}>Reason *</label><input className={INPUT} value={reason} onChange={(e) => setReason(e.target.value)} /></div></div><FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />Apply Adjustment</button></FormActions></div>;
 };
-
-// ── Category badge ────────────────────────────────────────────────────────────
-
-const CAT_BADGE: Record<InvProductType, string> = {
-  alcohol:   'bg-amber-500/15 border-amber-500/20 text-amber-400',
-  beverage:  'bg-sky-500/15 border-sky-500/20 text-sky-400',
-  cigarette: 'bg-orange-500/15 border-orange-500/20 text-orange-400',
-};
-const CAT_LABEL: Record<InvProductType, string> = {
-  alcohol: 'Alcohol', beverage: 'Beverage', cigarette: 'Cigarette',
-};
-// ── Main Component ────────────────────────────────────────────────────────────
 
 export const PackagedStockTab = () => {
-  const alcoholProducts   = useInventoryStore((s) => s.alcoholProducts);
-  const beverageProducts  = useInventoryStore((s) => s.beverageProducts);
-  const cigaretteProducts = useInventoryStore((s) => s.cigaretteProducts);
-  const invMovements      = useInventoryStore((s) => s.invMovements);
-  const deleteAlcohol     = useInventoryStore((s) => s.deleteAlcohol);
-  const deleteBeverage    = useInventoryStore((s) => s.deleteBeverage);
-  const deleteCigarette   = useInventoryStore((s) => s.deleteCigarette);
+  const alcohol = useInventoryStore((s) => s.alcoholProducts);
+  const beverages = useInventoryStore((s) => s.beverageProducts);
+  const cigarettes = useInventoryStore((s) => s.cigaretteProducts);
+  const movements = useInventoryStore((s) => s.invMovements);
+  const deleteAlcohol = useInventoryStore((s) => s.deleteAlcohol);
+  const deleteBeverage = useInventoryStore((s) => s.deleteBeverage);
+  const deleteCigarette = useInventoryStore((s) => s.deleteCigarette);
+  const [activeTab, setActiveTab] = useState<InventoryCategory>('spirits');
+  const [form, setForm] = useState<FormState | null>(null);
+  const close = () => setForm(null);
 
-  const [catFilter, setCatFilter] = useState<CatFilter>('all');
-  const [form,      setForm]      = useState<FormState | null>(null);
+  const products = useMemo(() => {
+    const rows: Array<{ p: Product; kind: 'alcohol' | 'beverage' | 'cigarette'; category: InventoryCategory; primary: string; secondary: string; min: string; low: boolean }> = [];
+    alcohol.forEach((p) => rows.push({ p, kind: 'alcohol', category: categoryForAlcohol(p), primary: mlDisplay(p.currentStockMl, p.bottleSizeMl), secondary: `${p.currentStockMl.toLocaleString()} ml total`, min: mlDisplay(p.minStockMl, p.bottleSizeMl), low: p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl }));
+    beverages.forEach((p) => rows.push({ p, kind: 'beverage', category: categoryForBeverage(p), primary: unitDisplay(p, p.currentStock), secondary: p.sizeLabel ? `Size ${p.sizeLabel}` : 'Unit stock', min: unitDisplay(p, p.minStock), low: p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock }));
+    cigarettes.forEach((p) => rows.push({ p, kind: 'cigarette', category: 'cigarettes', primary: cigaretteDisplay(p.currentSticks, p.sticksPerPacket), secondary: `${p.currentSticks.toLocaleString()} sticks total`, min: cigaretteDisplay(p.minSticks, p.sticksPerPacket), low: p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks }));
+    return rows.filter((r) => r.category === activeTab).sort((a, b) => Number(b.low) - Number(a.low) || a.p.name.localeCompare(b.p.name));
+  }, [alcohol, beverages, cigarettes, activeTab]);
 
-  const closeForm = () => setForm(null);
+  const totalValue = useMemo(() => alcohol.reduce((s, p) => s + p.currentStockMl / p.bottleSizeMl * (p.costPerBottle ?? 0), 0) + beverages.reduce((s, p) => s + p.currentStock * (p.costPerUnit ?? (p.costPerCarton && p.piecesPerCarton ? p.costPerCarton / p.piecesPerCarton : 0)), 0) + cigarettes.reduce((s, p) => s + p.currentSticks / p.sticksPerPacket * (p.costPerPacket ?? 0), 0), [alcohol, beverages, cigarettes]);
+  const lowCount = [...alcohol.filter((p) => p.minStockMl > 0 && p.currentStockMl <= p.minStockMl), ...beverages.filter((p) => p.minStock > 0 && p.currentStock <= p.minStock), ...cigarettes.filter((p) => p.minSticks > 0 && p.currentSticks <= p.minSticks)].length;
+  const todaySales = movements.filter((m) => m.type === 'Sale' && m.timestamp >= new Date().setHours(0, 0, 0, 0)).length;
+  const selected = form && 'p' in form ? form.p : undefined;
 
-  // ── Summary metrics ──────────────────────────────────────────────────────
-
-  const totalValue = useMemo(() => {
-    // Use fractional units (not Math.floor) so partial cartons/packets still contribute
-    const alc = alcoholProducts.reduce((s, p) => s + (p.currentStockMl / p.bottleSizeMl) * (p.costPerBottle ?? 0), 0);
-    const bev = beverageProducts.reduce((s, p) => s + (p.currentStock / p.piecesPerCarton) * (p.costPerCarton ?? 0), 0);
-    const cig = cigaretteProducts.reduce((s, p) => s + (p.currentSticks / p.sticksPerPacket) * (p.costPerPacket ?? 0), 0);
-    return alc + bev + cig;
-  }, [alcoholProducts, beverageProducts, cigaretteProducts]);
-
-  const lowCount = useMemo(() => {
-    const a = alcoholProducts.filter((p) => p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl).length;
-    const b = beverageProducts.filter((p) => p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock).length;
-    const c = cigaretteProducts.filter((p) => p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks).length;
-    return a + b + c;
-  }, [alcoholProducts, beverageProducts, cigaretteProducts]);
-
-  const todayDeductions = useMemo(() => {
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    return invMovements.filter((m) => m.type === 'Sale' && m.timestamp >= start.getTime()).length;
-  }, [invMovements]);
-
-  // ── Unified rows ─────────────────────────────────────────────────────────
-
-  const rows: UnifiedRow[] = useMemo(() => {
-    const alcRows: UnifiedRow[] = alcoholProducts.map((p) => ({
-      id: p.id, name: p.name, category: 'alcohol' as const,
-      ...fmtAlcohol(p), raw: p,
-    }));
-    const bevRows: UnifiedRow[] = beverageProducts.map((p) => ({
-      id: p.id, name: p.name, category: 'beverage' as const,
-      ...fmtBeverage(p), raw: p,
-    }));
-    const cigRows: UnifiedRow[] = cigaretteProducts.map((p) => ({
-      id: p.id, name: p.name, category: 'cigarette' as const,
-      ...fmtCigarette(p), raw: p,
-    }));
-    const all = [...alcRows, ...bevRows, ...cigRows].sort((a, b) => {
-      if (a.isLow && !b.isLow) return -1;
-      if (!a.isLow && b.isLow) return 1;
-      return a.name.localeCompare(b.name);
-    });
-    return catFilter === 'all' ? all : all.filter((r) => r.category === catFilter);
-  }, [alcoholProducts, beverageProducts, cigaretteProducts, catFilter]);
-
-  // ── Add button label ─────────────────────────────────────────────────────
-
-  const handleDelete = (row: UnifiedRow) => {
-    if (!confirm(`Delete "${row.name}"? This also removes its POS mappings.`)) return;
-    if (row.category === 'alcohol')   deleteAlcohol(row.id);
-    if (row.category === 'beverage')  deleteBeverage(row.id);
-    if (row.category === 'cigarette') deleteCigarette(row.id);
-    toast.success('Product deleted');
-    if (form && 'p' in form && form.p.id === row.id) closeForm();
+  const openAdd = () => setForm({ kind: 'add', category: activeTab });
+  const edit = (p: Product, kind: string) => setForm({ kind: kind as never, p } as FormState);
+  const remove = (row: typeof products[number]) => {
+    if (!confirm(`Delete "${row.p.name}"? This also removes its POS mappings.`)) return;
+    if (row.kind === 'alcohol') deleteAlcohol(row.p.id); else if (row.kind === 'beverage') deleteBeverage(row.p.id); else deleteCigarette(row.p.id);
+    toast.success('Product deleted'); if (selected?.id === row.p.id) close();
   };
 
-  const handleBuy = (row: UnifiedRow) => {
-    if (row.category === 'alcohol')   setForm({ kind: 'buy-alcohol',   p: row.raw as AlcoholProduct });
-    if (row.category === 'beverage')  setForm({ kind: 'buy-beverage',  p: row.raw as BeverageProduct });
-    if (row.category === 'cigarette') setForm({ kind: 'buy-cigarette', p: row.raw as CigaretteProduct });
-  };
-  const handleAdj = (row: UnifiedRow) => {
-    if (row.category === 'alcohol')   setForm({ kind: 'adj-alcohol',   p: row.raw as AlcoholProduct });
-    if (row.category === 'beverage')  setForm({ kind: 'adj-beverage',  p: row.raw as BeverageProduct });
-    if (row.category === 'cigarette') setForm({ kind: 'adj-cigarette', p: row.raw as CigaretteProduct });
-  };
-  const handleEdit = (row: UnifiedRow) => {
-    if (row.category === 'alcohol')   setForm({ kind: 'edit-alcohol',   p: row.raw as AlcoholProduct });
-    if (row.category === 'beverage')  setForm({ kind: 'edit-beverage',  p: row.raw as BeverageProduct });
-    if (row.category === 'cigarette') setForm({ kind: 'edit-cigarette', p: row.raw as CigaretteProduct });
-  };
-
-  // ── Add buttons based on current filter ──────────────────────────────────
-
-  const addButtons = catFilter === 'all' ? (
-    <div className="flex items-center gap-1.5">
-      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/15 border border-amber-500/25 text-amber-400 hover:brightness-110 transition-all" onClick={() => setForm({ kind: 'add', cat: 'alcohol' })}>
-        <Wine size={12} /> Alcohol
-      </button>
-      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/15 border border-sky-500/25 text-sky-400 hover:brightness-110 transition-all" onClick={() => setForm({ kind: 'add', cat: 'beverage' })}>
-        <GlassWater size={12} /> Beverage
-      </button>
-      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500/15 border border-orange-500/25 text-orange-400 hover:brightness-110 transition-all" onClick={() => setForm({ kind: 'add', cat: 'cigarette' })}>
-        <Cigarette size={12} /> Cigarette
-      </button>
+  return <div className="space-y-5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className={`${CARD} py-3`}><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tracked Products</p><p className="text-xl font-bold mt-1">{alcohol.length + beverages.length + cigarettes.length}</p><p className="text-[10px] text-muted-foreground/60">Across five tabs</p></div>
+      <div className={`${CARD} py-3`}><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Low Stock</p><p className="text-xl font-bold text-red-400 mt-1">{lowCount}</p><p className="text-[10px] text-muted-foreground/60">Needs attention</p></div>
+      <div className={`${CARD} py-3`}><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Inventory Value</p><p className="text-xl font-bold text-emerald-400 mt-1">Rs. {Math.round(totalValue).toLocaleString()}</p><p className="text-[10px] text-muted-foreground/60">At current cost</p></div>
+      <div className={`${CARD} py-3`}><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Today's Sales</p><p className="text-xl font-bold text-blue-400 mt-1">{todaySales}</p><p className="text-[10px] text-muted-foreground/60">Stock deduction events</p></div>
     </div>
-  ) : (
-    <button className={BTN_PRIMARY} onClick={() => setForm({ kind: 'add', cat: catFilter })}>
-      <Plus size={14} /> Add {CAT_LABEL[catFilter]}
-    </button>
-  );
-
-  return (
-    <div className="space-y-5">
-
-      {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-xl p-4 flex items-center gap-3" style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.18)' }}>
-          <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'rgba(59,130,246,0.12)' }}><Coins size={18} className="text-blue-400" /></div>
-          <div>
-            <p className="text-xs text-slate-400 mb-0.5">Total Stock Value</p>
-            <p className="text-xl font-bold text-blue-300">
-              Rs. {totalValue > 0 ? totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
-            </p>
-            <p className="text-[10px] text-slate-500">based on cost price data</p>
-          </div>
-        </div>
-        <div className="rounded-xl p-4 flex items-center gap-3" style={{ background: lowCount > 0 ? 'rgba(239,68,68,0.07)' : 'rgba(34,197,94,0.07)', border: lowCount > 0 ? '1px solid rgba(239,68,68,0.18)' : '1px solid rgba(34,197,94,0.18)' }}>
-          <div className="p-2.5 rounded-lg shrink-0" style={{ background: lowCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)' }}>
-            <AlertTriangle size={18} className={lowCount > 0 ? 'text-red-400' : 'text-green-400'} />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 mb-0.5">Low Stock Items</p>
-            <p className={`text-xl font-bold ${lowCount > 0 ? 'text-red-300' : 'text-green-300'}`}>{lowCount}</p>
-            <p className="text-[10px] text-slate-500">{lowCount > 0 ? 'at or below min threshold' : 'all items adequately stocked'}</p>
-          </div>
-        </div>
-        <div className="rounded-xl p-4 flex items-center gap-3" style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' }}>
-          <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'rgba(139,92,246,0.12)' }}><TrendingDown size={18} className="text-violet-400" /></div>
-          <div>
-            <p className="text-xs text-slate-400 mb-0.5">Today's Deductions</p>
-            <p className="text-xl font-bold text-violet-300">{todayDeductions}</p>
-            <p className="text-[10px] text-slate-500">POS-triggered deduction events</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Filter pills + Add buttons ────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          {(['all', 'alcohol', 'beverage', 'cigarette'] as CatFilter[]).map((cat) => (
-            <button
-              key={cat}
-              onClick={() => { setCatFilter(cat); closeForm(); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                catFilter === cat
-                  ? 'text-white'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              style={catFilter === cat
-                ? { background: 'rgba(249,115,22,0.18)', border: '1px solid rgba(249,115,22,0.35)', color: '#fb923c' }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }
-              }
-            >
-              {cat === 'all' ? 'All' : CAT_LABEL[cat]}
-            </button>
-          ))}
-          <span className="text-xs text-slate-600 ml-1">{rows.length} item{rows.length !== 1 ? 's' : ''}</span>
-        </div>
-        {addButtons}
-      </div>
-
-      {/* ── Inline form panel ────────────────────────────────────────────── */}
-      {form && (
-        <div>
-          {form.kind === 'add' && form.cat === 'alcohol'   && <AlcoholAddEditForm onClose={closeForm} />}
-          {form.kind === 'add' && form.cat === 'beverage'  && <BeverageAddEditForm onClose={closeForm} />}
-          {form.kind === 'add' && form.cat === 'cigarette' && <CigaretteAddEditForm onClose={closeForm} />}
-          {form.kind === 'edit-alcohol'   && <AlcoholAddEditForm   edit={form.p} onClose={closeForm} />}
-          {form.kind === 'edit-beverage'  && <BeverageAddEditForm  edit={form.p} onClose={closeForm} />}
-          {form.kind === 'edit-cigarette' && <CigaretteAddEditForm edit={form.p} onClose={closeForm} />}
-          {form.kind === 'buy-alcohol'    && <AlcoholBuyForm    p={form.p} onClose={closeForm} />}
-          {form.kind === 'buy-beverage'   && <BeverageBuyForm   p={form.p} onClose={closeForm} />}
-          {form.kind === 'buy-cigarette'  && <CigaretteBuyForm  p={form.p} onClose={closeForm} />}
-          {form.kind === 'adj-alcohol'    && <AlcoholAdjForm    p={form.p} onClose={closeForm} />}
-          {form.kind === 'adj-beverage'   && <BeverageAdjForm   p={form.p} onClose={closeForm} />}
-          {form.kind === 'adj-cigarette'  && <CigaretteAdjForm  p={form.p} onClose={closeForm} />}
-        </div>
-      )}
-
-      {/* ── Unified table ─────────────────────────────────────────────────── */}
-      {rows.length === 0 ? (
-        <div className={`${CARD} text-center py-14 text-slate-500 text-sm`}>
-          No products found. Use the add buttons above to get started.
-        </div>
-      ) : (
-        <div className={CARD}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[620px]">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className={TH}>Product Name</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Category</th>
-                  <th className={TH}>Current Stock</th>
-                  <th className={`${TH} hidden md:table-cell`}>Min Stock Alert</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Status</th>
-                  <th className={TH}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={`${row.category}-${row.id}`}
-                    className={`border-b border-white/[0.04] last:border-0 transition-colors ${row.isLow ? 'bg-red-500/[0.03]' : 'hover:bg-white/[0.015]'}`}
-                  >
-                    <td className={TD}>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium ${row.isLow ? 'text-red-300' : 'text-foreground'}`}>{row.name}</span>
-                        {row.isLow && <LowBadge />}
-                      </div>
-                    </td>
-                    <td className={`${TD} hidden sm:table-cell`}>
-                      <span className={`text-[10px] px-2 py-0.5 rounded border font-semibold leading-none ${CAT_BADGE[row.category]}`}>
-                        {CAT_LABEL[row.category]}
-                      </span>
-                    </td>
-                    <td className={TD}>
-                      <p className={`font-semibold font-mono ${row.isLow ? 'text-red-400' : 'text-foreground'}`}>{row.stockPrimary}</p>
-                      <p className="text-xs text-muted-foreground/60">{row.stockSecondary}</p>
-                    </td>
-                    <td className={`${TD} hidden md:table-cell text-muted-foreground`}>{row.minDisplay}</td>
-                    <td className={`${TD} hidden sm:table-cell`}><StatusBadge status={(row.raw as { status: 'active' | 'inactive' }).status} /></td>
-                    <td className={TD}>
-                      <div className="flex items-center gap-0.5">
-                        <button className={BTN_BUY}    title="Purchase stock" onClick={() => handleBuy(row)}> <ShoppingCart size={14} /></button>
-                        <button className={BTN_ADJUST} title="Adjust stock"    onClick={() => handleAdj(row)}> <SlidersHorizontal size={14} /></button>
-                        <button className={BTN_EDIT}   title="Edit product"    onClick={() => handleEdit(row)}><Edit3 size={14} /></button>
-                        <button className={BTN_DANGER} title="Delete product"  onClick={() => handleDelete(row)}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
+    <div className="flex flex-wrap gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      {TAB_DEFS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => { setActiveTab(id); close(); }} className={`flex-1 min-w-[125px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${activeTab === id ? 'text-white bg-orange-500/15 border border-orange-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'}`}><Icon size={14} /><span>{label}</span><span className="text-[10px] opacity-60">({id === 'spirits' ? alcohol.filter((p) => categoryForAlcohol(p) === id).length : id === 'wine' ? alcohol.filter((p) => categoryForAlcohol(p) === id).length : id === 'beer' ? beverages.filter((p) => categoryForBeverage(p) === id).length : id === 'soft-drinks' ? beverages.filter((p) => categoryForBeverage(p) === id).length : cigarettes.length})</span></button>)}
     </div>
-  );
+    <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-semibold">{CATEGORY_LABEL[activeTab]}</h2><p className="text-xs text-muted-foreground">{activeTab === 'spirits' || activeTab === 'wine' ? 'Stock tracked in ml' : activeTab === 'cigarettes' ? 'Stock tracked in sticks · 20 sticks per packet' : 'Stock tracked as individual units'}</p></div><button className={BTN_PRIMARY} onClick={openAdd}><Plus size={14} />Add Product</button></div>
+    {form && form.kind === 'add' && (form.category === 'spirits' || form.category === 'wine') && <AlcoholForm category={form.category} onClose={close} />}
+    {form && form.kind === 'add' && (form.category === 'beer' || form.category === 'soft-drinks') && <BeverageForm category={form.category} onClose={close} />}
+    {form && form.kind === 'add' && form.category === 'cigarettes' && <CigaretteForm onClose={close} />}
+    {form?.kind === 'edit-alcohol' && <AlcoholForm edit={form.p} category={categoryForAlcohol(form.p)} onClose={close} />}
+    {form?.kind === 'edit-beverage' && <BeverageForm edit={form.p} category={categoryForBeverage(form.p)} onClose={close} />}
+    {form?.kind === 'edit-cigarette' && <CigaretteForm edit={form.p} onClose={close} />}
+    {form?.kind === 'buy-alcohol' && <AlcoholPurchase p={form.p} onClose={close} />}
+    {form?.kind === 'buy-beverage' && <BeveragePurchase p={form.p} onClose={close} />}
+    {form?.kind === 'buy-cigarette' && <CigarettePurchase p={form.p} onClose={close} />}
+    {form?.kind === 'adjust-alcohol' && <Adjustment p={form.p} kind="alcohol" onClose={close} />}
+    {form?.kind === 'adjust-beverage' && <Adjustment p={form.p} kind="beverage" onClose={close} />}
+    {form?.kind === 'adjust-cigarette' && <Adjustment p={form.p} kind="cigarette" onClose={close} />}
+    <div className="overflow-x-auto rounded-xl border border-white/[0.07]" style={{ background: 'rgba(255,255,255,0.025)' }}>
+      {products.length === 0 ? <div className="py-14 text-center text-sm text-muted-foreground">No {CATEGORY_LABEL[activeTab].toLowerCase()} products yet.</div> : <table className="w-full text-sm"><thead><tr className="border-b border-white/[0.07]"><th className={TH}>Product</th><th className={`${TH} hidden sm:table-cell`}>Packaging</th><th className={TH}>Current Stock</th><th className={`${TH} hidden md:table-cell`}>Min Alert</th><th className={`${TH} hidden sm:table-cell`}>Status</th><th className={TH}>Actions</th></tr></thead><tbody>{products.map((row) => <tr key={row.p.id} className={`border-b border-white/[0.04] last:border-0 ${row.low ? 'bg-red-500/[0.03]' : 'hover:bg-white/[0.015]'}`}><td className={TD}><div className="flex items-center gap-2"><span className={`font-medium ${row.low ? 'text-red-300' : 'text-foreground'}`}>{row.p.name}</span>{row.low && <LowBadge />}</div></td><td className={`${TD} hidden sm:table-cell`}><span className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${CATEGORY_BADGE[row.category]}`}>{row.kind === 'alcohol' ? `${(row.p as AlcoholProduct).bottleSizeMl}ml btl` : row.kind === 'beverage' ? packagingLabel(row.p as BeverageProduct) : `${(row.p as CigaretteProduct).sticksPerPacket} sticks/pkt`}</span></td><td className={TD}><p className={`font-semibold font-mono ${row.low ? 'text-red-400' : 'text-foreground'}`}>{row.primary}</p><p className="text-xs text-muted-foreground/60">{row.secondary}</p></td><td className={`${TD} hidden md:table-cell text-muted-foreground`}>{row.min}</td><td className={`${TD} hidden sm:table-cell`}><StatusBadge status={row.p.status} /></td><td className={TD}><div className="flex items-center gap-0.5"><button className={BTN_BUY} title="Restock" onClick={() => edit(row.p, row.kind === 'alcohol' ? 'buy-alcohol' : row.kind === 'beverage' ? 'buy-beverage' : 'buy-cigarette')}><ShoppingCart size={14} /></button><button className={BTN_ADJUST} title="Adjust" onClick={() => edit(row.p, row.kind === 'alcohol' ? 'adjust-alcohol' : row.kind === 'beverage' ? 'adjust-beverage' : 'adjust-cigarette')}><SlidersHorizontal size={14} /></button><button className={BTN_EDIT} title="Edit" onClick={() => edit(row.p, row.kind === 'alcohol' ? 'edit-alcohol' : row.kind === 'beverage' ? 'edit-beverage' : 'edit-cigarette')}><Edit3 size={14} /></button><button className={BTN_DANGER} title="Delete" onClick={() => remove(row)}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table>}
+    </div>
+  </div>;
 };
