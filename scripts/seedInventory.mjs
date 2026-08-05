@@ -27,33 +27,33 @@ async function del(path) {
 // ── AlcoholProduct factory (tracked in ml) ────────────────────────────────────
 // bottleSizeMl=750 for all spirits (standard full bottle)
 // minStockMl=750 → alert when stock drops below 1 full bottle
-const alc = (id, name, bottleSizeMl = 750, minStockMl = 750) => ({
+const alc = (id, name, bottleSizeMl = 750) => ({
   id,
   name,
   bottleSizeMl,
   currentStockMl: 0,
-  minStockMl,
+  minStockMl: 0,
   status: 'active',
 });
 
 // ── BeverageProduct factory (tracked in pieces) ───────────────────────────────
 // minStock = 1 carton worth by default
-const bev = (id, name, piecesPerCarton, minStock) => ({
+const bev = (id, name, piecesPerCarton) => ({
   id,
   name,
   piecesPerCarton,
   currentStock: 0,
-  minStock: minStock ?? piecesPerCarton,
+  minStock: 0,
   status: 'active',
 });
 
 // ── CigaretteProduct factory (tracked in sticks) ─────────────────────────────
-const cig = (id, name, sticksPerPacket = 25, minSticks = 25) => ({
+const cig = (id, name, sticksPerPacket = 20) => ({
   id,
   name,
   sticksPerPacket,
   currentSticks: 0,
-  minSticks,
+  minSticks: 0,
   status: 'active',
 });
 
@@ -115,10 +115,10 @@ const beverageProducts = [
 // ── CIGARETTE PRODUCTS ────────────────────────────────────────────────────────
 // All variants — 25 sticks/packet (standard Nepali pack), alert at 1 packet
 const cigaretteProducts = [
-  cig('cig-surya-red',    'Surya Red',    25, 25),
-  cig('cig-surya-light',  'Surya Light',  25, 25),
-  cig('cig-surya-arctic', 'Surya Arctic', 25, 25),
-  cig('cig-shikhar-ice',  'Shikhar Ice',  25, 25),
+  cig('cig-surya-red',    'Surya Red'),
+  cig('cig-surya-light',  'Surya Light'),
+  cig('cig-surya-arctic', 'Surya Arctic'),
+  cig('cig-shikhar-ice',  'Shikhar Ice'),
 ];
 
 // ── PATHS TO WIPE (movement / transaction logs) ───────────────────────────────
