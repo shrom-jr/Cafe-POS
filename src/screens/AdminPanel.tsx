@@ -6,6 +6,8 @@ import ReceiptPreview from '@/components/ReceiptPreview';
 import { InventorySection } from '@/screens/InventorySection';
 import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
+import { ExpensesSection } from '@/screens/admin/ExpensesSection';
+import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { toast } from 'sonner';
 import {
   BarChart3, Coffee, CreditCard, Table2, TrendingUp,
@@ -13,7 +15,7 @@ import {
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
-  Search, Printer, ArrowUp, ArrowDown,
+  Search, Printer, ArrowUp, ArrowDown, Wrench,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -30,7 +32,7 @@ import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'inventory';
+type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'inventory' | 'expenses';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -138,6 +140,7 @@ const AdminPanel = () => {
     { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
     { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
     { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
+    { id: 'expenses',  label: 'Expenses',  icon: <Wrench size={15} />,     subtitle: 'Log and track maintenance expenses' },
     { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
   ];
 
@@ -244,6 +247,7 @@ const AdminPanel = () => {
               </div>
             )}
             {activeTab === 'inventory' && <InventorySection />}
+            {activeTab === 'expenses'  && <ExpensesSection />}
             {activeTab === 'settings'  && (
               <div className="space-y-6">
                 {/* Sub-tab pills */}
@@ -2103,6 +2107,7 @@ const ReportsSection = () => {
   const menuItems = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
   const settings  = usePOSStore((s) => s.settings);
+  const allMaintenanceExpenses = useMaintenanceStore((s) => s.expenses);
 
   const [period, setPeriod]         = useState<ReportPeriod>('today');
   const [search, setSearch]         = useState('');
@@ -2137,6 +2142,13 @@ const ReportsSection = () => {
   const periodPayments = payments.filter(
     (p) => p.createdAt >= periodStart.getTime() && p.createdAt < periodEnd,
   );
+
+  // Maintenance expenses filtered to the same period (matched by ISO date string)
+  const periodMaintenanceExpenses = allMaintenanceExpenses.filter((e) => {
+    const ts = new Date(e.date + 'T00:00:00').getTime();
+    return ts >= periodStart.getTime() && ts < periodEnd;
+  });
+  const totalMaintenanceExpenses = periodMaintenanceExpenses.reduce((s, e) => s + e.amount, 0);
 
   // Summary metrics
   // grossSales  = item subtotals before any discount or tax
@@ -2274,12 +2286,14 @@ const ReportsSection = () => {
       )}
 
       {/* ── Data cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {[
-          { label: 'Gross Sales',       value: `Rs. ${fmt(grossSales)}`,     sub: 'Item totals before discounts/tax',     color: 'blue',    icon: <TrendingUp size={14} /> },
-          { label: 'Net Sales',         value: `Rs. ${fmt(netSales)}`,       sub: 'Gross minus discounts (pre-tax)',       color: 'emerald', icon: <DollarSign size={14} /> },
-          { label: 'Total Revenue',     value: `Rs. ${fmt(totalRevenue)}`,   sub: 'Collected after discounts & tax',      color: 'indigo',  icon: <Receipt size={14} /> },
-          { label: 'Discounts Given',   value: `Rs. ${fmt(totalDiscounts)}`, sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <X size={14} /> },
+          { label: 'Gross Sales',               value: `Rs. ${fmt(grossSales)}`,                sub: 'Item totals before discounts/tax',     color: 'blue',    icon: <TrendingUp size={14} /> },
+          { label: 'Net Sales',                 value: `Rs. ${fmt(netSales)}`,                  sub: 'Gross minus discounts (pre-tax)',       color: 'emerald', icon: <DollarSign size={14} /> },
+          { label: 'Total Revenue',             value: `Rs. ${fmt(totalRevenue)}`,              sub: 'Collected after discounts & tax',      color: 'indigo',  icon: <Receipt size={14} /> },
+          { label: 'Discounts Given',           value: `Rs. ${fmt(totalDiscounts)}`,            sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <X size={14} /> },
+          { label: 'Maintenance Expenses',      value: `Rs. ${fmt(totalMaintenanceExpenses)}`,  sub: `${periodMaintenanceExpenses.length} expense${periodMaintenanceExpenses.length !== 1 ? 's' : ''} this period`, color: 'red', icon: <Wrench size={14} /> },
+          { label: 'Net Profit',                value: `Rs. ${fmt(totalRevenue - totalMaintenanceExpenses)}`, sub: 'Revenue minus maintenance expenses',   color: totalRevenue - totalMaintenanceExpenses >= 0 ? 'emerald' : 'red', icon: <TrendingUp size={14} /> },
         ].map((card, i) => {
           const c = {
             blue:    { b: 'border-blue-500/25',    bg: 'bg-blue-500/[0.08]',    ic: 'text-blue-400',    val: 'text-blue-300' },

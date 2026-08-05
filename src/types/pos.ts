@@ -232,6 +232,28 @@ export interface InvMenuMapping {
   deductQty: number;          // ml for alcohol, pieces for beverage, sticks for cigarette
 }
 
+// ── MAINTENANCE EXPENSES ─────────────────────────────────────────────────────
+
+export type MaintenanceCategory =
+  | 'plumbing'
+  | 'electrical'
+  | 'kitchen_equipment'
+  | 'cottage_structure'
+  | 'general';
+
+export type MaintenancePaymentMethod = 'cash' | 'esewa' | 'khalti' | 'bank_transfer';
+
+export interface MaintenanceExpense {
+  id: string;
+  title: string;
+  category: MaintenanceCategory;
+  amount: number;
+  paymentMethod: MaintenancePaymentMethod;
+  date: string;               // ISO date string yyyy-MM-dd
+  loggedBy: string;
+  createdAt: string;          // ISO datetime string
+}
+
 // ── SETTINGS (unchanged) ─────────────────────────────────────────────────────
 
 export interface Settings {

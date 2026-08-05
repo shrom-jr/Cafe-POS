@@ -1,0 +1,39 @@
+Build a text-based Maintenance Expense Tracking feature in the Admin Panel and integrate it into the Net Profit calculations in the Reports module.
+
+### 1. Database Schema (`expenses` collection in Firebase)
+Create/extend the Firestore `expenses` collection with the following TypeScript interface:
+interface MaintenanceExpense {
+  id: string;
+  title: string;              // e.g., "Plumbing leak repair"
+  category: 'plumbing' | 'electrical' | 'kitchen_equipment' | 'cottage_structure' | 'general';
+  amount: number;             // Amount in Rs.
+  paymentMethod: 'cash' | 'esewa' | 'khalti' | 'bank_transfer';
+  date: string;               // ISO date string
+  loggedBy: string;           // Admin/Staff user name
+  createdAt: string;
+}
+
+### 2. Admin Navigation & UI Setup
+1. Sidebar: Add an "Expenses" tab in the Admin Panel sidebar navigation (positioned under "Inventory" and above "Settings").
+2. Views (Admin > Expenses):
+   - Summary Cards: Show "Total Maintenance Spent" for the selected date range.
+   - Action Button: "+ Log Maintenance Expense" button opening a clean modal.
+   - Modal Form (Text-only, no photo uploads):
+     * Title/Description (Text input)
+     * Category (Select dropdown: Plumbing, Electrical, Kitchen Equipment, Cottage Structure, General Upkeep)
+     * Amount in Rs. (Numeric input)
+     * Payment Method (Select dropdown: Cash, eSewa, Khalti, Bank Transfer)
+     * Date (Datepicker, default to today)
+   - Log Table: Display past maintenance expense entries with columns for Date, Title, Category, Amount, Payment Method, Logged By, and Actions (Edit/Delete).
+   - Filters: Add date-range filters (Today, Yesterday, Last 7 Days, This Month, Custom) matching the rest of the application.
+
+### 3. Financial & Net Profit Reports Integration
+In `Admin > Reports`:
+1. Include a KPI card for "Total Maintenance Expenses".
+2. Update the Net Profit calculation to factor in all three expense streams:
+   Net Profit = Total Revenue - (Kitchen Purchases + Bar Restocks) - Maintenance Expenses
+3. Ensure all report time-range filters dynamically filter the Maintenance Expense totals along with Revenue, Kitchen Purchases, and Bar Restocks.
+
+### 4. Safety & Scope Rules
+- Do NOT alter or break existing Kitchen Portal Daily Expenses or Bar Portal Restock flows.
+- Ensure state updates immediately when an expense is added, updated, or deleted.

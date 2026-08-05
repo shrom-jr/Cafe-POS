@@ -19,6 +19,7 @@ import type {
 } from "../types/pos";
 import type { PurchaseEntry } from "../store/useKitchenPurchasesStore";
 import type { MeatEntry } from "../store/useMeatTrackerStore";
+import type { MaintenanceExpense } from "../types/pos";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[]) => void;
@@ -379,5 +380,21 @@ export async function pushMeatEntriesToFirebase(entries: MeatEntry[]) {
 export function subscribeToMeatEntries(callback: (entries: MeatEntry[]) => void) {
   return onValue(ref(db, "meatEntries"), (snapshot) => {
     callback(toArray(snapshot.val()) as MeatEntry[]);
+  });
+}
+
+// Push Maintenance Expenses
+export async function pushMaintenanceExpensesToFirebase(expenses: MaintenanceExpense[]) {
+  try {
+    await set(ref(db, "maintenanceExpenses"), JSON.parse(JSON.stringify(expenses || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Maintenance Expenses Push FAILED]:", error);
+  }
+}
+
+// Subscribe to Live Maintenance Expenses
+export function subscribeToMaintenanceExpenses(callback: (expenses: MaintenanceExpense[]) => void) {
+  return onValue(ref(db, "maintenanceExpenses"), (snapshot) => {
+    callback(toArray(snapshot.val()) as MaintenanceExpense[]);
   });
 }

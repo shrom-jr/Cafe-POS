@@ -4,6 +4,7 @@ import { useStaffStore } from "@/store/useStaffStore";
 import { useInventoryStore } from "@/store/useInventoryStore";
 import { useKitchenPurchasesStore } from "@/store/useKitchenPurchasesStore";
 import { useMeatTrackerStore } from "@/store/useMeatTrackerStore";
+import { useMaintenanceStore } from "@/store/useMaintenanceStore";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -22,6 +23,7 @@ import {
   subscribeToStaff,
   subscribeToKitchenPurchases,
   subscribeToMeatEntries,
+  subscribeToMaintenanceExpenses,
   pushOrdersToFirebase,
   pushTablesToFirebase,
   pushPaymentsToFirebase,
@@ -39,6 +41,7 @@ import {
   pushStaffToFirebase,
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
+  pushMaintenanceExpensesToFirebase,
 } from "@/utils/firebaseSync";
 
 export function useFirebaseSync() {
@@ -59,6 +62,7 @@ export function useFirebaseSync() {
   const invMappings = useInventoryStore((s) => s.invMappings);
   const kitchenPurchases = useKitchenPurchasesStore((s) => s.purchases);
   const meatEntries = useMeatTrackerStore((s) => s.meatEntries);
+  const maintenanceExpenses = useMaintenanceStore((s) => s.expenses);
   const setOrders = usePOSStore((s) => s.setOrders);
   const setTables = usePOSStore((s) => s.setTables);
   const setPayments = usePOSStore((s) => s.setPayments);
@@ -76,6 +80,7 @@ export function useFirebaseSync() {
   const setInvMappings = useInventoryStore((s) => s.setInvMappings);
   const setKitchenPurchases = useKitchenPurchasesStore((s) => s.setPurchases);
   const setMeatEntries = useMeatTrackerStore((s) => s.setMeatEntries);
+  const setMaintenanceExpenses = useMaintenanceStore((s) => s.setExpenses);
 
   const isRemoteOrderUpdate = useRef(false);
   const isRemoteTableUpdate = useRef(false);
@@ -94,6 +99,7 @@ export function useFirebaseSync() {
   const isRemoteInvMappingsUpdate = useRef(false);
   const isRemoteKitchenPurchasesUpdate = useRef(false);
   const isRemoteMeatEntriesUpdate = useRef(false);
+  const isRemoteMaintenanceExpensesUpdate = useRef(false);
   const hasLoadedOrders = useRef(false);
   const hasLoadedTables = useRef(false);
   const hasLoadedPayments = useRef(false);
@@ -111,6 +117,7 @@ export function useFirebaseSync() {
   const hasLoadedInvMappings = useRef(false);
   const hasLoadedKitchenPurchases = useRef(false);
   const hasLoadedMeatEntries = useRef(false);
+  const hasLoadedMaintenanceExpenses = useRef(false);
 
   // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
   useEffect(() => {
@@ -260,6 +267,15 @@ export function useFirebaseSync() {
       }
     });
 
+    const unsubscribeMaintenanceExpenses = subscribeToMaintenanceExpenses((remote) => {
+      hasLoadedMaintenanceExpenses.current = true;
+      const current = useMaintenanceStore.getState().expenses;
+      if (JSON.stringify(current) !== JSON.stringify(remote)) {
+        isRemoteMaintenanceExpensesUpdate.current = true;
+        setMaintenanceExpenses(remote);
+      }
+    });
+
     const unsubscribePayments = subscribeToPayments(store);
     const unsubscribeSettings = subscribeToSettings(store);
     const unsubscribeMenuItems = subscribeToMenuItems(store);
@@ -302,6 +318,7 @@ export function useFirebaseSync() {
       unsubscribeStaff();
       unsubscribeKitchenPurchases();
       unsubscribeMeatEntries();
+      unsubscribeMaintenanceExpenses();
     };
   }, [
     setOrders,
@@ -321,6 +338,7 @@ export function useFirebaseSync() {
     setInvMappings,
     setKitchenPurchases,
     setMeatEntries,
+    setMaintenanceExpenses,
   ]);
 
   // 2. Push Local Order Changes to Cloud
@@ -492,4 +510,14 @@ export function useFirebaseSync() {
     }
     pushMeatEntriesToFirebase(meatEntries);
   }, [meatEntries]);
+
+  // 19. Push Local Maintenance Expenses to Cloud
+  useEffect(() => {
+    if (!hasLoadedMaintenanceExpenses.current) return;
+    if (isRemoteMaintenanceExpensesUpdate.current) {
+      isRemoteMaintenanceExpensesUpdate.current = false;
+      return;
+    }
+    pushMaintenanceExpensesToFirebase(maintenanceExpenses);
+  }, [maintenanceExpenses]);
 }
