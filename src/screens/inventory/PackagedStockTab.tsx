@@ -65,7 +65,7 @@ function fmtAlcohol(p: AlcoholProduct): Pick<UnifiedRow, 'stockPrimary' | 'stock
     stockPrimary:   stockStr,
     stockSecondary: `${p.currentStockMl.toLocaleString()} ml total`,
     minDisplay:     minStr,
-    isLow: p.status === 'active' && p.currentStockMl <= p.minStockMl,
+    isLow: p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl,
   };
 }
 
@@ -88,7 +88,7 @@ function fmtBeverage(p: BeverageProduct): Pick<UnifiedRow, 'stockPrimary' | 'sto
     stockPrimary:   stockStr,
     stockSecondary: `${p.currentStock} pcs total`,
     minDisplay:     minStr,
-    isLow: p.status === 'active' && p.currentStock <= p.minStock,
+    isLow: p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock,
   };
 }
 
@@ -111,7 +111,7 @@ function fmtCigarette(p: CigaretteProduct): Pick<UnifiedRow, 'stockPrimary' | 's
     stockPrimary:   stockStr,
     stockSecondary: `${p.currentSticks} sticks total`,
     minDisplay:     minStr,
-    isLow: p.status === 'active' && p.currentSticks <= p.minSticks,
+    isLow: p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks,
   };
 }
 
@@ -457,9 +457,9 @@ export const PackagedStockTab = () => {
   }, [alcoholProducts, beverageProducts, cigaretteProducts]);
 
   const lowCount = useMemo(() => {
-    const a = alcoholProducts.filter((p) => p.status === 'active' && p.currentStockMl <= p.minStockMl).length;
-    const b = beverageProducts.filter((p) => p.status === 'active' && p.currentStock <= p.minStock).length;
-    const c = cigaretteProducts.filter((p) => p.status === 'active' && p.currentSticks <= p.minSticks).length;
+    const a = alcoholProducts.filter((p) => p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl).length;
+    const b = beverageProducts.filter((p) => p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock).length;
+    const c = cigaretteProducts.filter((p) => p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks).length;
     return a + b + c;
   }, [alcoholProducts, beverageProducts, cigaretteProducts]);
 

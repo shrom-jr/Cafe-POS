@@ -263,15 +263,15 @@ export const BeverageSection = () => {
 
   const sorted = useMemo(() =>
     [...products].sort((a, b) => {
-      const aLow = a.currentStock <= a.minStock;
-      const bLow = b.currentStock <= b.minStock;
+      const aLow = a.minStock > 0 && a.currentStock <= a.minStock;
+      const bLow = b.minStock > 0 && b.currentStock <= b.minStock;
       if (aLow && !bLow) return -1;
       if (!aLow && bLow) return 1;
       return a.name.localeCompare(b.name);
     }), [products]
   );
 
-  const lowCount = products.filter((p) => p.status === 'active' && p.currentStock <= p.minStock).length;
+  const lowCount = products.filter((p) => p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock).length;
   const close = () => { setMode('none'); setActiveId(null); };
 
   return (
@@ -312,7 +312,7 @@ export const BeverageSection = () => {
               </thead>
               <tbody>
                 {sorted.map((p) => {
-                  const isLow = p.currentStock <= p.minStock && p.status === 'active';
+                  const isLow = p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock;
                   const minCrates = Math.round(p.minStock / p.piecesPerCarton);
                   return (
                     <tr key={p.id}

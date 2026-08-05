@@ -302,8 +302,8 @@ export const AlcoholSection = () => {
 
   const sorted = useMemo(() =>
     [...products].sort((a, b) => {
-      const aLow = a.currentStockMl <= a.minStockMl;
-      const bLow = b.currentStockMl <= b.minStockMl;
+      const aLow = a.minStockMl > 0 && a.currentStockMl <= a.minStockMl;
+      const bLow = b.minStockMl > 0 && b.currentStockMl <= b.minStockMl;
       if (aLow && !bLow) return -1;
       if (!aLow && bLow) return 1;
       return a.name.localeCompare(b.name);
@@ -311,7 +311,7 @@ export const AlcoholSection = () => {
   );
 
   const lowCount = products.filter(
-    (p) => p.status === 'active' && p.currentStockMl <= p.minStockMl
+    (p) => p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl
   ).length;
 
   const close = () => { setMode('none'); setActiveId(null); };
@@ -367,7 +367,7 @@ export const AlcoholSection = () => {
               </thead>
               <tbody>
                 {sorted.map((p) => {
-                  const isLow = p.currentStockMl <= p.minStockMl && p.status === 'active';
+                  const isLow = p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl;
                   const stock = fmtMl(p.currentStockMl, p.bottleSizeMl);
                   const min   = fmtMl(p.minStockMl,     p.bottleSizeMl);
                   return (

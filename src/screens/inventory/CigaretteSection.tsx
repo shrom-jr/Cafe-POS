@@ -259,15 +259,15 @@ export const CigaretteSection = () => {
 
   const sorted = useMemo(() =>
     [...products].sort((a, b) => {
-      const aLow = a.currentSticks <= a.minSticks;
-      const bLow = b.currentSticks <= b.minSticks;
+      const aLow = a.minSticks > 0 && a.currentSticks <= a.minSticks;
+      const bLow = b.minSticks > 0 && b.currentSticks <= b.minSticks;
       if (aLow && !bLow) return -1;
       if (!aLow && bLow) return 1;
       return a.name.localeCompare(b.name);
     }), [products]
   );
 
-  const lowCount = products.filter((p) => p.status === 'active' && p.currentSticks <= p.minSticks).length;
+  const lowCount = products.filter((p) => p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks).length;
   const close = () => { setMode('none'); setActiveId(null); };
 
   return (
@@ -308,7 +308,7 @@ export const CigaretteSection = () => {
               </thead>
               <tbody>
                 {sorted.map((p) => {
-                  const isLow = p.currentSticks <= p.minSticks && p.status === 'active';
+                  const isLow = p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks;
                   const minPkts = Math.round(p.minSticks / p.sticksPerPacket);
                   return (
                     <tr key={p.id}
