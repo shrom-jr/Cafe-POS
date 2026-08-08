@@ -69,6 +69,10 @@ export interface TaxInvoiceData {
   vatRate:        number;
   total:          number;
   method:         string;
+  /** Previous Khatta due collected with this bill, printed as its own line. */
+  dueSettlement?: { customerName?: string; amount: number };
+  /** Amount actually collected: `total` plus any `dueSettlement.amount`. */
+  amountTendered?: number;
   /** Plain-string fallbacks (legacy) */
   serverName?:    string;
   cashierName?:   string;
@@ -300,6 +304,14 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
   const vatRow = (data.vatEnabled && data.vatAmount > 0)
     ? `<tr><td>VAT (${vatPct}%):</td><td class="text-right" colspan="4">Rs. ${data.vatAmount.toFixed(2)}</td></tr>`
     : '';
+  // Previous Khatta due collected with this bill — printed separately from the
+  // order total so the invoice shows exactly what money changed hands.
+  const settlementAmount = data.dueSettlement?.amount ?? 0;
+  const collectedAmount = data.amountTendered ?? data.total + settlementAmount;
+  const settlementRows = settlementAmount > 0
+    ? `<tr><td>Previous Due Settled${data.dueSettlement?.customerName ? ` (${data.dueSettlement.customerName})` : ''}:</td><td class="text-right">Rs. ${settlementAmount.toFixed(2)}</td></tr>
+       <tr class="grand-total"><td>AMOUNT PAID:</td><td class="text-right">Rs. ${collectedAmount.toFixed(2)}</td></tr>`
+    : '';
   const servedRow = servedBy
     ? `<tr><td colspan="2"><strong>Served By:</strong> ${servedBy}</td></tr>`
     : '';
@@ -343,9 +355,10 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
       <tr><td>Taxable Amount:</td><td class="text-right">Rs. ${taxableAmount.toFixed(2)}</td></tr>
       ${vatRow}
       <tr class="grand-total"><td>TOTAL:</td><td class="text-right">Rs. ${data.total.toFixed(2)}</td></tr>
+      ${settlementRows}
     </table>
     <div class="divider"></div>
-    <div class="inwords">In words: ${numberToWords(Math.round(data.total))}</div>
+    <div class="inwords">In words: ${numberToWords(Math.round(collectedAmount))}</div>
     <div class="divider"></div>
     <table class="meta-table">
       <tr>

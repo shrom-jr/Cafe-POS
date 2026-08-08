@@ -106,6 +106,17 @@ export interface Payment {
   takenBy?: StaffAttribution;
   /** Staff member who processed the payment */
   processedBy?: StaffAttribution;
+  /** Customer associated with a Khatta payment, when applicable. */
+  customerId?: string;
+  /**
+   * Previous Khatta due collected alongside this order, when the cashier
+   * ticked "Include Previous Due". Kept out of `total` so revenue is not
+   * double counted — the due was already booked as revenue when the Khatta
+   * charge was recorded.
+   */
+  dueSettlement?: { customerId: string; amount: number; repaymentId: string };
+  /** Cash/wallet actually collected: `total` plus any `dueSettlement.amount`. */
+  amountTendered?: number;
 }
 
 export interface WalletConfig {
@@ -265,6 +276,17 @@ export interface Customer {
   currentDue: number;   // Outstanding balance owed (NPR)
   totalSpend: number;   // Lifetime spend across all visits
   visits: number;       // Total number of visits
+}
+
+/** A standalone payment received against a customer's outstanding Khatta balance. */
+export interface CustomerRepayment {
+  id: string;
+  customerId: string;
+  amount: number;
+  method: 'cash' | 'fonepay';
+  notes?: string;
+  createdAt: number;
+  receivedBy?: StaffAttribution;
 }
 
 // ── SETTINGS (unchanged) ─────────────────────────────────────────────────────

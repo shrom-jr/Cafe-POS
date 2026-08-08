@@ -9,9 +9,11 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { calcBill } from '@/utils/calcBill';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { getStaffName } from '@/utils/staffName';
+import { toRepaymentMethod } from '@/utils/repaymentMethod';
 import { tableDisplayName } from '@/utils/tableName';
 import { playSuccess } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronDown, ChevronUp, Banknote, Smartphone,
   CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, BookMarked,
@@ -32,7 +34,7 @@ const ReviewScreen = () => {
   const markItemsPaid = usePOSStore((s) => s.markItemsPaid);
   const splitOrderItem = usePOSStore((s) => s.splitOrderItem);
 
-  const { addToCustomerDue, settleCustomerDue } = useCustomerStore();
+  const { addToCustomerDue } = useCustomerStore();
 
   const table = tables.find((t) => t.id === tableId);
   const order = tableId ? getActiveOrder(tableId) : undefined;
@@ -103,10 +105,28 @@ const ReviewScreen = () => {
   const activeBill = selectedQty.size > 0 ? splitBill : bill;
 
   // ── Khatta / Customer state ───────────────────────────────────
+  const currentUser = useStaffStore((s) => s.currentUser);
+  const canSettleDues = currentUser?.permissions.canSettleDues === true;
+  const isSplitMode = selectedQty.size > 0;
   const [includePrevDue, setIncludePrevDue] = useState(false);
-  const prevDueAmount = includePrevDue && attachedCustomer && attachedCustomer.currentDue > 0
-    ? attachedCustomer.currentDue
-    : 0;
+
+  // The customer snapshot on the order is a point-in-time copy and goes stale as
+  // soon as a due is collected elsewhere, so every amount we show, encode in a QR
+  // payload, or charge is driven by the live balance in the customer store.
+  const outstandingDue = useCustomerStore((s) =>
+    attachedCustomer ? s.customers.find((c) => c.id === attachedCustomer.id)?.currentDue ?? 0 : 0
+  );
+
+  // Settling a previous due needs the whole order to be closed in one go, so the
+  // option is withdrawn during split payments and for staff without permission.
+  const canIncludePrevDue = canSettleDues && !isSplitMode && !!attachedCustomer && outstandingDue > 0;
+  useEffect(() => {
+    if (!canIncludePrevDue && includePrevDue) setIncludePrevDue(false);
+  }, [canIncludePrevDue, includePrevDue]);
+
+  const prevDueAmount = canIncludePrevDue && includePrevDue ? outstandingDue : 0;
+  /** What the customer actually hands over: this bill plus any due being settled. */
+  const chargeTotal = activeBill.total + prevDueAmount;
 
   // ── Payment state ─────────────────────────────────────────────
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -120,6 +140,52 @@ const ReviewScreen = () => {
   const lastPrintJobRef = useRef<PrintJob | null>(null);
   const confirmingRef = useRef(false);
   const [billDetailsOpen, setBillDetailsOpen] = useState(false);
+  /** Previous due actually collected in the completed transaction. */
+  const [settledDue, setSettledDue] = useState(0);
+
+  // The due quoted to the customer when the cashier chose to settle it. If the
+  // balance moves afterwards — another device collected part of it — the figure
+  // the customer was told (and any QR they are scanning) is stale, so payment is
+  // blocked until the cashier acknowledges the new amount.
+  const [quotedDue, setQuotedDue] = useState<number | null>(null);
+  // Deliberately independent of `includePrevDue`: when the balance drops all the
+  // way to zero the settlement option withdraws itself, and the cashier must
+  // still be told the quoted figure no longer applies before taking any money.
+  const quotedDueStale = quotedDue !== null && quotedDue !== outstandingDue;
+  const toggleIncludePrevDue = (checked: boolean) => {
+    setIncludePrevDue(checked);
+    setQuotedDue(checked ? outstandingDue : null);
+  };
+  const openQRModal = (methodId: string) => {
+    setSelectedMethod(methodId);
+    setShowQRModal(true);
+  };
+  const closeQRModal = () => {
+    setShowQRModal(false);
+    setSelectedMethod(null);
+    setConfirming(false);
+  };
+  const acknowledgeNewAmount = () => setQuotedDue(outstandingDue);
+  const staleAmountNotice = quotedDueStale ? (
+    <div
+      data-testid="banner-amount-changed"
+      className="rounded-xl px-3 py-2.5 space-y-2"
+      style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.35)' }}
+    >
+      <p className="text-xs font-semibold" style={{ color: 'rgba(251,191,36,0.95)' }}>
+        Amount changed — {attachedCustomer?.name ?? 'the customer'}'s due is now Rs. {fmt(outstandingDue)}.
+        Ask them to rescan for Rs. {fmt(chargeTotal)}.
+      </p>
+      <button
+        onClick={acknowledgeNewAmount}
+        data-testid="button-acknowledge-amount"
+        className="w-full py-2 rounded-lg text-xs font-black transition-all active:scale-[0.97]"
+        style={{ background: 'rgba(251,191,36,0.18)', color: 'rgba(251,191,36,0.95)' }}
+      >
+        New amount confirmed with customer
+      </button>
+    </div>
+  ) : null;
 
   // Landscape detection — matches OrderScreen logic
   const detectLandscape = () => window.innerWidth > window.innerHeight && window.innerHeight < 600;
@@ -188,8 +254,8 @@ const ReviewScreen = () => {
 
   const getQRData = (method: string) => {
     if (method === 'esewa')
-      return `eSewa://pay?eSewaID=${settings.esewaPhone || settings.esewaId}&amount=${activeBill.total}&table=${tableNumber}&ref=${reference}`;
-    return `pay://${method}?amount=${activeBill.total}&ref=${reference}`;
+      return `eSewa://pay?eSewaID=${settings.esewaPhone || settings.esewaId}&amount=${chargeTotal}&table=${tableNumber}&ref=${reference}`;
+    return `pay://${method}?amount=${chargeTotal}&ref=${reference}`;
   };
 
   const getQRImage = (method: string) => {
@@ -205,6 +271,30 @@ const ReviewScreen = () => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
     setConfirming(true);
+
+    // Hard guard: the customer's balance moved after they were quoted, so no
+    // money changes hands on any payment path until the cashier acknowledges the
+    // new figure. Covers the case where the due was cleared entirely elsewhere.
+    if (quotedDueStale) {
+      toast.error(
+        outstandingDue > 0
+          ? `${attachedCustomer?.name ?? 'This customer'}'s due changed to Rs. ${fmt(outstandingDue)}. Requote the customer and confirm again.`
+          : `${attachedCustomer?.name ?? 'This customer'}'s due was already cleared elsewhere. Review the total and confirm again.`
+      );
+      confirmingRef.current = false;
+      setConfirming(false);
+      return;
+    }
+
+    // Pay Later books a new due, it never collects one. Letting it run while a
+    // previous due is selected would show the customer a combined total that is
+    // neither collected nor settled, so the two are mutually exclusive.
+    if (method === 'khatta' && prevDueAmount > 0) {
+      toast.error('Pay Later cannot settle a previous due. Uncheck "Include Previous Due" or collect the payment now.');
+      confirmingRef.current = false;
+      setConfirming(false);
+      return;
+    }
 
     // ── Khatta (Pay Later) path ─────────────────────────────────
     if (method === 'khatta' && attachedCustomer) {
@@ -233,6 +323,7 @@ const ReviewScreen = () => {
         billNumber: bn,
         takenBy: order?.takenBy,
         processedBy,
+        customerId: attachedCustomer.id,
       });
       const khattaItemIds = unpaidItems.map((i) => i.menuItemId);
       const khattaTablePayment: TablePayment = {
@@ -251,6 +342,7 @@ const ReviewScreen = () => {
       setBillNum(bn);
       setPaidAt(now);
       setPaidMethod(`Khatta · ${attachedCustomer.name.split(' ')[0]}`);
+      setQuotedDue(null);
       setPaid(true);
       if (tableId) resetTable(tableId);
       return;
@@ -269,6 +361,59 @@ const ReviewScreen = () => {
     const bn = getNextBillNumber();
     const now = Date.now();
 
+    // ── Previous-due settlement ─────────────────────────────────
+    // Recorded BEFORE the order payment so the amount we claim to have
+    // collected can never exceed what the ledger actually accepted. The
+    // permission is re-checked against live state, not just the hidden UI.
+    let dueSettlement: { customerId: string; amount: number; repaymentId: string } | undefined;
+    if (prevDueAmount > 0 && attachedCustomer && !isSplit) {
+      const liveStaff = useStaffStore.getState().currentUser;
+      if (liveStaff?.permissions.canSettleDues !== true) {
+        toast.error('You do not have permission to settle customer dues.');
+        confirmingRef.current = false;
+        setConfirming(false);
+        return;
+      }
+      const customerState = useCustomerStore.getState();
+      const liveDue = customerState.getCustomer(attachedCustomer.id)?.currentDue ?? 0;
+      // The balance moved between the figure quoted to the customer and this
+      // confirmation (another device collected part of it). Never silently charge
+      // or settle a different amount than the one quoted — make the cashier requote.
+      if (liveDue !== quotedDue || liveDue !== prevDueAmount) {
+        toast.error(
+          liveDue > 0
+            ? `${attachedCustomer.name}'s due changed to Rs. ${fmt(liveDue)}. Requote the customer and confirm again.`
+            : `${attachedCustomer.name}'s due was already cleared elsewhere. Review the total and confirm again.`
+        );
+        confirmingRef.current = false;
+        setConfirming(false);
+        return;
+      }
+      const settleAmount = liveDue;
+      if (settleAmount > 0) {
+        const result = customerState.receiveRepayment({
+          customerId: attachedCustomer.id,
+          amount: settleAmount,
+          method: toRepaymentMethod(method),
+          notes: `Previous due settled at checkout · Bill #${bn} · ${resolvedMethod}`,
+          receivedBy: processedBy,
+        });
+        if (!result.ok) {
+          toast.error(result.error);
+          confirmingRef.current = false;
+          setConfirming(false);
+          return;
+        }
+        dueSettlement = {
+          customerId: attachedCustomer.id,
+          amount: result.repayment.amount,
+          repaymentId: result.repayment.id,
+        };
+      }
+    }
+    const settledAmount = dueSettlement?.amount ?? 0;
+    const tenderedTotal = payBill.total + settledAmount;
+
     addPayment({
       orderId: orderIdRef.current,
       tableNumber,
@@ -280,6 +425,8 @@ const ReviewScreen = () => {
       vatRate: payBill.vatRate,
       vatMode: payBill.vatMode,
       vatEnabled: payBill.vatEnabled,
+      // `total` stays the order revenue — the settled due was already booked as
+      // revenue by the original Khatta charge and must not be counted twice.
       total: payBill.total,
       method,
       reference,
@@ -288,6 +435,7 @@ const ReviewScreen = () => {
       billNumber: bn,
       takenBy,
       processedBy,
+      ...(dueSettlement ? { dueSettlement, amountTendered: tenderedTotal } : {}),
     });
 
     // Build payItemIds — split item in store when only a partial quantity is being paid
@@ -361,6 +509,12 @@ const ReviewScreen = () => {
         vatRate:        payBill.vatRate,
         total:          payBill.total,
         method:         resolvedMethod,
+        ...(dueSettlement
+          ? {
+              dueSettlement: { customerName: attachedCustomer?.name, amount: dueSettlement.amount },
+              amountTendered: tenderedTotal,
+            }
+          : {}),
         takenBy,
         processedBy,
         logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
@@ -377,12 +531,13 @@ const ReviewScreen = () => {
       setBillNum(bn);
       setPaidAt(now);
       setPaidMethod(resolvedMethod);
+      setQuotedDue(null);
       setPaid(true);
       if (tableId) resetTable(tableId);
       if (payItems.length > 0) firePrintJob(taxJob);
-      // Settle the customer's previous due when cashier included it in this payment
-      if (prevDueAmount > 0 && attachedCustomer) {
-        settleCustomerDue(attachedCustomer.id);
+      if (settledAmount > 0) {
+        setSettledDue(settledAmount);
+        toast.success(`Rs. ${fmt(settledAmount)} previous due settled for ${attachedCustomer?.name ?? 'customer'}.`);
       }
     } else {
       setSelectedQty(new Map());
@@ -452,6 +607,20 @@ const ReviewScreen = () => {
           <span className={`font-semibold text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Total</span>
           <span className={`font-black text-foreground ${compact ? 'text-base' : 'text-lg'}`}>Rs. {fmt(printSession?.total ?? 0)}</span>
         </div>
+        {settledDue > 0 && (
+          <div className="space-y-1 border-t border-dashed border-border/60 pt-1.5" data-testid="text-settled-due">
+            <div className="flex justify-between items-center">
+              <span className={`font-semibold text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Previous Due Settled</span>
+              <span className={`font-bold text-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Rs. {fmt(settledDue)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className={`font-semibold text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Amount Collected</span>
+              <span className={`font-black text-foreground ${compact ? 'text-base' : 'text-lg'}`}>
+                Rs. {fmt((printSession?.total ?? 0) + settledDue)}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     );
 
@@ -1002,16 +1171,27 @@ const ReviewScreen = () => {
           </span>
         </div>
 
-        {/* Previous due + include checkbox */}
-        {attachedCustomer.currentDue > 0 && (
+        {/* Previous due + include checkbox — settling requires permission */}
+        {outstandingDue > 0 && !canIncludePrevDue && (
+          <p className="text-xs font-medium" style={{ color: 'rgba(251,191,36,0.75)' }}>
+            Rs. {fmt(outstandingDue)} outstanding
+            {!canSettleDues
+              ? ' — you do not have permission to settle dues'
+              : isSplitMode
+                ? ' — settle dues on a full payment, not a split'
+                : ''}
+          </p>
+        )}
+        {canIncludePrevDue && (
           <label
             className="flex items-center gap-3 py-2 px-2 rounded-xl cursor-pointer transition-all"
             style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)' }}
           >
             <input
               type="checkbox"
+              data-testid="checkbox-include-prev-due"
               checked={includePrevDue}
-              onChange={(e) => setIncludePrevDue(e.target.checked)}
+              onChange={(e) => toggleIncludePrevDue(e.target.checked)}
               className="w-4 h-4 rounded accent-amber-400 cursor-pointer flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
@@ -1019,21 +1199,31 @@ const ReviewScreen = () => {
                 Include Previous Due
               </p>
               <p className="text-[11px]" style={{ color: 'rgba(251,191,36,0.6)' }}>
-                + Rs. {fmt(attachedCustomer.currentDue)} outstanding
+                + Rs. {fmt(outstandingDue)} outstanding
               </p>
             </div>
             {includePrevDue && (
-              <span className="flex-shrink-0 text-xs font-black" style={{ color: 'rgba(251,191,36,0.9)' }}>
-                Total Rs. {fmt(activeBill.total + attachedCustomer.currentDue)}
+              <span
+                className="flex-shrink-0 text-xs font-black"
+                style={{ color: 'rgba(251,191,36,0.9)' }}
+                data-testid="text-charge-total"
+              >
+                Total Rs. {fmt(chargeTotal)}
               </span>
             )}
           </label>
         )}
-        {attachedCustomer.currentDue === 0 && (
+        {outstandingDue === 0 && (
           <p className="text-xs font-medium" style={{ color: 'rgba(52,211,153,0.7)' }}>
             ✓ No outstanding due — account is clear
           </p>
         )}
+        {includePrevDue && (
+          <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.45)' }} data-testid="text-khatta-unavailable">
+            Pay Later is unavailable while settling a previous due — the due has to be collected now.
+          </p>
+        )}
+        {quotedDueStale && <div className="mt-2">{staleAmountNotice}</div>}
       </div>
     );
   };
@@ -1066,7 +1256,7 @@ const ReviewScreen = () => {
         {/* Cash */}
         <button
           onClick={() => handleConfirmPayment('cash')}
-          disabled={confirming}
+          disabled={confirming || quotedDueStale}
           data-testid="button-payment-method-cash"
           className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
           style={{
@@ -1088,10 +1278,11 @@ const ReviewScreen = () => {
         </button>
 
         {/* Khatta (Pay Later) — only when customer attached */}
-        {attachedCustomer && !selectedQty.size && (
+        {attachedCustomer && !selectedQty.size && !includePrevDue && (
           <button
             onClick={() => handleConfirmPayment('khatta')}
-            disabled={confirming}
+            data-testid="button-payment-method-khatta"
+            disabled={confirming || quotedDueStale}
             className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
             style={{
               background: 'rgba(251,191,36,0.08)',
@@ -1134,9 +1325,9 @@ const ReviewScreen = () => {
           return (
             <button
               key={id}
-              onClick={() => { if (!confirming) { setSelectedMethod(id); setShowQRModal(true); } }}
+              onClick={() => { if (!confirming) openQRModal(id); }}
               data-testid={`button-payment-method-${id}`}
-              disabled={confirming}
+              disabled={confirming || quotedDueStale}
               className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:scale-[1.015] disabled:opacity-40`}
               style={{
                 background: 'rgba(255,255,255,0.045)',
@@ -1228,15 +1419,20 @@ const ReviewScreen = () => {
                   }}
                 >
                   <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    Total
+                    {prevDueAmount > 0 ? 'To Collect' : 'Total'}
                     {selectedQty.size > 0 && (
                       <span className="ml-2 normal-case font-semibold tracking-normal" style={{ color: 'rgba(147,197,253,0.65)' }}>
                         {selectedQty.size} item{selectedQty.size !== 1 ? 's' : ''}
                       </span>
                     )}
+                    {prevDueAmount > 0 && (
+                      <span className="ml-2 normal-case font-semibold tracking-normal" style={{ color: 'rgba(251,191,36,0.7)' }}>
+                        incl. Rs. {fmt(prevDueAmount)} due
+                      </span>
+                    )}
                   </span>
                   <span className="text-[24px] font-black tracking-tight leading-none tabular-nums" style={{ color: '#ffffff' }}>
-                    Rs. {fmt(activeBill.total)}
+                    Rs. {fmt(chargeTotal)}
                   </span>
                 </div>
 
@@ -1276,7 +1472,7 @@ const ReviewScreen = () => {
                       {/* Cash */}
                       <button
                         onClick={() => handleConfirmPayment('cash')}
-                        disabled={confirming}
+                        disabled={confirming || quotedDueStale}
                         data-testid="button-payment-method-cash"
                         className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
                         style={{
@@ -1296,10 +1492,11 @@ const ReviewScreen = () => {
                       </button>
 
                       {/* Khatta (Pay Later) — landscape inline, only if customer attached */}
-                      {attachedCustomer && !selectedQty.size && (
+                      {attachedCustomer && !selectedQty.size && !includePrevDue && (
                         <button
                           onClick={() => handleConfirmPayment('khatta')}
-                          disabled={confirming}
+                          data-testid="button-payment-method-khatta"
+                          disabled={confirming || quotedDueStale}
                           className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
                           style={{
                             background: 'rgba(251,191,36,0.08)',
@@ -1339,9 +1536,9 @@ const ReviewScreen = () => {
                         return (
                           <button
                             key={id}
-                            onClick={() => { if (!confirming) { setSelectedMethod(id); setShowQRModal(true); } }}
+                            onClick={() => { if (!confirming) openQRModal(id); }}
                             data-testid={`button-payment-method-${id}`}
-                            disabled={confirming}
+                            disabled={confirming || quotedDueStale}
                             className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:scale-[1.015] disabled:opacity-40"
                             style={{
                               background: 'rgba(255,255,255,0.045)',
@@ -1676,18 +1873,23 @@ const ReviewScreen = () => {
                             className="font-bold uppercase pb-1"
                             style={{ fontSize: 11, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)' }}
                           >
-                            {selectedQty.size > 0 ? 'Split Total' : 'Total'}
+                            {selectedQty.size > 0 ? 'Split Total' : prevDueAmount > 0 ? 'To Collect' : 'Total'}
                           </span>
                           <span
                             className="font-bold tabular-nums leading-none text-white"
                             style={{ fontSize: 32, textShadow: '0 0 24px rgba(255,255,255,0.12)' }}
                           >
-                            Rs. {fmt(activeBill.total)}
+                            Rs. {fmt(chargeTotal)}
                           </span>
                         </div>
                         {selectedQty.size > 0 && (
                           <p className="text-xs text-right mt-1.5" style={{ color: 'rgba(147,197,253,0.6)' }}>
                             {selectedQty.size} item{selectedQty.size !== 1 ? 's' : ''} selected for split payment
+                          </p>
+                        )}
+                        {prevDueAmount > 0 && (
+                          <p className="text-xs text-right mt-1.5" style={{ color: 'rgba(251,191,36,0.7)' }}>
+                            Rs. {fmt(activeBill.total)} bill + Rs. {fmt(prevDueAmount)} previous due
                           </p>
                         )}
                       </div>
@@ -1748,7 +1950,7 @@ const ReviewScreen = () => {
                           {/* Cash */}
                           <button
                             onClick={() => handleConfirmPayment('cash')}
-                            disabled={confirming}
+                            disabled={confirming || quotedDueStale}
                             data-testid="button-payment-method-cash"
                             className="pos-pay-card flex items-center gap-[10px] px-3 rounded-[14px] disabled:opacity-40"
                             style={{
@@ -1797,9 +1999,9 @@ const ReviewScreen = () => {
                             return (
                               <button
                                 key={id}
-                                onClick={() => { if (!confirming) { setSelectedMethod(id); setShowQRModal(true); } }}
+                                onClick={() => { if (!confirming) openQRModal(id); }}
                                 data-testid={`button-payment-method-${id}`}
-                                disabled={confirming}
+                                disabled={confirming || quotedDueStale}
                                 className="pos-pay-card flex items-center gap-[10px] rounded-[14px] disabled:opacity-40"
                                 style={{
                                   minHeight: 66,
@@ -1874,7 +2076,9 @@ const ReviewScreen = () => {
                       style={{ width: 160, height: 160, objectFit: 'contain' }}
                     />
                   ) : (
-                    <QRCodeSVG value={getQRData(selectedMethod)} size={160} bgColor="#ffffff" fgColor="#000000" level="M" />
+                    <span data-testid="qr-payload" data-qr-value={getQRData(selectedMethod)}>
+                      <QRCodeSVG value={getQRData(selectedMethod)} size={160} bgColor="#ffffff" fgColor="#000000" level="M" />
+                    </span>
                   )}
                 </div>
               </div>
@@ -1888,7 +2092,7 @@ const ReviewScreen = () => {
                       {resolvePaymentLabel(selectedMethod, settings)} Payment
                     </h3>
                     <button
-                      onClick={() => { setShowQRModal(false); setSelectedMethod(null); setConfirming(false); }}
+                      onClick={closeQRModal}
                       className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-90 flex-shrink-0"
                     >
                       <X size={15} />
@@ -1896,7 +2100,12 @@ const ReviewScreen = () => {
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Amount Due</p>
-                    <p className="text-3xl font-black text-foreground tabular-nums leading-tight">Rs. {fmt(activeBill.total)}</p>
+                    <p className="text-3xl font-black text-foreground tabular-nums leading-tight">Rs. {fmt(chargeTotal)}</p>
+                    {prevDueAmount > 0 && (
+                      <p className="text-xs font-semibold mt-0.5" style={{ color: 'rgba(251,191,36,0.9)' }}>
+                        Rs. {fmt(activeBill.total)} bill + Rs. {fmt(prevDueAmount)} previous due
+                      </p>
+                    )}
                     {activeBill.discountAmount > 0 && (
                       <p className="text-xs text-success font-semibold mt-0.5">Saved Rs. {fmt(activeBill.discountAmount)}</p>
                     )}
@@ -1904,6 +2113,7 @@ const ReviewScreen = () => {
                   <p className="text-xs font-semibold text-muted-foreground">
                     Scan the QR code and confirm after payment
                   </p>
+                  {staleAmountNotice}
                 </div>
 
                 {/* Bottom: confirm button */}
@@ -1913,7 +2123,7 @@ const ReviewScreen = () => {
                     setConfirming(true);
                     await handleConfirmPayment(selectedMethod);
                   }}
-                  disabled={confirming}
+                  disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
                   className="w-full py-3 rounded-2xl text-white font-black text-sm transition-all active:scale-[0.97] disabled:opacity-80 flex items-center justify-center gap-2"
                   style={{
@@ -1938,7 +2148,7 @@ const ReviewScreen = () => {
                   {resolvePaymentLabel(selectedMethod, settings)} Payment
                 </h3>
                 <button
-                  onClick={() => { setShowQRModal(false); setSelectedMethod(null); setConfirming(false); }}
+                  onClick={closeQRModal}
                   className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-90"
                 >
                   <X size={17} />
@@ -1947,7 +2157,12 @@ const ReviewScreen = () => {
               <div className="px-6 pt-5 pb-6 flex flex-col items-center gap-4">
                 <div className="text-center">
                   <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">Amount Due</p>
-                  <p className="text-5xl font-black text-foreground mt-1 tabular-nums">Rs. {fmt(activeBill.total)}</p>
+                  <p className="text-5xl font-black text-foreground mt-1 tabular-nums">Rs. {fmt(chargeTotal)}</p>
+                  {prevDueAmount > 0 && (
+                    <p className="text-xs font-semibold mt-1" style={{ color: 'rgba(251,191,36,0.9)' }}>
+                      Rs. {fmt(activeBill.total)} bill + Rs. {fmt(prevDueAmount)} previous due
+                    </p>
+                  )}
                   {activeBill.discountAmount > 0 && (
                     <p className="text-xs text-success font-semibold mt-1">Saved Rs. {fmt(activeBill.discountAmount)}</p>
                   )}
@@ -1959,19 +2174,22 @@ const ReviewScreen = () => {
                   {getQRImage(selectedMethod) ? (
                     <img src={getQRImage(selectedMethod)!} alt={`${selectedMethod} QR`} className="w-56 h-56 object-contain" />
                   ) : (
-                    <QRCodeSVG value={getQRData(selectedMethod)} size={224} bgColor="#ffffff" fgColor="#000000" level="M" />
+                    <span data-testid="qr-payload" data-qr-value={getQRData(selectedMethod)}>
+                      <QRCodeSVG value={getQRData(selectedMethod)} size={224} bgColor="#ffffff" fgColor="#000000" level="M" />
+                    </span>
                   )}
                 </div>
                 <p className="text-sm font-semibold text-foreground text-center">
                   Scan QR and confirm after payment
                 </p>
+                {staleAmountNotice}
                 <button
                   onClick={async () => {
                     if (confirming) return;
                     setConfirming(true);
                     await handleConfirmPayment(selectedMethod);
                   }}
-                  disabled={confirming}
+                  disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
                   className="w-full py-4 rounded-2xl text-white font-black text-base transition-all active:scale-[0.97] disabled:opacity-80 flex items-center justify-center gap-2"
                   style={{

@@ -1,28 +1,49 @@
 ---
-name: Khatta Customer Ledger System
-description: Architecture of the customer credit/tab system (Khatta) — types, store, UI, and settlement logic
+name: Khatta Customer Ledger
+description: Durable rules for the customer credit (Khatta) system — how dues are charged, collected, and kept auditable
 ---
 
-## Data Model
-- `Customer` interface added to `src/types/pos.ts`: `{ id, name, phone, currentDue, totalSpend, visits }`
-- `Order.attachedCustomer?: { id, name, phone, currentDue }` — snapshot stored on the order itself
-- `StaffPermissions` extended with optional `canAttachCustomer`, `canSettleDues`, `canViewCustomers` booleans
+## Rule: a Khatta balance may only decrease through a recorded repayment
 
-## Store
-- `src/store/useCustomerStore.ts` — Zustand + localStorage (`pos_customers`)
-- Seeds 3 demo customers on first run (Ramesh, Sunita, Binod)
-- Actions: `addCustomer`, `updateCustomer`, `addToCustomerDue`, `settleCustomerDue`, `getCustomer`
-- `usePOSStore.attachCustomerToOrder(orderId, Customer|null)` — writes snapshot into the order + persists
-
-## Components
-- `src/components/orders/CustomerPicker.tsx` — modal overlay with search-by-name/phone, avatar list, inline "+ New Customer" form
-- `OrderPanel` — new `attachedCustomer` + `onAttachCustomer` props; customer row below Pax row
-- `OrderScreen` — manages `attachedCustomer` state, `handleAttachCustomer` fn, `showCustomerPicker` state; passes to landscape OrderPanel; renders CustomerPicker in portrait drawer
-
-## Settlement Logic (ReviewScreen)
-- Khatta path (method === 'khatta'): addPayment with method='khatta', addToCustomerDue(orderId total), markItemsPaid, resetTable — no printed receipt
-- Include Previous Due checkbox: `prevDueAmount` added to display; after allDone, `settleCustomerDue` resets currentDue to 0
-- Khatta button shown only when `attachedCustomer` is set and not in split-payment mode
+Every path that reduces a customer's `currentDue` — the standalone Receive Payment modal and the checkout "Include Previous Due" flow alike — must go through the store's repayment action, which writes a repayment ledger entry. A "just zero the balance" helper must not exist on the customer store.
 
 **Why:**
-No Firebase sync for customers — localStorage only; keeps it fast and avoids Firebase coupling for a feature that is primarily local-device UX. Add Firebase sync later if multi-device customer ledger is needed.
+An earlier settle-only helper cleared balances at checkout without a ledger entry, so collected-dues totals under-reported money actually taken and the settlement could not be audited.
+
+**How to apply:**
+If you add a new way to clear or adjust a due (bulk write-off, admin correction, sync from another device), route it through a ledger entry too — otherwise reports and the customer's history silently disagree with reality.
+
+## Rule: collecting a due at checkout must also charge for it
+
+When the cashier includes a previous due in an order payment, the due has to be part of the amount presented to the customer — QR payload, on-screen amount, and printed invoice — before the balance is reduced. Record the settlement before the order payment so the amount claimed can never exceed what the ledger accepted.
+
+**Why:**
+Showing a combined total while charging only the order total lets a checkbox erase a real balance and report money that was never collected.
+
+**How to apply:**
+Due settlement is offered only on a full payment (never a split, where the order may not close in one transaction) and only to staff with the settle-dues permission — re-check that permission against live state at confirmation time, not just by hiding the UI.
+
+## Rule: never quote a due from the order's customer snapshot
+
+The customer object copied onto an order is a point-in-time snapshot and goes stale the moment another device collects part of the balance. Every displayed amount, QR payload, and charged figure must read the live balance from the customer store. Remember the figure quoted to the customer; if the live balance moves before confirmation, block payment and make the cashier requote rather than silently charging or settling a different number.
+
+**Why:**
+A stale snapshot lets the customer scan a QR for more than they owe, and the difference lands nowhere in the ledger.
+
+## Rule: Pay Later and previous-due settlement are mutually exclusive
+
+Pay Later books a new due; it never collects one. It must be withdrawn while a previous due is selected for settlement, and rejected at confirmation as a backstop.
+
+**Why:**
+Running the pay-later path with a combined total on screen shows the customer money that was neither collected nor recorded against their balance.
+
+## Rule: a settled due is not new revenue
+
+The settlement is recorded on the payment as its own component alongside the amount actually tendered; the payment's `total` stays the order revenue. The due was already booked as revenue when the original Khatta charge was recorded, so folding it into `total` double counts sales.
+
+## Storage
+
+Customers and their repayment ledger are localStorage-only — no Firebase sync — which keeps the feature fast but device-local.
+
+**Why:**
+Chosen deliberately to avoid Firebase coupling for what began as single-device UX. The consequence is that balances diverge across POS devices, so multi-device deployments need a sync story before relying on Khatta.

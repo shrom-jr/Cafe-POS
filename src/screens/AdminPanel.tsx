@@ -7,6 +7,7 @@ import { InventorySection } from '@/screens/InventorySection';
 import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { ExpensesSection } from '@/screens/admin/ExpensesSection';
+import CustomersView from '@/components/customers/CustomersView';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
@@ -34,7 +35,7 @@ import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'inventory' | 'expenses';
+type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -141,6 +142,7 @@ const AdminPanel = () => {
     { id: 'menu',      label: 'Menu',      icon: <Coffee size={15} />,     subtitle: 'Manage items and categories' },
     { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
     { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
+    { id: 'customers', label: 'Customers', icon: <Users size={15} />,      subtitle: 'Customer Khatta balances and repayments' },
     { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
     { id: 'expenses',  label: 'Expenses',  icon: <Wrench size={15} />,     subtitle: 'Log and track maintenance expenses' },
     { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
@@ -248,6 +250,7 @@ const AdminPanel = () => {
                 {reportView === 'kitchen' && <KitchenReportTab />}
               </div>
             )}
+            {activeTab === 'customers' && <CustomersView />}
             {activeTab === 'inventory' && <InventorySection />}
             {activeTab === 'expenses'  && <ExpensesSection />}
             {activeTab === 'settings'  && (

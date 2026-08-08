@@ -4,13 +4,14 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
-import { LogOut, LayoutGrid, Clock, ChefHat, GlassWater, ShieldCheck } from 'lucide-react';
+import { LogOut, LayoutGrid, Clock, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
 const PERM_NAV: { path: string; label: string; perm: keyof StaffPermissions; icon: ReactNode }[] = [
   { path: '/',        label: 'Tables',         perm: 'pos',     icon: <LayoutGrid  size={13} /> },
   { path: '/history', label: 'History',        perm: 'pos',     icon: <Clock       size={13} /> },
+  { path: '/customers', label: 'Customers',    perm: 'canViewCustomers', icon: <Users size={13} /> },
   { path: '/kitchen', label: 'Kitchen Portal', perm: 'kitchen', icon: <ChefHat     size={13} /> },
   { path: '/bar',     label: 'Bar Portal',     perm: 'bar',     icon: <GlassWater  size={13} /> },
   { path: '/admin',   label: 'Admin',          perm: 'admin',   icon: <ShieldCheck size={13} /> },

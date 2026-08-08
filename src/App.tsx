@@ -11,6 +11,7 @@ import BillHistory from '@/screens/BillHistory';
 import AdminPanel from '@/screens/AdminPanel';
 import KitchenPortal from '@/screens/KitchenPortal';
 import BarPortal from '@/screens/BarPortal';
+import CustomersPortal from '@/screens/CustomersPortal';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -103,6 +104,14 @@ const App = () => {
                   element={
                     <RequirePermission perm="pos">
                       <BillHistory />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/customers"
+                  element={
+                    <RequirePermission perm="canViewCustomers">
+                      <CustomersPortal />
                     </RequirePermission>
                   }
                 />

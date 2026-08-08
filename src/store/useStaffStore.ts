@@ -7,8 +7,14 @@ const SESSION_USER_KEY = 'pos_current_user';   // full object — survives HMR &
 
 /** Backfill `permissions` for accounts created before this field existed. */
 function migrateUser(u: StaffUser): StaffUser {
-  if (u.permissions) return u;
-  return { ...u, permissions: DEFAULT_PERMISSIONS[u.role] ?? DEFAULT_PERMISSIONS.WAITER };
+  return {
+    ...u,
+    // Preserve explicit permissions while filling capabilities added in later releases.
+    permissions: {
+      ...(DEFAULT_PERMISSIONS[u.role] ?? DEFAULT_PERMISSIONS.WAITER),
+      ...(u.permissions ?? {}),
+    },
+  };
 }
 
 function loadUsers(): StaffUser[] {
