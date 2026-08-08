@@ -15,6 +15,7 @@ import CustomersPortal from '@/screens/CustomersPortal';
 import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { subscribeToStaff } from '@/utils/firebaseSync';
 import OfflineBanner from '@/components/OfflineBanner';
@@ -41,7 +42,6 @@ const RequirePermission = ({
   return <>{children}</>;
 };
 
-
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
   const currentUser = useStaffStore((s) => s.currentUser);
@@ -49,13 +49,17 @@ const App = () => {
   // Sync orders bidirectionally with Firebase Realtime Database
   useFirebaseSync();
 
-  // Subscribe to staff accounts immediately on mount — before any login check.
-  // This runs in its own isolated effect with [] so it is never torn down and
-  // re-registered by dependency changes in useFirebaseSync.
+  // Subscribe to staff accounts immediately on mount
   useEffect(() => {
     const unsubscribe = subscribeToStaff({
       setUsers: (users) => useStaffStore.getState().setUsers(users),
     });
+    return unsubscribe;
+  }, []);
+
+  // Sync customer Khatta records and repayments in real-time with Firebase Firestore
+  useEffect(() => {
+    const unsubscribe = useCustomerStore.getState().initSync();
     return unsubscribe;
   }, []);
 
