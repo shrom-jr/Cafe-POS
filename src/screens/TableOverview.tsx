@@ -14,56 +14,26 @@ function useClock() {
     const id = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Per-area color palette — non-status hues only (no green/amber/orange/red) ──
+// ── Per-area color palette — non-status hues only ──────────────────────────
 export const AREA_COLORS = [
   // Slot 0 - Ground Floor (Electric Sky Blue)
-  {
-    text: "text-sky-400",
-    bg: "bg-sky-500",
-    glow: "shadow-sky-500/50",
-    border: "border-sky-500/30"
-  },
+  { text: 'text-sky-400',    bg: 'bg-sky-500',    glow: 'shadow-sky-500/50',    border: 'border-sky-500/30'    },
   // Slot 1 - Cabins (Vivid Purple)
-  {
-    text: "text-purple-400",
-    bg: "bg-purple-500",
-    glow: "shadow-purple-500/50",
-    border: "border-purple-500/30"
-  },
+  { text: 'text-purple-400', bg: 'bg-purple-500', glow: 'shadow-purple-500/50', border: 'border-purple-500/30' },
   // Slot 2 - 1st Floor (Seafoam Teal)
-  {
-    text: "text-teal-400",
-    bg: "bg-teal-500",
-    glow: "shadow-teal-500/50",
-    border: "border-teal-500/30"
-  },
-  // Slot 3 - Soft Gold / Warm Amber
-  {
-    text: "text-amber-300",
-    bg: "bg-amber-400",
-    glow: "shadow-amber-400/50",
-    border: "border-amber-400/30"
-  },
+  { text: 'text-teal-400',   bg: 'bg-teal-500',   glow: 'shadow-teal-500/50',   border: 'border-teal-500/30'   },
+  // Slot 3 - Soft Gold
+  { text: 'text-amber-300',  bg: 'bg-amber-400',  glow: 'shadow-amber-400/50',  border: 'border-amber-400/30'  },
   // Slot 4 - Royal Indigo
-  {
-    text: "text-indigo-400",
-    bg: "bg-indigo-500",
-    glow: "shadow-indigo-500/50",
-    border: "border-indigo-500/30"
-  },
-  // Slot 5 - Pure Silver / Crisp White Accent
-  {
-    text: "text-slate-200",
-    bg: "bg-slate-300",
-    glow: "shadow-slate-300/50",
-    border: "border-slate-300/30"
-  }
+  { text: 'text-indigo-400', bg: 'bg-indigo-500', glow: 'shadow-indigo-500/50', border: 'border-indigo-500/30' },
+  // Slot 5 - Silver
+  { text: 'text-slate-200',  bg: 'bg-slate-300',  glow: 'shadow-slate-300/50',  border: 'border-slate-300/30'  },
 ];
 
-// ── Area container box ────────────────────────────────────────────────────────
+// ── Area section box ──────────────────────────────────────────────────────────
 interface AreaBoxProps {
   areaName: string;
   areaIndex: number;
@@ -78,52 +48,46 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
   const theme         = AREA_COLORS[areaIndex % AREA_COLORS.length];
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-slate-900/30">
-      {/* Area header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800/60">
-        {/* Left accent pill */}
+    <div>
+      {/* Section header — no outer card, just a clean divider row */}
+      <div className="flex items-center gap-3 px-1 mb-3">
+        {/* Colored accent bar */}
         <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
 
         {/* Area name */}
-        <span className={`text-sm font-semibold tracking-wide ${theme.text}`}>
+        <span className={`text-sm font-bold tracking-widest uppercase ${theme.text}`}>
           {areaName}
         </span>
 
-        {/* Inline stats — sit directly after the title */}
+        {/* Status chips */}
         {freeCount > 0 && (
-          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            {freeCount} free
+          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', color: '#34d399' }}>
+            🟢 {freeCount} Free
           </span>
         )}
         {occupiedCount > 0 && (
-          <span
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border"
-            style={{ background: 'hsl(32 90% 50% / 0.10)', color: 'hsl(32 90% 65%)', borderColor: 'hsl(32 90% 50% / 0.25)' }}
-          >
-            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(32 90% 55%)' }} />
-            {occupiedCount} active
+          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={{ background: 'hsl(32 90% 50% / 0.12)', border: '1px solid hsl(32 90% 50% / 0.30)', color: 'hsl(32 90% 68%)' }}>
+            🟠 {occupiedCount} Active
           </span>
         )}
-        <span className="text-slate-400 text-xs font-medium">{tables.length} tables</span>
       </div>
 
-      {/* Table grid */}
-      <div className="p-3 sm:p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-          {tables.map((table) => {
-            const data = tableOrderData[table.id] || { itemCount: 0 };
-            return (
-              <TableCard
-                key={table.id}
-                table={table}
-                itemCount={data.itemCount}
-                showSection={false}
-                onClick={() => onTableClick(table)}
-              />
-            );
-          })}
-        </div>
+      {/* Table grid — cards float on the page background */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+        {tables.map((table) => {
+          const data = tableOrderData[table.id] || { itemCount: 0 };
+          return (
+            <TableCard
+              key={table.id}
+              table={table}
+              itemCount={data.itemCount}
+              showSection={false}
+              onClick={() => onTableClick(table)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -152,7 +116,7 @@ const TableOverview = () => {
 
   const counts = useMemo(() => ({
     available: tables.filter((t) => t.status === 'free').length,
-    active:    tables.filter((t) => t.status === 'occupied').length,
+    active:    tables.filter((t) => t.status !== 'free').length,
   }), [tables]);
 
   // Ordered section list: areaOrder first, then any orphaned sections
@@ -187,23 +151,25 @@ const TableOverview = () => {
     navigate(`/order/${table.id}`);
   };
 
+  // Compact combined status badge + clock
   const headerRight = (
     <>
-      <div className="flex items-center gap-2 text-xs font-medium">
-        <span
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: '#10b981', boxShadow: '0 0 6px 2px rgba(16,185,129,0.55)' }}
-        />
-        <span style={{ color: '#10b981' }}>{counts.available} Available</span>
-        <span className="text-white/20 mx-0.5">•</span>
-        <span
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: 'hsl(var(--warning))', boxShadow: '0 0 6px 2px hsl(32 90% 50% / 0.55)' }}
-        />
-        <span style={{ color: 'hsl(32 90% 65%)' }}>{counts.active} Active</span>
-      </div>
-      <div className="h-5 w-px bg-white/10" />
-      <span className="font-mono text-xs font-medium text-white/35 tabular-nums min-w-[76px] text-right">
+      <span
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold flex-shrink-0"
+        style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          color: 'rgba(255,255,255,0.85)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ color: '#34d399' }}>🟢</span>
+        <span style={{ color: '#34d399' }}>{counts.available}</span>
+        <span className="text-white/25 mx-0.5">|</span>
+        <span style={{ color: 'hsl(32 90% 65%)' }}>🟠</span>
+        <span style={{ color: 'hsl(32 90% 65%)' }}>{counts.active}</span>
+      </span>
+      <span className="font-mono text-xs font-medium text-white/40 tabular-nums flex-shrink-0 hidden sm:inline">
         {clock}
       </span>
     </>
@@ -218,9 +184,9 @@ const TableOverview = () => {
             <p className="text-sm mt-1">Go to Admin → Tables to add tables.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {/* Section tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Table sections">
+          <div className="flex flex-col gap-6">
+            {/* ── Section filter pills ── */}
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label="Table sections">
               {['All', ...sections].map((section) => {
                 const count = section === 'All'
                   ? tables.length
@@ -232,29 +198,37 @@ const TableOverview = () => {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setSelectedSection(section)}
-                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? 'border-accent/50 bg-accent/15 text-accent'
-                        : 'border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white/75'
-                    }`}
+                    className="shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150"
+                    style={active ? {
+                      background: 'rgba(59,130,246,0.85)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(59,130,246,0.5)',
+                      boxShadow: '0 1px 8px -2px rgba(59,130,246,0.5)',
+                    } : {
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(100,116,139,0.45)',
+                      color: 'rgb(226,232,240)',
+                    }}
                   >
-                    {section} <span className="ml-1 opacity-70">({count})</span>
+                    {section} <span className="opacity-60">({count})</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Area boxes */}
-            {visibleSections.map((section) => (
-              <AreaBox
-                key={section}
-                areaName={section}
-                areaIndex={Math.max(0, sections.indexOf(section))}
-                tables={tablesByArea[section] ?? []}
-                tableOrderData={tableOrderData}
-                onTableClick={handleTableClick}
-              />
-            ))}
+            {/* ── Area sections — table cards float on the page background ── */}
+            <div className="flex flex-col gap-8">
+              {visibleSections.map((section) => (
+                <AreaBox
+                  key={section}
+                  areaName={section}
+                  areaIndex={Math.max(0, sections.indexOf(section))}
+                  tables={tablesByArea[section] ?? []}
+                  tableOrderData={tableOrderData}
+                  onTableClick={handleTableClick}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

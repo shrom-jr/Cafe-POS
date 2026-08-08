@@ -1,0 +1,30 @@
+Apply a visual and contrast enhancement across the existing POS floor plan, header, and table cards. Do NOT change the page navigation structure, remove top portal tabs, or alter any backend logic, Firebase hooks, or order state.
+
+### 1. Top Header & Dynamic Branding
+- Branding (Top-Left):
+  * Replace the dim top-left text with the uploaded logo from Settings > Company Profile (or a clean restaurant vector icon if no logo exists) alongside the restaurant name in extra-bold pure white text ("S BAMBOO COTTAGE & SEKUWA CORNER").
+- Top Portal Navigation (Center):
+  * Retain all direct portal buttons in place: [Tables], [History], [Kitchen Portal], [Bar Portal], [Admin].
+  * Style them as a sleek segmented control bar using subtle dark glass styling, vector icons, and a vibrant active pill highlight (e.g., solid blue/indigo fill with white text for the active screen).
+- Status Cluster (Top-Right):
+  * Combine availability counters into a single compact status badge ("🟢 14 Free | 🟠 1 Active"). Keep the logged-in staff badge and "Switch User" button clean and aligned.
+
+### 2. Floor Layout & Area Filter Cleanup
+- Area Filter Pills:
+  * Style active filter pills (All, Ground Floor, Cabins, First Floor) with a solid accent fill and pure white text.
+  * Style inactive filter pills with high-contrast light slate text (text-slate-200) and a subtle dark border (border-slate-700) so they are easy to read against the dark background.
+- Floor Containers & Section Headers:
+  * Remove the heavy full-width outer container border boxes wrapping each floor section (Ground Floor, Cabins, First Floor) so table cards float cleanly on the floor plan background.
+  * Simplify area dividers to clean section text headers with a single status chip (e.g., "GROUND FLOOR" badge "🟢 4 Free"). Delete redundant floor text labels ("1 active", "5 tables").
+
+### 3. Table Card Contrast & Readability (Readable from 5 feet away)
+- Table Title: Upgrade table names (e.g., "Table 1") to 24px extra-bold pure white text (text-2xl font-bold text-white).
+- Available Tables: Visually quiet dark cards with clear white titles. Remove redundant green dots or low-contrast "Available" badges inside empty cards.
+- Occupied Tables:
+  * Add a glowing amber border around the card container.
+  * Display a solid high-visibility badge: "OCCUPIED" (black text on solid amber fill).
+  * Render order metrics in bold, high-contrast white text: "👥 1 Pax  |  📦 2 Items  |  ⏱️ 8m".
+
+### 4. Guardrail Rules
+- Do NOT convert the top navigation into a hamburger drawer or overlay.
+- Keep all existing routes, click handlers, KOT modals, and permission checks fully intact.
