@@ -3,7 +3,6 @@ import { CafeTable } from '@/types/pos';
 import { tableDisplayName } from '@/utils/tableName';
 
 const DARK_SURFACE = 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)';
-const OCCUPIED_SURFACE = 'linear-gradient(160deg, #1a1308 0%, #120e06 100%)';
 const HOVER_BORDER = 'rgba(59,130,246,0.50)';
 const HOVER_SHADOW = '0 8px 28px -4px rgba(59,130,246,0.22), inset 0 1px 0 0 rgba(59,130,246,0.06)';
 const BASE_SHADOW  = '0 2px 10px -2px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.03)';
@@ -36,7 +35,7 @@ const statusConfig = {
     metaColor: '',
   },
   occupied: {
-    cardBg: OCCUPIED_SURFACE,
+    cardBg: DARK_SURFACE,
     cardBorder: AMBER_BORDER,
     cardShadow: AMBER_SHADOW,
     cardHoverBorder: 'hsl(32 90% 60% / 0.80)',
