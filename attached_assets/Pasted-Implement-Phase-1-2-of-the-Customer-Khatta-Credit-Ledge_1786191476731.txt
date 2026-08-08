@@ -1,0 +1,26 @@
+Implement Phase 1 & 2 of the Customer Khatta (Credit Ledger) System in the POS. Focus on customer attachment in live orders, permission checks, and settlement logic.
+
+### 1. Data Schema & Types
+- Customer Model: Add or update the Customer type: { id, name, phone, currentDue: number, totalSpend: number, visits: number }. Create a central mock/state store for customers if not already present.
+- Staff Permission Flags: Add canAttachCustomer, canSettleDues, and canViewCustomers boolean flags to the staff user profile definition.
+
+### 2. Order Panel Attachment (OrderPanel.tsx / OrderScreen.tsx)
+- Add a "👤 Customer (+)" trigger button next to or near the Guests (Pax) counter in the right cart panel.
+- Tapping opens a simple popover:
+  * Search bar (by phone number or name).
+  * Quick-select list showing matched customers with their name, phone, and current due balance in amber text (e.g., "Rs. 1,200").
+  * Inline "+ New Customer" form (fields: Name, Phone) to register a new customer in 2 taps.
+- When attached: Display a clean tag on the order panel (e.g., "👤 Ramesh S. · Due: Rs. 1,200") with a small [x] button to detach.
+
+### 3. Payment Settlement Modal Integration
+- When settling an order with an attached customer:
+  * Display Customer Header: Show attached customer name, phone, and "Previous Outstanding Due: Rs. X".
+  * Dynamic Checkbox: Add "[ ] Include Previous Due (+ Rs. X) in today's payment". Checking this updates the Grand Total Payable (Today's Order + Previous Due).
+  * Payment Methods: Ensure options for Cash, Digital/QR, and "Add to Khatta (Pay Later)".
+- Settlement Logic:
+  * If "Add to Khatta" is selected: Set today's order balance to $0 paid today, add today's order total directly to the customer's `currentDue` ledger, and close table.
+  * If paid normally with "Include Previous Due" checked: Settle today's order and reset the customer's `currentDue` to 0.
+  * If paid normally WITHOUT "Include Previous Due": Settle today's order and leave `currentDue` untouched.
+
+### Guardrails
+- Maintain all existing order state, KOT generation, table status resetting, and printing logic.

@@ -5,3 +5,4 @@
 - [Firebase Inventory Source of Truth](firebase-inventory-source-of-truth.md) — alcohol/beverage/cigarette products and invMovements must never be read from or written to localStorage; Firebase is the single master
 - [Inventory Category Model](inventory-category-model.md) — wine stays in the ml-tracked alcohol collection for shared bottle/glass deductions; beer and soft drinks use direct packaged units
 - [Maintenance Expenses Architecture](maintenance-expenses.md) — Firebase-backed expense store; Admin "Expenses" tab between Inventory and Settings; Net Profit card in Reports = Revenue − Maintenance Expenses
+- [Khatta Customer Ledger](khatta-system.md) — Customer type in pos.ts; useCustomerStore (localStorage); attachCustomerToOrder in usePOSStore; CustomerPicker component; Khatta button + due checkbox in ReviewScreen

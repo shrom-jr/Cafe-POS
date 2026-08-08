@@ -5,6 +5,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { calcBill } from '@/utils/calcBill';
 import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { getStaffName } from '@/utils/staffName';
@@ -13,7 +14,7 @@ import { playSuccess } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ChevronLeft, ChevronDown, ChevronUp, Banknote, Smartphone,
-  CheckCircle2, Home, X, Loader2, Printer, Check,
+  CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, BookMarked,
 } from 'lucide-react';
 import { OrderItem, TablePayment } from '@/types/pos';
 
@@ -31,8 +32,11 @@ const ReviewScreen = () => {
   const markItemsPaid = usePOSStore((s) => s.markItemsPaid);
   const splitOrderItem = usePOSStore((s) => s.splitOrderItem);
 
+  const { addToCustomerDue, settleCustomerDue } = useCustomerStore();
+
   const table = tables.find((t) => t.id === tableId);
   const order = tableId ? getActiveOrder(tableId) : undefined;
+  const attachedCustomer = order?.attachedCustomer ?? null;
 
   // Snapshot items and order ID so they survive order state changes on payment
   const itemsRef = useRef(order?.items || []);
@@ -97,6 +101,12 @@ const ReviewScreen = () => {
   );
 
   const activeBill = selectedQty.size > 0 ? splitBill : bill;
+
+  // ── Khatta / Customer state ───────────────────────────────────
+  const [includePrevDue, setIncludePrevDue] = useState(false);
+  const prevDueAmount = includePrevDue && attachedCustomer && attachedCustomer.currentDue > 0
+    ? attachedCustomer.currentDue
+    : 0;
 
   // ── Payment state ─────────────────────────────────────────────
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -195,6 +205,56 @@ const ReviewScreen = () => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
     setConfirming(true);
+
+    // ── Khatta (Pay Later) path ─────────────────────────────────
+    if (method === 'khatta' && attachedCustomer) {
+      const bn = getNextBillNumber();
+      const now = Date.now();
+      const liveUser = useStaffStore.getState().currentUser;
+      const processedBy = liveUser
+        ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
+        : undefined;
+      addPayment({
+        orderId: orderIdRef.current,
+        tableNumber,
+        items: [...unpaidItems],
+        subtotal: bill.subtotal,
+        discount: discountValue,
+        discountType: discountMode,
+        vatAmount: bill.vatAmount,
+        vatRate: bill.vatRate,
+        vatMode: bill.vatMode,
+        vatEnabled: bill.vatEnabled,
+        total: bill.total,
+        method: 'khatta',
+        reference: `KHATTA-${attachedCustomer.name}`,
+        createdAt: now,
+        cafeName: settings.cafeName,
+        billNumber: bn,
+        takenBy: order?.takenBy,
+        processedBy,
+      });
+      const khattaItemIds = unpaidItems.map((i) => i.menuItemId);
+      const khattaTablePayment: TablePayment = {
+        id: crypto.randomUUID(),
+        itemIds: khattaItemIds,
+        total: bill.total,
+        method: 'khatta',
+        timestamp: now,
+        billNumber: bn,
+      };
+      markItemsPaid(orderIdRef.current, khattaItemIds, khattaTablePayment);
+      addToCustomerDue(attachedCustomer.id, bill.total);
+      updateOrderStatus(orderIdRef.current, 'paid');
+      playSuccess();
+      lastPrintJobRef.current = null; // No printed receipt for khatta
+      setBillNum(bn);
+      setPaidAt(now);
+      setPaidMethod(`Khatta · ${attachedCustomer.name.split(' ')[0]}`);
+      setPaid(true);
+      if (tableId) resetTable(tableId);
+      return;
+    }
 
     const isSplit = selectedQty.size > 0;
     const payItems = isSplit ? splitSelectedItems : unpaidItems;
@@ -320,6 +380,10 @@ const ReviewScreen = () => {
       setPaid(true);
       if (tableId) resetTable(tableId);
       if (payItems.length > 0) firePrintJob(taxJob);
+      // Settle the customer's previous due when cashier included it in this payment
+      if (prevDueAmount > 0 && attachedCustomer) {
+        settleCustomerDue(attachedCustomer.id);
+      }
     } else {
       setSelectedQty(new Map());
       confirmingRef.current = false;
@@ -905,6 +969,75 @@ const ReviewScreen = () => {
     </div>
   );
 
+  // ── Customer card (Khatta) ─────────────────────────────────────
+  const getCustomerCard = () => {
+    if (!attachedCustomer) return null;
+    return (
+      <div
+        className="rounded-2xl px-4 py-3 flex-shrink-0"
+        style={{
+          background: 'rgba(59,130,246,0.07)',
+          border: '1px solid rgba(59,130,246,0.2)',
+        }}
+      >
+        {/* Customer header */}
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
+            style={{ background: 'rgba(59,130,246,0.18)', color: 'rgba(147,197,253,0.9)' }}
+          >
+            {attachedCustomer.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white truncate">{attachedCustomer.name}</p>
+            <p className="text-[11px]" style={{ color: 'rgba(148,163,184,0.65)' }}>
+              {attachedCustomer.phone || 'No phone'}
+            </p>
+          </div>
+          <span
+            className="flex-shrink-0 text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(59,130,246,0.12)', color: 'rgba(147,197,253,0.8)', border: '1px solid rgba(59,130,246,0.2)' }}
+          >
+            Khatta
+          </span>
+        </div>
+
+        {/* Previous due + include checkbox */}
+        {attachedCustomer.currentDue > 0 && (
+          <label
+            className="flex items-center gap-3 py-2 px-2 rounded-xl cursor-pointer transition-all"
+            style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)' }}
+          >
+            <input
+              type="checkbox"
+              checked={includePrevDue}
+              onChange={(e) => setIncludePrevDue(e.target.checked)}
+              className="w-4 h-4 rounded accent-amber-400 cursor-pointer flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold" style={{ color: 'rgba(251,191,36,0.9)' }}>
+                Include Previous Due
+              </p>
+              <p className="text-[11px]" style={{ color: 'rgba(251,191,36,0.6)' }}>
+                + Rs. {fmt(attachedCustomer.currentDue)} outstanding
+              </p>
+            </div>
+            {includePrevDue && (
+              <span className="flex-shrink-0 text-xs font-black" style={{ color: 'rgba(251,191,36,0.9)' }}>
+                Total Rs. {fmt(activeBill.total + attachedCustomer.currentDue)}
+              </span>
+            )}
+          </label>
+        )}
+        {attachedCustomer.currentDue === 0 && (
+          <p className="text-xs font-medium" style={{ color: 'rgba(52,211,153,0.7)' }}>
+            ✓ No outstanding due — account is clear
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const getPaymentCard = (compact = false) => {
     return (
     <div
@@ -953,6 +1086,33 @@ const ReviewScreen = () => {
             <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>Tap to pay</p>
           </div>
         </button>
+
+        {/* Khatta (Pay Later) — only when customer attached */}
+        {attachedCustomer && !selectedQty.size && (
+          <button
+            onClick={() => handleConfirmPayment('khatta')}
+            disabled={confirming}
+            className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
+            style={{
+              background: 'rgba(251,191,36,0.08)',
+              border: '1px solid rgba(251,191,36,0.28)',
+              boxShadow: '0 2px 12px -4px rgba(251,191,36,0.15)',
+            }}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}
+            >
+              <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Khatta</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                {attachedCustomer.name.split(' ')[0]}
+              </p>
+            </div>
+          </button>
+        )}
 
         {/* Digital wallets */}
         {qrMethods.map(({ id, label }) => {
@@ -1095,6 +1255,9 @@ const ReviewScreen = () => {
                   Print Pre-Bill
                 </button>
 
+                {/* Customer (Khatta) card — landscape */}
+                {getCustomerCard()}
+
                 {/* 2. PAYMENT METHODS — flex-1 so it fills available space; list scrolls if needed */}
                 <div
                   className="flex-1 min-h-0 flex flex-col rounded-xl px-3 pt-2 pb-2"
@@ -1131,6 +1294,31 @@ const ReviewScreen = () => {
                           <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>Tap to pay</p>
                         </div>
                       </button>
+
+                      {/* Khatta (Pay Later) — landscape inline, only if customer attached */}
+                      {attachedCustomer && !selectedQty.size && (
+                        <button
+                          onClick={() => handleConfirmPayment('khatta')}
+                          disabled={confirming}
+                          className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
+                          style={{
+                            background: 'rgba(251,191,36,0.08)',
+                            border: '1px solid rgba(251,191,36,0.28)',
+                            boxShadow: '0 2px 10px -4px rgba(251,191,36,0.15)',
+                          }}
+                        >
+                          <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}>
+                            <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+                          </div>
+                          <div className="text-left min-w-0">
+                            <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Khatta</p>
+                            <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              {attachedCustomer.name.split(' ')[0]}
+                            </p>
+                          </div>
+                        </button>
+                      )}
 
                       {/* Digital wallets */}
                       {qrMethods.map(({ id, label }) => {
@@ -1306,6 +1494,7 @@ const ReviewScreen = () => {
                     <Printer size={13} />
                     Print Pre-Bill
                   </button>
+                  {getCustomerCard()}
                   {getPaymentCard()}
                 </div>
               </div>

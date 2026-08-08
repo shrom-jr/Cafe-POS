@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Order, OrderItem } from '@/types/pos';
+import { Customer, Order, OrderItem } from '@/types/pos';
 import { fmt } from '@/utils/format';
 import { tableDisplayName } from '@/utils/tableName';
 import { SEND_DELAY, SUCCESS_DURATION, FLASH_DURATION, NOW_TICK_INTERVAL } from '@/utils/kitchenTimings';
-import { Minus, Plus, Trash2, ShoppingBag, Users, ArrowRightLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Users, ArrowRightLeft, UserCircle, X as XIcon } from 'lucide-react';
+import CustomerPicker from './CustomerPicker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,10 @@ interface OrderPanelProps {
   canPay?: boolean;
   /** Name of the staff member who took the order, for display. */
   serverName?: string;
+  /** Currently attached customer for Khatta tracking. */
+  attachedCustomer?: Customer | null;
+  /** Called when the cashier attaches or detaches a customer. */
+  onAttachCustomer?: (customer: Customer | null) => void;
 }
 
 const BLUE_BTN = { background: 'rgba(59,130,246,0.16)', border: '1px solid rgba(59,130,246,0.30)' };
@@ -57,8 +62,11 @@ const OrderPanel = ({
   onPaxChange,
   canPay = true,
   serverName,
+  attachedCustomer,
+  onAttachCustomer,
 }: OrderPanelProps) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [sendPhase, setSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [sentAt, setSentAt] = useState<number | null>(
     order?.kitchenStatus === 'placed' ? Date.now() : null
@@ -298,6 +306,50 @@ const OrderPanel = ({
           </button>
         </div>
       </div>
+
+      {/* Customer (Khatta) row */}
+      <div
+        className="px-4 py-2 flex items-center gap-3 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <UserCircle size={14} className="flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} />
+        <span className="text-xs font-semibold flex-1" style={{ color: 'rgba(255,255,255,0.32)' }}>Customer</span>
+        {attachedCustomer ? (
+          <div className="flex items-center gap-1.5 max-w-[60%]">
+            <span className="text-xs font-semibold truncate" style={{ color: 'rgba(147,197,253,0.9)' }}>
+              👤 {attachedCustomer.name.split(' ')[0]}
+              {attachedCustomer.currentDue > 0 && (
+                <span style={{ color: 'hsl(32 90% 68%)' }}> · Due Rs. {fmt(attachedCustomer.currentDue)}</span>
+              )}
+            </span>
+            <button
+              onClick={() => onAttachCustomer?.(null)}
+              className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+              title="Detach customer"
+            >
+              <XIcon size={10} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowCustomerPicker(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
+            style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.75)' }}
+          >
+            <UserCircle size={11} />
+            Add
+          </button>
+        )}
+      </div>
+
+      {/* Customer picker overlay */}
+      {showCustomerPicker && (
+        <CustomerPicker
+          onSelect={(c) => { onAttachCustomer?.(c); setShowCustomerPicker(false); }}
+          onClose={() => setShowCustomerPicker(false)}
+        />
+      )}
 
       {/* Item list — scrollable */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">

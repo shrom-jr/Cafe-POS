@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db } from '@/storage/db';
-import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StaffAttribution, StockMovement, TablePayment } from '@/types/pos';
+import { CafeTable, Category, Customer, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StaffAttribution, StockMovement, TablePayment } from '@/types/pos';
 import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -59,6 +59,8 @@ interface POSState {
   markItemsPaid: (orderId: string, menuItemIds: string[], tablePayment: TablePayment) => void;
 
   addPayment: (payment: Omit<Payment, 'id'>) => void;
+  /** Attach or detach a customer (for Khatta tracking) from an active order. */
+  attachCustomerToOrder: (orderId: string, customer: Customer | null) => void;
 
   updateSettings: (updates: Partial<Settings>) => void;
   getNextBillNumber: () => number;
@@ -463,6 +465,23 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       db.saveTables(tables);
       return { orders, tables };
+    });
+  },
+
+  attachCustomerToOrder: (orderId, customer) => {
+    set((state) => {
+      const orders = state.orders.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              attachedCustomer: customer
+                ? { id: customer.id, name: customer.name, phone: customer.phone, currentDue: customer.currentDue }
+                : undefined,
+            }
+          : o
+      );
+      db.saveOrders(orders);
+      return { orders };
     });
   },
 

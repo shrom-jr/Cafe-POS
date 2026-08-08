@@ -6,10 +6,13 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { TopBar } from '@/components/ui/Navigation';
 import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
-import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft } from 'lucide-react';
+import CustomerPicker from '@/components/orders/CustomerPicker';
+import { Customer } from '@/types/pos';
+import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft, UserCircle } from 'lucide-react';
 import { playClick } from '@/utils/sounds';
 import { firePrintJob } from '@/utils/printEngine';
 import { getStaffName } from '@/utils/staffName';
@@ -70,6 +73,8 @@ const OrderScreen = () => {
   const [movePhase, setMovePhase] = useState<null | 'picker' | 'confirm'>(null);
   const [moveTargetTableId, setMoveTargetTableId] = useState<string | null>(null);
   const [moveIsProcessing, setMoveIsProcessing] = useState(false);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const attachCustomerToOrder = usePOSStore((s) => s.attachCustomerToOrder);
   const [moveSuccessBanner, setMoveSuccessBanner] = useState<string | null>(
     () => (location.state as { movedFrom?: number })?.movedFrom != null
       ? `Moved from Table ${(location.state as { movedFrom?: number }).movedFrom} ✓`
@@ -171,6 +176,13 @@ const OrderScreen = () => {
   const handleClear = () => {
     if (!order) return;
     clearOrder(order.id);
+  };
+
+  const attachedCustomer = order?.attachedCustomer ?? null;
+
+  const handleAttachCustomer = (customer: Customer | null) => {
+    if (!order) return;
+    attachCustomerToOrder(order.id, customer);
   };
 
   // Fallback safety — default to draft if unexpected value
@@ -503,6 +515,8 @@ const OrderScreen = () => {
               onPaxChange={handlePaxChange}
               canPay={canPay}
               serverName={order?.takenBy?.name}
+              attachedCustomer={attachedCustomer}
+              onAttachCustomer={handleAttachCustomer}
             />
           </div>
         )}
@@ -622,6 +636,49 @@ const OrderScreen = () => {
                 </button>
               </div>
             </div>
+
+            {/* Customer (Khatta) row — portrait drawer */}
+            <div
+              className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <UserCircle size={14} style={{ color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
+              <span className="text-sm font-semibold flex-1" style={{ color: 'rgba(255,255,255,0.38)' }}>Customer</span>
+              {attachedCustomer ? (
+                <div className="flex items-center gap-1.5 max-w-[55%]">
+                  <span className="text-xs font-semibold truncate" style={{ color: 'rgba(147,197,253,0.88)' }}>
+                    👤 {attachedCustomer.name.split(' ')[0]}
+                    {attachedCustomer.currentDue > 0 && (
+                      <span style={{ color: 'hsl(32 90% 68%)' }}> · Rs.{fmt(attachedCustomer.currentDue)}</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => handleAttachCustomer(null)}
+                    className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCustomerPicker(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                  style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.75)' }}
+                >
+                  <UserCircle size={11} />
+                  Add
+                </button>
+              )}
+            </div>
+
+            {/* Customer picker overlay — portrait */}
+            {showCustomerPicker && (
+              <CustomerPicker
+                onSelect={(c) => { handleAttachCustomer(c); setShowCustomerPicker(false); }}
+                onClose={() => setShowCustomerPicker(false)}
+              />
+            )}
 
             {/* Guests (Pax) selector */}
             <div

@@ -80,6 +80,8 @@ export interface Order {
   tablePayments?: TablePayment[];
   /** Staff member who created/took the order */
   takenBy?: StaffAttribution;
+  /** Customer attached to this order for Khatta (credit ledger) tracking */
+  attachedCustomer?: { id: string; name: string; phone: string; currentDue: number };
 }
 
 export interface Payment {
@@ -252,6 +254,17 @@ export interface MaintenanceExpense {
   date: string;               // ISO date string yyyy-MM-dd
   loggedBy: string;
   createdAt: string;          // ISO datetime string
+}
+
+// ── CUSTOMER (Khatta / Credit Ledger) ────────────────────────────────────────
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  currentDue: number;   // Outstanding balance owed (NPR)
+  totalSpend: number;   // Lifetime spend across all visits
+  visits: number;       // Total number of visits
 }
 
 // ── SETTINGS (unchanged) ─────────────────────────────────────────────────────
