@@ -8,11 +8,11 @@ const HOVER_SHADOW = '0 8px 28px -4px rgba(59,130,246,0.22), inset 0 1px 0 0 rgb
 const BASE_SHADOW  = '0 2px 10px -2px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.03)';
 
 const AMBER_BORDER = 'hsl(32 90% 50% / 0.72)';
-const AMBER_SHADOW = `0 0 0 1px hsl(32 90% 50% / 0.22), 0 4px 20px -4px hsl(32 90% 45% / 0.40), ${BASE_SHADOW}`;
-const AMBER_HOVER_SHADOW = `0 0 0 1px hsl(32 90% 50% / 0.38), 0 8px 28px -4px hsl(32 90% 45% / 0.45), ${HOVER_SHADOW}`;
+const AMBER_SHADOW = BASE_SHADOW;
+const AMBER_HOVER_SHADOW = HOVER_SHADOW;
 
 const RED_BORDER  = 'hsl(0 72% 51% / 0.65)';
-const RED_SHADOW  = `0 0 0 1px hsl(0 72% 51% / 0.20), 0 4px 20px -4px hsl(0 72% 45% / 0.38), ${BASE_SHADOW}`;
+const RED_SHADOW  = BASE_SHADOW;
 
 const statusConfig = {
   free: {
@@ -49,7 +49,7 @@ const statusConfig = {
     labelBg: 'hsl(32 90% 50%)',
     labelColor: '#000000',
     numberColor: '#ffffff',
-    numberShadow: '0 0 12px rgba(255,200,100,0.15)',
+    numberShadow: 'none',
     paxColor: '#ffffff',
     metaColor: 'rgba(255,255,255,0.80)',
   },
