@@ -32,7 +32,7 @@ interface OrderPanelProps {
   serverName?: string;
 }
 
-const BLUE_BTN = { background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.24)' };
+const BLUE_BTN = { background: 'rgba(59,130,246,0.16)', border: '1px solid rgba(59,130,246,0.30)' };
 
 const formatTime = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -66,7 +66,6 @@ const OrderPanel = ({
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(Date.now());
 
-  // Refs for timer cleanup — prevents state updates on unmounted component
   const sendTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,7 +75,6 @@ const OrderPanel = ({
     return id;
   };
 
-  // Clean up all timers on unmount
   useEffect(() => {
     return () => {
       sendTimers.current.forEach(clearTimeout);
@@ -84,13 +82,11 @@ const OrderPanel = ({
     };
   }, []);
 
-  // Now ticker — relative time display
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), NOW_TICK_INTERVAL);
     return () => clearInterval(id);
   }, []);
 
-  // Derive safe kitchen state — fallback to draft on unexpected values
   const rawStatus = order?.kitchenStatus;
   const kitchenStatus: 'draft' | 'placed' = rawStatus === 'placed' ? 'placed' : 'draft';
   const hasUnsentItems = kitchenStatus === 'placed' ? (order?.hasUnsentItems ?? false) : false;
@@ -100,17 +96,16 @@ const OrderPanel = ({
   const total = unpaidItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
-  // canPay=false (WAITER role) means the "Proceed to Payment" state is never reached
   const isProceedState = canPay && kitchenStatus === 'placed' && !hasUnsentItems;
   const isUpdateState = kitchenStatus === 'placed' && hasUnsentItems;
 
-  const statusLabel = kitchenStatus === 'draft' ? 'Draft' : hasUnsentItems ? 'Updated' : 'Sent';
+  const statusLabel = kitchenStatus === 'draft' ? 'DRAFT' : hasUnsentItems ? 'UPDATED' : 'SENT';
   const statusColor =
     kitchenStatus === 'draft'
-      ? { background: 'rgba(148,163,184,0.12)', color: 'rgba(148,163,184,0.7)', border: '1px solid rgba(148,163,184,0.2)' }
+      ? { background: 'rgba(148,163,184,0.14)', color: 'rgba(226,232,240,0.85)', border: '1px solid rgba(148,163,184,0.25)' }
       : hasUnsentItems
-      ? { background: 'rgba(251,191,36,0.12)', color: 'rgba(251,191,36,0.8)', border: '1px solid rgba(251,191,36,0.25)' }
-      : { background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.25)' };
+      ? { background: 'rgba(251,191,36,0.14)', color: 'rgba(251,191,36,0.9)', border: '1px solid rgba(251,191,36,0.28)' }
+      : { background: 'rgba(52,211,153,0.14)', color: 'rgba(52,211,153,0.9)', border: '1px solid rgba(52,211,153,0.28)' };
 
   const primaryLabel =
     kitchenStatus === 'draft' ? 'Send to Kitchen'
@@ -147,14 +142,12 @@ const OrderPanel = ({
   const isBtnDisabled = items.length === 0 || sendPhase === 'sending';
 
   const handleSend = () => {
-    if (sendPhase !== 'idle') return; // race condition guard
+    if (sendPhase !== 'idle') return;
 
-    // Snapshot unsent IDs at click time — stable for flash
     const unsentSnapshot = items
       .filter((i) => !i.sentToKitchen && i.status !== 'paid')
       .map((i) => i.id);
 
-    // Flash the unsent items — cancel any prior flash first
     if (flashTimer.current !== null) clearTimeout(flashTimer.current);
     if (unsentSnapshot.length > 0) {
       setFlashingIds(new Set(unsentSnapshot));
@@ -188,11 +181,8 @@ const OrderPanel = ({
     setShowClearConfirm(false);
   };
 
-  // Grouping — derived from sentToKitchen flag on each item
   const hasGrouping = kitchenStatus === 'placed' && hasUnsentItems;
-  const sentDisplayItems = hasGrouping
-    ? items.filter((i) => i.sentToKitchen)
-    : items;
+  const sentDisplayItems = hasGrouping ? items.filter((i) => i.sentToKitchen) : items;
   const unsentDisplayItems = hasGrouping
     ? items.filter((i) => !i.sentToKitchen && i.status !== 'paid')
     : [];
@@ -219,72 +209,67 @@ const OrderPanel = ({
         }
       `}</style>
 
-      {/* Top inner highlight */}
       <div className="absolute inset-x-0 top-0 h-px pointer-events-none" style={{ background: 'rgba(255,255,255,0.07)' }} />
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)' }} />
 
-      {/* Header */}
+      {/* ── Header: two-row layout ── */}
       <div
-        className="relative px-4 py-3 flex items-center gap-2 flex-shrink-0"
+        className="relative flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}
       >
-        <ShoppingBag size={16} style={{ color: 'rgba(59,130,246,0.65)' }} />
-        <h3 className="font-bold text-sm flex-1 text-white/80">
-          {order ? tableDisplayName(order.tableNumber) : 'Order'}
-        </h3>
-        {order && (
-          <span
-            key={statusLabel}
-            className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-            style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
-          >
-            {statusLabel}
-          </span>
-        )}
-        {serverName && (
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(139,92,246,0.14)', color: 'rgba(196,181,253,0.82)', border: '1px solid rgba(139,92,246,0.22)' }}
-          >
-            Served By: {serverName}
-          </span>
-        )}
-        {itemCount > 0 && (
-          <div className="flex items-center gap-2">
+        {/* Row 1: table name + status badge + action buttons */}
+        <div className="px-4 pt-3 pb-1.5 flex items-center gap-2">
+          <h3 className="font-extrabold text-base text-white flex-1 truncate">
+            {order ? tableDisplayName(order.tableNumber) : 'Order'}
+          </h3>
+          {order && (
             <span
-              className="px-2 py-0.5 rounded-full text-xs font-bold"
-              style={{ background: 'rgba(59,130,246,0.16)', color: 'rgba(147,197,253,0.88)', border: '1px solid rgba(59,130,246,0.28)' }}
+              key={statusLabel}
+              className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
             >
-              {itemCount} items
+              {statusLabel}
             </span>
-            {onMoveTable && (
-              <button
-                onClick={moveDisabled ? undefined : onMoveTable}
-                disabled={moveDisabled}
-                data-testid="button-move-table"
-                title={moveDisabled ? 'No available tables' : 'Move order to another table'}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={moveDisabled
-                  ? { color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }
-                  : { color: 'rgba(147,197,253,0.82)', border: '1px solid rgba(59,130,246,0.22)', background: 'rgba(59,130,246,0.09)' }
-                }
-              >
-                <ArrowRightLeft size={11} />
-                {moveDisabled ? 'No tables' : 'Move'}
-              </button>
-            )}
-            {onClear && (
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                data-testid="button-clear-order"
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white/35 transition-all active:scale-95 hover:text-red-400 hover:bg-red-500/10"
-                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        )}
+          )}
+          {itemCount > 0 && (
+            <>
+              {onMoveTable && (
+                <button
+                  onClick={moveDisabled ? undefined : onMoveTable}
+                  disabled={moveDisabled}
+                  data-testid="button-move-table"
+                  title={moveDisabled ? 'No available tables' : 'Move order to another table'}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                  style={moveDisabled
+                    ? { color: 'rgba(255,255,255,0.30)', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }
+                    : { color: 'rgba(147,197,253,0.88)', border: '1px solid rgba(59,130,246,0.28)', background: 'rgba(59,130,246,0.10)' }
+                  }
+                >
+                  <ArrowRightLeft size={11} />
+                  Move
+                </button>
+              )}
+              {onClear && (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  data-testid="button-clear-order"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                  style={{ color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.10)' }}
+                >
+                  <Trash2 size={11} />
+                  Clear
+                </button>
+              )}
+            </>
+          )}
+        </div>
+        {/* Row 2: served-by + item count subtitle */}
+        <div className="px-4 pb-2.5">
+          <span className="text-xs font-medium" style={{ color: 'rgba(148,163,184,0.72)' }}>
+            {serverName ? `Served by ${serverName}` : 'No server assigned'}
+            {itemCount > 0 ? ` · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : ''}
+          </span>
+        </div>
       </div>
 
       {/* Pax selector */}
@@ -384,7 +369,7 @@ const OrderPanel = ({
         />
         <div className="flex items-center justify-between py-1">
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wider text-white/30">Total</span>
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(148,163,184,0.65)' }}>Total</span>
             {kitchenStatus === 'placed' && sentAt && (
               <span
                 key={Math.floor((now - sentAt) / 60000)}
@@ -397,20 +382,18 @@ const OrderPanel = ({
           </div>
           <span
             className="text-3xl font-black"
-            style={{ color: items.length > 0 ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.25)' }}
+            style={{ color: items.length > 0 ? '#ffffff' : 'rgba(255,255,255,0.25)' }}
           >
             Rs. {fmt(total)}
           </span>
         </div>
 
-        {/* Safety hint */}
         {kitchenStatus === 'draft' && items.length > 0 && (
-          <p className="text-[10px] text-center font-medium" style={{ color: 'rgba(251,191,36,0.5)' }}>
-            Send to kitchen before payment
+          <p className="text-[10px] text-center font-semibold" style={{ color: 'rgba(251,191,36,0.6)' }}>
+            ⚠ Send to kitchen before payment
           </p>
         )}
 
-        {/* Primary action */}
         <button
           onClick={handlePrimary}
           disabled={isBtnDisabled}
@@ -473,23 +456,24 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
       background: isPaid
         ? 'rgba(255,255,255,0.02)'
         : isUnsent
-        ? 'rgba(251,191,36,0.05)'
-        : 'rgba(255,255,255,0.05)',
+        ? 'rgba(251,191,36,0.06)'
+        : 'rgba(15,23,42,0.75)',
       border: isPaid
         ? '1px solid rgba(255,255,255,0.04)'
         : isUnsent
-        ? '1px solid rgba(251,191,36,0.2)'
-        : '1px solid rgba(255,255,255,0.06)',
+        ? '1px solid rgba(251,191,36,0.22)'
+        : '1px solid rgba(30,41,59,0.85)',
       opacity: isPaid ? 0.5 : 1,
       transition: 'background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease',
       animation: isFlashing ? 'op-item-flash 0.65s ease' : undefined,
     }}
   >
+    {/* Name + unit price */}
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1.5">
         <p
-          className={`text-sm font-bold truncate ${isPaid ? 'line-through' : ''}`}
-          style={{ color: isPaid ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.95)' }}
+          className={`text-sm font-bold line-clamp-2 ${isPaid ? 'line-through' : ''}`}
+          style={{ color: isPaid ? 'rgba(255,255,255,0.55)' : '#ffffff' }}
         >
           {item.name}
         </p>
@@ -504,45 +488,56 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
           </span>
         )}
       </div>
-      <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.42)' }}>Rs. {fmt(item.price)} each</p>
+      <p className="text-xs font-medium mt-0.5" style={{ color: 'rgba(148,163,184,0.72)' }}>
+        Rs. {fmt(item.price)} each
+      </p>
     </div>
-    <div className="flex items-center gap-1">
+
+    {/* Stepper — square touch-friendly buttons */}
+    <div className="flex items-center gap-1.5">
       <button
         onClick={() => !isPaid && onUpdateQty(item.id, -1)}
         disabled={isPaid}
         aria-label={`Decrease ${item.name} quantity`}
         data-testid={`button-decrease-${item.menuItemId}`}
-        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 transition-colors active:scale-90 hover:text-red-400 hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-30"
-        style={{ background: 'rgba(255,255,255,0.05)' }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base transition-colors active:scale-90 hover:text-red-400 hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-30"
+        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.70)' }}
       >
         <Minus size={13} />
       </button>
-      <span className="w-7 text-center font-black text-sm text-white/85" aria-label={`${item.quantity} of ${item.name}`}>{item.quantity}</span>
+      <span className="w-7 text-center font-black text-sm text-white tabular-nums" aria-label={`${item.quantity} of ${item.name}`}>
+        {item.quantity}
+      </span>
       <button
         onClick={() => !isPaid && onUpdateQty(item.id, 1)}
         disabled={isPaid}
         aria-label={`Increase ${item.name} quantity`}
         data-testid={`button-increase-${item.menuItemId}`}
-        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/45 transition-colors active:scale-90 hover:text-blue-300 hover:brightness-110 disabled:pointer-events-none disabled:opacity-30"
-        style={{ background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.24)' }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base transition-colors active:scale-90 hover:text-blue-300 hover:brightness-110 disabled:pointer-events-none disabled:opacity-30"
+        style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.35)', color: 'rgba(147,197,253,0.9)' }}
       >
         <Plus size={13} />
       </button>
     </div>
-    <p className="w-16 text-right text-sm font-bold" style={{ color: isPaid ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.88)' }}>
+
+    {/* Line total */}
+    <p className="w-16 text-right text-sm font-bold flex-shrink-0" style={{ color: isPaid ? 'rgba(255,255,255,0.40)' : 'rgba(255,255,255,0.90)' }}>
       Rs. {fmt(item.price * item.quantity)}
     </p>
+
+    {/* Delete */}
     {!isPaid && (
       <button
         onClick={() => onRemove(item.id)}
         aria-label={`Remove ${item.name}`}
         data-testid={`button-remove-${item.menuItemId}`}
-        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/22 transition-colors active:scale-90 hover:text-red-400 hover:bg-red-500/10"
+        className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors active:scale-90 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+        style={{ color: 'rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.04)' }}
       >
         <Trash2 size={13} />
       </button>
     )}
-    {isPaid && <div className="w-7 h-7 flex-shrink-0" />}
+    {isPaid && <div className="w-8 h-8 flex-shrink-0" />}
   </div>
 );
 

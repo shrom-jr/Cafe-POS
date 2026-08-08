@@ -1,0 +1,30 @@
+Apply a complete UI and contrast overhaul to the Table Order / Menu Selection view (OrderScreen / TableOrderView), fixing both the menu grid and the populated cart panel. Do NOT modify order logic, KOT state, or backend data.
+
+### 1. Right Cart Panel (Header & Active Items)
+- Header Layout (Top-Right Panel):
+  * Row 1: Display "Table 2" in bold white text, a clean "DRAFT" status badge, and clear text/icon action buttons for [⇄ Move] and [🗑️ Clear].
+  * Row 2: A clean, uncrowded sub-header line showing "Served by Sanjib Basnet · 2 Items" in readable light-slate text. Remove the distorted oval "Served By" badge.
+- Cart Item Cards:
+  * Structure rows so item names ("Crunchy Chicken Burger", "Cheese Sandwich") have space to display without premature truncation ("Crunchy Chic...").
+  * Use dark navy card containers (bg-slate-900 / border-slate-800) with bold white item titles and clear price text ("Rs. 200 each").
+  * Touch-Friendly Stepper: Upgrade quantity controls to distinct square buttons [-] 1 [+] with clear borders and bold white numbers, making them easy to tap.
+  * Trash Icon: Clean, visible delete icon aligned nicely on the right.
+- Bottom Total & KOT Action:
+  * High-contrast "TOTAL" section with extra-bold pure white or emerald amount ("Rs. 425").
+  * Clean, readable helper text above the action button.
+  * Prominent, full-width "Send to Kitchen" button with vibrant blue styling and bold white centered text.
+
+### 2. Menu Item Cards (Left Grid & Badges)
+- Card Styling: Match the dark navy surface background (bg-slate-900) used in TableCard.tsx with a subtle border (border-slate-800).
+- Item Details: 16px bold pure white title + bright price badge ("Rs. 150").
+- Badge Alignment: Place the selected quantity badge (e.g., "1") neatly in the top-right corner of the card container instead of overlapping the blue "+" button.
+- Make the entire menu card clickable to add +1 to cart.
+
+### 3. Navigation, Search & Category Bars
+- Top Header: Back arrow button + extra-bold pure white table title ("Table 2").
+- Search Input: High-contrast slate background with bright placeholder text ("Search menu...").
+- Primary Categories (Food, Beverages, Alcohol, Others): Active tab = solid blue fill + white text. Inactive tabs = light-slate text (text-slate-200) with subtle dark borders (border-slate-700).
+- Sub-Category Pills (Burgers & Sandwiches, Soups, Sizzlers, etc.): High-contrast light slate text on dark glass pill containers with clean spacing.
+
+### 4. Guardrail Rules
+- Maintain all existing cart state handlers, KOT printing/saving triggers, and table status updates.

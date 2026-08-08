@@ -389,7 +389,8 @@ const OrderScreen = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search-menu"
-                className="w-full pl-9 pr-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full pl-9 pr-3 py-2 rounded-lg text-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-accent"
+                style={{ background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(30,41,59,0.9)' }}
               />
               {search && (
                 <button
@@ -413,14 +414,14 @@ const OrderScreen = () => {
                     data-testid={`button-pillar-${pillar.toLowerCase()}`}
                     className="flex-1 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all active:scale-95"
                     style={activePillar === pillar ? {
-                      background: 'rgba(59,130,246,0.22)',
-                      color: 'rgba(255,255,255,0.95)',
-                      border: '1px solid rgba(59,130,246,0.35)',
-                      boxShadow: '0 2px 10px -2px rgba(59,130,246,0.3)',
+                      background: 'rgba(59,130,246,0.85)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(59,130,246,0.5)',
+                      boxShadow: '0 1px 8px -2px rgba(59,130,246,0.5)',
                     } : {
                       background: 'rgba(15,23,42,0.55)',
-                      color: 'rgba(255,255,255,0.42)',
-                      border: '1px solid rgba(255,255,255,0.07)',
+                      color: 'rgb(226,232,240)',
+                      border: '1px solid rgba(100,116,139,0.40)',
                     }}
                   >
                     {pillar}
@@ -442,9 +443,9 @@ const OrderScreen = () => {
                       border: '1px solid rgba(16,185,129,0.32)',
                       boxShadow: '0 2px 8px -2px rgba(16,185,129,0.22)',
                     } : {
-                      background: 'rgba(15,23,42,0.4)',
-                      color: 'rgba(255,255,255,0.38)',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'rgba(15,23,42,0.55)',
+                      color: 'rgb(226,232,240)',
+                      border: '1px solid rgba(100,116,139,0.35)',
                     }}
                   >
                     {cat.name}

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutGrid, History, Settings, Coffee } from 'lucide-react';
+import { LayoutGrid, History, Settings, ChevronLeft } from 'lucide-react';
 
 const navItems = [
   { path: '/', icon: LayoutGrid, label: 'Tables' },
@@ -44,18 +44,24 @@ export const TopBar = ({
   showBack?: boolean;
   onBack?: () => void;
 }) => (
-  <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-3">
+  <header
+    className="sticky top-0 z-40 backdrop-blur-sm flex-shrink-0 px-3 py-2.5 flex items-center gap-2"
+    style={{
+      background: 'linear-gradient(135deg, #0a1228 0%, #0d1a2e 100%)',
+      borderBottom: '1px solid rgba(59,130,246,0.18)',
+    }}
+  >
     {showBack && (
-      <button onClick={onBack} className="text-muted-foreground hover:text-foreground p-1" data-testid="button-back">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
+      <button
+        onClick={onBack}
+        data-testid="button-back"
+        className="flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 transition-all active:scale-90"
+        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.75)' }}
+      >
+        <ChevronLeft size={18} strokeWidth={2.5} />
       </button>
     )}
-    <div className="flex items-center gap-2">
-      <Coffee size={20} className="text-accent" />
-      <h1 className="text-lg font-bold">{title}</h1>
-    </div>
+    <h1 className="text-base font-extrabold text-white tracking-tight truncate">{title}</h1>
   </header>
 );
 
