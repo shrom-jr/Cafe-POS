@@ -2,62 +2,51 @@ import { useEffect, useState } from 'react';
 import { CafeTable } from '@/types/pos';
 import { tableDisplayName } from '@/utils/tableName';
 
-const DARK_SURFACE = 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)';
-const HOVER_BORDER = 'rgba(59,130,246,0.38)';
-const HOVER_SHADOW = '0 6px 24px -4px rgba(59,130,246,0.18), inset 0 1px 0 0 rgba(59,130,246,0.05)';
-const BASE_SHADOW  = '0 2px 10px -2px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.03)';
-
 const statusConfig = {
   free: {
-    cardBg: DARK_SURFACE,
-    cardBorder: 'rgba(16,185,129,0.22)',
-    cardShadow: BASE_SHADOW,
-    cardHoverBorder: HOVER_BORDER,
-    cardHoverShadow: HOVER_SHADOW,
-    dotColor: '#10b981',
-    dotGlow: '0 0 6px 2px rgba(16,185,129,0.45)',
-    dotPulse: false,
-    label: 'Available',
-    labelBg: 'rgba(16,185,129,0.09)',
-    labelColor: 'rgba(52,211,153,0.78)',
-    numberColor: 'rgba(255,255,255,0.75)',
-    numberShadow: 'none',
-    paxColor: '',
-    metaColor: '',
+    cardBorder:      'rgba(16,185,129,0.20)',
+    cardGlow:        'rgba(16,185,129,0.00)',
+    cardHoverBorder: 'rgba(16,185,129,0.50)',
+    cardHoverGlow:   'rgba(16,185,129,0.20)',
+    dotColor:        '#10b981',
+    dotGlow:         '0 0 6px 2px rgba(16,185,129,0.50)',
+    dotPulse:        false,
+    label:           'Available',
+    labelBg:         'rgba(16,185,129,0.10)',
+    labelColor:      'rgba(52,211,153,0.82)',
+    numberColor:     'rgba(255,255,255,0.72)',
+    paxColor:        '',
+    metaColor:       '',
   },
   occupied: {
-    cardBg: DARK_SURFACE,
-    cardBorder: 'hsl(32 90% 50% / 0.28)',
-    cardShadow: BASE_SHADOW,
-    cardHoverBorder: HOVER_BORDER,
-    cardHoverShadow: HOVER_SHADOW,
-    dotColor: 'hsl(32 90% 55%)',
-    dotGlow: '0 0 6px 2px hsl(32 90% 50% / 0.5)',
-    dotPulse: true,
-    label: 'Active',
-    labelBg: 'hsl(32 90% 50% / 0.11)',
-    labelColor: 'hsl(32 90% 65%)',
-    numberColor: 'rgba(255,255,255,0.88)',
-    numberShadow: 'none',
-    paxColor: 'hsl(32 85% 62%)',
-    metaColor: 'rgba(255,255,255,0.32)',
+    cardBorder:      'hsl(32 90% 50% / 0.28)',
+    cardGlow:        'hsl(32 90% 50% / 0.08)',
+    cardHoverBorder: 'hsl(32 90% 50% / 0.55)',
+    cardHoverGlow:   'hsl(32 90% 50% / 0.22)',
+    dotColor:        'hsl(32 90% 55%)',
+    dotGlow:         '0 0 6px 2px hsl(32 90% 50% / 0.55)',
+    dotPulse:        true,
+    label:           'Active',
+    labelBg:         'hsl(32 90% 50% / 0.12)',
+    labelColor:      'hsl(32 90% 65%)',
+    numberColor:     'rgba(255,255,255,0.90)',
+    paxColor:        'hsl(32 85% 62%)',
+    metaColor:       'rgba(255,255,255,0.32)',
   },
   billing: {
-    cardBg: DARK_SURFACE,
-    cardBorder: 'hsl(0 72% 51% / 0.28)',
-    cardShadow: BASE_SHADOW,
-    cardHoverBorder: HOVER_BORDER,
-    cardHoverShadow: HOVER_SHADOW,
-    dotColor: 'hsl(0 72% 55%)',
-    dotGlow: '0 0 6px 2px hsl(0 72% 51% / 0.5)',
-    dotPulse: true,
-    label: 'Billing',
-    labelBg: 'hsl(0 72% 51% / 0.11)',
-    labelColor: 'hsl(0 72% 65%)',
-    numberColor: 'rgba(255,255,255,0.88)',
-    numberShadow: 'none',
-    paxColor: 'hsl(0 70% 62%)',
-    metaColor: 'rgba(255,255,255,0.32)',
+    cardBorder:      'hsl(0 72% 51% / 0.28)',
+    cardGlow:        'hsl(0 72% 51% / 0.08)',
+    cardHoverBorder: 'hsl(0 72% 51% / 0.55)',
+    cardHoverGlow:   'hsl(0 72% 51% / 0.22)',
+    dotColor:        'hsl(0 72% 55%)',
+    dotGlow:         '0 0 6px 2px hsl(0 72% 51% / 0.55)',
+    dotPulse:        true,
+    label:           'Billing',
+    labelBg:         'hsl(0 72% 51% / 0.12)',
+    labelColor:      'hsl(0 72% 65%)',
+    numberColor:     'rgba(255,255,255,0.90)',
+    paxColor:        'hsl(0 70% 62%)',
+    metaColor:       'rgba(255,255,255,0.32)',
   },
 };
 
@@ -73,7 +62,7 @@ function useTimer(startTime?: number) {
       setElapsed(
         h > 0
           ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-          : `${m}:${String(s).padStart(2, '0')}`
+          : `${m}:${String(s).padStart(2, '0')}`,
       );
     };
     update();
@@ -91,10 +80,13 @@ interface TableCardProps {
 }
 
 const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: TableCardProps) => {
-  const timer = useTimer(table.orderStartTime);
-  const cfg = statusConfig[table.status];
+  const timer    = useTimer(table.orderStartTime);
+  const cfg      = statusConfig[table.status];
   const isActive = table.status !== 'free';
   const [hovered, setHovered] = useState(false);
+
+  const border     = hovered ? cfg.cardHoverBorder : cfg.cardBorder;
+  const glowAlpha  = hovered ? cfg.cardHoverGlow   : cfg.cardGlow;
 
   return (
     <button
@@ -104,15 +96,17 @@ const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: Table
       data-testid={`table-card-${table.id}`}
       className="relative flex flex-col items-center justify-center p-4 rounded-2xl w-full min-h-[148px] transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0"
       style={{
-        background: cfg.cardBg,
-        border: `1px solid ${hovered ? cfg.cardHoverBorder : cfg.cardBorder}`,
-        boxShadow: hovered ? cfg.cardHoverShadow : cfg.cardShadow,
+        background: 'linear-gradient(160deg, #0c1525 0%, #080f1d 100%)',
+        border: `1px solid ${border}`,
+        boxShadow: `0 2px 12px -4px rgba(0,0,0,0.65), 0 0 0 1px ${glowAlpha}, inset 0 1px 0 0 rgba(255,255,255,0.04)`,
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
       }}
     >
-      {/* Top inner highlight */}
+      {/* Inner top highlight */}
       <div
         className="absolute inset-0 rounded-2xl pointer-events-none"
-        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 40%)' }}
+        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.030) 0%, transparent 45%)' }}
       />
 
       {/* Status dot */}
@@ -122,7 +116,7 @@ const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: Table
       >
         {cfg.dotPulse && (
           <div
-            className="absolute inset-0 rounded-full animate-ping opacity-50"
+            className="absolute inset-0 rounded-full animate-ping opacity-55"
             style={{ background: cfg.dotColor, animationDuration: '2.2s' }}
           />
         )}
@@ -132,12 +126,13 @@ const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: Table
       <span
         title={tableDisplayName(table.number)}
         className="block w-full min-w-0 truncate text-center text-xl sm:text-2xl font-bold tracking-tight leading-tight"
-        style={{ color: cfg.numberColor, textShadow: cfg.numberShadow }}
+        style={{ color: cfg.numberColor }}
       >
         {tableDisplayName(table.number)}
       </span>
+
       {showSection && (
-        <span className="mt-1 max-w-full truncate text-[10px] font-medium text-white/40" title={table.section || 'Ground Floor'}>
+        <span className="mt-1 max-w-full truncate text-[10px] font-medium text-white/35" title={table.section || 'Ground Floor'}>
           {table.section || 'Ground Floor'}
         </span>
       )}
@@ -150,13 +145,16 @@ const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: Table
         {cfg.label}
       </span>
 
-      {/* Active/Billing details */}
+      {/* Active / billing details */}
       {isActive && (
         <div className="mt-2.5 flex w-full flex-col items-center gap-1">
           <span className="text-sm font-bold leading-tight" style={{ color: cfg.paxColor }}>
             {table.pax ?? 1} pax
           </span>
-          <span className="max-w-full truncate text-[10px] font-medium leading-tight tabular-nums" style={{ color: cfg.metaColor }}>
+          <span
+            className="max-w-full truncate text-[10px] font-medium leading-tight tabular-nums"
+            style={{ color: cfg.metaColor }}
+          >
             {itemCount} item{itemCount !== 1 ? 's' : ''}{timer ? ` · ${timer}` : ''}
           </span>
         </div>

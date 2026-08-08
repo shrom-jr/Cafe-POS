@@ -17,50 +17,20 @@ function useClock() {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-// ── Per-area color palette — non-status hues only (no green/amber/orange/red) ──
+// ── Per-area color palette ────────────────────────────────────────────────────
 export const AREA_COLORS = [
-  // Slot 0 - Ground Floor (Electric Sky Blue)
-  {
-    text: "text-sky-400",
-    bg: "bg-sky-500",
-    glow: "shadow-sky-500/50",
-    border: "border-sky-500/30"
-  },
-  // Slot 1 - Cabins (Vivid Purple)
-  {
-    text: "text-purple-400",
-    bg: "bg-purple-500",
-    glow: "shadow-purple-500/50",
-    border: "border-purple-500/30"
-  },
-  // Slot 2 - 1st Floor (Seafoam Teal)
-  {
-    text: "text-teal-400",
-    bg: "bg-teal-500",
-    glow: "shadow-teal-500/50",
-    border: "border-teal-500/30"
-  },
-  // Slot 3 - Soft Gold / Warm Amber
-  {
-    text: "text-amber-300",
-    bg: "bg-amber-400",
-    glow: "shadow-amber-400/50",
-    border: "border-amber-400/30"
-  },
-  // Slot 4 - Royal Indigo
-  {
-    text: "text-indigo-400",
-    bg: "bg-indigo-500",
-    glow: "shadow-indigo-500/50",
-    border: "border-indigo-500/30"
-  },
-  // Slot 5 - Pure Silver / Crisp White Accent
-  {
-    text: "text-slate-200",
-    bg: "bg-slate-300",
-    glow: "shadow-slate-300/50",
-    border: "border-slate-300/30"
-  }
+  // 0 — Electric Sky Blue
+  { text: '#38bdf8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.25)', dot: '#38bdf8', glow: 'rgba(56,189,248,0.35)' },
+  // 1 — Vivid Purple
+  { text: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)', dot: '#a78bfa', glow: 'rgba(167,139,250,0.35)' },
+  // 2 — Seafoam Teal
+  { text: '#2dd4bf', bg: 'rgba(45,212,191,0.12)', border: 'rgba(45,212,191,0.25)', dot: '#2dd4bf', glow: 'rgba(45,212,191,0.35)' },
+  // 3 — Soft Gold
+  { text: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.25)', dot: '#fbbf24', glow: 'rgba(251,191,36,0.35)' },
+  // 4 — Royal Indigo
+  { text: '#818cf8', bg: 'rgba(129,140,248,0.12)', border: 'rgba(129,140,248,0.25)', dot: '#818cf8', glow: 'rgba(129,140,248,0.35)' },
+  // 5 — Pearl Silver
+  { text: '#cbd5e1', bg: 'rgba(203,213,225,0.10)', border: 'rgba(203,213,225,0.22)', dot: '#cbd5e1', glow: 'rgba(203,213,225,0.28)' },
 ];
 
 // ── Area container box ────────────────────────────────────────────────────────
@@ -78,34 +48,66 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
   const theme         = AREA_COLORS[areaIndex % AREA_COLORS.length];
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-slate-900/30">
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: 'rgba(10,18,36,0.55)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
       {/* Area header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800/60">
-        {/* Left accent pill */}
-        <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
+      <div
+        className="flex items-center gap-3 px-4 py-3"
+        style={{
+          background: theme.bg,
+          borderBottom: `1px solid ${theme.border}`,
+        }}
+      >
+        {/* Accent pill */}
+        <span
+          className="flex-shrink-0 w-[3px] h-5 rounded-full"
+          style={{ background: theme.dot, boxShadow: `0 0 8px 2px ${theme.glow}` }}
+        />
 
         {/* Area name */}
-        <span className={`text-sm font-semibold tracking-wide ${theme.text}`}>
+        <span className="text-sm font-bold tracking-wide" style={{ color: theme.text }}>
           {areaName}
         </span>
 
-        {/* Inline stats — sit directly after the title */}
+        {/* Stats */}
         {freeCount > 0 && (
-          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={{
+              background: 'rgba(16,185,129,0.12)',
+              color: '#34d399',
+              border: '1px solid rgba(16,185,129,0.22)',
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
             {freeCount} free
           </span>
         )}
         {occupiedCount > 0 && (
           <span
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border"
-            style={{ background: 'hsl(32 90% 50% / 0.10)', color: 'hsl(32 90% 65%)', borderColor: 'hsl(32 90% 50% / 0.25)' }}
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={{
+              background: 'hsl(32 90% 50% / 0.10)',
+              color: 'hsl(32 90% 65%)',
+              border: '1px solid hsl(32 90% 50% / 0.22)',
+            }}
           >
-            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(32 90% 55%)' }} />
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'hsl(32 90% 55%)' }} />
             {occupiedCount} active
           </span>
         )}
-        <span className="text-slate-400 text-xs font-medium">{tables.length} tables</span>
+
+        {/* Table count */}
+        <span className="ml-auto text-xs font-medium" style={{ color: 'rgba(255,255,255,0.28)' }}>
+          {tables.length} tables
+        </span>
       </div>
 
       {/* Table grid */}
@@ -133,10 +135,10 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
 const TableOverview = () => {
   const { tables } = useTables();
   const { orders } = useOrders();
-  const settings = usePOSStore((s) => s.settings);
-  const areaOrder = usePOSStore((s) => s.areaOrder);
-  const navigate = useNavigate();
-  const clock = useClock();
+  const settings   = usePOSStore((s) => s.settings);
+  const areaOrder  = usePOSStore((s) => s.areaOrder);
+  const navigate   = useNavigate();
+  const clock      = useClock();
   const [selectedSection, setSelectedSection] = useState('All');
 
   const tableOrderData = useMemo(() => {
@@ -155,21 +157,18 @@ const TableOverview = () => {
     active:    tables.filter((t) => t.status === 'occupied').length,
   }), [tables]);
 
-  // Ordered section list: areaOrder first, then any orphaned sections
   const sections = useMemo(() => {
     const tableSections = tables.map((t) => t.section?.trim() || 'Ground Floor');
     const seen = new Set<string>();
     const result: string[] = [];
     for (const name of [...areaOrder, ...tableSections]) {
       if (name && !seen.has(name) && tableSections.includes(name)) {
-        seen.add(name);
-        result.push(name);
+        seen.add(name); result.push(name);
       }
     }
     return result;
   }, [tables, areaOrder]);
 
-  // Tables per area, sorted by name within each area
   const tablesByArea = useMemo(() => {
     const map: Record<string, CafeTable[]> = {};
     for (const section of sections) {
@@ -180,12 +179,9 @@ const TableOverview = () => {
     return map;
   }, [tables, sections]);
 
-  // Which areas to render based on selected tab
   const visibleSections = selectedSection === 'All' ? sections : [selectedSection];
 
-  const handleTableClick = (table: CafeTable) => {
-    navigate(`/order/${table.id}`);
-  };
+  const handleTableClick = (table: CafeTable) => navigate(`/order/${table.id}`);
 
   const headerRight = (
     <>
@@ -195,14 +191,14 @@ const TableOverview = () => {
           style={{ background: '#10b981', boxShadow: '0 0 6px 2px rgba(16,185,129,0.55)' }}
         />
         <span style={{ color: '#10b981' }}>{counts.available} Available</span>
-        <span className="text-white/20 mx-0.5">•</span>
+        <span className="text-white/20 mx-0.5">·</span>
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{ background: 'hsl(var(--warning))', boxShadow: '0 0 6px 2px hsl(32 90% 50% / 0.55)' }}
         />
         <span style={{ color: 'hsl(32 90% 65%)' }}>{counts.active} Active</span>
       </div>
-      <div className="h-5 w-px bg-white/10" />
+      <div className="h-4 w-px bg-white/10" />
       <span className="font-mono text-xs font-medium text-white/35 tabular-nums min-w-[76px] text-right">
         {clock}
       </span>
@@ -219,32 +215,43 @@ const TableOverview = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {/* Section tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Table sections">
-              {['All', ...sections].map((section) => {
-                const count = section === 'All'
+            {/* ── Section filter pills ───────────────────────────────────────── */}
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label="Table sections">
+              {['All', ...sections].map((section, idx) => {
+                const count   = section === 'All'
                   ? tables.length
                   : tables.filter((t) => (t.section?.trim() || 'Ground Floor') === section).length;
-                const active = selectedSection === section;
+                const active  = selectedSection === section;
+                // 'All' pill uses the accent blue; area pills use area color
+                const isAll   = section === 'All';
+                const theme   = isAll ? null : AREA_COLORS[(idx - 1) % AREA_COLORS.length];
+
                 return (
                   <button
                     key={section}
                     role="tab"
                     aria-selected={active}
                     onClick={() => setSelectedSection(section)}
-                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? 'border-accent/50 bg-accent/15 text-accent'
-                        : 'border-white/10 bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white/75'
-                    }`}
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-95 select-none"
+                    style={active ? {
+                      background: isAll ? 'rgba(59,130,246,0.20)' : theme!.bg,
+                      color: isAll ? '#93c5fd' : theme!.text,
+                      border: `1px solid ${isAll ? 'rgba(59,130,246,0.35)' : theme!.border}`,
+                      boxShadow: `0 2px 10px -3px ${isAll ? 'rgba(59,130,246,0.35)' : theme!.glow}`,
+                    } : {
+                      background: 'rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.42)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
                   >
-                    {section} <span className="ml-1 opacity-70">({count})</span>
+                    {section}
+                    <span className="ml-1.5 opacity-60">({count})</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Area boxes */}
+            {/* ── Area boxes ────────────────────────────────────────────────── */}
             {visibleSections.map((section) => (
               <AreaBox
                 key={section}
