@@ -1,0 +1,32 @@
+Build Phase 3 of the Customer Khatta System: Admin Customer Directory, Standalone Repayment Modal, and Top Navigation Link.
+
+### 1. Admin Sidebar & View (AdminPanel.tsx / CustomersView.tsx)
+- Sidebar: Add "👥 Customers" tab to the Admin sidebar between Reports and Inventory.
+- Customers Admin Page:
+  * Top Metric Cards: 
+    1. "Total Customers" (count)
+    2. "Total Outstanding Khatta" (sum of all currentDue in bold amber text, e.g., "Rs. 14,200")
+    3. "Collected Dues" (total repayments logged)
+  * Search & Filter Bar: Input for search by name/phone + filter pill "[x] Has Dues Only".
+  * Customer Table: Columns for Name, Phone Number, Total Visits, Lifetime Spend (Rs.), Current Due (highlighted in amber if > 0, green if 0), and Actions.
+  * Action Buttons per Row: 
+    - [Receive Payment]: Opens Standalone Repayment Modal.
+    - [View Ledger]: Opens simple modal showing customer's past orders and repayment history.
+
+### 2. Standalone Repayment Modal (Receive Payment)
+- Triggered from Customer Table or Top Nav Customer Portal.
+- Form Fields:
+  * Customer Name & Current Due display (e.g., "Current Due: Rs. 1,200").
+  * Payment Amount input (e.g., Rs. 500 or full amount).
+  * Payment Method selector: Cash / Fonepay (QR).
+  * Notes/Ref input (optional).
+- Action: "Confirm Repayment" button that deducts the entered amount from the customer's `currentDue`, records the transaction in their ledger history, and updates total store stats.
+
+### 3. Top Portal Navigation (Navigation.tsx / AppLayout.tsx)
+- Add "👥 Customers" tab to the primary top header menu bar: [Tables] [History] [Customers] [Kitchen Portal] [Bar Portal] [Admin].
+- Only show or enable this tab if logged-in user has `canViewCustomers` permission (ADMIN & CASHIER).
+- Clicking it opens a fast-access Customers Drawer/Modal so cashiers can quickly view running Khatta balances and process standalone repayments without entering the full Admin Panel.
+
+### Guardrails
+- Keep dark navy styling matching the rest of the application (bg-slate-900 / border-slate-800).
+- Preserve all existing routes, POS store data, and order screen functionality.
