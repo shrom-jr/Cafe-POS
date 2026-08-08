@@ -472,7 +472,7 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1.5">
         <p
-          className={`text-sm font-bold line-clamp-2 ${isPaid ? 'line-through' : ''}`}
+          className={`flex-1 min-w-0 text-sm font-bold break-words ${isPaid ? 'line-through' : ''}`}
           style={{ color: isPaid ? 'rgba(255,255,255,0.55)' : '#ffffff' }}
         >
           {item.name}
