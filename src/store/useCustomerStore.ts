@@ -4,23 +4,15 @@ import { Customer, CustomerRepayment, StaffAttribution } from '@/types/pos';
 const CUSTOMERS_KEY = 'pos_customers';
 const REPAYMENTS_KEY = 'pos_customer_repayments';
 
-const SEED_CUSTOMERS: Customer[] = [
-  { id: 'cust-1', name: 'Ramesh Sharma',  phone: '9841012345', currentDue: 1200, totalSpend: 8500,  visits: 12 },
-  { id: 'cust-2', name: 'Sunita Thapa',   phone: '9812345678', currentDue: 0,    totalSpend: 4200,  visits: 7  },
-  { id: 'cust-3', name: 'Binod Karki',    phone: '9856789012', currentDue: 350,  totalSpend: 2700,  visits: 5  },
-];
-
 function loadCustomers(): Customer[] {
   try {
     const d = localStorage.getItem(CUSTOMERS_KEY);
     if (d) {
       const parsed = JSON.parse(d) as Customer[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch { /* ignore */ }
-  // First run — seed with demo data and persist
-  localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(SEED_CUSTOMERS));
-  return SEED_CUSTOMERS;
+  return [];
 }
 
 function persist(customers: Customer[]) {
@@ -93,8 +85,6 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   },
 
   updateCustomer: (id, updates) => {
-    // Strip balance fields at runtime too — the type alone would not stop a
-    // caller that widens the object, and a silent balance edit is unauditable.
     const { currentDue: _ignoredDue, id: _ignoredId, ...safeUpdates } =
       updates as Partial<Customer>;
     const customers = get().customers.map((c) => (c.id === id ? { ...c, ...safeUpdates } : c));
