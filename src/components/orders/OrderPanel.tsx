@@ -220,12 +220,11 @@ const OrderPanel = ({
       <div className="absolute inset-x-0 top-0 h-px pointer-events-none" style={{ background: 'rgba(255,255,255,0.07)' }} />
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)' }} />
 
-      {/* ── Header: two-row layout ── */}
+      {/* Header */}
       <div
         className="relative flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}
       >
-        {/* Row 1: table name + status badge + action buttons */}
         <div className="px-4 pt-3 pb-1.5 flex items-center gap-2">
           <h3 className="font-extrabold text-base text-white flex-1 truncate">
             {order ? tableDisplayName(order.tableNumber) : 'Order'}
@@ -271,7 +270,6 @@ const OrderPanel = ({
             </>
           )}
         </div>
-        {/* Row 2: served-by + item count subtitle */}
         <div className="px-4 pb-2.5">
           <span className="text-xs font-medium" style={{ color: 'rgba(148,163,184,0.72)' }}>
             {serverName ? `Served by ${serverName}` : 'No server assigned'}
@@ -285,21 +283,21 @@ const OrderPanel = ({
         className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <Users size={14} className="text-white/28 flex-shrink-0" />
-        <span className="text-xs font-semibold text-white/32 flex-1">Guests (Pax)</span>
+        <Users size={14} className="text-white/40 flex-shrink-0" />
+        <span className="text-xs font-semibold text-slate-300 flex-1">Guests (Pax)</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPaxChange?.(Math.max(1, pax - 1))}
             disabled={pax <= 1}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/55 transition-all active:scale-90 disabled:opacity-25 disabled:cursor-not-allowed hover:text-white hover:brightness-110"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 transition-all active:scale-90 disabled:opacity-25 disabled:cursor-not-allowed hover:text-white hover:brightness-110"
             style={BLUE_BTN}
           >
             <Minus size={12} />
           </button>
-          <span className="w-6 text-center font-black text-sm tabular-nums text-white/82">{pax}</span>
+          <span className="w-6 text-center font-black text-sm tabular-nums text-white">{pax}</span>
           <button
             onClick={() => onPaxChange?.(pax + 1)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/55 transition-all active:scale-90 hover:text-white hover:brightness-110"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 transition-all active:scale-90 hover:text-white hover:brightness-110"
             style={BLUE_BTN}
           >
             <Plus size={12} />
@@ -307,38 +305,41 @@ const OrderPanel = ({
         </div>
       </div>
 
-      {/* Customer (Khatta) row */}
+      {/* High-Contrast Customer (Khatta) Row */}
       <div
-        className="px-4 py-2 flex items-center gap-3 flex-shrink-0"
+        className="px-4 py-2.5 flex items-center justify-between gap-2 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <UserCircle size={14} className="flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} />
-        <span className="text-xs font-semibold flex-1" style={{ color: 'rgba(255,255,255,0.32)' }}>Customer</span>
+        <div className="flex items-center gap-2">
+          <UserCircle size={15} className="text-blue-400 flex-shrink-0" />
+          <span className="text-xs font-bold text-slate-300">Customer</span>
+        </div>
+
         {attachedCustomer ? (
-          <div className="flex items-center gap-1.5 max-w-[60%]">
-            <span className="text-xs font-semibold truncate" style={{ color: 'rgba(147,197,253,0.9)' }}>
-              👤 {attachedCustomer.name.split(' ')[0]}
-              {attachedCustomer.currentDue > 0 && (
-                <span style={{ color: 'hsl(32 90% 68%)' }}> · Due Rs. {fmt(attachedCustomer.currentDue)}</span>
-              )}
+          <div className="flex items-center gap-1.5 max-w-[70%] bg-blue-950/50 border border-blue-500/35 px-2.5 py-1 rounded-xl">
+            <span className="text-xs font-bold text-white truncate">
+              👤 {attachedCustomer.name}
             </span>
+            {attachedCustomer.currentDue > 0 && (
+              <span className="text-[11px] font-extrabold text-amber-400 flex-shrink-0">
+                (Due Rs. {fmt(attachedCustomer.currentDue)})
+              </span>
+            )}
             <button
               onClick={() => onAttachCustomer?.(null)}
-              className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all flex-shrink-0"
               title="Detach customer"
             >
-              <XIcon size={10} />
+              <XIcon size={12} />
             </button>
           </div>
         ) : (
           <button
             onClick={() => setShowCustomerPicker(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all active:scale-95"
-            style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.75)' }}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/35 text-blue-300"
           >
-            <UserCircle size={11} />
-            Add
+            <UserCircle size={13} />
+            + Attach Customer
           </button>
         )}
       </div>
@@ -351,7 +352,7 @@ const OrderPanel = ({
         />
       )}
 
-      {/* Item list — scrollable */}
+      {/* Item list */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12" style={{ color: 'rgba(255,255,255,0.22)' }}>
@@ -520,7 +521,6 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
       animation: isFlashing ? 'op-item-flash 0.65s ease' : undefined,
     }}
   >
-    {/* Name + unit price */}
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1.5">
         <p
@@ -545,7 +545,6 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
       </p>
     </div>
 
-    {/* Stepper — square touch-friendly buttons */}
     <div className="flex items-center gap-1.5">
       <button
         onClick={() => !isPaid && onUpdateQty(item.id, -1)}
@@ -572,12 +571,10 @@ const OrderItemRow = ({ item, onUpdateQty, onRemove, isPaid = false, isUnsent = 
       </button>
     </div>
 
-    {/* Line total */}
     <p className="w-16 text-right text-sm font-bold flex-shrink-0" style={{ color: isPaid ? 'rgba(255,255,255,0.40)' : 'rgba(255,255,255,0.90)' }}>
       Rs. {fmt(item.price * item.quantity)}
     </p>
 
-    {/* Delete */}
     {!isPaid && (
       <button
         onClick={() => onRemove(item.id)}
