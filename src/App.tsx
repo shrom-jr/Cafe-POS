@@ -17,7 +17,7 @@ import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { subscribeToStaff } from '@/utils/firebaseSync';
-import { subscribeToCustomers, writeCustomersToFirebase, type FirebaseCustomerRecord } from '@/utils/firebaseSync';
+import { subscribeToCustomers, writeCustomer, writeCustomersToFirebase, type FirebaseCustomerRecord } from '@/utils/firebaseSync';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import OfflineBanner from '@/components/OfflineBanner';
