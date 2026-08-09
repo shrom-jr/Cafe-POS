@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
@@ -17,6 +17,9 @@ import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { subscribeToStaff } from '@/utils/firebaseSync';
+import { subscribeToCustomers, writeCustomersToFirebase, type FirebaseCustomerRecord } from '@/utils/firebaseSync';
+import { useCustomerStore } from '@/store/useCustomerStore';
+import { usePOSStore } from '@/store/usePOSStore';
 import OfflineBanner from '@/components/OfflineBanner';
 import { StaffPermissions } from '@/types/staff';
 import { getFirstPermittedRoute } from '@/utils/permissions';
@@ -45,6 +48,7 @@ const RequirePermission = ({
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
   const currentUser = useStaffStore((s) => s.currentUser);
+  const orders = usePOSStore((s) => s.orders);
 
   // Sync orders bidirectionally with Firebase Realtime Database
   useFirebaseSync();
@@ -56,6 +60,61 @@ const App = () => {
     const unsubscribe = subscribeToStaff({
       setUsers: (users) => useStaffStore.getState().setUsers(users),
     });
+    return unsubscribe;
+  }, []);
+
+  // Customer attachment is stored on the order snapshot, not on the customer
+  // itself. Persist the referenced customer when a new order/customer pairing
+  // appears so the Firebase customer node remains present across devices.
+  const attachedCustomerByOrder = useRef(new Map<string, string>());
+  useEffect(() => {
+    const customerState = useCustomerStore.getState();
+    for (const order of orders) {
+      const customerId = order.attachedCustomer?.id;
+      if (!customerId || attachedCustomerByOrder.current.get(order.id) === customerId) continue;
+
+      attachedCustomerByOrder.current.set(order.id, customerId);
+      const customer = customerState.getCustomer(customerId);
+      if (customer) {
+        void writeCustomer({
+          ...customer,
+          repayments: customerState.repayments.filter((repayment) => repayment.customerId === customer.id),
+        });
+      }
+    }
+  }, [orders]);
+
+  // Customer balances and repayment ledgers are shared across all POS devices.
+  // Keep localStorage as the offline fallback, and seed Firebase once when the
+  // new node is empty so existing local customer history is not discarded.
+  useEffect(() => {
+    let seedingLocalCustomers = false;
+    let hasReceivedRemoteSnapshot = false;
+
+    const unsubscribe = subscribeToCustomers(
+      (remoteCustomers) => {
+        const localState = useCustomerStore.getState();
+        if (!hasReceivedRemoteSnapshot && remoteCustomers.length === 0 && localState.customers.length > 0) {
+          if (seedingLocalCustomers) return;
+          seedingLocalCustomers = true;
+          const records: FirebaseCustomerRecord[] = localState.customers.map((customer) => ({
+            ...customer,
+            repayments: localState.repayments.filter((repayment) => repayment.customerId === customer.id),
+          }));
+          void writeCustomersToFirebase(records).finally(() => {
+            seedingLocalCustomers = false;
+          });
+          return;
+        }
+
+        hasReceivedRemoteSnapshot = true;
+        localState.hydrateFromFirebase(remoteCustomers);
+      },
+      (error) => {
+        console.warn('[Firebase Customer Sync] Offline or unavailable; using local customer data.', error);
+      },
+    );
+
     return unsubscribe;
   }, []);
 

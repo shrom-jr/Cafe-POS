@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Customer, CustomerRepayment, StaffAttribution } from '@/types/pos';
+import { writeCustomer } from '@/utils/firebaseSync';
 
 const CUSTOMERS_KEY = 'pos_customers';
 const REPAYMENTS_KEY = 'pos_customer_repayments';
@@ -61,8 +62,20 @@ interface CustomerState {
     notes?: string;
     receivedBy?: StaffAttribution;
   }) => { ok: true; repayment: CustomerRepayment } | { ok: false; error: string };
+  /** Replace local customer state with a Firebase snapshot. */
+  hydrateFromFirebase: (records: Array<Customer & { repayments?: CustomerRepayment[] }>) => void;
   /** Returns the freshest snapshot of a single customer by ID. */
   getCustomer: (id: string) => Customer | undefined;
+}
+
+function withLedger(
+  customer: Customer,
+  repayments: CustomerRepayment[],
+): Customer & { repayments: CustomerRepayment[] } {
+  return {
+    ...customer,
+    repayments: repayments.filter((repayment) => repayment.customerId === customer.id),
+  };
 }
 
 export const useCustomerStore = create<CustomerState>((set, get) => ({
@@ -81,6 +94,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const customers = [...get().customers, customer];
     persist(customers);
     set({ customers });
+    void writeCustomer(withLedger(customer, get().repayments));
     return customer;
   },
 
@@ -90,6 +104,8 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const customers = get().customers.map((c) => (c.id === id ? { ...c, ...safeUpdates } : c));
     persist(customers);
     set({ customers });
+    const updatedCustomer = customers.find((customer) => customer.id === id);
+    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, get().repayments));
   },
 
   addToCustomerDue: (id, amount) => {
@@ -105,6 +121,8 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     );
     persist(customers);
     set({ customers });
+    const updatedCustomer = customers.find((customer) => customer.id === id);
+    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, get().repayments));
   },
 
   receiveRepayment: ({ customerId, amount, method, notes, receivedBy }) => {
@@ -136,7 +154,21 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     persist(customers);
     persistRepayments(repayments);
     set({ customers, repayments });
+    const updatedCustomer = customers.find((entry) => entry.id === customerId);
+    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, repayments));
     return { ok: true, repayment };
+  },
+
+  hydrateFromFirebase: (records) => {
+    const customers = records.map(({ repayments: _repayments, ...customer }) => customer);
+    const repayments = records.flatMap((record) =>
+      Array.isArray(record.repayments)
+        ? record.repayments.filter((repayment) => repayment.customerId === record.id)
+        : [],
+    );
+    persist(customers);
+    persistRepayments(repayments);
+    set({ customers, repayments });
   },
 
   getCustomer: (id) => get().customers.find((c) => c.id === id),

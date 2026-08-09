@@ -20,6 +20,7 @@ import type {
 import type { PurchaseEntry } from "../store/useKitchenPurchasesStore";
 import type { MeatEntry } from "../store/useMeatTrackerStore";
 import type { MaintenanceExpense } from "../types/pos";
+import type { Customer, CustomerRepayment } from "../types/pos";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[]) => void;
@@ -40,6 +41,11 @@ type StaffSyncStore = {
   setUsers: (users: StaffUser[]) => void;
 };
 
+/** Customer records are stored with their repayment ledger under one Firebase key. */
+export type FirebaseCustomerRecord = Customer & {
+  repayments: CustomerRepayment[];
+};
+
 // Safely converts Firebase keyed objects/arrays/nulls into clean JavaScript arrays
 const toArray = (data: any) => {
   if (!data) return [];
@@ -47,6 +53,98 @@ const toArray = (data: any) => {
   if (typeof data === "object") return Object.values(data).filter(Boolean);
   return [];
 };
+
+const toFirebaseCustomerRecord = (customer: FirebaseCustomerRecord): FirebaseCustomerRecord => ({
+  ...customer,
+  repayments: Array.isArray(customer.repayments) ? customer.repayments : [],
+});
+
+/**
+ * Write one customer and its complete repayment ledger.
+ *
+ * This intentionally writes the complete customer record rather than only the
+ * changed field. That keeps each customer key self-contained and lets a new
+ * device hydrate the balance and history in one read.
+ */
+export async function writeCustomer(customerData: FirebaseCustomerRecord) {
+  try {
+    await set(
+      ref(db, `customers/${customerData.id}`),
+      JSON.parse(JSON.stringify(toFirebaseCustomerRecord(customerData))),
+    );
+  } catch (error) {
+    console.error("❌ [Firebase Customer Write FAILED]:", error);
+  }
+}
+
+/** Seed or replace the complete customer collection during initial sync. */
+export async function writeCustomersToFirebase(customers: FirebaseCustomerRecord[]) {
+  try {
+    const records = customers.reduce<Record<string, FirebaseCustomerRecord>>((result, customer) => {
+      result[customer.id] = toFirebaseCustomerRecord(customer);
+      return result;
+    }, {});
+    await set(ref(db, "customers"), JSON.parse(JSON.stringify(records)));
+  } catch (error) {
+    console.error("❌ [Firebase Customers Write FAILED]:", error);
+  }
+}
+
+export async function deleteCustomerFirebase(customerId: string) {
+  try {
+    await set(ref(db, `customers/${customerId}`), null);
+  } catch (error) {
+    console.error("❌ [Firebase Customer Delete FAILED]:", error);
+  }
+}
+
+/**
+ * Subscribe to all customer records. Firebase may return either an object
+ * keyed by customer ID or an array from older writes, so normalize both.
+ */
+export function subscribeToCustomers(
+  callback: (customers: FirebaseCustomerRecord[]) => void,
+  onError?: (error: unknown) => void,
+) {
+  try {
+    return onValue(
+      ref(db, "customers"),
+      (snapshot) => {
+        try {
+          const rawData = snapshot.val();
+          const records: FirebaseCustomerRecord[] = Array.isArray(rawData)
+            ? rawData.filter(Boolean).map((record: any) => ({
+                ...record,
+                repayments: Array.isArray(record.repayments) ? record.repayments : [],
+              }))
+            : rawData && typeof rawData === "object"
+              ? Object.entries(rawData)
+                  .filter(([, record]) => Boolean(record))
+                  .map(([id, record]) => ({
+                    id,
+                    ...(record as Omit<FirebaseCustomerRecord, "id">),
+                    repayments: Array.isArray((record as any).repayments)
+                      ? (record as any).repayments
+                      : [],
+                  }))
+              : [];
+          callback(records);
+        } catch (error) {
+          console.error("❌ [Firebase Customer Snapshot FAILED]:", error);
+          onError?.(error);
+        }
+      },
+      (error) => {
+        console.error("❌ [Firebase Customer Listener FAILED]:", error);
+        onError?.(error);
+      },
+    );
+  } catch (error) {
+    console.error("❌ [Firebase Customer Subscription FAILED]:", error);
+    onError?.(error);
+    return () => {};
+  }
+}
 
 // Deeply sanitizes raw Firebase data
 export function sanitizeOrder(rawOrder: any): Order {

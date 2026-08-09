@@ -43,7 +43,10 @@ The settlement is recorded on the payment as its own component alongside the amo
 
 ## Storage
 
-Customers and their repayment ledger are localStorage-only — no Firebase sync — which keeps the feature fast but device-local.
+Customers and their repayment ledger are persisted locally for offline fallback and synchronized in real time to Firebase under `/customers/{customerId}`. Each Firebase customer record contains the customer fields plus its repayment ledger.
 
 **Why:**
-Chosen deliberately to avoid Firebase coupling for what began as single-device UX. The consequence is that balances diverge across POS devices, so multi-device deployments need a sync story before relying on Khatta.
+Khatta balances and repayments must stay consistent across POS devices; localStorage alone allowed devices to diverge and could lose customer history after a refresh or restart.
+
+**How to apply:**
+Use the existing Firebase database singleton. Treat Firebase snapshots as the shared source when available, seed an empty remote node from local history, and keep writes fire-and-forget so offline failures never block order completion.
