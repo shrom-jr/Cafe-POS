@@ -7,7 +7,7 @@ import { InventorySection } from '@/screens/InventorySection';
 import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { ExpensesSection } from '@/screens/admin/ExpensesSection';
-import CustomersView from '@/components/customers/CustomersView';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
@@ -63,6 +63,283 @@ const PageHeader = ({
     {action && <div className="flex-shrink-0 ml-4">{action}</div>}
   </div>
 );
+
+// ── ADMIN CUSTOMER ANALYTICS ─────────────────────────────────────────────────
+
+const RatioBar = ({
+  leftLabel, rightLabel, leftValue, rightValue, leftColor, rightColor,
+}: {
+  leftLabel: string; rightLabel: string; leftValue: number; rightValue: number;
+  leftColor: string; rightColor: string;
+}) => {
+  const total = leftValue + rightValue;
+  const leftPct = total > 0 ? Math.round((leftValue / total) * 100) : 50;
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1.5">
+        <span className="font-semibold" style={{ color: leftColor }}>{leftLabel}</span>
+        <span className="font-semibold" style={{ color: rightColor }}>{rightLabel}</span>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06] flex">
+        <div className="h-full" style={{ width: `${leftPct}%`, background: leftColor }} />
+        <div className="h-full flex-1" style={{ background: rightColor }} />
+      </div>
+    </div>
+  );
+};
+
+const AdminCustomerAnalytics = () => {
+  const customers = useCustomerStore((s) => s.customers);
+  const repayments = useCustomerStore((s) => s.repayments);
+  const orders = usePOSStore((s) => s.orders);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState<'financials' | 'visits' | 'consumption' | 'audit'>('financials');
+
+  const totalRevenue = customers.reduce((s, c) => s + c.totalSpend, 0);
+  const totalDue = customers.reduce((s, c) => s + c.currentDue, 0);
+  const totalPaid = repayments.reduce((s, r) => s + r.amount, 0);
+  const totalFood = customers.reduce((s, c) => s + (c.foodItemsConsumed ?? 0), 0);
+  const totalBev = customers.reduce((s, c) => s + (c.beverageItemsConsumed ?? 0), 0);
+
+  const selected = selectedId ? customers.find((c) => c.id === selectedId) : undefined;
+  const selectedRepayments = selected
+    ? repayments.filter((r) => r.customerId === selected.id).sort((a, b) => b.createdAt - a.createdAt)
+    : [];
+  const selectedOrders = selected
+    ? orders
+        .filter((o) => o.attachedCustomer?.id === selected.id && o.status === 'paid')
+        .sort((a, b) => b.createdAt - a.createdAt)
+    : [];
+  const selectedPaidOff = selectedRepayments.reduce((s, r) => s + r.amount, 0);
+
+  const visitFrequency = (() => {
+    if (!selected || selected.visits < 2 || selectedOrders.length < 2) return null;
+    const times = selectedOrders.map((o) => o.createdAt);
+    const spanDays = (Math.max(...times) - Math.min(...times)) / 86400000;
+    if (spanDays <= 0) return null;
+    const perWeek = (selected.visits / spanDays) * 7;
+    return perWeek >= 1 ? `${perWeek.toFixed(1)} visits / week` : `${(perWeek * 4.35).toFixed(1)} visits / month`;
+  })();
+
+  const cardStyle = { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Customer Analytics" subtitle="Financial and consumption analytics across all registered customers" />
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Customer Revenue Generated</p>
+          <p className="mt-1 text-2xl font-bold text-white" data-testid="stat-customer-revenue">Rs. {fmt(totalRevenue)}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{customers.length} customers · {customers.reduce((s, c) => s + c.visits, 0)} total visits</p>
+        </div>
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Outstanding Credit Ratio</p>
+          <RatioBar
+            leftLabel={`Paid Rs. ${fmt(totalPaid)}`} rightLabel={`Unpaid Rs. ${fmt(totalDue)}`}
+            leftValue={totalPaid} rightValue={totalDue} leftColor="#34d399" rightColor="#f87171"
+          />
+        </div>
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Food vs Beverage Consumption</p>
+          <RatioBar
+            leftLabel={`Food ${totalFood}`} rightLabel={`Beverage ${totalBev}`}
+            leftValue={totalFood} rightValue={totalBev} leftColor="#fbbf24" rightColor="#60a5fa"
+          />
+        </div>
+      </div>
+
+      {/* Customer table */}
+      <div className="overflow-x-auto rounded-2xl" style={cardStyle}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.08] text-left text-xs uppercase tracking-wide text-slate-400">
+              <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Phone</th>
+              <th className="px-4 py-3 font-medium">Lifetime Revenue</th>
+              <th className="px-4 py-3 font-medium">Outstanding</th>
+              <th className="px-4 py-3 font-medium">Visits</th>
+              <th className="px-4 py-3 font-medium">Last Visit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customers.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No customers registered yet.</td></tr>
+            )}
+            {customers.map((c) => (
+              <tr
+                key={c.id}
+                onClick={() => { setSelectedId(c.id); setDrawerTab('financials'); }}
+                className="cursor-pointer border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.04]"
+                data-testid={`row-analytics-customer-${c.id}`}
+              >
+                <td className="px-4 py-3 font-medium text-white">{c.name}</td>
+                <td className="px-4 py-3 text-slate-300">{c.phone}</td>
+                <td className="px-4 py-3 text-slate-200">Rs. {fmt(c.totalSpend)}</td>
+                <td className="px-4 py-3">
+                  {c.currentDue > 0
+                    ? <span className="font-semibold text-red-400">Rs. {fmt(c.currentDue)}</span>
+                    : <span className="font-semibold text-emerald-400">Clear</span>}
+                </td>
+                <td className="px-4 py-3 text-slate-300">{c.visits}</td>
+                <td className="px-4 py-3 text-slate-400">
+                  {c.lastVisit ? format(new Date(c.lastVisit), 'dd MMM yyyy, hh:mm a') : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Analytics drawer */}
+      <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selected?.name}</DialogTitle>
+            <DialogDescription>{selected?.phone}</DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-4">
+              <div className="flex gap-2 flex-wrap">
+                {([
+                  { id: 'financials',  label: '💰 Financials' },
+                  { id: 'visits',      label: '📅 Visits' },
+                  { id: 'consumption', label: '🍽️ Consumption & Top Items' },
+                  { id: 'audit',       label: '📜 Audit Trail' },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setDrawerTab(tab.id)}
+                    className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                      drawerTab === tab.id
+                        ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+                        : 'border-white/10 bg-white/[0.04] text-slate-400'
+                    }`}
+                    data-testid={`tab-analytics-${tab.id}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="max-h-[55vh] overflow-y-auto">
+                {drawerTab === 'financials' && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Lifetime Revenue</p>
+                      <p className="mt-1 text-xl font-bold text-white">Rs. {fmt(selected.totalSpend)}</p>
+                    </div>
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Total Paid Off</p>
+                      <p className="mt-1 text-xl font-bold text-emerald-400">Rs. {fmt(selectedPaidOff)}</p>
+                    </div>
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Current Outstanding Balance</p>
+                      <p className={`mt-1 text-xl font-bold ${selected.currentDue > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {selected.currentDue > 0 ? `Rs. ${fmt(selected.currentDue)}` : 'Clear'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {drawerTab === 'visits' && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Total Visit Count</p>
+                      <p className="mt-1 text-xl font-bold text-white">{selected.visits}</p>
+                    </div>
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Last Visit</p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {selected.lastVisit ? format(new Date(selected.lastVisit), 'dd MMM yyyy, hh:mm a') : 'No visits recorded'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="text-xs text-slate-400">Visit Frequency</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{visitFrequency ?? 'Not enough data yet'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {drawerTab === 'consumption' && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl p-4" style={cardStyle}>
+                        <p className="text-xs text-slate-400">Total Food Items Eaten</p>
+                        <p className="mt-1 text-xl font-bold text-amber-300">{selected.foodItemsConsumed ?? 0}</p>
+                      </div>
+                      <div className="rounded-xl p-4" style={cardStyle}>
+                        <p className="text-xs text-slate-400">Total Drinks Consumed</p>
+                        <p className="mt-1 text-xl font-bold text-blue-300">{selected.beverageItemsConsumed ?? 0}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4" style={cardStyle}>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Ranked Top Favorites</p>
+                      {(selected.topOrders ?? []).length === 0 && (
+                        <p className="text-sm text-slate-500">No settled orders recorded yet.</p>
+                      )}
+                      {(selected.topOrders ?? []).slice(0, 10).map((item, i) => (
+                        <div key={item.itemId} className="flex items-center justify-between border-b border-white/[0.04] py-1.5 last:border-0">
+                          <span className="text-sm text-slate-200">
+                            <span className="mr-2 font-bold text-slate-500">#{i + 1}</span>
+                            {item.name}
+                            <span className="ml-2 text-xs text-slate-500">{item.category}</span>
+                          </span>
+                          <span className="text-sm font-semibold text-white">×{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {drawerTab === 'audit' && (
+                  <div className="space-y-2">
+                    {selectedOrders.length === 0 && selectedRepayments.length === 0 && (
+                      <p className="py-6 text-center text-sm text-slate-500">No history recorded yet.</p>
+                    )}
+                    {[
+                      ...selectedOrders.map((o) => ({
+                        key: `o-${o.id}`, at: o.createdAt, kind: 'order' as const,
+                        title: `Order — Table ${o.tableNumber}`,
+                        amount: o.items.reduce((s, i) => s + i.price * i.quantity, 0),
+                        lines: o.items.map((i) => `${i.name} ×${i.quantity} — Rs. ${fmt(i.price * i.quantity)}`),
+                      })),
+                      ...selectedRepayments.map((r) => ({
+                        key: `r-${r.id}`, at: r.createdAt, kind: 'repayment' as const,
+                        title: `Repayment (${r.method === 'cash' ? 'Cash' : 'QR / Fonepay'})${r.receivedBy ? ` — by ${r.receivedBy.name}` : ''}`,
+                        amount: r.amount,
+                        lines: r.notes ? [r.notes] : [],
+                      })),
+                    ]
+                      .sort((a, b) => b.at - a.at)
+                      .map((entry) => (
+                        <div key={entry.key} className="rounded-xl p-3" style={cardStyle}>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-sm font-semibold ${entry.kind === 'repayment' ? 'text-emerald-300' : 'text-white'}`}>
+                              {entry.title}
+                            </span>
+                            <span className={`text-sm font-bold ${entry.kind === 'repayment' ? 'text-emerald-400' : 'text-slate-200'}`}>
+                              {entry.kind === 'repayment' ? '−' : '+'} Rs. {fmt(entry.amount)}
+                            </span>
+                          </div>
+                          {entry.lines.map((line, i) => (
+                            <p key={i} className="mt-0.5 text-xs text-slate-400">{line}</p>
+                          ))}
+                          <p className="mt-0.5 text-[11px] text-slate-500">{format(new Date(entry.at), 'dd MMM yyyy, hh:mm a')}</p>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
 
 const AdminPanel = () => {
   const currentUser = useStaffStore((s) => s.currentUser);
@@ -250,7 +527,7 @@ const AdminPanel = () => {
                 {reportView === 'kitchen' && <KitchenReportTab />}
               </div>
             )}
-            {activeTab === 'customers' && <CustomersView />}
+            {activeTab === 'customers' && <AdminCustomerAnalytics />}
             {activeTab === 'inventory' && <InventorySection />}
             {activeTab === 'expenses'  && <ExpensesSection />}
             {activeTab === 'settings'  && (

@@ -1,0 +1,77 @@
+Task: Separate Customer System into Staff Floor View and Admin Analytics View with Complete Firebase Sync
+
+
+
+Goals & Requirements:
+
+
+
+1. Data Schema Updates (src/types/customer.ts & src/store/useCustomerStore.ts):
+
+- Extend Customer type to include: foodItemsConsumed (number), beverageItemsConsumed (number), lastVisit (string), topOrders (array of { itemId, name, quantity, category }).
+
+- Update order settlement handlers in usePOSStore so attaching a customer to a closed/paid order updates their totalSpend, visits, lastVisit date, food/drink consumption counters, and top favorite items array.
+
+- All customer mutations (add, edit, delete, repayment, order updates) must automatically write to Firebase at /customers/{customerId} and keep localStorage as an offline fallback.
+
+
+
+2. Staff Floor Customer Screen (src/components/staff/StaffCustomerScreen.tsx or main top nav route):
+
+- Layout: Simple, high-speed, text-and-number based.
+
+- Top Cards: Total Active Customers, Total Dues Outstanding (Rs. in red), Total Collected Dues (Rs.).
+
+- Top Right Button: "+ Register New Customer" modal (Name + Phone).
+
+- Table Actions on Every Row:
+
+  * "Collect Payment" button: Opens modal to log Cash/QR repayment.
+
+  * "Edit" button: Edit name or phone inline.
+
+  * "Delete" button: Deletes profile from local store and Firebase.
+
+  * "View Ledger" button: Opens simple date-stamped text history modal.
+
+
+
+3. Admin Panel Customer Screen (src/components/admin/AdminCustomerPanel.tsx or admin sidebar route):
+
+- Top Visual KPI Cards & Bar Indicators:
+
+  * Total Customer Revenue Generated
+
+  * Outstanding Credit Ratio (Paid vs Unpaid visual bar)
+
+  * Food vs Beverage Consumption Ratio Bar
+
+- Customer Analytical Drawer/Modal (Opens on row click) with 4 Tabs:
+
+  * Tab 1 (Financials): Lifetime Revenue, Total Paid, Current Dues.
+
+  * Tab 2 (Visits): Visit Count, Last Visit Date/Time, Frequency summary.
+
+  * Tab 3 (Consumption & Top Items): Food count, Drink count, Ranked list of most ordered items.
+
+  * Tab 4 (Audit Trail): Full date-stamped itemized bill and repayment ledger.
+
+
+
+4. Guardrails:
+
+- Do NOT alter dev ports, package.json scripts, or server configurations.
+
+- Keep all Firebase operations non-blocking using try/catch handlers.
+
+- Verify TypeScript types, build script, and test suite pass after implementation.
+
+
+
+STRICT EXECUTION LIMITS:
+
+- Do NOT generate test files, integration tests, or custom test suites.
+
+- Do NOT refactor unprompted components (e.g., QR modals, tax invoices) unless explicitly instructed.
+
+- Apply requested edits directly to target files in a single pass and stop immediately upon build verification.

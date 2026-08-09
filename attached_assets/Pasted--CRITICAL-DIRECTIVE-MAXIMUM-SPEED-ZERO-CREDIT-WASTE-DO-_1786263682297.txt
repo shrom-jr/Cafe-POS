@@ -1,0 +1,65 @@
+[CRITICAL DIRECTIVE: MAXIMUM SPEED & ZERO CREDIT WASTE - DO NOT LOOP]
+
+Goal: Separate Customer Management into a Staff Floor View (src/screens/CustomersPortal.tsx) and an Admin Analytics View (src/screens/AdminPanel.tsx) with Realtime Firebase Sync.
+
+STRICT AGENT EXECUTION RULES (PREVENT DRAIN):
+1. DO NOT run any test suites or commands (NO 'npm test', NO 'vitest', NO 'playwright').
+2. DO NOT start/restart dev servers, check ports, or open headless browser windows.
+3. DO NOT search or scan files outside the 6 target files listed below.
+4. Apply code edits directly in ONE SINGLE PASS.
+5. Once edits are made, run 'npm run build' ONLY ONCE to verify zero TypeScript errors, then STOP IMMEDIATELY.
+
+TARGET FILES ONLY:
+- src/types/pos.ts
+- src/store/useCustomerStore.ts
+- src/store/usePOSStore.ts
+- src/utils/firebaseSync.ts
+- src/screens/CustomersPortal.tsx
+- src/screens/AdminPanel.tsx
+
+FILE-BY-FILE DIRECTIVES:
+
+1. src/types/pos.ts:
+   - Extend 'Customer' interface with:
+     * foodItemsConsumed: number;
+     * beverageItemsConsumed: number;
+     * lastVisit?: string;
+     * topOrders?: Array<{ itemId: string; name: string; quantity: number; category: string }>;
+
+2. src/store/usePOSStore.ts & src/store/useCustomerStore.ts & src/utils/firebaseSync.ts:
+   - In usePOSStore order settlement, when an order closes with an attached customer:
+     * Increment visits (+1) and set lastVisit = new Date().toISOString()
+     * Add order total to totalSpend
+     * Categorize items into foodItemsConsumed vs beverageItemsConsumed
+     * Update topOrders array with item counts
+   - In useCustomerStore & firebaseSync, ensure all customer mutations (add, edit, delete, collect payment, order settlement) write to Firebase RTDB at /customers/{customerId}. Keep localStorage as offline fallback.
+
+3. src/screens/CustomersPortal.tsx (Staff Floor View):
+   - Fast, text-and-number based view for cashiers/waiters during active shift.
+   - Top Stat Cards: Total Active Customers, Total Dues Outstanding (bold red text), Total Collected Dues.
+   - Top Right Button: "+ Register New Customer" modal (Name + Phone).
+   - Customer Table Columns: Name, Phone Number, Current Due (Red if >0, Green "Clear" if 0), Actions.
+   - Direct Actions on EVERY ROW:
+     * [ 💵 Collect Payment ]: Quick modal to record Cash/QR payment (updates currentDue & totalPaid in Firebase).
+     * [ ✏️ Edit ]: Inline modal to edit Name and Phone.
+     * [ 🗑️ Delete ]: Confirmation prompt to delete customer from store and Firebase.
+     * [ 📖 View Ledger ]: Simple text popup drawer displaying date-stamped order and repayment history.
+
+4. src/screens/AdminPanel.tsx (Admin Customer Tab):
+   - Deep financial and consumption analytics view for owners.
+   - Top Visual KPI Cards & Ratio Bars:
+     * Total Customer Revenue Generated (Rs.)
+     * Outstanding Credit Ratio Bar (Paid vs Unpaid)
+     * Food vs Beverage Consumption Ratio Bar
+   - Click Any Customer Row to open a 4-Tab Analytics Drawer:
+     * Tab 1 (Financials): Lifetime Revenue, Total Paid Off, Current Outstanding Balance.
+     * Tab 2 (Visits): Total Visit Count, Last Visit Date/Time, Visit Frequency.
+     * Tab 3 (Consumption & Top Items): Total Food Items Eaten, Total Drinks Consumed, Ranked Top Favorites.
+     * Tab 4 (Audit Trail): Full date-stamped itemized bill & repayment ledger.
+
+EXECUTION PROCEDURE:
+Step 1: Update src/types/pos.ts.
+Step 2: Update src/store/useCustomerStore.ts, src/store/usePOSStore.ts, and src/utils/firebaseSync.ts.
+Step 3: Update src/screens/CustomersPortal.tsx and src/screens/AdminPanel.tsx.
+Step 4: Run 'npm run build' ONCE.
+Step 5: Output final summary and STOP immediately.

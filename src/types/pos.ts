@@ -276,6 +276,14 @@ export interface Customer {
   currentDue: number;   // Outstanding balance owed (NPR)
   totalSpend: number;   // Lifetime spend across all visits
   visits: number;       // Total number of visits
+  /** Lifetime count of food items consumed across settled orders */
+  foodItemsConsumed: number;
+  /** Lifetime count of beverage items consumed across settled orders */
+  beverageItemsConsumed: number;
+  /** ISO datetime of the customer's most recent settled order */
+  lastVisit?: string;
+  /** Running per-item consumption tally used to rank favorite orders */
+  topOrders?: Array<{ itemId: string; name: string; quantity: number; category: string }>;
 }
 
 /** A standalone payment received against a customer's outstanding Khatta balance. */

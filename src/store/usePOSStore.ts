@@ -4,6 +4,7 @@ import { CafeTable, Category, Customer, Ingredient, MenuItem, Order, Payment, Re
 import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useStaffStore } from '@/store/useStaffStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { getStaffName } from '@/utils/staffName';
 import { tableNameKey } from '@/utils/tableName';
 
@@ -563,6 +564,47 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.savePayments(payments);
       return { payments };
     });
+
+    // ── Customer consumption metrics ─────────────────────────────────────────
+    // When the settled order has an attached customer, record the visit,
+    // spend, food/beverage tallies, and top-order ranking. Pay Later (khatta)
+    // settlements skip visit/spend because addToCustomerDue already counts them.
+    const settledOrder = get().orders.find((o) => o.id === payment.orderId);
+    const attached = settledOrder?.attachedCustomer;
+    if (attached) {
+      const { menuItems, categories } = get();
+      const isBeverageCategory = (categoryId: string): boolean => {
+        const category = categories.find((c) => c.id === categoryId);
+        const pillar = category?.parentCategory ?? '';
+        const name = category?.name ?? '';
+        return /beverage|drink|bar|alcohol|liquor|beer|wine|cocktail|juice|coffee|tea/i.test(
+          `${pillar} ${name}`,
+        );
+      };
+      let foodItems = 0;
+      let beverageItems = 0;
+      const consumedItems: Array<{ itemId: string; name: string; quantity: number; category: string }> = [];
+      for (const item of payment.items ?? []) {
+        const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+        const category = menuItem ? categories.find((c) => c.id === menuItem.categoryId) : undefined;
+        const beverage = menuItem ? isBeverageCategory(menuItem.categoryId) : false;
+        if (beverage) beverageItems += item.quantity;
+        else foodItems += item.quantity;
+        consumedItems.push({
+          itemId: item.menuItemId,
+          name: item.name,
+          quantity: item.quantity,
+          category: category?.parentCategory ?? category?.name ?? (beverage ? 'Beverage' : 'Food'),
+        });
+      }
+      useCustomerStore.getState().recordOrderConsumption(attached.id, {
+        orderTotal: payment.total,
+        countVisitAndSpend: payment.method !== 'khatta',
+        foodItems,
+        beverageItems,
+        items: consumedItems,
+      });
+    }
   },
 
   updateSettings: (updates) => {

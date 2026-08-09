@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Customer, CustomerRepayment, StaffAttribution } from '@/types/pos';
-import { writeCustomer } from '@/utils/firebaseSync';
+import { writeCustomer, deleteCustomerFirebase } from '@/utils/firebaseSync';
 
 const CUSTOMERS_KEY = 'pos_customers';
 const REPAYMENTS_KEY = 'pos_customer_repayments';
@@ -62,6 +62,24 @@ interface CustomerState {
     notes?: string;
     receivedBy?: StaffAttribution;
   }) => { ok: true; repayment: CustomerRepayment } | { ok: false; error: string };
+  /** Permanently remove a customer from the local store and Firebase. */
+  deleteCustomer: (id: string) => void;
+  /**
+   * Record consumption metrics when an order settles with an attached
+   * customer: visit count, last visit, spend, food/beverage tallies, and the
+   * running top-orders ranking. `countVisitAndSpend` is false for Pay Later
+   * settlements because `addToCustomerDue` already counted them.
+   */
+  recordOrderConsumption: (
+    customerId: string,
+    data: {
+      orderTotal: number;
+      countVisitAndSpend: boolean;
+      foodItems: number;
+      beverageItems: number;
+      items: Array<{ itemId: string; name: string; quantity: number; category: string }>;
+    },
+  ) => void;
   /** Replace local customer state with a Firebase snapshot. */
   hydrateFromFirebase: (records: Array<Customer & { repayments?: CustomerRepayment[] }>) => void;
   /** Returns the freshest snapshot of a single customer by ID. */
@@ -90,6 +108,8 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       currentDue: 0,
       totalSpend: 0,
       visits: 0,
+      foodItemsConsumed: 0,
+      beverageItemsConsumed: 0,
     };
     const customers = [...get().customers, customer];
     persist(customers);
@@ -159,8 +179,53 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     return { ok: true, repayment };
   },
 
+  deleteCustomer: (id) => {
+    const customers = get().customers.filter((c) => c.id !== id);
+    const repayments = get().repayments.filter((r) => r.customerId !== id);
+    persist(customers);
+    persistRepayments(repayments);
+    set({ customers, repayments });
+    void deleteCustomerFirebase(id);
+  },
+
+  recordOrderConsumption: (customerId, data) => {
+    const nowIso = new Date().toISOString();
+    const customers = get().customers.map((c) => {
+      if (c.id !== customerId) return c;
+      const topOrders = [...(c.topOrders ?? [])];
+      for (const item of data.items) {
+        const idx = topOrders.findIndex((t) => t.itemId === item.itemId);
+        if (idx >= 0) {
+          topOrders[idx] = { ...topOrders[idx], quantity: topOrders[idx].quantity + item.quantity };
+        } else {
+          topOrders.push({ ...item });
+        }
+      }
+      topOrders.sort((a, b) => b.quantity - a.quantity);
+      return {
+        ...c,
+        visits: data.countVisitAndSpend ? c.visits + 1 : c.visits,
+        totalSpend: data.countVisitAndSpend
+          ? Math.round((c.totalSpend + data.orderTotal) * 100) / 100
+          : c.totalSpend,
+        lastVisit: nowIso,
+        foodItemsConsumed: (c.foodItemsConsumed ?? 0) + data.foodItems,
+        beverageItemsConsumed: (c.beverageItemsConsumed ?? 0) + data.beverageItems,
+        topOrders,
+      };
+    });
+    persist(customers);
+    set({ customers });
+    const updatedCustomer = customers.find((c) => c.id === customerId);
+    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, get().repayments));
+  },
+
   hydrateFromFirebase: (records) => {
-    const customers = records.map(({ repayments: _repayments, ...customer }) => customer);
+    const customers = records.map(({ repayments: _repayments, ...customer }) => ({
+      ...customer,
+      foodItemsConsumed: customer.foodItemsConsumed ?? 0,
+      beverageItemsConsumed: customer.beverageItemsConsumed ?? 0,
+    }));
     const repayments = records.flatMap((record) =>
       Array.isArray(record.repayments)
         ? record.repayments.filter((repayment) => repayment.customerId === record.id)
