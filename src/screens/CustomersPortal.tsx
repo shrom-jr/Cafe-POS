@@ -1,413 +1,480 @@
-import { useMemo, useState } from 'react';
-import AppLayout from '@/components/ui/AppLayout';
+import { useState, useMemo } from 'react';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { usePOSStore } from '@/store/usePOSStore';
+import { useStaffStore } from '@/store/useStaffStore';
+import { Customer, CustomerRepayment } from '@/types/pos';
 import { fmt } from '@/utils/format';
-import { format } from 'date-fns';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { Plus, Banknote, Pencil, Trash2, BookOpen, Search } from 'lucide-react';
+import AppLayout from '@/components/ui/AppLayout';
+import { UserCircle, Plus, X, BookOpen, Edit2, Trash2, DollarSign, AlertTriangle } from 'lucide-react';
 
-const cardStyle = {
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.08)',
-} as const;
+// ── helpers ────────────────────────────────────────────────────────────────────
 
-const inputCls =
-  'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50';
+const formatDate = (ts: number | string) =>
+  new Date(typeof ts === 'string' ? ts : ts).toLocaleString([], {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+
+// ── sub-components ─────────────────────────────────────────────────────────────
+
+interface ModalProps { onClose: () => void; children: React.ReactNode; title: string }
+const Modal = ({ onClose, children, title }: ModalProps) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl" style={{ background: 'rgba(15,23,42,0.98)' }}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
+        <p className="font-black text-white text-sm">{title}</p>
+        <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+          <X size={15} />
+        </button>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  </div>
+);
+
+// ── main component ─────────────────────────────────────────────────────────────
 
 const CustomersPortal = () => {
-  const customers = useCustomerStore((s) => s.customers);
-  const repayments = useCustomerStore((s) => s.repayments);
-  const addCustomer = useCustomerStore((s) => s.addCustomer);
-  const updateCustomer = useCustomerStore((s) => s.updateCustomer);
-  const deleteCustomer = useCustomerStore((s) => s.deleteCustomer);
-  const receiveRepayment = useCustomerStore((s) => s.receiveRepayment);
+  const {
+    customers, repayments,
+    addCustomer, updateCustomer, deleteCustomer, receiveRepayment,
+  } = useCustomerStore();
   const orders = usePOSStore((s) => s.orders);
+  const currentUser = useStaffStore((s) => s.currentUser);
 
-  const [search, setSearch] = useState('');
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [regName, setRegName] = useState('');
-  const [regPhone, setRegPhone] = useState('');
+  // ── stat cards ──────────────────────────────────────────────────────────────
+  const totalActive = customers.length;
+  const totalDues = customers.reduce((s, c) => s + c.currentDue, 0);
+  const totalCollected = repayments.reduce((s, r) => s + r.amount, 0);
 
-  // All row actions track only the customer ID so every render reads the
-  // live record from the store — never a stale snapshot.
-  const [collectId, setCollectId] = useState<string | null>(null);
-  const [collectAmount, setCollectAmount] = useState('');
-  const [collectMethod, setCollectMethod] = useState<'cash' | 'fonepay'>('cash');
+  // ── modal/drawer state ──────────────────────────────────────────────────────
+  const [showRegister, setShowRegister]   = useState(false);
+  const [registerName, setRegisterName]   = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
+  const [registerError, setRegisterError] = useState('');
 
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
+  const [editTarget, setEditTarget]   = useState<Customer | null>(null);
+  const [editName, setEditName]       = useState('');
+  const [editPhone, setEditPhone]     = useState('');
 
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [ledgerId, setLedgerId] = useState<string | null>(null);
+  const [collectTarget, setCollectTarget]     = useState<Customer | null>(null);
+  const [collectAmount, setCollectAmount]     = useState('');
+  const [collectMethod, setCollectMethod]     = useState<'cash' | 'fonepay'>('cash');
+  const [collectError, setCollectError]       = useState('');
 
-  const totalDue = customers.reduce((sum, c) => sum + c.currentDue, 0);
-  const totalCollected = repayments.reduce((sum, r) => sum + r.amount, 0);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [ledgerTarget, setLedgerTarget] = useState<Customer | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q),
-    );
-  }, [customers, search]);
-
-  const collectCustomer = collectId ? customers.find((c) => c.id === collectId) : undefined;
-  const deleteCustomerRec = deleteId ? customers.find((c) => c.id === deleteId) : undefined;
-  const ledgerCustomer = ledgerId ? customers.find((c) => c.id === ledgerId) : undefined;
-
-  const ledgerEntries = useMemo(() => {
-    if (!ledgerCustomer) return [];
-    const orderEntries = orders
-      .filter((o) => o.attachedCustomer?.id === ledgerCustomer.id && o.status === 'paid')
-      .map((o) => ({
-        key: `order-${o.id}`,
-        at: o.createdAt,
-        label: `Order — Table ${o.tableNumber}`,
-        detail: o.items.map((i) => `${i.name} ×${i.quantity}`).join(', '),
-        amount: o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-        kind: 'order' as const,
-      }));
-    const repaymentEntries = repayments
-      .filter((r) => r.customerId === ledgerCustomer.id)
-      .map((r) => ({
-        key: `repay-${r.id}`,
-        at: r.createdAt,
-        label: `Repayment (${r.method === 'cash' ? 'Cash' : 'QR / Fonepay'})`,
-        detail: r.notes ?? '',
-        amount: r.amount,
-        kind: 'repayment' as const,
-      }));
-    return [...orderEntries, ...repaymentEntries].sort((a, b) => b.at - a.at);
-  }, [ledgerCustomer, orders, repayments]);
-
+  // ── register helpers ────────────────────────────────────────────────────────
   const handleRegister = () => {
-    if (!regName.trim() || !regPhone.trim()) {
-      toast.error('Name and phone number are both required.');
-      return;
-    }
-    addCustomer({ name: regName, phone: regPhone });
-    toast.success(`${regName.trim()} registered.`);
-    setRegName('');
-    setRegPhone('');
-    setRegisterOpen(false);
+    if (!registerName.trim()) { setRegisterError('Name is required.'); return; }
+    addCustomer({ name: registerName, phone: registerPhone });
+    setRegisterName('');
+    setRegisterPhone('');
+    setRegisterError('');
+    setShowRegister(false);
   };
 
+  // ── edit helpers ────────────────────────────────────────────────────────────
+  const openEdit = (c: Customer) => {
+    setEditTarget(c);
+    setEditName(c.name);
+    setEditPhone(c.phone);
+  };
+  const handleEdit = () => {
+    if (!editTarget || !editName.trim()) return;
+    updateCustomer(editTarget.id, { name: editName, phone: editPhone });
+    setEditTarget(null);
+  };
+
+  // ── collect helpers ─────────────────────────────────────────────────────────
+  const openCollect = (c: Customer) => {
+    setCollectTarget(c);
+    setCollectAmount('');
+    setCollectMethod('cash');
+    setCollectError('');
+  };
   const handleCollect = () => {
-    if (!collectCustomer) return;
+    if (!collectTarget) return;
+    const processedBy = currentUser
+      ? { id: currentUser.id, name: currentUser.name ?? currentUser.email ?? '', role: currentUser.role }
+      : undefined;
     const result = receiveRepayment({
-      customerId: collectCustomer.id,
+      customerId: collectTarget.id,
       amount: Number(collectAmount),
       method: collectMethod,
+      receivedBy: processedBy,
     });
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(`Rs. ${fmt(result.repayment.amount)} collected from ${collectCustomer.name}.`);
-    setCollectId(null);
-    setCollectAmount('');
+    if (!result.ok) { setCollectError(result.error); return; }
+    setCollectTarget(null);
   };
 
-  const handleEditSave = () => {
-    if (!editId) return;
-    if (!editName.trim() || !editPhone.trim()) {
-      toast.error('Name and phone number are both required.');
-      return;
-    }
-    updateCustomer(editId, { name: editName.trim(), phone: editPhone.trim() });
-    toast.success('Customer updated.');
-    setEditId(null);
-  };
+  // ── ledger data ─────────────────────────────────────────────────────────────
+  const ledgerEntries = useMemo(() => {
+    if (!ledgerTarget) return [];
+    const custOrders = orders
+      .filter((o) => o.attachedCustomer?.id === ledgerTarget.id && o.status === 'paid')
+      .map((o) => ({
+        kind: 'order' as const,
+        at: o.createdAt,
+        label: `Order — Table ${o.tableNumber}`,
+        amount: o.items.reduce((s, i) => s + i.price * i.quantity, 0),
+        detail: o.items.map((i) => `${i.name} ×${i.quantity}`).join(', '),
+      }));
+    const custRepayments = repayments
+      .filter((r) => r.customerId === ledgerTarget.id)
+      .map((r: CustomerRepayment) => ({
+        kind: 'repayment' as const,
+        at: r.createdAt,
+        label: `Repayment (${r.method === 'cash' ? 'Cash' : 'QR / Fonepay'})`,
+        amount: r.amount,
+        detail: r.notes ?? '',
+      }));
+    return [...custOrders, ...custRepayments].sort((a, b) => b.at - a.at);
+  }, [ledgerTarget, orders, repayments]);
 
-  const handleDelete = () => {
-    if (!deleteCustomerRec) return;
-    deleteCustomer(deleteCustomerRec.id);
-    toast.success(`${deleteCustomerRec.name} deleted.`);
-    setDeleteId(null);
-  };
+  // ── input style helper ──────────────────────────────────────────────────────
+  const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 transition-colors";
 
   return (
     <AppLayout title="Customers">
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-          {/* Header */}
-          <div className="mb-6 flex items-start justify-between border-b border-white/[0.06] pb-5">
+        <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 space-y-5">
+
+          {/* ── Page header ── */}
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-white">Customers</h1>
-              <p className="mt-0.5 text-sm text-slate-300">
-                Register customers, collect dues, and review ledgers during your shift.
-              </p>
+              <h1 className="text-lg font-black text-white">Customers</h1>
+              <p className="text-xs text-slate-400 mt-0.5">Credit balances · repayments · ledger history</p>
             </div>
             <button
-              onClick={() => setRegisterOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-500 active:scale-95"
-              data-testid="button-register-customer"
+              onClick={() => setShowRegister(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all active:scale-95 hover:brightness-110"
+              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)', boxShadow: '0 4px 16px -4px rgba(59,130,246,0.45)' }}
             >
-              <Plus size={16} /> Register New Customer
+              <Plus size={15} />
+              Register New Customer
             </button>
           </div>
 
-          {/* Stat cards */}
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl p-4" style={cardStyle}>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Active Customers</p>
-              <p className="mt-1 text-2xl font-bold text-white" data-testid="stat-active-customers">{customers.length}</p>
+          {/* ── Stat cards ── */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Total Customers</p>
+              <p className="mt-1 text-2xl font-black text-white">{totalActive}</p>
             </div>
-            <div className="rounded-2xl p-4" style={cardStyle}>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Dues Outstanding</p>
-              <p className="mt-1 text-2xl font-bold text-red-400" data-testid="stat-total-dues">Rs. {fmt(totalDue)}</p>
+            <div className="rounded-2xl p-4" style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-red-400">Total Dues Outstanding</p>
+              <p className="mt-1 text-2xl font-black text-red-400">Rs. {fmt(totalDues)}</p>
             </div>
-            <div className="rounded-2xl p-4" style={cardStyle}>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Collected Dues</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-400" data-testid="stat-total-collected">Rs. {fmt(totalCollected)}</p>
+            <div className="rounded-2xl p-4" style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.18)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">Total Collected</p>
+              <p className="mt-1 text-2xl font-black text-emerald-400">Rs. {fmt(totalCollected)}</p>
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or phone…"
-              className={`${inputCls} pl-9`}
-              data-testid="input-customer-search"
-            />
+          {/* ── Customer table ── */}
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {customers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <UserCircle size={40} className="text-slate-600" />
+                <p className="text-sm text-slate-500">No customers registered yet.</p>
+                <button
+                  onClick={() => setShowRegister(true)}
+                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  + Register the first customer
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 border-b border-white/[0.06]">
+                      <th className="px-4 py-3">Customer</th>
+                      <th className="px-4 py-3">Phone</th>
+                      <th className="px-4 py-3">Current Due</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map((c) => (
+                      <tr key={c.id} className="border-b border-white/[0.04] last:border-0">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0"
+                              style={{ background: 'rgba(59,130,246,0.18)', color: 'rgba(147,197,253,0.9)' }}
+                            >
+                              {c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-semibold text-white">{c.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">{c.phone || '—'}</td>
+                        <td className="px-4 py-3">
+                          {c.currentDue > 0
+                            ? <span className="font-black text-red-400">Rs. {fmt(c.currentDue)}</span>
+                            : <span className="font-semibold text-emerald-400">✓ Clear</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openCollect(c)}
+                              title="Collect Payment"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all active:scale-95"
+                            >
+                              <DollarSign size={12} />
+                              Collect
+                            </button>
+                            <button
+                              onClick={() => setLedgerTarget(c)}
+                              title="View Ledger"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all active:scale-95"
+                            >
+                              <BookOpen size={12} />
+                              Ledger
+                            </button>
+                            <button
+                              onClick={() => openEdit(c)}
+                              title="Edit Customer"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(c)}
+                              title="Delete Customer"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 bg-white/5 border border-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-95"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          {/* Customer table */}
-          <div className="overflow-x-auto rounded-2xl" style={cardStyle}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.08] text-left text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Phone Number</th>
-                  <th className="px-4 py-3 font-medium">Current Due</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                      {customers.length === 0 ? 'No customers registered yet.' : 'No customers match your search.'}
-                    </td>
-                  </tr>
-                )}
-                {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-white/[0.04] last:border-0" data-testid={`row-customer-${c.id}`}>
-                    <td className="px-4 py-3 font-medium text-white">{c.name}</td>
-                    <td className="px-4 py-3 text-slate-300">{c.phone}</td>
-                    <td className="px-4 py-3">
-                      {c.currentDue > 0 ? (
-                        <span className="font-semibold text-red-400" data-testid={`text-due-${c.id}`}>Rs. {fmt(c.currentDue)}</span>
-                      ) : (
-                        <span className="font-semibold text-emerald-400" data-testid={`text-due-${c.id}`}>Clear</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => { setCollectId(c.id); setCollectAmount(''); setCollectMethod('cash'); }}
-                          disabled={c.currentDue <= 0}
-                          className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 transition-all hover:bg-emerald-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-                          data-testid={`button-collect-${c.id}`}
-                        >
-                          <Banknote size={13} /> Collect Payment
-                        </button>
-                        <button
-                          onClick={() => { setEditId(c.id); setEditName(c.name); setEditPhone(c.phone); }}
-                          className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs font-semibold text-slate-200 transition-all hover:bg-white/[0.1] active:scale-95"
-                          data-testid={`button-edit-${c.id}`}
-                        >
-                          <Pencil size={13} /> Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(c.id)}
-                          className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300 transition-all hover:bg-red-500/20 active:scale-95"
-                          data-testid={`button-delete-${c.id}`}
-                        >
-                          <Trash2 size={13} /> Delete
-                        </button>
-                        <button
-                          onClick={() => setLedgerId(c.id)}
-                          className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/20 active:scale-95"
-                          data-testid={`button-ledger-${c.id}`}
-                        >
-                          <BookOpen size={13} /> View Ledger
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </main>
 
-      {/* Register modal */}
-      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Register New Customer</DialogTitle>
-            <DialogDescription>Add a customer to the Khatta ledger.</DialogDescription>
-          </DialogHeader>
+      {/* ── Register modal ── */}
+      {showRegister && (
+        <Modal title="Register New Customer" onClose={() => { setShowRegister(false); setRegisterError(''); }}>
           <div className="space-y-3">
-            <input value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="Full name" className={inputCls} data-testid="input-register-name" />
-            <input value={regPhone} onChange={(e) => setRegPhone(e.target.value)} placeholder="Phone number" className={inputCls} data-testid="input-register-phone" />
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
+              <input
+                className={inputClass}
+                placeholder="e.g. Ram Shrestha"
+                value={registerName}
+                onChange={(e) => { setRegisterName(e.target.value); setRegisterError(''); }}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Phone Number</label>
+              <input
+                className={inputClass}
+                placeholder="e.g. 9800000000"
+                value={registerPhone}
+                onChange={(e) => setRegisterPhone(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              />
+            </div>
+            {registerError && (
+              <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle size={12} />{registerError}</p>
+            )}
+            <button
+              onClick={handleRegister}
+              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
+              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)' }}
+            >
+              Register Customer
+            </button>
           </div>
-          <DialogFooter>
-            <button onClick={() => setRegisterOpen(false)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button>
-            <button onClick={handleRegister} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white" data-testid="button-register-save">Register</button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </Modal>
+      )}
 
-      {/* Collect payment modal — reads the live customer record on every render */}
-      <Dialog open={!!collectId} onOpenChange={(open) => !open && setCollectId(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Collect Payment</DialogTitle>
-            <DialogDescription>
-              {collectCustomer
-                ? <>Current due for {collectCustomer.name}: <span className="font-semibold text-red-400">Rs. {fmt(collectCustomer.currentDue)}</span></>
-                : 'This customer no longer exists.'}
-            </DialogDescription>
-          </DialogHeader>
-          {collectCustomer && collectCustomer.currentDue > 0 ? (
-            <div className="space-y-3">
-              <div className="flex gap-2">
+      {/* ── Edit modal ── */}
+      {editTarget && (
+        <Modal title="Edit Customer" onClose={() => setEditTarget(null)}>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name</label>
+              <input
+                className={inputClass}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Phone Number</label>
+              <input
+                className={inputClass}
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
+              />
+            </div>
+            <button
+              onClick={handleEdit}
+              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
+              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)' }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Collect Payment modal ── */}
+      {collectTarget && (
+        <Modal title={`Collect from ${collectTarget.name}`} onClose={() => setCollectTarget(null)}>
+          <div className="space-y-3">
+            {/* Balance display */}
+            <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+              <p className="text-xs text-slate-400">Current Outstanding</p>
+              <p className="text-2xl font-black text-red-400 mt-0.5">Rs. {fmt(collectTarget.currentDue)}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount Received (Rs.)</label>
+              <input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                className={inputClass}
+                placeholder={`Max Rs. ${fmt(collectTarget.currentDue)}`}
+                value={collectAmount}
+                onChange={(e) => { setCollectAmount(e.target.value); setCollectError(''); }}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleCollect()}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method</label>
+              <div className="grid grid-cols-2 gap-2">
                 {(['cash', 'fonepay'] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setCollectMethod(m)}
-                    className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
+                    className="py-2 rounded-xl text-xs font-bold capitalize transition-all active:scale-95"
+                    style={
                       collectMethod === m
-                        ? 'border-blue-500/50 bg-blue-500/15 text-blue-300'
-                        : 'border-white/10 bg-white/[0.04] text-slate-400'
-                    }`}
-                    data-testid={`button-collect-method-${m}`}
+                        ? { background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.5)', color: 'rgba(147,197,253,0.95)' }
+                        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }
+                    }
                   >
                     {m === 'cash' ? '💵 Cash' : '📱 QR / Fonepay'}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={collectCustomer.currentDue}
-                  value={collectAmount}
-                  onChange={(e) => setCollectAmount(e.target.value)}
-                  placeholder="Amount received"
-                  className={inputCls}
-                  data-testid="input-collect-amount"
-                />
-                <button
-                  onClick={() => setCollectAmount(String(collectCustomer.currentDue))}
-                  className="whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-semibold text-slate-300"
-                  data-testid="button-collect-full"
-                >
-                  Full amount
+            </div>
+            {collectError && (
+              <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle size={12} />{collectError}</p>
+            )}
+            <button
+              onClick={handleCollect}
+              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
+              style={{ background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: '0 4px 14px -4px rgba(16,185,129,0.4)' }}
+            >
+              Confirm Collection
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Delete confirmation modal ── */}
+      {deleteTarget && (
+        <Modal title="Delete Customer?" onClose={() => setDeleteTarget(null)}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-300">
+              This will permanently remove <span className="font-bold text-white">{deleteTarget.name}</span> and all their repayment history. This cannot be undone.
+            </p>
+            {deleteTarget.currentDue > 0 && (
+              <div className="rounded-xl px-3 py-2 flex items-center gap-2" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                <AlertTriangle size={14} className="text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-300">This customer has an outstanding balance of Rs. {fmt(deleteTarget.currentDue)}.</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { deleteCustomer(deleteTarget.id); setDeleteTarget(null); }}
+                className="flex-1 py-2.5 rounded-xl font-black text-sm text-white bg-red-500/80 border border-red-500/50 hover:bg-red-500 transition-all active:scale-95"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Ledger drawer ── */}
+      {ledgerTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+          <div
+            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col"
+            style={{ background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '80dvh' }}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between px-5 py-4 flex-shrink-0 border-b border-white/[0.07]">
+              <div>
+                <p className="font-black text-white text-sm flex items-center gap-2">
+                  <BookOpen size={14} className="text-blue-400" />
+                  {ledgerTarget.name}'s Ledger
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{ledgerTarget.phone || 'No phone'}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-500">Balance</p>
+                  <p className={`text-sm font-black ${ledgerTarget.currentDue > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {ledgerTarget.currentDue > 0 ? `Rs. ${fmt(ledgerTarget.currentDue)}` : '✓ Clear'}
+                  </p>
+                </div>
+                <button onClick={() => setLedgerTarget(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+                  <X size={15} />
                 </button>
               </div>
             </div>
-          ) : collectCustomer ? (
-            <p className="text-sm text-emerald-400">This customer's balance is already clear.</p>
-          ) : null}
-          <DialogFooter>
-            <button onClick={() => setCollectId(null)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button>
-            <button
-              onClick={handleCollect}
-              disabled={!collectCustomer || collectCustomer.currentDue <= 0}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-              data-testid="button-collect-confirm"
-            >
-              Record Payment
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit modal */}
-      <Dialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-            <DialogDescription>Update the customer's name and phone number.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Full name" className={inputCls} data-testid="input-edit-name" />
-            <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone number" className={inputCls} data-testid="input-edit-phone" />
-          </div>
-          <DialogFooter>
-            <button onClick={() => setEditId(null)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Cancel</button>
-            <button onClick={handleEditSave} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white" data-testid="button-edit-save">Save</button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteCustomerRec?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes the customer and their repayment history from this device and Firebase.
-              {deleteCustomerRec && deleteCustomerRec.currentDue > 0 && (
-                <span className="mt-1 block font-semibold text-red-400">
-                  Warning: this customer still owes Rs. {fmt(deleteCustomerRec.currentDue)}.
-                </span>
+            {/* Entries */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2">
+              {ledgerEntries.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-500">No history recorded yet.</p>
+              ) : (
+                ledgerEntries.map((e, i) => (
+                  <div key={i} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-semibold ${e.kind === 'repayment' ? 'text-emerald-300' : 'text-blue-300'}`}>
+                        {e.kind === 'repayment' ? '💰' : '🧾'} {e.label}
+                      </span>
+                      <span className={`text-xs font-black ${e.kind === 'repayment' ? 'text-emerald-400' : 'text-white'}`}>
+                        {e.kind === 'repayment' ? '−' : '+'} Rs. {fmt(e.amount)}
+                      </span>
+                    </div>
+                    {e.detail && (
+                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{e.detail}</p>
+                    )}
+                    <p className="text-[10px] text-slate-600 mt-0.5">{formatDate(e.at)}</p>
+                  </div>
+                ))
               )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-500" data-testid="button-delete-confirm">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Ledger drawer */}
-      <Dialog open={!!ledgerId} onOpenChange={(open) => !open && setLedgerId(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Ledger — {ledgerCustomer?.name}</DialogTitle>
-            <DialogDescription>Date-stamped order and repayment history.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-            {ledgerEntries.length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-500">No history recorded yet.</p>
-            )}
-            {ledgerEntries.map((entry) => (
-              <div key={entry.key} className="rounded-xl p-3" style={cardStyle}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-semibold ${entry.kind === 'repayment' ? 'text-emerald-300' : 'text-white'}`}>
-                    {entry.label}
-                  </span>
-                  <span className={`text-sm font-bold ${entry.kind === 'repayment' ? 'text-emerald-400' : 'text-slate-200'}`}>
-                    {entry.kind === 'repayment' ? '−' : '+'} Rs. {fmt(entry.amount)}
-                  </span>
-                </div>
-                {entry.detail && <p className="mt-0.5 text-xs text-slate-400">{entry.detail}</p>}
-                <p className="mt-0.5 text-[11px] text-slate-500">{format(new Date(entry.at), 'dd MMM yyyy, hh:mm a')}</p>
-              </div>
-            ))}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </AppLayout>
   );
 };

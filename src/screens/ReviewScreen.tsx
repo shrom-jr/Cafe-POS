@@ -142,6 +142,8 @@ const ReviewScreen = () => {
   const [billDetailsOpen, setBillDetailsOpen] = useState(false);
   /** Previous due actually collected in the completed transaction. */
   const [settledDue, setSettledDue] = useState(0);
+  /** Cash collected alongside a Credit (khatta) booking — Option D split. */
+  const [creditAmountReceived, setCreditAmountReceived] = useState('');
 
   // The due quoted to the customer when the cashier chose to settle it. If the
   // balance moves afterwards — another device collected part of it — the figure
@@ -296,7 +298,7 @@ const ReviewScreen = () => {
       return;
     }
 
-    // ── Khatta (Pay Later) path ─────────────────────────────────
+    // ── Credit (Pay Later / Khatta) path ────────────────────────
     if (method === 'khatta' && attachedCustomer) {
       const bn = getNextBillNumber();
       const now = Date.now();
@@ -317,7 +319,7 @@ const ReviewScreen = () => {
         vatEnabled: bill.vatEnabled,
         total: bill.total,
         method: 'khatta',
-        reference: `KHATTA-${attachedCustomer.name}`,
+        reference: `CREDIT-${attachedCustomer.name}`,
         createdAt: now,
         cafeName: settings.cafeName,
         billNumber: bn,
@@ -335,14 +337,35 @@ const ReviewScreen = () => {
         billNumber: bn,
       };
       markItemsPaid(orderIdRef.current, khattaItemIds, khattaTablePayment);
+      // Adds today's bill to the customer's running credit balance.
       addToCustomerDue(attachedCustomer.id, bill.total);
+
+      // Option D — partial cash received alongside the credit booking.
+      // After addToCustomerDue the live balance = oldDue + today's bill.
+      // Apply the partial payment against that combined figure.
+      const parsedReceived = Math.round(Number(creditAmountReceived) * 100) / 100;
+      if (parsedReceived > 0) {
+        const liveDue = useCustomerStore.getState().getCustomer(attachedCustomer.id)?.currentDue ?? 0;
+        const safeAmount = Math.min(parsedReceived, liveDue);
+        if (safeAmount > 0) {
+          useCustomerStore.getState().receiveRepayment({
+            customerId: attachedCustomer.id,
+            amount: safeAmount,
+            method: 'cash',
+            notes: `Partial cash at credit booking · Bill #${bn}`,
+            receivedBy: processedBy,
+          });
+        }
+      }
+
       updateOrderStatus(orderIdRef.current, 'paid');
       playSuccess();
-      lastPrintJobRef.current = null; // No printed receipt for khatta
+      lastPrintJobRef.current = null;
       setBillNum(bn);
       setPaidAt(now);
-      setPaidMethod(`Khatta · ${attachedCustomer.name.split(' ')[0]}`);
+      setPaidMethod(`Credit · ${attachedCustomer.name.split(' ')[0]}`);
       setQuotedDue(null);
+      setCreditAmountReceived('');
       setPaid(true);
       if (tableId) resetTable(tableId);
       return;
@@ -1138,7 +1161,7 @@ const ReviewScreen = () => {
     </div>
   );
 
-  // ── Customer card (Khatta) ─────────────────────────────────────
+  // ── Customer card (Credit) ─────────────────────────────────────
   const getCustomerCard = () => {
     if (!attachedCustomer) return null;
     return (
@@ -1152,29 +1175,35 @@ const ReviewScreen = () => {
         {/* Customer header */}
         <div className="flex items-center gap-2.5 mb-2.5">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
-            style={{ background: 'rgba(59,130,246,0.18)', color: 'rgba(147,197,253,0.9)' }}
+            className="w-9 h-9 rounded-full flex items-center justify-center font-black text-base flex-shrink-0"
+            style={{ background: 'rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.95)' }}
           >
             {attachedCustomer.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white truncate">{attachedCustomer.name}</p>
+            <p className="text-sm font-black text-white truncate">{attachedCustomer.name}</p>
             <p className="text-[11px]" style={{ color: 'rgba(148,163,184,0.65)' }}>
               {attachedCustomer.phone || 'No phone'}
             </p>
           </div>
-          <span
-            className="flex-shrink-0 text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(59,130,246,0.12)', color: 'rgba(147,197,253,0.8)', border: '1px solid rgba(59,130,246,0.2)' }}
-          >
-            Khatta
-          </span>
+          {/* Live credit balance — prominently shown */}
+          <div className="flex-shrink-0 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(148,163,184,0.55)' }}>
+              Credit Balance
+            </p>
+            <p
+              className="text-base font-black tabular-nums leading-tight"
+              style={{ color: outstandingDue > 0 ? '#f87171' : '#34d399' }}
+            >
+              {outstandingDue > 0 ? `Rs. ${fmt(outstandingDue)}` : '✓ Clear'}
+            </p>
+          </div>
         </div>
 
-        {/* Previous due + include checkbox — settling requires permission */}
+        {/* Merge Past Credit checkbox — settling requires permission */}
         {outstandingDue > 0 && !canIncludePrevDue && (
           <p className="text-xs font-medium" style={{ color: 'rgba(251,191,36,0.75)' }}>
-            Rs. {fmt(outstandingDue)} outstanding
+            Rs. {fmt(outstandingDue)} outstanding credit
             {!canSettleDues
               ? ' — you do not have permission to settle dues'
               : isSplitMode
@@ -1196,10 +1225,10 @@ const ReviewScreen = () => {
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold" style={{ color: 'rgba(251,191,36,0.9)' }}>
-                Include Previous Due
+                Merge Past Credit (+ Rs. {fmt(outstandingDue)})
               </p>
               <p className="text-[11px]" style={{ color: 'rgba(251,191,36,0.6)' }}>
-                + Rs. {fmt(outstandingDue)} outstanding
+                Collect full balance now in one payment
               </p>
             </div>
             {includePrevDue && (
@@ -1215,12 +1244,12 @@ const ReviewScreen = () => {
         )}
         {outstandingDue === 0 && (
           <p className="text-xs font-medium" style={{ color: 'rgba(52,211,153,0.7)' }}>
-            ✓ No outstanding due — account is clear
+            ✓ No outstanding credit — account is clear
           </p>
         )}
         {includePrevDue && (
           <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.45)' }} data-testid="text-khatta-unavailable">
-            Pay Later is unavailable while settling a previous due — the due has to be collected now.
+            Credit booking is unavailable while merging past credit — collect the full amount now.
           </p>
         )}
         {quotedDueStale && <div className="mt-2">{staleAmountNotice}</div>}
@@ -1277,32 +1306,49 @@ const ReviewScreen = () => {
           </div>
         </button>
 
-        {/* Khatta (Pay Later) — only when customer attached */}
+        {/* 📝 Credit (Pay Later) — only when customer attached and not merging past credit */}
         {attachedCustomer && !selectedQty.size && !includePrevDue && (
-          <button
-            onClick={() => handleConfirmPayment('khatta')}
-            data-testid="button-payment-method-khatta"
-            disabled={confirming || quotedDueStale}
-            className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
-            style={{
-              background: 'rgba(251,191,36,0.08)',
-              border: '1px solid rgba(251,191,36,0.28)',
-              boxShadow: '0 2px 12px -4px rgba(251,191,36,0.15)',
-            }}
-          >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => handleConfirmPayment('khatta')}
+              data-testid="button-payment-method-khatta"
+              disabled={confirming || quotedDueStale}
+              className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
+              style={{
+                background: 'rgba(251,191,36,0.08)',
+                border: '1px solid rgba(251,191,36,0.28)',
+                boxShadow: '0 2px 12px -4px rgba(251,191,36,0.15)',
+              }}
             >
-              <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
-            </div>
-            <div className="text-left min-w-0">
-              <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Khatta</p>
-              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                {attachedCustomer.name.split(' ')[0]}
-              </p>
-            </div>
-          </button>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}
+              >
+                <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>📝 Credit</p>
+                <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                  {attachedCustomer.name.split(' ')[0]}
+                </p>
+              </div>
+            </button>
+            {/* Option D — partial cash received alongside Credit booking */}
+            {outstandingDue > 0 && (
+              <input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                placeholder={`Cash received (max Rs. ${fmt(outstandingDue + bill.total)})`}
+                value={creditAmountReceived}
+                onChange={(e) => setCreditAmountReceived(e.target.value)}
+                className="w-full rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
+              />
+            )}
+          </div>
         )}
 
         {/* Digital wallets */}
@@ -1491,30 +1537,46 @@ const ReviewScreen = () => {
                         </div>
                       </button>
 
-                      {/* Khatta (Pay Later) — landscape inline, only if customer attached */}
+                      {/* 📝 Credit (Pay Later) — landscape inline, only if customer attached */}
                       {attachedCustomer && !selectedQty.size && !includePrevDue && (
-                        <button
-                          onClick={() => handleConfirmPayment('khatta')}
-                          data-testid="button-payment-method-khatta"
-                          disabled={confirming || quotedDueStale}
-                          className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
-                          style={{
-                            background: 'rgba(251,191,36,0.08)',
-                            border: '1px solid rgba(251,191,36,0.28)',
-                            boxShadow: '0 2px 10px -4px rgba(251,191,36,0.15)',
-                          }}
-                        >
-                          <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
-                            style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}>
-                            <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
-                          </div>
-                          <div className="text-left min-w-0">
-                            <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Khatta</p>
-                            <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                              {attachedCustomer.name.split(' ')[0]}
-                            </p>
-                          </div>
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleConfirmPayment('khatta')}
+                            data-testid="button-payment-method-khatta"
+                            disabled={confirming || quotedDueStale}
+                            className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
+                            style={{
+                              background: 'rgba(251,191,36,0.08)',
+                              border: '1px solid rgba(251,191,36,0.28)',
+                              boxShadow: '0 2px 10px -4px rgba(251,191,36,0.15)',
+                            }}
+                          >
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                              style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}>
+                              <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+                            </div>
+                            <div className="text-left min-w-0">
+                              <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>📝 Credit</p>
+                              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                {attachedCustomer.name.split(' ')[0]}
+                              </p>
+                            </div>
+                          </button>
+                          {outstandingDue > 0 && (
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="decimal"
+                              placeholder="Cash received (optional)"
+                              value={creditAmountReceived}
+                              onChange={(e) => setCreditAmountReceived(e.target.value)}
+                              className="w-full rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none"
+                              style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
+                            />
+                          )}
+                        </div>
                       )}
 
                       {/* Digital wallets */}
@@ -1979,6 +2041,50 @@ const ReviewScreen = () => {
                               <p className="text-[10px] font-medium mt-0.5" style={{ color: 'rgba(52,211,153,0.75)' }}>Tap to pay</p>
                             </div>
                           </button>
+
+                          {/* 📝 Credit (Pay Later) — tablet inline */}
+                          {attachedCustomer && !selectedQty.size && !includePrevDue && (() => {
+                            const creditColor = 'hsl(32 90% 68%)';
+                            return (
+                              <div className="flex flex-col gap-1.5">
+                                <button
+                                  onClick={() => handleConfirmPayment('khatta')}
+                                  data-testid="button-payment-method-khatta"
+                                  disabled={confirming || quotedDueStale}
+                                  className="pos-pay-card flex items-center gap-[10px] rounded-[14px] disabled:opacity-40"
+                                  style={{
+                                    minHeight: 66,
+                                    padding: '12px 14px',
+                                    background: 'linear-gradient(145deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))',
+                                    border: '1px solid rgba(251,191,36,0.3)',
+                                    boxShadow: '0 2px 14px rgba(251,191,36,0.15), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07)',
+                                  }}
+                                >
+                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(251,191,36,0.18)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <BookMarked size={20} style={{ color: creditColor }} />
+                                  </div>
+                                  <div className="text-left min-w-0">
+                                    <p className="text-[14px] font-bold leading-tight" style={{ color: creditColor }}>📝 Credit</p>
+                                    <p className="text-[10px] font-medium mt-0.5 truncate" style={{ color: 'rgba(251,191,36,0.6)' }}>{attachedCustomer.name.split(' ')[0]}</p>
+                                  </div>
+                                </button>
+                                {outstandingDue > 0 && (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    inputMode="decimal"
+                                    placeholder="Cash received alongside credit (optional)"
+                                    value={creditAmountReceived}
+                                    onChange={(e) => setCreditAmountReceived(e.target.value)}
+                                    className="w-full rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                                    style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
+                                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* Digital wallets */}
                           {qrMethods.map(({ id, label }) => {

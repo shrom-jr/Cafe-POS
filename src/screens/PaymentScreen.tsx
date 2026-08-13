@@ -42,6 +42,7 @@ const PaymentScreen = () => {
 
   const table = tables.find((t) => t.id === tableId);
   const order = tableId ? getActiveOrder(tableId) : undefined;
+  const attachedCustomer = order?.attachedCustomer ?? null;
 
   const orderSnapshot = useRef<{ id: string; items: OrderItem[]; tableNumber: string; takenBy?: { id: string; name: string; role: string } } | null>(null);
   useEffect(() => {
@@ -327,6 +328,40 @@ const PaymentScreen = () => {
             )}
           </div>
         </div>
+
+        {/* Attached Customer Card — prominent credit balance display */}
+        {attachedCustomer && (
+          <div
+            className="rounded-2xl px-4 py-3"
+            style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.22)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center font-black text-base flex-shrink-0"
+                style={{ background: 'rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.95)' }}
+              >
+                {attachedCustomer.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-white truncate">{attachedCustomer.name}</p>
+                <p className="text-[11px]" style={{ color: 'rgba(148,163,184,0.65)' }}>
+                  {attachedCustomer.phone || 'No phone'}
+                </p>
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'rgba(148,163,184,0.5)' }}>
+                  Credit Balance
+                </p>
+                <p
+                  className="text-base font-black tabular-nums leading-tight"
+                  style={{ color: attachedCustomer.currentDue > 0 ? '#f87171' : '#34d399' }}
+                >
+                  {attachedCustomer.currentDue > 0 ? `Rs. ${attachedCustomer.currentDue}` : '✓ Clear'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Payment methods */}
         <div className="space-y-2.5">
