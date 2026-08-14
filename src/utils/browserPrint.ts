@@ -184,7 +184,32 @@ ${bodyHTML}
 </html>`;
 }
 
+/**
+ * Deliver an HTML receipt string to the appropriate print path:
+ *
+ *   Electron desktop app → window.electronAPI.printSilent()
+ *     The Electron main process opens a hidden off-screen BrowserWindow,
+ *     loads the HTML, and calls webContents.print({ silent: true }) —
+ *     zero dialogs, zero previews, direct to the Windows default printer.
+ *
+ *   Web / mobile browsers → hidden iframe + window.print()
+ *     Opens the OS print dialog pre-styled for 80mm thermal paper.
+ *     The caller (System/Browser Print mode) has already explained to the
+ *     user that a dialog will appear.
+ */
 function fireBrowserPrint(html: string): Promise<boolean> {
+  // ── Electron path ──────────────────────────────────────────────────────────
+  if (typeof window !== 'undefined' && window.electronAPI?.printSilent) {
+    try {
+      window.electronAPI.printSilent(html);
+      return Promise.resolve(true);
+    } catch (err) {
+      console.warn('[browserPrint] electronAPI.printSilent threw:', err);
+      return Promise.resolve(false);
+    }
+  }
+
+  // ── Web / mobile path (iframe + window.print) ──────────────────────────────
   return new Promise((resolve) => {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('aria-hidden', 'true');

@@ -1,0 +1,45 @@
+{
+  "name": "sbamboo-pos-desktop",
+  "version": "1.0.0",
+  "description": "S Bamboo Cottage POS — Windows Desktop App (Electron wrapper)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis",
+    "build:dir": "electron-builder --dir",
+    "build:all": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.sbamboocottage.pos",
+    "productName": "S Bamboo Cottage POS",
+    "copyright": "Copyright © 2024 S Bamboo Cottage & Sekuwa Corner",
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**/*"
+    ],
+    "extraResources": [],
+    "directories": {
+      "output": "../dist-electron"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon-512.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "S Bamboo Cottage POS",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

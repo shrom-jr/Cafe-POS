@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 package-lock.json
+
+# Electron desktop build output
+dist-electron/
+electron/node_modules/
+electron/out/

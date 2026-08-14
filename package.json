@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:electron": "cd electron && npm install && npm run build",
+    "electron:start": "cd electron && npm install && npm start"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
