@@ -461,12 +461,12 @@ function twoColTotals(label: string, value: string): number[][] {
  * browser-accessible WebSocket relay.  The relay listens on ws://ip:port/ws
  * and proxies raw bytes to the TCP socket.
  *
- * If no relay is reachable the function falls back gracefully (no throw).
- * For now the implementation is a no-op stub — real relay integration
- * requires a sidecar service (e.g. node-escpos-server) running on the LAN.
+ * If no relay is reachable the function falls back gracefully (no throw and
+ * no browser print dialog). Real relay integration requires a sidecar service
+ * (e.g. node-escpos-server) running on the LAN.
  *
- * The hook usePrintQueue calls this for KOT/BOT/VOID tickets when the
- * autoPrint listener is enabled on this terminal.
+ * The hook usePrintQueue calls this for KOT/BOT/VOID tickets when this browser
+ * is the designated auto-print hub.
  */
 export async function sendToNetworkPrinter(
   buffer: Uint8Array,

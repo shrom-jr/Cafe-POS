@@ -26,7 +26,6 @@ import {
   buildVoidTicket,
   sendToNetworkPrinter,
 } from '@/utils/escpos';
-import { firePrintJob } from '@/utils/printEngine';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
 
@@ -40,8 +39,16 @@ export function usePrintQueue() {
   const settings  = usePOSStore((s) => s.settings);
   const setOrders = usePOSStore((s) => s.setOrders);
 
-  // Reactively track the localStorage flag so toggling the setting in the same
-  // browser session activates/deactivates the listener without a page reload.
+  // Tickets created before this hook's session started are historical backlog
+  // and must never be sent to a printer after a refresh.
+  const sessionStartTime = useRef(Date.now());
+
+  // This lock covers both successful and failed attempts. A failed hardware
+  // dispatch must not repeatedly retry or open anything in the background.
+  const processedTicketIds = useRef(new Set<string>());
+
+  // Reactively track the localStorage flag so another tab can activate or
+  // deactivate the listener without a page reload.
   const [isHub, setIsHub] = useState(isPrintHub);
 
   useEffect(() => {
@@ -52,28 +59,55 @@ export function usePrintQueue() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Track which ticket ids have already been dispatched this session so
-  // rapid Zustand re-renders don't double-fire while the async send is in
-  // flight (before the 'printed' write comes back from Firebase).
-  const dispatched = useRef(new Set<string>());
-
   useEffect(() => {
+    const tables = usePOSStore.getState().tables;
+    let cleanedHistoricalTickets = false;
+
+    // Mark legacy pending tickets as printed in the persisted order data.
+    // This cleanup also runs on non-hub devices so a refresh cannot leave an
+    // old pending backlog waiting for a future hub session.
+    const cleanedOrders = orders.map((order) => {
+      if (!order.tickets?.some(
+        (ticket) => ticket.status === 'pending' && !isCurrentSessionTicket(ticket),
+      )) {
+        return order;
+      }
+
+      cleanedHistoricalTickets = true;
+      return {
+        ...order,
+        tickets: order.tickets.map((ticket) =>
+          ticket.status === 'pending' && !isCurrentSessionTicket(ticket)
+            ? { ...ticket, status: 'printed' as const }
+            : ticket,
+        ),
+      };
+    });
+
+    if (cleanedHistoricalTickets) {
+      setOrders(cleanedOrders);
+    }
+
     if (!isHub) return;
 
-    const tables = usePOSStore.getState().tables;
-
-    for (const order of orders) {
+    for (const order of cleanedOrders) {
       if (!order.tickets) continue;
 
       const pax = tables.find((t) => t.id === order.tableId)?.pax ?? 1;
 
       for (const ticket of order.tickets) {
         if (ticket.status === 'printed') continue;
-        if (dispatched.current.has(ticket.id)) continue;
+        if (!isCurrentSessionTicket(ticket)) continue;
+        if (processedTicketIds.current.has(ticket.id)) continue;
 
-        dispatched.current.add(ticket.id);
+        processedTicketIds.current.add(ticket.id);
         void dispatchTicket(ticket, pax);
       }
+    }
+
+    function isCurrentSessionTicket(ticket: Ticket): boolean {
+      const createdAt = Date.parse(ticket.createdAt);
+      return Number.isFinite(createdAt) && createdAt > sessionStartTime.current;
     }
 
     async function dispatchTicket(ticket: Ticket, pax: number) {
@@ -107,29 +141,12 @@ export function usePrintQueue() {
       }
 
       if (!success) {
-        // Browser fallback: dispatch via the existing iframe print engine so
-        // the ticket still comes out of the locally-installed printer.
-        const headerName =
-          ticket.ticketType === 'BOT'      ? `${cafeName} — BAR/BOT` :
-          ticket.ticketType === 'VOID_KOT' ? `${cafeName} — ** VOID KOT **` :
-          ticket.ticketType === 'VOID_BOT' ? `${cafeName} — ** VOID BOT **` :
-          cafeName;
-        firePrintJob({
-          type: 'KITCHEN_KOT',
-          data: {
-            cafeName:    headerName,
-            tableNumber: ticket.tableName,
-            pax,
-            kotNumber:   ticket.ticketNumber,
-            timestamp:   new Date(ticket.createdAt).getTime(),
-            items:       ticket.items.map((i) => ({
-              name: ticket.voidReason ? `${i.name} (VOID: ${ticket.voidReason})` : i.name,
-              quantity: i.quantity,
-            })),
-            serverName:  ticket.serverName,
-          },
-        });
-        success = true;
+        // Hardware failures are deliberately silent to the user. The ticket
+        // stays pending for visibility, while processedTicketIds prevents a
+        // retry loop during this browser session.
+        console.warn(
+          `[print-queue] Could not dispatch ${ticket.ticketType} #${ticket.ticketNumber}; no browser print fallback was attempted.`,
+        );
       }
 
       if (success) {
