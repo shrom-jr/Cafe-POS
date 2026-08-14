@@ -65,6 +65,20 @@ const CustomersPortal = () => {
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [ledgerTarget, setLedgerTarget] = useState<Customer | null>(null);
 
+  const enteredCollectAmount = Number(collectAmount);
+  const collectAmountExceedsDue = !!collectTarget
+    && collectAmount.trim() !== ''
+    && Number.isFinite(enteredCollectAmount)
+    && enteredCollectAmount > collectTarget.currentDue;
+  const collectAmountValid = !!collectTarget
+    && collectAmount.trim() !== ''
+    && Number.isFinite(enteredCollectAmount)
+    && enteredCollectAmount > 0
+    && enteredCollectAmount <= collectTarget.currentDue;
+  const visibleCollectError = collectAmountExceedsDue
+    ? `Amount cannot exceed current due of Rs. ${fmt(collectTarget.currentDue)}`
+    : collectError;
+
   // ── register helpers ────────────────────────────────────────────────────────
   const handleRegister = () => {
     if (!registerName.trim()) { setRegisterError('Name is required.'); return; }
@@ -96,6 +110,14 @@ const CustomersPortal = () => {
   };
   const handleCollect = () => {
     if (!collectTarget) return;
+    if (!collectAmountValid) {
+      setCollectError(
+        collectAmountExceedsDue
+          ? `Amount cannot exceed current due of Rs. ${fmt(collectTarget.currentDue)}`
+          : 'Enter a valid amount greater than zero.',
+      );
+      return;
+    }
     const processedBy = currentUser
       ? { id: currentUser.id, name: currentUser.name ?? currentUser.email ?? '', role: currentUser.role }
       : undefined;
@@ -344,7 +366,17 @@ const CustomersPortal = () => {
               <p className="text-2xl font-black text-red-400 mt-0.5">Rs. {fmt(collectTarget.currentDue)}</p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount Received (Rs.)</label>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-xs font-semibold text-slate-400">Amount Received (Rs.)</label>
+                <button
+                  type="button"
+                  onClick={() => { setCollectAmount(String(collectTarget.currentDue)); setCollectError(''); }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-black text-amber-200 transition-all active:scale-95 hover:bg-amber-400/20"
+                  style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }}
+                >
+                  ⚡ Pay Full: Rs. {fmt(collectTarget.currentDue)}
+                </button>
+              </div>
               <input
                 type="number"
                 min="0"
@@ -356,6 +388,14 @@ const CustomersPortal = () => {
                 autoFocus
                 onKeyDown={(e) => e.key === 'Enter' && handleCollect()}
               />
+              {collectAmount.trim() !== '' && Number.isFinite(enteredCollectAmount) && enteredCollectAmount >= 0 && enteredCollectAmount < collectTarget.currentDue && (
+                <p className="text-xs text-slate-400 mt-1.5">
+                  Remaining balance after payment: <span className="font-bold text-white">Rs. {fmt(collectTarget.currentDue - enteredCollectAmount)}</span>
+                </p>
+              )}
+              {collectAmount.trim() !== '' && Number.isFinite(enteredCollectAmount) && enteredCollectAmount === collectTarget.currentDue && (
+                <p className="text-xs font-bold text-emerald-400 mt-1.5">Balance will be: ✓ Clear</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method</label>
@@ -376,12 +416,13 @@ const CustomersPortal = () => {
                 ))}
               </div>
             </div>
-            {collectError && (
-              <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle size={12} />{collectError}</p>
+            {visibleCollectError && (
+              <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle size={12} />{visibleCollectError}</p>
             )}
             <button
               onClick={handleCollect}
-              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
+              disabled={!collectAmountValid}
+              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: '0 4px 14px -4px rgba(16,185,129,0.4)' }}
             >
               Confirm Collection
