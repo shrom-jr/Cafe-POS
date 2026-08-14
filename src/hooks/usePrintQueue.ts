@@ -24,8 +24,9 @@ import {
   buildKOT,
   buildBOT,
   buildVoidTicket,
-  sendToNetworkPrinter,
+  dispatchEscpos,
 } from '@/utils/escpos';
+import { autoReconnectUSB } from '@/utils/webusbPrinter';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
 
@@ -58,6 +59,12 @@ export function usePrintQueue() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // On the hub device, silently re-attach an already-paired WebUSB printer so
+  // direct-cable printing works right after a page refresh (no prompt).
+  useEffect(() => {
+    if (isHub) void autoReconnectUSB();
+  }, [isHub]);
 
   useEffect(() => {
     const tables = usePOSStore.getState().tables;
@@ -114,11 +121,7 @@ export function usePrintQueue() {
       const cafeName = settings.cafeName || 'Cafe';
 
       const isKitchenTicket = ticket.ticketType === 'KOT' || ticket.ticketType === 'VOID_KOT';
-      const printerIp   = isKitchenTicket ? settings.kitchenPrinterIp   : settings.receptionPrinterIp;
-      const printerPort = isKitchenTicket ? (settings.kitchenPrinterPort ?? 9100) : (settings.receptionPrinterPort ?? 9100);
-      const useNetwork  = isKitchenTicket
-        ? Boolean(printerIp)
-        : (settings.receptionPrinterMode === 'network' && Boolean(printerIp));
+      const target = isKitchenTicket ? 'kitchen' : 'reception';
 
       // Build the ESC/POS buffer
       let buffer: Uint8Array | null = null;
@@ -133,12 +136,9 @@ export function usePrintQueue() {
 
       if (!buffer) return;
 
-      let success = false;
-
-      if (useNetwork && printerIp) {
-        const result = await sendToNetworkPrinter(buffer, printerIp, printerPort);
-        success = result === 'ok';
-      }
+      // dispatchEscpos routes to WebUSB or network per settings and is fully
+      // silent on failure (console warning only — no dialogs, no window.print).
+      const success = await dispatchEscpos(buffer, settings, target);
 
       if (!success) {
         // Hardware failures are deliberately silent to the user. The ticket

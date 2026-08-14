@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { firePrintJob, type PrintJob } from '@/utils/printEngine';
+import { type PrintJob } from '@/utils/printEngine';
+import { fireSilentPrintJob } from '@/utils/silentPrint';
 import { getStaffName } from '@/utils/staffName';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
@@ -190,7 +191,7 @@ const PaymentScreen = () => {
     };
     lastPrintJobRef.current = printJob;
     console.log('PRINT STAFF DATA:', { takenBy: resolvedTakenBy, processedBy: resolvedProcessedBy, liveUser });
-    firePrintJob(printJob);
+    void fireSilentPrintJob(printJob);
   };
 
   // Receipt dispatched via firePrintJob — no DOM portal needed
@@ -204,7 +205,7 @@ const PaymentScreen = () => {
     const handleReprint = () => {
       if (reprinting) return;
       setReprinting(true);
-      if (lastPrintJobRef.current) firePrintJob(lastPrintJobRef.current);
+      if (lastPrintJobRef.current) void fireSilentPrintJob(lastPrintJobRef.current);
       setTimeout(() => setReprinting(false), 1800);
     };
 

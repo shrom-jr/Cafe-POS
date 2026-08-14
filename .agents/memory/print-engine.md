@@ -1,20 +1,21 @@
 ---
 name: Print Engine Architecture
-description: How the three print job types work and why the old polling approach was replaced
+description: Silent dual-mode ESC/POS printing (WebUSB + network); firePrintJob iframe pipeline is legacy
 ---
 
 ## Rule
-All receipt printing goes through `firePrintJob(job: PrintJob)` in `src/utils/printEngine.ts`. Three job types:
-- `KITCHEN_KOT` — fired by OrderScreen on "Send to Kitchen"; no financial data
-- `PRE_BILL` — fired by ReviewScreen "Print Pre-Bill" button; watermarked pre-bill
-- `TAX_INVOICE` — fired by ReviewScreen + PaymentScreen on payment confirmation; official receipt
+All production printing is silent raw ESC/POS — no window.print(), alert, or iframe dialogs anywhere in the hardware path.
 
-Callers store the job in a `useRef<PrintJob | null>` for reprint support.
+- Screens still build structured `PrintJob` objects (KITCHEN_KOT / PRE_BILL / TAX_INVOICE from `printEngine.ts` types) but dispatch them through `fireSilentPrintJob()` in `src/utils/silentPrint.ts`, which converts to ESC/POS bytes and routes via `dispatchEscpos()` in `src/utils/escpos.ts`.
+- `dispatchEscpos(buffer, settings, 'kitchen' | 'reception')` routes per configured mode: `'webusb'` → `sendRawToUSB()` (native navigator.usb driver in `src/utils/webusbPrinter.ts`), `'network'` → WebSocket relay to IP:port. Unconfigured/offline = console.warn only, resolves false.
+- Kitchen mode: `settings.kitchenPrinterMode` ('webusb'|'network', default network). Reception: `settings.receptionPrinterMode` — legacy 'browser'/'usb' values are treated as 'webusb'.
+- WebUSB pairing is a one-time user gesture (`pairUSBPrinter`); `autoReconnectUSB()` silently re-attaches on mount (called by usePrintQueue on the hub device and by the printer settings panel).
+- Background KOT/BOT/VOID queue (`usePrintQueue`) runs only on the device where localStorage `pos_is_print_hub === 'true'`; it also uses `dispatchEscpos`.
 
-**Why:** The old system used a DOM portal (`ThermalReceiptLayout`) + `setReceiptText()` module-level state + a polling loop (`isReceiptTextReady()`) before calling `triggerPrint()`. This was fragile (race on portal render) and couldn't support kitchen tickets or pre-bills without a full parallel portal system.
+**Why:** Waiter phones and the cashier hub must never pop a browser print dialog; the Pantum PD-80BW works over direct USB cable (WebUSB) or Wi-Fi (port 9100).
 
 **How to apply:**
-- `ThermalReceiptLayout` still exists and is used by AdminPanel's ReceiptPreview (visual preview only, not printing). Do NOT remove it.
-- `src/utils/print.ts` (`triggerPrint`, `setReceiptText`, `isReceiptTextReady`) still exists because `ThermalReceiptLayout` calls `setReceiptText` in its useEffect. Do NOT call `triggerPrint` from screen components — use `firePrintJob` instead.
-- Print Bill buttons carry `data-testid="button-print-pre-bill"` in all three layout branches (mobile/landscape/tablet) in ReviewScreen.
+- `firePrintJob()` / `openPrintIframe()` in `printEngine.ts` still exist but are LEGACY — no screen should call them. Its HTML builders and PrintJob types are still used for typing and by tests.
+- `ThermalReceiptLayout` + `src/utils/print.ts` remain only for AdminPanel ReceiptPreview (visual preview). Do NOT remove.
+- Callers keep the last job in a `useRef<PrintJob | null>` for reprint; reprint also goes through `fireSilentPrintJob`.
 - KOT snapshot must be taken BEFORE calling `sendToKitchen(order.id)` — the store marks items as sent immediately.

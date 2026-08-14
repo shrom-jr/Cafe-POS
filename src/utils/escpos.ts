@@ -15,7 +15,8 @@
  * 80mm paper = 48 characters wide in monospace at normal density.
  */
 
-import { Ticket } from '@/types/pos';
+import { Settings, Ticket } from '@/types/pos';
+import { sendRawToUSB, getUSBConnectionStatus } from '@/utils/webusbPrinter';
 
 // ── ESC/POS command constants ─────────────────────────────────────────────────
 
@@ -468,6 +469,63 @@ function twoColTotals(label: string, value: string): number[][] {
  * The hook usePrintQueue calls this for KOT/BOT/VOID tickets when this browser
  * is the designated auto-print hub.
  */
+/**
+ * Unified silent print dispatcher.
+ *
+ * Routes a raw ESC/POS buffer to the configured printer for the given target:
+ *   'kitchen'   — kitchenPrinterMode:  'webusb' | 'network'
+ *   'reception' — receptionPrinterMode: 'webusb' | 'network'
+ *                 (legacy 'browser' / 'usb' values are treated as 'webusb')
+ *
+ * If unconfigured or the hardware is unreachable it logs a console warning and
+ * resolves false — it NEVER opens window.print(), an alert, or any dialog.
+ */
+export type PrinterTarget = 'kitchen' | 'reception';
+
+export function resolvePrinterMode(
+  settings: Settings,
+  target: PrinterTarget,
+): 'webusb' | 'network' {
+  if (target === 'kitchen') {
+    if (settings.kitchenPrinterMode === 'webusb') return 'webusb';
+    return 'network';
+  }
+  return settings.receptionPrinterMode === 'network' ? 'network' : 'webusb';
+}
+
+export async function dispatchEscpos(
+  buffer: Uint8Array,
+  settings: Settings,
+  target: PrinterTarget,
+): Promise<boolean> {
+  const mode = resolvePrinterMode(settings, target);
+
+  if (mode === 'webusb') {
+    if (!getUSBConnectionStatus()) {
+      console.warn(`[escpos] ${target} printer is in WebUSB mode but no USB printer is paired/connected — job skipped silently.`);
+      return false;
+    }
+    const ok = await sendRawToUSB(buffer);
+    if (!ok) {
+      console.warn(`[escpos] WebUSB dispatch to ${target} printer failed — job skipped silently.`);
+    }
+    return ok;
+  }
+
+  // network mode
+  const ip = target === 'kitchen' ? settings.kitchenPrinterIp : settings.receptionPrinterIp;
+  const port = (target === 'kitchen' ? settings.kitchenPrinterPort : settings.receptionPrinterPort) ?? 9100;
+  if (!ip) {
+    console.warn(`[escpos] ${target} printer is in network mode but no IP is configured — job skipped silently.`);
+    return false;
+  }
+  const result = await sendToNetworkPrinter(buffer, ip, port);
+  if (result !== 'ok') {
+    console.warn(`[escpos] Network dispatch to ${target} printer at ${ip}:${port} failed — job skipped silently.`);
+  }
+  return result === 'ok';
+}
+
 export async function sendToNetworkPrinter(
   buffer: Uint8Array,
   ip: string,

@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { firePrintJob, type PrintJob } from '@/utils/printEngine';
+import { type PrintJob } from '@/utils/printEngine';
+import { fireSilentPrintJob } from '@/utils/silentPrint';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -232,9 +233,9 @@ const ReviewScreen = () => {
     setActivePreset(mode === 'percent' ? 0 : null);
   };
 
-  // Trigger B: Print Pre-Bill (PRE_BILL layout) ─────────────────
+  // Trigger B: Print Pre-Bill (PRE_BILL layout) — silent ESC/POS dispatch ──
   const handlePrintPreBill = () => {
-    firePrintJob({
+    void fireSilentPrintJob({
       type: 'PRE_BILL',
       data: {
         cafeName:       settings.cafeName,
@@ -427,7 +428,7 @@ const ReviewScreen = () => {
       confirmingRef.current = false;
       setPaid(true);
       if (tableId) resetTable(tableId);
-      firePrintJob(creditTaxJob);
+      void fireSilentPrintJob(creditTaxJob);
       return;
     }
 
@@ -617,7 +618,7 @@ const ReviewScreen = () => {
       setQuotedDue(null);
       setPaid(true);
       if (tableId) resetTable(tableId);
-      if (payItems.length > 0) firePrintJob(taxJob);
+      if (payItems.length > 0) void fireSilentPrintJob(taxJob);
       if (settledAmount > 0) {
         setSettledDue(settledAmount);
         toast.success(`Rs. ${fmt(settledAmount)} previous due settled for ${attachedCustomer?.name ?? 'customer'}.`);
@@ -627,7 +628,7 @@ const ReviewScreen = () => {
       confirmingRef.current = false;
       setConfirming(false);
       setPartialSuccess(true);
-      if (payItems.length > 0) firePrintJob(taxJob);
+      if (payItems.length > 0) void fireSilentPrintJob(taxJob);
       setTimeout(() => setPartialSuccess(false), 2500);
     }
   };
@@ -660,7 +661,7 @@ const ReviewScreen = () => {
     const handleReprint = () => {
       if (reprinting) return;
       setReprinting(true);
-      if (lastPrintJobRef.current) firePrintJob(lastPrintJobRef.current);
+      if (lastPrintJobRef.current) void fireSilentPrintJob(lastPrintJobRef.current);
       setTimeout(() => setReprinting(false), 1800);
     };
 

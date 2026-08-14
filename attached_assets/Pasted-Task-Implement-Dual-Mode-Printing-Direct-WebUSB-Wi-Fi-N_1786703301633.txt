@@ -1,0 +1,42 @@
+Task: Implement Dual-Mode Printing (Direct WebUSB + Wi-Fi/Network IP ESC/POS) for Pantum PD-80BW with Zero Window.Print Popups
+
+TARGET FILES:
+- src/types/pos.ts
+- src/utils/webusbPrinter.ts (Create new native WebUSB driver)
+- src/utils/escpos.ts
+- src/hooks/usePrintQueue.ts
+- src/components/settings/PrinterSettingsModal.tsx
+- src/screens/OrderScreen.tsx & src/components/orders/OrderPanel.tsx
+
+REQUIREMENTS & IMPLEMENTATION:
+
+1. NATIVE WEBUSB DRIVER (src/utils/webusbPrinter.ts):
+   - Implement direct USB communication using the browser's native navigator.usb API:
+     * autoReconnectUSB(): On app mount, check navigator.usb.getDevices() to automatically re-attach to an already-paired Pantum printer without prompting the user.
+     * pairUSBPrinter(): Triggered by user click: calls navigator.usb.requestDevice({ filters: [] }) to prompt the browser's device selector, claims the printer interface, and caches the active USB device.
+     * sendRawToUSB(buffer: Uint8Array): Sends raw ESC/POS binary data directly to the device's bulk OUT endpoint.
+     * getUSBConnectionStatus(): Returns boolean indicating if a printer is actively claimed and ready.
+
+2. HYBRID PRINTER SETTINGS UI (src/components/settings/PrinterSettingsModal.tsx):
+   - For BOTH Kitchen and Reception/Bar printers, provide a clean Connection Mode toggle:
+     * Mode A: "WebUSB (Direct Cable)"
+       - Shows current status badge: 🟢 "Pantum PD-80BW Connected" or ⚪ "Not Paired".
+       - Shows "🔌 Pair USB Printer" button.
+     * Mode B: "Wi-Fi / Network IP"
+       - Shows Wi-Fi IP Address (e.g., 192.168.1.200) and Port (9100).
+   - Add a working "Test Print" button for each printer that dispatches a test ticket using its active mode.
+   - Keep the "Enable Auto-Print on this device" toggle stored in localStorage ('pos_is_print_hub').
+
+3. UNIFIED SILENT PRINT DISPATCHER (src/utils/escpos.ts & src/hooks/usePrintQueue.ts):
+   - When printing KOTs, BOTs, Pre-Bills, or Invoices:
+     * If configured mode is 'webusb': Dispatch raw ESC/POS binary bytes via sendRawToUSB().
+     * If configured mode is 'network': Dispatch raw ESC/POS binary bytes to the configured IP/Port.
+     * If unconfigured or offline: Log a silent warning to console—DO NOT EVER trigger window.print() or alert dialogs.
+
+4. MANUAL BILL PRINT BUTTON:
+   - Wire the "Print Pre-Bill" and final payment invoice actions to use the silent ESC/POS WebUSB/Network dispatcher directly.
+
+STRICT EXECUTION LIMITS:
+- Do NOT alter dev ports or run test suites.
+- Apply all changes in ONE focused pass.
+- Run 'npm run build' ONCE to verify zero TypeScript errors, then STOP immediately.
