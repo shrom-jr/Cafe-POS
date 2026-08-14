@@ -48,6 +48,8 @@ interface USBDevice {
   close(): Promise<void>;
   selectConfiguration(configurationValue: number): Promise<void>;
   claimInterface(interfaceNumber: number): Promise<void>;
+  releaseInterface?(interfaceNumber: number): Promise<void>;
+  selectAlternateInterface?(interfaceNumber: number, alternateSetting: number): Promise<void>;
   transferOut(endpointNumber: number, data: BufferSource): Promise<{ status: string; bytesWritten: number }>;
 }
 
@@ -72,46 +74,122 @@ export function isWebUSBSupported(): boolean {
   return getUSB() !== null;
 }
 
+interface BulkOutCandidate {
+  configurationValue: number;
+  interfaceNumber: number;
+  alternateSetting: number;
+  endpointNumber: number;
+  interfaceClass: number;
+}
+
+function getBulkOutCandidates(config: USBConfiguration): BulkOutCandidate[] {
+  return config.interfaces
+    .flatMap((iface) =>
+      iface.alternates.flatMap((alt) =>
+        alt.endpoints
+          .filter((endpoint) => endpoint.direction === 'out' && endpoint.type === 'bulk')
+          .map((endpoint) => ({
+            configurationValue: config.configurationValue,
+            interfaceNumber: iface.interfaceNumber,
+            alternateSetting: alt.alternateSetting,
+            endpointNumber: endpoint.endpointNumber,
+            interfaceClass: alt.interfaceClass,
+          })),
+      ),
+    )
+    // USB printer class is 7. Vendor-specific printers are retained as
+    // fallbacks because several ESC/POS devices do not advertise class 7.
+    .sort((a, b) => {
+      const classScore = Number(b.interfaceClass === 7) - Number(a.interfaceClass === 7);
+      if (classScore !== 0) return classScore;
+      return a.alternateSetting - b.alternateSetting;
+    });
+}
+
+async function releaseInterfaceQuietly(device: USBDevice, interfaceNumber: number): Promise<void> {
+  try {
+    await device.releaseInterface?.(interfaceNumber);
+  } catch {
+    // The browser may already have released it while changing configuration.
+  }
+}
+
 /**
- * Open the device, select a configuration, claim the printer interface and
- * locate its bulk OUT endpoint. Returns true on success.
+ * Open the device, scan every configuration and every alternate setting, then
+ * claim the first usable interface with a bulk OUT endpoint.
+ *
+ * Windows printers commonly expose a non-zero interface number or put their
+ * printer endpoint behind an alternate setting. Never assume interface 0,
+ * configuration 1, or alternate setting 0. A failed candidate is isolated so
+ * the next configuration/interface can still be tried.
  */
 async function claimDevice(device: USBDevice): Promise<boolean> {
-  try {
-    if (!device.opened) await device.open();
-    if (!device.configuration) {
-      await device.selectConfiguration(device.configurations[0]?.configurationValue ?? 1);
+  if (!device.opened) {
+    try {
+      await device.open();
+    } catch {
+      return false;
     }
-    const config = device.configuration;
-    if (!config) return false;
+  }
 
-    // Prefer the printer class (7); otherwise take the first interface that
-    // exposes a bulk OUT endpoint (some printers report vendor-specific class).
-    let chosenInterface: number | null = null;
-    let chosenEndpoint: number | null = null;
+  const configurations = device.configurations ?? [];
+  if (configurations.length === 0) return false;
 
-    for (const iface of config.interfaces) {
-      for (const alt of iface.alternates) {
-        const out = alt.endpoints.find((e) => e.direction === 'out' && e.type === 'bulk');
-        if (!out) continue;
-        if (alt.interfaceClass === 7 || chosenInterface === null) {
-          chosenInterface = iface.interfaceNumber;
-          chosenEndpoint = out.endpointNumber;
+  for (const configuration of configurations) {
+    try {
+      if (device.configuration?.configurationValue !== configuration.configurationValue) {
+        await device.selectConfiguration(configuration.configurationValue);
+      }
+    } catch {
+      // A configuration may be unavailable while Windows is transitioning the
+      // device. Continue scanning the remaining configurations.
+      continue;
+    }
+
+    const selectedConfiguration = device.configuration;
+    if (!selectedConfiguration) continue;
+
+    const candidates = getBulkOutCandidates(selectedConfiguration);
+    for (const candidate of candidates) {
+      const iface = selectedConfiguration.interfaces.find(
+        (item) => item.interfaceNumber === candidate.interfaceNumber,
+      );
+      if (!iface) continue;
+
+      let claimedHere = false;
+      try {
+        if (!iface.claimed) {
+          await device.claimInterface(candidate.interfaceNumber);
+          claimedHere = true;
         }
-        if (alt.interfaceClass === 7) break;
+
+        // The endpoint descriptor belongs to this alternate setting. It is
+        // not usable until that setting is selected after claiming the iface.
+        if (candidate.alternateSetting !== 0) {
+          if (!device.selectAlternateInterface) {
+            if (claimedHere) await releaseInterfaceQuietly(device, candidate.interfaceNumber);
+            continue;
+          }
+          await device.selectAlternateInterface(
+            candidate.interfaceNumber,
+            candidate.alternateSetting,
+          );
+        }
+
+        activeDevice = device;
+        activeOutEndpoint = candidate.endpointNumber;
+        return true;
+      } catch {
+        // claimInterface/selectAlternateInterface can reject for an occupied
+        // interface. Do not let that abort discovery of the next candidate.
+        if (claimedHere) {
+          await releaseInterfaceQuietly(device, candidate.interfaceNumber);
+        }
       }
     }
-
-    if (chosenInterface === null || chosenEndpoint === null) return false;
-
-    await device.claimInterface(chosenInterface);
-    activeDevice = device;
-    activeOutEndpoint = chosenEndpoint;
-    return true;
-  } catch (err) {
-    console.warn('[webusb] Failed to claim printer interface:', err);
-    return false;
   }
+
+  return false;
 }
 
 /**
