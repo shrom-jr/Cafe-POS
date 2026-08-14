@@ -1,0 +1,57 @@
+Task: Implement Step 3 - KOT & BOT Automatic Split Engine, Category Routing, and Incremental Ticket Generation
+
+TARGET FILES:
+- src/types/pos.ts (or types index)
+- src/store/usePOSStore.ts
+- src/utils/ticketSplitter.ts (Create helper if needed)
+
+ROUTING RULES SPECIFICATION:
+1. KITCHEN DESTINATION (KOT):
+   - All Food categories (Burgers, Sandwiches, Soups, Sizzlers, Chhoila, Chef's Special, Fish, Veg Snacks, Non-Veg Snacks, Platters, Thukpa, Sekuwa, etc.)
+   - Hot Beverages (Tea, Coffee, Hot Chocolate)
+   - Milk Shakes & Blended Smoothies
+2. BAR / RECEPTION DESTINATION (BOT):
+   - All Alcohol & Wine categories (Beer, Whiskey, Rum, Vodka, Gin, etc.)
+   - Cold Non-Alcoholic Beverages (Cold Drinks, Energy Drinks, Juices, Water, Soda)
+   - Cigarettes & Tobacco products
+   - Hookah
+
+REQUIREMENTS & IMPLEMENTATION:
+
+1. DATA MODEL EXTENSIONS:
+   - Define Ticket interface:
+     * id: string
+     * orderId: string
+     * tableId: string
+     * tableName: string
+     * ticketType: 'KOT' | 'BOT'
+     * ticketNumber: number (increments per table session: KOT #1, KOT #2, etc.)
+     * items: Array<{ id: string, name: string, quantity: number, notes?: string }>
+     * serverName: string
+     * customerName?: string
+     * createdAt: string
+     * status: 'pending' | 'printed'
+   - Add tickets?: Ticket[] to the Table Order model.
+
+2. ATOMIC SEND & SPLIT LOGIC (Inside sendToKitchen action in usePOSStore):
+   - Identify all items currently with kitchenStatus === 'draft'.
+   - If no draft items exist, do nothing.
+   - Separate draft items into two groups:
+     * kitchenDraftItems (matches Kitchen routing rules)
+     * barDraftItems (matches Bar routing rules)
+   - Generate KOT ticket if kitchenDraftItems.length > 0 (assign next sequential KOT number for this order).
+   - Generate BOT ticket if barDraftItems.length > 0 (assign next sequential BOT number for this order).
+   - Mark all processed draft items as kitchenStatus: 'sent' and stamp sentAt timestamp.
+   - Append newly generated tickets to order.tickets array.
+   - Save updated orders/tables (which triggers existing Firebase sync).
+
+3. VOID TICKET GENERATION:
+   - When voidOrderItem is executed for a sent item:
+     * Identify whether the voided item was Kitchen or Bar.
+     * Generate a VOID ticket (ticketType: 'VOID_KOT' or 'VOID_BOT') containing the voided item, quantity, cancellation reason, staff name, and timestamp.
+     * Append to order.tickets.
+
+STRICT LIMITS:
+- Do NOT alter dev ports or run test suites.
+- Apply all changes in ONE focused pass.
+- Run 'npm run build' ONCE to verify zero TypeScript errors, then STOP immediately.

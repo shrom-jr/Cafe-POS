@@ -7,6 +7,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { getStaffName } from '@/utils/staffName';
 import { tableNameKey } from '@/utils/tableName';
+import { buildTicket, nextTicketNumber, resolveItemDestination, splitDraftItems } from '@/utils/ticketSplitter';
 
 type DynamicPillar = string;
 
@@ -397,27 +398,85 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   sendToKitchen: (orderId) => {
-    const order = get().orders.find((o) => o.id === orderId);
-    if (order) {
-      const unsentItems = order.items
-        .filter((i) => !i.sentToKitchen && i.kitchenStatus !== 'sent' && i.status !== 'paid')
-        .map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, name: i.name }));
-      if (unsentItems.length > 0) {
-        useInventoryStore.getState().deductInventoryForSale(unsentItems);
-      }
-    }
+    const state0 = get();
+    const order = state0.orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // Collect draft items for inventory deduction (snapshot before marking sent)
+    const draftItems = order.items.filter(
+      (i) => i.kitchenStatus !== 'sent' && !i.sentToKitchen && i.status !== 'paid',
+    );
+    if (draftItems.length === 0) return;
+
+    const unsentForInventory = draftItems.map((i) => ({
+      menuItemId: i.menuItemId,
+      quantity: i.quantity,
+      name: i.name,
+    }));
+    useInventoryStore.getState().deductInventoryForSale(unsentForInventory);
+
+    // Build lookup maps for ticket splitting
+    const menuItemCategoryMap = new Map<string, string>(
+      state0.menuItems.map((m) => [m.id, m.categoryId]),
+    );
+    const categoryMap = new Map<string, Category>(
+      state0.categories.map((c) => [c.id, c]),
+    );
+
+    // Split draft items into kitchen vs bar groups
+    const { kitchenItems, barItems } = splitDraftItems(draftItems, menuItemCategoryMap, categoryMap);
+
     const nowIso = new Date().toISOString();
+    const serverName = order.takenBy?.name ?? '';
+    const customerName = order.attachedCustomer?.name;
+    const existingTickets = order.tickets ?? [];
+
+    const newTickets = [];
+
+    if (kitchenItems.length > 0) {
+      const kotNumber = nextTicketNumber(existingTickets, 'KOT');
+      newTickets.push(
+        buildTicket({
+          orderId: order.id,
+          tableId: order.tableId,
+          tableName: order.tableNumber,
+          ticketType: 'KOT',
+          ticketNumber: kotNumber,
+          items: kitchenItems,
+          serverName,
+          customerName,
+        }),
+      );
+    }
+
+    if (barItems.length > 0) {
+      const botNumber = nextTicketNumber(existingTickets, 'BOT');
+      newTickets.push(
+        buildTicket({
+          orderId: order.id,
+          tableId: order.tableId,
+          tableName: order.tableNumber,
+          ticketType: 'BOT',
+          ticketNumber: botNumber,
+          items: barItems,
+          serverName,
+          customerName,
+        }),
+      );
+    }
+
     set((state) => {
       const orders = state.orders.map((o) =>
         o.id === orderId
           ? (() => {
-              // Mark every item as sent (both legacy bool and new kitchenStatus)
+              // Mark every draft item as sent (both legacy bool and new kitchenStatus)
               const markedItems = o.items.map((i) => ({
                 ...i,
                 sentToKitchen: true,
                 kitchenStatus: 'sent' as const,
                 sentAt: i.kitchenStatus === 'sent' ? i.sentAt : nowIso,
               }));
+              // Merge duplicate unsent lines (same menuItemId, not paid)
               const indexByMenuItemId = new Map<string, number>();
               const mergedItems: typeof markedItems = [];
               for (const item of markedItems) {
@@ -426,14 +485,23 @@ export const usePOSStore = create<POSState>((set, get) => ({
                 } else {
                   const existing = indexByMenuItemId.get(item.menuItemId);
                   if (existing !== undefined) {
-                    mergedItems[existing] = { ...mergedItems[existing], quantity: mergedItems[existing].quantity + item.quantity };
+                    mergedItems[existing] = {
+                      ...mergedItems[existing],
+                      quantity: mergedItems[existing].quantity + item.quantity,
+                    };
                   } else {
                     indexByMenuItemId.set(item.menuItemId, mergedItems.length);
                     mergedItems.push(item);
                   }
                 }
               }
-              return { ...o, kitchenStatus: 'placed' as const, hasUnsentItems: false, items: mergedItems };
+              return {
+                ...o,
+                kitchenStatus: 'placed' as const,
+                hasUnsentItems: false,
+                items: mergedItems,
+                tickets: [...(o.tickets ?? []), ...newTickets],
+              };
             })()
           : o
       );
@@ -443,6 +511,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {
+    const state0 = get();
+
+    // Build lookup maps once (needed for VOID ticket routing)
+    const menuItemCategoryMap = new Map<string, string>(
+      state0.menuItems.map((m) => [m.id, m.categoryId]),
+    );
+    const categoryMap = new Map<string, Category>(
+      state0.categories.map((c) => [c.id, c]),
+    );
+
     set((state) => {
       const orders = state.orders.map((o) => {
         if (o.id !== orderId) return o;
@@ -455,6 +533,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
             ? o.items.filter((i) => i.id !== itemId)
             : o.items.map((i) => (i.id === itemId ? { ...i, quantity: remaining } : i));
 
+        const nowIso = new Date().toISOString();
+
         const voidRecord = {
           id: crypto.randomUUID(),
           itemId,
@@ -463,13 +543,39 @@ export const usePOSStore = create<POSState>((set, get) => ({
           price: target.price,
           reason,
           cancelledBy,
-          cancelledAt: new Date().toISOString(),
+          cancelledAt: nowIso,
         };
+
+        // Generate a VOID_KOT or VOID_BOT ticket only for sent items
+        const existingTickets = o.tickets ?? [];
+        const voidTickets = [];
+        if (target.kitchenStatus === 'sent' || target.sentToKitchen) {
+          const destination = resolveItemDestination(target.menuItemId, menuItemCategoryMap, categoryMap);
+          const voidType = destination === 'KOT' ? 'VOID_KOT' as const : 'VOID_BOT' as const;
+          // Count existing VOID tickets of the same type to get the next number
+          const existingVoids = existingTickets.filter((t) => t.ticketType === voidType);
+          const voidNumber = existingVoids.length + 1;
+          voidTickets.push(
+            buildTicket({
+              orderId: o.id,
+              tableId: o.tableId,
+              tableName: o.tableNumber,
+              ticketType: voidType,
+              ticketNumber: voidNumber,
+              items: [{ id: target.id, name: target.name, quantity: qty }],
+              serverName: o.takenBy?.name ?? '',
+              customerName: o.attachedCustomer?.name,
+              voidReason: reason,
+              voidedBy: cancelledBy,
+            }),
+          );
+        }
 
         return {
           ...o,
           items: updatedItems,
           voidHistory: [...(o.voidHistory ?? []), voidRecord],
+          tickets: [...existingTickets, ...voidTickets],
         };
       });
       db.saveOrders(orders);
