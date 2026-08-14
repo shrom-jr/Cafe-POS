@@ -612,36 +612,36 @@ const OrderItemRow = ({
       }}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p
-            className={`flex-1 min-w-0 text-sm font-bold break-words ${isPaid ? 'line-through' : ''}`}
-            style={{ color: isPaid ? 'rgba(255,255,255,0.55)' : '#ffffff' }}
-          >
-            {item.name}
-          </p>
+        <p
+          className={`text-sm font-bold leading-snug ${isPaid ? 'line-through' : ''}`}
+          style={{ color: isPaid ? 'rgba(255,255,255,0.55)' : '#ffffff', wordBreak: 'break-word' }}
+        >
+          {item.name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <span className="text-xs font-medium" style={{ color: 'rgba(148,163,184,0.72)' }}>
+            Rs. {fmt(item.price)} each
+          </span>
           {isPaid && (
-            <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
+            <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.7)' }}>
               Paid
             </span>
           )}
           {isSent && !isPaid && (
-            <span className="flex-shrink-0 flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
+            <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: 'rgba(59,130,246,0.14)', color: 'rgba(147,197,253,0.85)', border: '1px solid rgba(59,130,246,0.2)' }}>
               <Lock size={8} />
               Sent
             </span>
           )}
           {isDraft && (
-            <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
+            <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.9)' }}>
               Draft
             </span>
           )}
         </div>
-        <p className="text-xs font-medium mt-0.5" style={{ color: 'rgba(148,163,184,0.72)' }}>
-          Rs. {fmt(item.price)} each
-        </p>
       </div>
 
       <div className="flex items-center gap-1.5">
