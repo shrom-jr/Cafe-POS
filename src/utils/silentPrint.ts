@@ -1,19 +1,22 @@
 /**
  * silentPrint.ts
  *
- * Silent ESC/POS replacement for the legacy firePrintJob() iframe pipeline.
+ * Unified print dispatcher for structured PrintJob objects.
  *
- * Accepts the exact same structured PrintJob objects that screens already
- * build (KITCHEN_KOT / PRE_BILL / TAX_INVOICE) but renders them as raw
- * ESC/POS bytes and dispatches through the unified WebUSB / network
- * dispatcher. If the printer is unconfigured or offline it logs a console
- * warning and resolves false — it NEVER opens window.print(), an iframe
- * print dialog, or an alert.
+ * Accepts KITCHEN_KOT / PRE_BILL / TAX_INVOICE jobs and routes each to the
+ * correct print path based on the configured printer mode:
  *
- * Routing:
- *   KITCHEN_KOT → kitchen printer
- *   PRE_BILL    → reception printer
- *   TAX_INVOICE → reception printer
+ *   KITCHEN_KOT → always ESC/POS (WebUSB or network)
+ *   PRE_BILL    → reception printer mode:
+ *                   'system'  → browserPrintPreBill()   (window.print via iframe)
+ *                   'webusb'  → dispatchEscpos → sendRawToUSB
+ *                   'network' → dispatchEscpos → sendToNetworkPrinter
+ *   TAX_INVOICE → same routing as PRE_BILL
+ *
+ * System/browser mode is intercepted BEFORE building ESC/POS bytes because
+ * the HTML renderer needs the original structured data, not raw bytes.
+ *
+ * All paths resolve true/false — nothing throws or opens alerts.
  */
 
 import { usePOSStore } from '@/store/usePOSStore';
@@ -23,13 +26,16 @@ import {
   buildPreBill,
   buildTaxInvoice,
   dispatchEscpos,
+  resolvePrinterMode,
+  type EscPreBillOptions,
+  type EscTaxInvoiceOptions,
 } from '@/utils/escpos';
+import {
+  browserPrintPreBill,
+  browserPrintTaxInvoice,
+} from '@/utils/browserPrint';
 import { Ticket } from '@/types/pos';
 
-/**
- * Dispatch a structured print job silently via ESC/POS.
- * Resolves true when the bytes reached the printer, false otherwise.
- */
 export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
   const settings = usePOSStore.getState().settings;
 
@@ -59,7 +65,7 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
 
     case 'PRE_BILL': {
       const d = job.data;
-      const buffer = buildPreBill({
+      const preBillData: EscPreBillOptions = {
         cafeName: d.cafeName,
         cafeAddress: d.cafeAddress,
         cafePan: d.cafePan,
@@ -73,13 +79,19 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         vatRate: d.vatRate,
         total: d.total,
         timestamp: d.timestamp,
-      });
+      };
+
+      if (resolvePrinterMode(settings, 'reception') === 'system') {
+        return browserPrintPreBill(preBillData);
+      }
+
+      const buffer = buildPreBill(preBillData);
       return dispatchEscpos(buffer, settings, 'reception');
     }
 
     case 'TAX_INVOICE': {
       const d = job.data;
-      const buffer = buildTaxInvoice({
+      const invoiceData: EscTaxInvoiceOptions = {
         cafeName: d.cafeName,
         cafeAddress: d.cafeAddress,
         cafePan: d.cafePan,
@@ -100,7 +112,13 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         amountTendered: d.amountTendered,
         creditSettlement: d.creditSettlement,
         timestamp: d.timestamp,
-      });
+      };
+
+      if (resolvePrinterMode(settings, 'reception') === 'system') {
+        return browserPrintTaxInvoice(invoiceData);
+      }
+
+      const buffer = buildTaxInvoice(invoiceData);
       return dispatchEscpos(buffer, settings, 'reception');
     }
   }

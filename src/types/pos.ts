@@ -385,7 +385,7 @@ export interface Settings {
   /** Enable kitchen printer buzzer/bell command on KOT print */
   kitchenPrinterBuzzer?: boolean;
   /** Connection mode for the reception/bar printer ('browser'/'usb' are legacy values, treated as 'webusb') */
-  receptionPrinterMode?: 'browser' | 'usb' | 'network' | 'webusb';
+  receptionPrinterMode?: 'browser' | 'usb' | 'network' | 'webusb' | 'system';
   /** IP address of the reception/bar network printer */
   receptionPrinterIp?: string;
   /** TCP port of the reception/bar network printer (default 9100) */

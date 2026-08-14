@@ -485,12 +485,17 @@ export type PrinterTarget = 'kitchen' | 'reception';
 export function resolvePrinterMode(
   settings: Settings,
   target: PrinterTarget,
-): 'webusb' | 'network' {
+): 'webusb' | 'network' | 'system' {
   if (target === 'kitchen') {
     if (settings.kitchenPrinterMode === 'webusb') return 'webusb';
     return 'network';
   }
-  return settings.receptionPrinterMode === 'network' ? 'network' : 'webusb';
+  // Reception
+  const m = settings.receptionPrinterMode;
+  if (m === 'network') return 'network';
+  if (m === 'system') return 'system';
+  // 'webusb' | 'usb' | 'browser' | undefined → webusb
+  return 'webusb';
 }
 
 export async function dispatchEscpos(
@@ -499,6 +504,15 @@ export async function dispatchEscpos(
   target: PrinterTarget,
 ): Promise<boolean> {
   const mode = resolvePrinterMode(settings, target);
+
+  if (mode === 'system') {
+    // System/Browser print requires structured data — it must be triggered
+    // at the fireSilentPrintJob or test-print level where the original data
+    // objects are still available. Raw ESC/POS bytes cannot be re-rendered
+    // as HTML from here.
+    console.warn(`[escpos] ${target} printer is in System/Browser mode — dispatch must go through fireSilentPrintJob or browserPrint* helpers, not dispatchEscpos.`);
+    return false;
+  }
 
   if (mode === 'webusb') {
     if (!getUSBConnectionStatus()) {
