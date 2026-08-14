@@ -15,7 +15,6 @@ import { Customer, OrderItem } from '@/types/pos';
 import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft, UserCircle, Lock, Minus, Plus, Trash2 } from 'lucide-react';
 import VoidItemModal from '@/components/orders/VoidItemModal';
 import { playClick } from '@/utils/sounds';
-import { firePrintJob } from '@/utils/printEngine';
 import { getStaffName } from '@/utils/staffName';
 import { filterMenuItems } from '@/utils/menuFilter';
 import { compareTableNames, tableDisplayName } from '@/utils/tableName';
@@ -47,7 +46,6 @@ const OrderScreen = () => {
     removeItemFromOrder,
     clearOrder,
     sendToKitchen,
-    getNextKotNumber,
     orders,
   } = useOrders();
   const categories = usePOSStore((s) => s.categories);
@@ -247,46 +245,11 @@ const OrderScreen = () => {
     setNow(ts);
     setShowKitchenWarning(false);
 
-    // Snapshot unsent items BEFORE the store marks them as sent
-    const unsentOrderItems = order.items.filter(
-      (i) => !isSentToKitchen(i) && i.status !== 'paid',
-    );
-
-    // Kitchen food filter — driven by each category's sendToKitchen flag.
-    // Only items whose category has sendToKitchen === true are printed on the KOT.
-    const kotItems = unsentOrderItems
-      .filter((i) => {
-        const menuItem = menuItems.find((m) => m.id === i.menuItemId);
-        if (!menuItem) return false;
-        const cat = categories.find((c) => c.id === menuItem.categoryId);
-        return cat?.sendToKitchen === true;
-      })
-      .map((i) => ({ name: i.name, quantity: i.quantity }));
-
     sendToKitchen(order.id);
-
-    if (kotItems.length === 0) {
-      // All unsent items are bar/counter items — order is sent but no KOT printed
-      if (unsentOrderItems.length > 0) {
-        toast.info('No kitchen items to print.');
-      }
-    } else {
-      // Increment KOT counter and get the assigned number before printing
-      const kotNumber = getNextKotNumber();
-      // Fire KOT to kitchen printer — no financial data included
-      firePrintJob({
-        type: 'KITCHEN_KOT',
-        data: {
-          cafeName:    settings.cafeName,
-          tableNumber: table.number,
-          pax:         table.pax || 1,
-          kotNumber,
-          timestamp:   ts,
-          items:       kotItems,
-          serverName:  order.takenBy?.name || currentUser?.name,
-        },
-      });
-    }
+    // Tickets are now written to Firebase by sendToKitchen; the designated
+    // print-hub device (pos_is_print_hub === 'true') picks them up via
+    // usePrintQueue and dispatches to the printer. Waiter phones never
+    // open a print dialog here.
 
     const t1 = setTimeout(() => setDrawerSendPhase('sent'), SEND_DELAY);
     const t2 = setTimeout(() => setDrawerSendPhase('idle'), SEND_DELAY + SUCCESS_DURATION);

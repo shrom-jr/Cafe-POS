@@ -52,10 +52,14 @@ const PrinterSettingsSection = () => {
   );
   const [receptionIp, setReceptionIp] = useState(settings.receptionPrinterIp ?? '');
   const [receptionPort, setReceptionPort] = useState(String(settings.receptionPrinterPort ?? 9100));
-  const [autoPrint, setAutoPrint] = useState(settings.autoPrintEnabled ?? false);
+  const [autoPrint, setAutoPrint] = useState(
+    () => localStorage.getItem('pos_is_print_hub') === 'true',
+  );
   const [testing, setTesting] = useState<'kot' | 'bot' | null>(null);
 
   const saveAll = () => {
+    // autoPrint is device-local — written only to localStorage, never to Firebase.
+    localStorage.setItem('pos_is_print_hub', autoPrint ? 'true' : 'false');
     updateSettings({
       kitchenPrinterIp: kitchenIp.trim() || undefined,
       kitchenPrinterPort: Number(kitchenPort) || 9100,
@@ -63,7 +67,6 @@ const PrinterSettingsSection = () => {
       receptionPrinterMode: receptionMode,
       receptionPrinterIp: receptionIp.trim() || undefined,
       receptionPrinterPort: Number(receptionPort) || 9100,
-      autoPrintEnabled: autoPrint,
     });
     toast.success('Printer settings saved');
   };

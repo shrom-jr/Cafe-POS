@@ -1,9 +1,10 @@
 /**
  * usePrintQueue.ts
  *
- * Background auto-print listener.  When the user enables "Auto-Print" for
- * this terminal (settings.autoPrintEnabled), this hook watches every order's
- * ticket array and dispatches pending tickets automatically:
+ * Background auto-print listener.  Activates only on the designated print-hub
+ * device — i.e. the browser where localStorage key 'pos_is_print_hub' === 'true'.
+ * All other devices (waiter phones, etc.) write tickets to Firebase and never
+ * attempt to print; this hook's effect becomes a no-op for them.
  *
  *   KOT        → kitchen printer  (IP / buzzer from settings)
  *   BOT        → reception printer (IP or browser)
@@ -16,7 +17,7 @@
  * Mount this hook once in App.tsx (inside <App>, after useFirebaseSync).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Ticket } from '@/types/pos';
 import {
@@ -27,10 +28,29 @@ import {
 } from '@/utils/escpos';
 import { firePrintJob } from '@/utils/printEngine';
 
+const PRINT_HUB_KEY = 'pos_is_print_hub';
+
+/** Returns true only when this browser has explicitly been marked as the print hub. */
+function isPrintHub(): boolean {
+  return localStorage.getItem(PRINT_HUB_KEY) === 'true';
+}
+
 export function usePrintQueue() {
-  const orders   = usePOSStore((s) => s.orders);
-  const settings = usePOSStore((s) => s.settings);
+  const orders    = usePOSStore((s) => s.orders);
+  const settings  = usePOSStore((s) => s.settings);
   const setOrders = usePOSStore((s) => s.setOrders);
+
+  // Reactively track the localStorage flag so toggling the setting in the same
+  // browser session activates/deactivates the listener without a page reload.
+  const [isHub, setIsHub] = useState(isPrintHub);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === PRINT_HUB_KEY) setIsHub(e.newValue === 'true');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Track which ticket ids have already been dispatched this session so
   // rapid Zustand re-renders don't double-fire while the async send is in
@@ -38,7 +58,7 @@ export function usePrintQueue() {
   const dispatched = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!settings.autoPrintEnabled) return;
+    if (!isHub) return;
 
     const tables = usePOSStore.getState().tables;
 
@@ -128,5 +148,5 @@ export function usePrintQueue() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, settings.autoPrintEnabled]);
+  }, [orders, isHub]);
 }
