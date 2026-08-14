@@ -202,7 +202,11 @@ const OrderScreen = () => {
       ? { background: 'rgba(251,191,36,0.12)', color: 'rgba(251,191,36,0.8)', border: '1px solid rgba(251,191,36,0.25)' }
       : { background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.25)' };
 
-  // Per-item draft/sent counts (using backwards-compatible helper)
+  /** True when the item has already been sent to the kitchen (backwards-compatible). */
+  const isSentToKitchen = (item: OrderItem) =>
+    item.kitchenStatus === 'sent' || item.sentToKitchen === true;
+
+  // Per-item draft/sent counts
   const unpaidDrawerItems = (order?.items || []).filter((i) => i.status !== 'paid');
   const drawerDraftItems = unpaidDrawerItems.filter((i) => !isSentToKitchen(i));
   const drawerHasDraft = drawerDraftItems.length > 0;
@@ -218,10 +222,6 @@ const OrderScreen = () => {
     drawerSendPhase === 'sending' ? 'Sending...'
     : drawerSendPhase === 'sent' ? 'Sent ✓'
     : drawerPrimaryLabel;
-
-  /** True when the item has already been sent to the kitchen (backwards-compatible). */
-  const isSentToKitchen = (item: OrderItem) =>
-    item.kitchenStatus === 'sent' || item.sentToKitchen === true;
 
   const handleSendToKitchen = () => {
     if (!order || drawerSendPhase !== 'idle') return; // race condition guard
