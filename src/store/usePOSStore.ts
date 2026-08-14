@@ -52,6 +52,7 @@ interface POSState {
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   sendToKitchen: (orderId: string) => void;
+  voidOrderItem: (orderId: string, itemId: string, qty: number, reason: string, cancelledBy: string) => void;
 
   moveOrder: (orderId: string, newTableId: string) => void;
   clearOrder: (orderId: string) => void;
@@ -320,7 +321,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set((state) => {
       const orders = state.orders.map((o) => {
         if (o.id !== orderId) return o;
-        const existing = o.items.find((i) => i.menuItemId === item.id && i.status !== 'paid' && !i.sentToKitchen);
+        // Only merge into a draft (unsent) line for the same menu item
+        const existing = o.items.find(
+          (i) => i.menuItemId === item.id && i.status !== 'paid' && i.kitchenStatus !== 'sent' && !i.sentToKitchen,
+        );
         const wasPlaced = o.kitchenStatus === 'placed';
         if (existing) {
           return {
@@ -334,7 +338,17 @@ export const usePOSStore = create<POSState>((set, get) => ({
         return {
           ...o,
           hasUnsentItems: wasPlaced ? true : o.hasUnsentItems,
-          items: [...o.items, { id: crypto.randomUUID(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1 }],
+          items: [
+            ...o.items,
+            {
+              id: crypto.randomUUID(),
+              menuItemId: item.id,
+              name: item.name,
+              price: item.price,
+              quantity: 1,
+              kitchenStatus: 'draft' as const,
+            },
+          ],
         };
       });
       db.saveOrders(orders);
@@ -386,17 +400,24 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const order = get().orders.find((o) => o.id === orderId);
     if (order) {
       const unsentItems = order.items
-        .filter((i) => !i.sentToKitchen && i.status !== 'paid')
+        .filter((i) => !i.sentToKitchen && i.kitchenStatus !== 'sent' && i.status !== 'paid')
         .map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, name: i.name }));
       if (unsentItems.length > 0) {
         useInventoryStore.getState().deductInventoryForSale(unsentItems);
       }
     }
+    const nowIso = new Date().toISOString();
     set((state) => {
       const orders = state.orders.map((o) =>
         o.id === orderId
           ? (() => {
-              const markedItems = o.items.map((i) => ({ ...i, sentToKitchen: true }));
+              // Mark every item as sent (both legacy bool and new kitchenStatus)
+              const markedItems = o.items.map((i) => ({
+                ...i,
+                sentToKitchen: true,
+                kitchenStatus: 'sent' as const,
+                sentAt: i.kitchenStatus === 'sent' ? i.sentAt : nowIso,
+              }));
               const indexByMenuItemId = new Map<string, number>();
               const mergedItems: typeof markedItems = [];
               for (const item of markedItems) {
@@ -416,6 +437,41 @@ export const usePOSStore = create<POSState>((set, get) => ({
             })()
           : o
       );
+      db.saveOrders(orders);
+      return { orders };
+    });
+  },
+
+  voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {
+    set((state) => {
+      const orders = state.orders.map((o) => {
+        if (o.id !== orderId) return o;
+        const target = o.items.find((i) => i.id === itemId);
+        if (!target) return o;
+
+        const remaining = target.quantity - qty;
+        const updatedItems =
+          remaining <= 0
+            ? o.items.filter((i) => i.id !== itemId)
+            : o.items.map((i) => (i.id === itemId ? { ...i, quantity: remaining } : i));
+
+        const voidRecord = {
+          id: crypto.randomUUID(),
+          itemId,
+          name: target.name,
+          quantity: qty,
+          price: target.price,
+          reason,
+          cancelledBy,
+          cancelledAt: new Date().toISOString(),
+        };
+
+        return {
+          ...o,
+          items: updatedItems,
+          voidHistory: [...(o.voidHistory ?? []), voidRecord],
+        };
+      });
       db.saveOrders(orders);
       return { orders };
     });

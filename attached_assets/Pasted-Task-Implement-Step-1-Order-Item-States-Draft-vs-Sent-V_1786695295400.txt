@@ -1,0 +1,56 @@
+Task: Implement Step 1 - Order Item States (Draft vs. Sent), Void/Cancel Security Modal, and Dynamic Action Button
+
+TARGET FILES:
+- src/types/index.ts (or wherever Order/OrderItem/Table types are defined)
+- src/store/usePOSStore.ts
+- src/components/orders/OrderPanel.tsx
+- src/components/orders/VoidItemModal.tsx (Create if not present)
+
+REQUIREMENTS & LOGIC TO IMPLEMENT:
+
+1. DATA MODEL & ITEM STATES:
+   - Update OrderItem type to include:
+     * status: 'draft' | 'sent' (default: 'draft' when added from menu)
+     * sentAt?: string | null
+   - Add voidHistory array to the Table/Order model:
+     * { id: string, itemId: string, name: string, quantity: number, price: number, reason: string, cancelledBy: string, cancelledAt: string }
+
+2. DRAFT vs SENT ITEM BEHAVIOR IN ORDER PANEL:
+   - DRAFT ITEMS:
+     * Display with a subtle "DRAFT" or editable tag.
+     * Cashier/waiter can freely increase (+), decrease (-), or delete (trash) without confirmation.
+   - SENT ITEMS:
+     * Display with a "SENT" badge or lock icon (🔒).
+     * Clicking (-) or trash icon (🗑️) on a SENT item MUST NOT silently delete it.
+     * Clicking (-) or trash on a SENT item MUST open the VoidItemModal.
+
+3. VOID / CANCELLATION MODAL:
+   - Modal displays:
+     * Item Name & Current Ordered Quantity.
+     * Quantity Selector: Allow selecting how many units to cancel (1 to max ordered).
+     * Mandatory Reason Selector (Radio buttons or clean chips):
+       - "Customer Changed Mind"
+       - "Kitchen Out of Stock"
+       - "Wrong Item Punched"
+       - "Other" (with an optional text field)
+   - On Confirm:
+     * Deduct the cancelled quantity from the sent item (or remove the line if quantity reaches 0).
+     * Append a record to order.voidHistory with the current user's name (e.g. Sanjib Basnet), timestamp, and selected reason.
+
+4. DYNAMIC PRIMARY ACTION BUTTON (Bottom of OrderPanel):
+   - If cart has ANY items with status === 'draft':
+     * Button displays: "[ Send New Items to Kitchen (X items) ]" in blue.
+     * Clicking it marks all draft items as status = 'sent', records sentAt timestamp, and updates table order status.
+   - If ALL items in cart have status === 'sent':
+     * Button displays: "[ Proceed to Payment → ]" in emerald green/blue.
+   - If cart has 0 items:
+     * Button is disabled: "[ Add items to order ]".
+
+5. PERSISTENCE GUARD (NEVER WIPE CUSTOMER ON EMPTY CART):
+   - When all items are removed or cancelled, DO NOT nullify or reset table.customerId, order.customerId, guest count (pax), or assigned server.
+   - Customer badge must remain pinned to the table until explicitly removed via its '✕' icon.
+
+STRICT EXECUTION LIMITS:
+- Do NOT alter dev ports or run test suites.
+- Apply all changes in ONE focused pass.
+- Run 'npm run build' ONCE to verify zero TypeScript errors, then STOP immediately.

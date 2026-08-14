@@ -45,9 +45,26 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  /** Payment state – separate from kitchen state */
   status?: 'unpaid' | 'paid';
   paidAt?: number;
+  /** Kitchen state: 'draft' = not yet sent, 'sent' = sent to kitchen */
+  kitchenStatus?: 'draft' | 'sent';
+  sentAt?: string | null;
+  /** Legacy boolean flag kept for backward-compatibility */
   sentToKitchen?: boolean;
+}
+
+/** One cancelled/voided item line recorded on an order. */
+export interface VoidRecord {
+  id: string;
+  itemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  reason: string;
+  cancelledBy: string;
+  cancelledAt: string;
 }
 
 export interface TablePayment {
@@ -82,6 +99,8 @@ export interface Order {
   takenBy?: StaffAttribution;
   /** Customer attached to this order for Khatta (credit ledger) tracking */
   attachedCustomer?: { id: string; name: string; phone: string; currentDue: number };
+  /** Log of every voided / cancelled item on this order */
+  voidHistory?: VoidRecord[];
 }
 
 export interface Payment {
