@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import { usePOSStore } from '@/store/usePOSStore';
 import { Customer, Order, OrderItem } from '@/types/pos';
 import { fmt } from '@/utils/format';
 import { tableDisplayName } from '@/utils/tableName';
@@ -65,6 +67,9 @@ const OrderPanel = ({
   attachedCustomer,
   onAttachCustomer,
 }: OrderPanelProps) => {
+  const { tableId } = useParams<{ tableId: string }>();
+  const table = usePOSStore((s) => s.tables.find((candidate) => candidate.id === tableId));
+  const attachCustomerToTable = usePOSStore((s) => s.attachCustomerToTable);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [sendPhase, setSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -187,6 +192,18 @@ const OrderPanel = ({
   const handleClearConfirmed = () => {
     onClear?.();
     setShowClearConfirm(false);
+  };
+
+  const handleCustomerChange = (customer: Customer | null) => {
+    if (order) {
+      onAttachCustomer?.(customer);
+      return;
+    }
+    // Empty tables do not have an order yet. Create the draft and persist the
+    // attachment in one store update so the badge appears immediately.
+    if (customer && tableId && table) {
+      attachCustomerToTable(tableId, table.number, customer);
+    }
   };
 
   const hasGrouping = kitchenStatus === 'placed' && hasUnsentItems;
@@ -326,7 +343,7 @@ const OrderPanel = ({
               </span>
             )}
             <button
-              onClick={() => onAttachCustomer?.(null)}
+              onClick={() => handleCustomerChange(null)}
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all flex-shrink-0"
               title="Detach customer"
             >
@@ -347,7 +364,7 @@ const OrderPanel = ({
       {/* Customer picker overlay */}
       {showCustomerPicker && (
         <CustomerPicker
-          onSelect={(c) => { onAttachCustomer?.(c); setShowCustomerPicker(false); }}
+          onSelect={(c) => { handleCustomerChange(c); setShowCustomerPicker(false); }}
           onClose={() => setShowCustomerPicker(false)}
         />
       )}

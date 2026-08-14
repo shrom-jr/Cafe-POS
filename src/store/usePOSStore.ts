@@ -62,6 +62,8 @@ interface POSState {
   addPayment: (payment: Omit<Payment, 'id'>) => void;
   /** Attach or detach a customer (for Khatta tracking) from an active order. */
   attachCustomerToOrder: (orderId: string, customer: Customer | null) => void;
+  /** Attach a customer to a table, creating its empty draft order when needed. */
+  attachCustomerToTable: (tableId: string, tableNumber: string, customer: Customer | null) => void;
 
   updateSettings: (updates: Partial<Settings>) => void;
   getNextBillNumber: () => number;
@@ -483,6 +485,54 @@ export const usePOSStore = create<POSState>((set, get) => ({
       );
       db.saveOrders(orders);
       return { orders };
+    });
+  },
+
+  attachCustomerToTable: (tableId, tableNumber, customer) => {
+    set((state) => {
+      const existingOrder = state.orders.find(
+        (o) => o.tableId === tableId && (o.status === 'active' || o.status === 'billed')
+      );
+
+      // Detaching an empty, non-existent draft must not create an order.
+      if (!existingOrder && !customer) return state;
+
+      const attachedCustomer = customer
+        ? { id: customer.id, name: customer.name, phone: customer.phone, currentDue: customer.currentDue }
+        : undefined;
+
+      if (existingOrder) {
+        const orders = state.orders.map((o) =>
+          o.id === existingOrder.id ? { ...o, attachedCustomer } : o
+        );
+        db.saveOrders(orders);
+        return { orders };
+      }
+
+      const { currentUser, users } = useStaffStore.getState();
+      const activeUser = currentUser ?? users.find((u) => u.active);
+      const takenBy = activeUser
+        ? { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role }
+        : undefined;
+      const order: Order = {
+        id: crypto.randomUUID(),
+        tableId,
+        tableNumber,
+        items: [],
+        status: 'active',
+        createdAt: Date.now(),
+        ...(takenBy ? { takenBy } : {}),
+        attachedCustomer,
+      };
+      const orders = [...state.orders, order];
+      const tables = state.tables.map((table) =>
+        table.id === tableId
+          ? { ...table, status: 'occupied' as const, orderId: order.id, orderStartTime: order.createdAt }
+          : table
+      );
+      db.saveOrders(orders);
+      db.saveTables(tables);
+      return { orders, tables };
     });
   },
 
