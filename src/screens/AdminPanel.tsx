@@ -3,6 +3,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import AppLayout from '@/components/ui/AppLayout';
 import ReceiptPreview from '@/components/ReceiptPreview';
+import PrinterSettingsSection from '@/components/settings/PrinterSettingsModal';
 import { InventorySection } from '@/screens/InventorySection';
 import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
@@ -36,7 +37,7 @@ import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
-type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'staff';
+type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -538,6 +539,7 @@ const AdminPanel = () => {
                     { id: 'bill',     label: 'Company Profile' },
                     { id: 'billing',  label: 'Billing & Receipts' },
                     { id: 'payments', label: 'Payments' },
+                    { id: 'printers', label: 'Printers' },
                     { id: 'staff',    label: 'Staff & Users' },
                   ] as { id: SettingsSubTab; label: string }[]).map((sub) => (
                     <button
@@ -557,6 +559,7 @@ const AdminPanel = () => {
                 {settingsSubTab === 'bill'     && <CompanyProfileSection />}
                 {settingsSubTab === 'billing'  && <BillingReceiptsSection />}
                 {settingsSubTab === 'payments' && <PaymentsSection />}
+                {settingsSubTab === 'printers' && <PrinterSettingsSection />}
                 {settingsSubTab === 'staff'    && <StaffManagement />}
               </div>
             )}

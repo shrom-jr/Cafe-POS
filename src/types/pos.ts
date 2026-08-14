@@ -375,6 +375,21 @@ export interface Settings {
   };
   customWallets?: CustomWallet[];
   printerAddress?: string;
+  // ── Printer hardware configuration ──────────────────────────────────────────
+  /** IP address of the kitchen thermal printer (e.g. 192.168.1.200) */
+  kitchenPrinterIp?: string;
+  /** TCP port of the kitchen thermal printer (default 9100) */
+  kitchenPrinterPort?: number;
+  /** Enable kitchen printer buzzer/bell command on KOT print */
+  kitchenPrinterBuzzer?: boolean;
+  /** Connection mode for the reception/bar printer */
+  receptionPrinterMode?: 'browser' | 'usb' | 'network';
+  /** IP address of the reception/bar network printer */
+  receptionPrinterIp?: string;
+  /** TCP port of the reception/bar network printer (default 9100) */
+  receptionPrinterPort?: number;
+  /** When true this device runs the background auto-print listener */
+  autoPrintEnabled?: boolean;
   billCounter: number;
   kotCounter: number;
   resetKotDaily: boolean;

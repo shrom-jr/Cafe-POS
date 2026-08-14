@@ -16,6 +16,7 @@ import PinLoginScreen from '@/screens/PinLoginScreen';
 import NotFound from './pages/NotFound.tsx';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
+import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { subscribeToStaff } from '@/utils/firebaseSync';
 import { subscribeToCustomers, writeCustomer, writeCustomersToFirebase, type FirebaseCustomerRecord } from '@/utils/firebaseSync';
 import { useCustomerStore } from '@/store/useCustomerStore';
@@ -52,6 +53,10 @@ const App = () => {
 
   // Sync orders bidirectionally with Firebase Realtime Database
   useFirebaseSync();
+
+  // Background auto-print listener — only dispatches when this device has
+  // "Enable Auto-Print Listener" turned on in Admin → Settings → Printers.
+  usePrintQueue();
 
   // Subscribe to staff accounts immediately on mount — before any login check.
   // This runs in its own isolated effect with [] so it is never torn down and

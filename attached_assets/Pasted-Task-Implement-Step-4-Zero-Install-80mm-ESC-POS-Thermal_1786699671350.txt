@@ -1,0 +1,41 @@
+Task: Implement Step 4 - Zero-Install 80mm ESC/POS Thermal Print Engine, Hardware Settings, and Auto-Print Listener for Pantum PD-80BW
+
+TARGET FILES:
+- src/types/pos.ts
+- src/utils/escpos.ts (Create new ESC/POS byte generator & 80mm template builder)
+- src/hooks/usePrintQueue.ts (Create auto-print listener hook)
+- src/components/settings/PrinterSettingsModal.tsx (Create printer configuration & test modal)
+- src/components/orders/OrderPanel.tsx & src/screens/OrderScreen.tsx (Wire print pre-bill and auto-dispatch)
+- src/App.tsx (Mount background print queue listener)
+
+REQUIREMENTS:
+
+1. ESC/POS 80MM TICKET FORMATTER (src/utils/escpos.ts):
+   - Build 80mm formatted templates and ESC/POS command buffers for:
+     * KOT (Kitchen Order Ticket): Table Name, Pax, Waiter, Customer Name, sequential KOT #, Items (Qty, Name, Notes), Kitchen Buzzer alarm command (\x1b\x1e or \x1b\x70), and Paper Cut command (\x1d\x56\x00).
+     * BOT (Bar Order Ticket): Table Name, Pax, Waiter, Customer Name, sequential BOT #, Drinks/Alcohol/Cigarettes/Hookah items, and Paper Cut.
+     * VOID Tickets (VOID_KOT / VOID_BOT): Large CANCELLED/VOID header, Item, Qty, Cancellation Reason, Staff Name, Timestamp, and Paper Cut.
+     * Final Tax Receipt / Bill: Restaurant Name (S Bamboo Cottage & Sekuwa Corner), Address/PAN, Bill #, Table, Customer, Items with Rates & Amounts, Subtotal, Discount, Grand Total, Payment Mode (Cash/Credit/eSewa/Khalti/Fonepay), Thank You footer, and Paper Cut.
+     * Pre-Bill Estimate: Clean estimate slip before payment settlement.
+
+2. PRINTER SETTINGS MODAL (src/components/settings/PrinterSettingsModal.tsx):
+   - Add hardware configuration stored in localStorage / Firebase settings:
+     * Kitchen Printer: Wi-Fi IP Address (e.g. 192.168.1.200), Port (default 9100), Buzzer Alarm toggle, and "Test Print KOT" button.
+     * Reception / Bar Printer: Connection Mode (Local USB / Browser / Network IP), and "Test Print Receipt / BOT" button.
+     * Auto-Print Hub Toggle: "Enable Auto-Print Listener on this device" (Only the cashier desktop turns this ON).
+
+3. IN-APP AUTO-PRINT LISTENER (src/hooks/usePrintQueue.ts):
+   - When Auto-Print is enabled on the terminal:
+     * Subscribes to new pending tickets in order.tickets / printQueue from Firebase.
+     * Automatically dispatches KOT to the Kitchen Printer IP socket.
+     * Automatically dispatches BOT & Receipts to the Reception Printer.
+     * Updates ticket status from 'pending' to 'printed' to avoid duplicate prints.
+
+4. WIRING UI BUTTONS:
+   - "Print Pre-Bill" button on the payment screen triggers an instant estimate print for the table.
+   - Finalizing payment prints the Tax Invoice.
+
+STRICT EXECUTION LIMITS:
+- Do NOT alter dev ports or run test suites.
+- Apply all changes in ONE focused pass.
+- Run 'npm run build' ONCE to verify zero TypeScript errors, then STOP immediately.
