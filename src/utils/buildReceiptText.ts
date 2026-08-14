@@ -100,6 +100,8 @@ export interface ReceiptData {
   vatRate: number;
   total: number;
   method: string;
+  /** Credit booked from this invoice, after any cash collected today. */
+  creditSettlement?: { customerName?: string; amount: number };
   /** Plain-string fallbacks (legacy) */
   serverName?: string;
   cashierName?: string;
@@ -163,6 +165,12 @@ export function buildReceiptText(data: ReceiptData): string {
   }
   push(hr('='));
   push(formatLine('TOTAL:', `Rs. ${data.total.toFixed(2)}`));
+  if (data.creditSettlement) {
+    push(formatLine(
+      `Amount Added to Due${data.creditSettlement.customerName ? ` (${data.creditSettlement.customerName})` : ''}:`,
+      `Rs. ${data.creditSettlement.amount.toFixed(2)}`,
+    ));
+  }
   push(hr('='));
 
   // ── Footer ───────────────────────────────────────────────────

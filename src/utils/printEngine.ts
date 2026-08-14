@@ -73,6 +73,8 @@ export interface TaxInvoiceData {
   dueSettlement?: { customerName?: string; amount: number };
   /** Amount actually collected: `total` plus any `dueSettlement.amount`. */
   amountTendered?: number;
+  /** Credit booked from this invoice, after any cash collected today. */
+  creditSettlement?: { customerName?: string; amount: number };
   /** Plain-string fallbacks (legacy) */
   serverName?:    string;
   cashierName?:   string;
@@ -312,6 +314,9 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
     ? `<tr><td>Previous Due Settled${data.dueSettlement?.customerName ? ` (${data.dueSettlement.customerName})` : ''}:</td><td class="text-right">Rs. ${settlementAmount.toFixed(2)}</td></tr>
        <tr class="grand-total"><td>AMOUNT PAID:</td><td class="text-right">Rs. ${collectedAmount.toFixed(2)}</td></tr>`
     : '';
+  const creditRows = data.creditSettlement
+    ? `<tr><td>Amount Added to Due${data.creditSettlement.customerName ? ` (${data.creditSettlement.customerName})` : ''}:</td><td class="text-right">Rs. ${data.creditSettlement.amount.toFixed(2)}</td></tr>`
+    : '';
   const servedRow = servedBy
     ? `<tr><td colspan="2"><strong>Served By:</strong> ${servedBy}</td></tr>`
     : '';
@@ -356,6 +361,7 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
       ${vatRow}
       <tr class="grand-total"><td>TOTAL:</td><td class="text-right">Rs. ${data.total.toFixed(2)}</td></tr>
       ${settlementRows}
+       ${creditRows}
     </table>
     <div class="divider"></div>
     <div class="inwords">In words: ${numberToWords(Math.round(collectedAmount))}</div>

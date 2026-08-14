@@ -16,7 +16,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronDown, ChevronUp, Banknote, Smartphone,
-  CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, BookMarked,
+  CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, FileText,
 } from 'lucide-react';
 import { OrderItem, TablePayment } from '@/types/pos';
 
@@ -85,6 +85,7 @@ const ReviewScreen = () => {
     vatRate: number;
     vatEnabled: boolean;
     total: number;
+    amountAddedToCredit?: number;
   } | null>(null);
 
   const splitSelectedItems = useMemo(
@@ -137,13 +138,21 @@ const ReviewScreen = () => {
   const [paidMethod, setPaidMethod] = useState('');
   const [reprinting, setReprinting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
   const lastPrintJobRef = useRef<PrintJob | null>(null);
   const confirmingRef = useRef(false);
   const [billDetailsOpen, setBillDetailsOpen] = useState(false);
   /** Previous due actually collected in the completed transaction. */
   const [settledDue, setSettledDue] = useState(0);
   /** Cash collected alongside a Credit (khatta) booking — Option D split. */
-  const [creditAmountReceived, setCreditAmountReceived] = useState('');
+  const [creditAmountReceived, setCreditAmountReceived] = useState('0');
+
+  const creditCashCollected = Math.min(
+    Math.max(0, Math.round((Number(creditAmountReceived) || 0) * 100) / 100),
+    bill.total,
+  );
+  const creditAmountAdded = Math.max(0, Math.round((bill.total - creditCashCollected) * 100) / 100);
+  const creditNewBalance = Math.round((outstandingDue + creditAmountAdded) * 100) / 100;
 
   // The due quoted to the customer when the cashier chose to settle it. If the
   // balance moves afterwards — another device collected part of it — the figure
@@ -166,6 +175,11 @@ const ReviewScreen = () => {
     setShowQRModal(false);
     setSelectedMethod(null);
     setConfirming(false);
+  };
+  const openCreditConfirmation = () => {
+    if (confirming || quotedDueStale) return;
+    setCreditAmountReceived('0');
+    setShowCreditConfirmation(true);
   };
   const acknowledgeNewAmount = () => setQuotedDue(outstandingDue);
   const staleAmountNotice = quotedDueStale ? (
@@ -302,6 +316,11 @@ const ReviewScreen = () => {
     if (method === 'khatta' && attachedCustomer) {
       const bn = getNextBillNumber();
       const now = Date.now();
+      const cashCollected = Math.min(
+        Math.max(0, Math.round((Number(creditAmountReceived) || 0) * 100) / 100),
+        bill.total,
+      );
+      const amountAddedToCredit = Math.max(0, Math.round((bill.total - cashCollected) * 100) / 100);
       const liveUser = useStaffStore.getState().currentUser;
       const processedBy = liveUser
         ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
@@ -343,10 +362,9 @@ const ReviewScreen = () => {
       // Option D — partial cash received alongside the credit booking.
       // After addToCustomerDue the live balance = oldDue + today's bill.
       // Apply the partial payment against that combined figure.
-      const parsedReceived = Math.round(Number(creditAmountReceived) * 100) / 100;
-      if (parsedReceived > 0) {
+      if (cashCollected > 0) {
         const liveDue = useCustomerStore.getState().getCustomer(attachedCustomer.id)?.currentDue ?? 0;
-        const safeAmount = Math.min(parsedReceived, liveDue);
+        const safeAmount = Math.min(cashCollected, liveDue);
         if (safeAmount > 0) {
           useCustomerStore.getState().receiveRepayment({
             customerId: attachedCustomer.id,
@@ -358,16 +376,58 @@ const ReviewScreen = () => {
         }
       }
 
+      const session = {
+        items: [...unpaidItems],
+        billNum: bn,
+        paidAt: now,
+        paidMethod: `CREDIT · ${attachedCustomer.name}`,
+        subtotal: bill.subtotal,
+        discountAmount: bill.discountAmount,
+        vatAmount: bill.vatAmount,
+        vatRate: bill.vatRate,
+        vatEnabled: bill.vatEnabled,
+        total: bill.total,
+        amountAddedToCredit,
+      };
+      setPrintSession(session);
+      const creditTaxJob: PrintJob = {
+        type: 'TAX_INVOICE',
+        data: {
+          cafeName: settings.cafeName,
+          cafeAddress: settings.cafeAddress,
+          cafePan: settings.cafePan,
+          billFooter: settings.billFooter,
+          tableNumber,
+          billNumber: bn,
+          timestamp: now,
+          items: unpaidItems.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity })),
+          subtotal: bill.subtotal,
+          discountAmount: bill.discountAmount,
+          vatEnabled: bill.vatEnabled,
+          vatAmount: bill.vatAmount,
+          vatRate: bill.vatRate,
+          total: bill.total,
+          method: 'Credit',
+          creditSettlement: { customerName: attachedCustomer.name, amount: amountAddedToCredit },
+          takenBy: order?.takenBy,
+          processedBy,
+          logo: settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+          showLogoOnBill: settings.showLogoOnBill,
+        },
+      };
+      lastPrintJobRef.current = creditTaxJob;
       updateOrderStatus(orderIdRef.current, 'paid');
       playSuccess();
-      lastPrintJobRef.current = null;
       setBillNum(bn);
       setPaidAt(now);
-      setPaidMethod(`Credit · ${attachedCustomer.name.split(' ')[0]}`);
+      setPaidMethod(`CREDIT · ${attachedCustomer.name}`);
       setQuotedDue(null);
-      setCreditAmountReceived('');
+      setShowCreditConfirmation(false);
+      setConfirming(false);
+      confirmingRef.current = false;
       setPaid(true);
       if (tableId) resetTable(tableId);
+      firePrintJob(creditTaxJob);
       return;
     }
 
@@ -630,6 +690,14 @@ const ReviewScreen = () => {
           <span className={`font-semibold text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Total</span>
           <span className={`font-black text-foreground ${compact ? 'text-base' : 'text-lg'}`}>Rs. {fmt(printSession?.total ?? 0)}</span>
         </div>
+        {printSession?.amountAddedToCredit !== undefined && (
+          <div className="flex justify-between items-center border-t border-dashed border-border/60 pt-1.5" data-testid="text-amount-added-to-credit">
+            <span className={`font-semibold text-muted-foreground ${compact ? 'text-xs' : 'text-sm'}`}>Amount Added to Credit</span>
+            <span className={`font-black text-foreground ${compact ? 'text-xs' : 'text-sm'}`}>
+              Rs. {fmt(printSession.amountAddedToCredit)}
+            </span>
+          </div>
+        )}
         {settledDue > 0 && (
           <div className="space-y-1 border-t border-dashed border-border/60 pt-1.5" data-testid="text-settled-due">
             <div className="flex justify-between items-center">
@@ -1306,11 +1374,10 @@ const ReviewScreen = () => {
           </div>
         </button>
 
-        {/* 📝 Credit (Pay Later) — only when customer attached and not merging past credit */}
+        {/* Credit (Pay Later) — only when customer attached and not merging past credit */}
         {attachedCustomer && !selectedQty.size && !includePrevDue && (
-          <div className="flex flex-col gap-1">
             <button
-              onClick={() => handleConfirmPayment('khatta')}
+              onClick={openCreditConfirmation}
               data-testid="button-payment-method-khatta"
               disabled={confirming || quotedDueStale}
               className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
@@ -1324,31 +1391,15 @@ const ReviewScreen = () => {
                 className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}
               >
-                <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+                <FileText size={18} style={{ color: 'hsl(32 90% 68%)' }} />
               </div>
               <div className="text-left min-w-0">
-                <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>📝 Credit</p>
+                <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Credit</p>
                 <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>
                   {attachedCustomer.name.split(' ')[0]}
                 </p>
               </div>
             </button>
-            {/* Option D — partial cash received alongside Credit booking */}
-            {outstandingDue > 0 && (
-              <input
-                type="number"
-                min="0"
-                inputMode="decimal"
-                placeholder={`Cash received (max Rs. ${fmt(outstandingDue + bill.total)})`}
-                value={creditAmountReceived}
-                onChange={(e) => setCreditAmountReceived(e.target.value)}
-                className="w-full rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
-                style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
-              />
-            )}
-          </div>
         )}
 
         {/* Digital wallets */}
@@ -1537,11 +1588,10 @@ const ReviewScreen = () => {
                         </div>
                       </button>
 
-                      {/* 📝 Credit (Pay Later) — landscape inline, only if customer attached */}
+                      {/* Credit (Pay Later) — landscape inline, only if customer attached */}
                       {attachedCustomer && !selectedQty.size && !includePrevDue && (
-                        <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => handleConfirmPayment('khatta')}
+                            onClick={openCreditConfirmation}
                             data-testid="button-payment-method-khatta"
                             disabled={confirming || quotedDueStale}
                             className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
@@ -1553,30 +1603,15 @@ const ReviewScreen = () => {
                           >
                             <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
                               style={{ background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.22)' }}>
-                              <BookMarked size={18} style={{ color: 'hsl(32 90% 68%)' }} />
+                              <FileText size={18} style={{ color: 'hsl(32 90% 68%)' }} />
                             </div>
                             <div className="text-left min-w-0">
-                              <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>📝 Credit</p>
+                              <p className="font-bold text-sm leading-tight" style={{ color: 'hsl(32 90% 68%)' }}>Credit</p>
                               <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
                                 {attachedCustomer.name.split(' ')[0]}
                               </p>
                             </div>
                           </button>
-                          {outstandingDue > 0 && (
-                            <input
-                              type="number"
-                              min="0"
-                              inputMode="decimal"
-                              placeholder="Cash received (optional)"
-                              value={creditAmountReceived}
-                              onChange={(e) => setCreditAmountReceived(e.target.value)}
-                              className="w-full rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none"
-                              style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
-                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
-                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
-                            />
-                          )}
-                        </div>
                       )}
 
                       {/* Digital wallets */}
@@ -2042,13 +2077,12 @@ const ReviewScreen = () => {
                             </div>
                           </button>
 
-                          {/* 📝 Credit (Pay Later) — tablet inline */}
+                          {/* Credit (Pay Later) — tablet inline */}
                           {attachedCustomer && !selectedQty.size && !includePrevDue && (() => {
                             const creditColor = 'hsl(32 90% 68%)';
                             return (
-                              <div className="flex flex-col gap-1.5">
                                 <button
-                                  onClick={() => handleConfirmPayment('khatta')}
+                                  onClick={openCreditConfirmation}
                                   data-testid="button-payment-method-khatta"
                                   disabled={confirming || quotedDueStale}
                                   className="pos-pay-card flex items-center gap-[10px] rounded-[14px] disabled:opacity-40"
@@ -2061,28 +2095,13 @@ const ReviewScreen = () => {
                                   }}
                                 >
                                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(251,191,36,0.18)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <BookMarked size={20} style={{ color: creditColor }} />
+                                    <FileText size={20} style={{ color: creditColor }} />
                                   </div>
                                   <div className="text-left min-w-0">
-                                    <p className="text-[14px] font-bold leading-tight" style={{ color: creditColor }}>📝 Credit</p>
+                                    <p className="text-[14px] font-bold leading-tight" style={{ color: creditColor }}>Credit</p>
                                     <p className="text-[10px] font-medium mt-0.5 truncate" style={{ color: 'rgba(251,191,36,0.6)' }}>{attachedCustomer.name.split(' ')[0]}</p>
                                   </div>
                                 </button>
-                                {outstandingDue > 0 && (
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    inputMode="decimal"
-                                    placeholder="Cash received alongside credit (optional)"
-                                    value={creditAmountReceived}
-                                    onChange={(e) => setCreditAmountReceived(e.target.value)}
-                                    className="w-full rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none"
-                                    style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}
-                                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
-                                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.2)'; }}
-                                  />
-                                )}
-                              </div>
                             );
                           })()}
 
@@ -2157,6 +2176,100 @@ const ReviewScreen = () => {
       </div>
 
       {/* QR Modal */}
+      {showCreditConfirmation && attachedCustomer && (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+          <div
+            className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+            style={{ background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(251,191,36,0.25)' }}
+          >
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.08]">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(251,191,36,0.14)', color: 'hsl(32 90% 68%)' }}
+              >
+                <FileText size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-black text-white text-base">Confirm Credit Settlement</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">This order will be added to the customer ledger.</p>
+              </div>
+              <button
+                onClick={() => setShowCreditConfirmation(false)}
+                disabled={confirming}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-40"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="px-5 py-5 space-y-3.5">
+              <div className="rounded-2xl p-3.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-white truncate">{attachedCustomer.name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{attachedCustomer.phone || 'No phone number'}</p>
+                  </div>
+                  <FileText size={18} className="text-blue-300 flex-shrink-0" />
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-400">Today's Order Total</span>
+                  <span className="font-bold text-white tabular-nums">Rs. {fmt(bill.total)}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-400">Customer Existing Due</span>
+                  <span className="font-bold text-red-400 tabular-nums">Rs. {fmt(outstandingDue)}</span>
+                </div>
+                <div className="flex justify-between gap-3 pt-2 border-t border-white/[0.08]">
+                  <span className="font-semibold text-slate-300">New Total Due Balance</span>
+                  <span className="font-black text-red-400 tabular-nums">Rs. {fmt(creditNewBalance)}</span>
+                </div>
+              </div>
+
+              <label className="block">
+                <span className="block text-xs font-semibold text-slate-300 mb-1.5">Cash Collected Today (Rs.)</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={bill.total}
+                  step="0.01"
+                  inputMode="decimal"
+                  value={creditAmountReceived}
+                  onChange={(e) => setCreditAmountReceived(e.target.value)}
+                  className="w-full rounded-xl px-3.5 py-3 text-sm text-white bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-amber-400/60 transition-colors"
+                  autoFocus
+                />
+              </label>
+
+              <div className="flex items-center justify-between rounded-xl px-3.5 py-3" style={{ background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                <span className="text-xs font-semibold text-amber-200">Net Amount Added to Credit</span>
+                <span className="text-base font-black text-amber-300 tabular-nums">Rs. {fmt(creditAmountAdded)}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <button
+                  onClick={() => setShowCreditConfirmation(false)}
+                  disabled={confirming}
+                  className="py-3 rounded-xl font-bold text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleConfirmPayment('khatta')}
+                  disabled={confirming || quotedDueStale}
+                  className="py-3 rounded-xl font-black text-sm text-slate-950 transition-all active:scale-95 hover:brightness-110 disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', boxShadow: '0 4px 16px -4px rgba(251,191,36,0.45)' }}
+                >
+                  {confirming ? <><Loader2 size={15} className="animate-spin" /> Processing...</> : 'Confirm Credit & Settle'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showQRModal && selectedMethod && selectedMethod !== 'cash' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md">
 
