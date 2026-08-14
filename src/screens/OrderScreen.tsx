@@ -11,8 +11,9 @@ import { TopBar } from '@/components/ui/Navigation';
 import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
 import CustomerPicker from '@/components/orders/CustomerPicker';
-import { Customer } from '@/types/pos';
-import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft, UserCircle } from 'lucide-react';
+import { Customer, OrderItem } from '@/types/pos';
+import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft, UserCircle, Lock, Minus, Plus, Trash2 } from 'lucide-react';
+import VoidItemModal from '@/components/orders/VoidItemModal';
 import { playClick } from '@/utils/sounds';
 import { firePrintJob } from '@/utils/printEngine';
 import { getStaffName } from '@/utils/staffName';
@@ -75,6 +76,8 @@ const OrderScreen = () => {
   const [moveIsProcessing, setMoveIsProcessing] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const attachCustomerToOrder = usePOSStore((s) => s.attachCustomerToOrder);
+  const voidOrderItem = usePOSStore((s) => s.voidOrderItem);
+  const [voidTarget, setVoidTarget] = useState<OrderItem | null>(null);
   const [moveSuccessBanner, setMoveSuccessBanner] = useState<string | null>(
     () => (location.state as { movedFrom?: number })?.movedFrom != null
       ? `Moved from Table ${(location.state as { movedFrom?: number }).movedFrom} ✓`
@@ -199,11 +202,16 @@ const OrderScreen = () => {
       ? { background: 'rgba(251,191,36,0.12)', color: 'rgba(251,191,36,0.8)', border: '1px solid rgba(251,191,36,0.25)' }
       : { background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.25)' };
 
+  // Per-item draft/sent counts (using backwards-compatible helper)
+  const unpaidDrawerItems = (order?.items || []).filter((i) => i.status !== 'paid');
+  const drawerDraftItems = unpaidDrawerItems.filter((i) => !isSentToKitchen(i));
+  const drawerHasDraft = drawerDraftItems.length > 0;
+  const drawerDraftUnitCount = drawerDraftItems.reduce((s, i) => s + i.quantity, 0);
+  const drawerAllSent = unpaidDrawerItems.length > 0 && !drawerHasDraft;
+
   const drawerPrimaryLabel =
-    kitchenStatus === 'draft'
-      ? 'Send to Kitchen'
-      : hasUnsentItems
-      ? 'Send Update'
+    drawerHasDraft
+      ? `Send ${drawerDraftUnitCount} item${drawerDraftUnitCount !== 1 ? 's' : ''} to Kitchen`
       : 'Proceed to Payment →';
 
   const drawerButtonLabel =
@@ -211,12 +219,16 @@ const OrderScreen = () => {
     : drawerSendPhase === 'sent' ? 'Sent ✓'
     : drawerPrimaryLabel;
 
+  /** True when the item has already been sent to the kitchen (backwards-compatible). */
+  const isSentToKitchen = (item: OrderItem) =>
+    item.kitchenStatus === 'sent' || item.sentToKitchen === true;
+
   const handleSendToKitchen = () => {
     if (!order || drawerSendPhase !== 'idle') return; // race condition guard
 
     // Snapshot unsent IDs at click time — stable for flash
     const unsentSnapshot = order.items
-      .filter((i) => !i.sentToKitchen && i.status !== 'paid')
+      .filter((i) => !isSentToKitchen(i) && i.status !== 'paid')
       .map((i) => i.id);
 
     // Cancel any prior flash and start a new one from the snapshot
@@ -237,7 +249,7 @@ const OrderScreen = () => {
 
     // Snapshot unsent items BEFORE the store marks them as sent
     const unsentOrderItems = order.items.filter(
-      (i) => !i.sentToKitchen && i.status !== 'paid',
+      (i) => !isSentToKitchen(i) && i.status !== 'paid',
     );
 
     // Kitchen food filter — driven by each category's sendToKitchen flag.
@@ -283,14 +295,21 @@ const OrderScreen = () => {
 
   const handleDrawerPrimary = () => {
     if (drawerSendPhase !== 'idle') return;
-    if (kitchenStatus === 'placed' && !hasUnsentItems) {
+    if (drawerAllSent) {
       setShowCart(false);
       handlePay();
-    } else if (kitchenStatus === 'draft' && order && order.items.length > 0) {
-      handleSendToKitchen();
-    } else {
+    } else if (drawerHasDraft && order && order.items.length > 0) {
       handleSendToKitchen();
     }
+  };
+
+  const handleVoidConfirm = (qty: number, reason: string) => {
+    if (!voidTarget || !order) return;
+    const cancelledBy = currentUser
+      ? `${currentUser.firstName ?? ''} ${currentUser.lastName ?? ''}`.trim() || currentUser.username || currentUser.name || 'Staff'
+      : 'Staff';
+    voidOrderItem(order.id, voidTarget.id, qty, reason, cancelledBy);
+    setVoidTarget(null);
   };
 
   const handlePaxChange = (newPax: number) => {
@@ -718,24 +737,45 @@ const OrderScreen = () => {
                 </div>
               ) : (() => {
                 const allItems = order?.items || [];
-                const hasGrouping = kitchenStatus === 'placed' && hasUnsentItems;
-                const sentItems = hasGrouping
-                  ? allItems.filter((i) => i.sentToKitchen)
-                  : allItems;
-                const unsentItems = hasGrouping
-                  ? allItems.filter((i) => !i.sentToKitchen && i.status !== 'paid')
-                  : [];
+                const sentGroupItems = allItems.filter((i) => isSentToKitchen(i));
+                const draftGroupItems = allItems.filter((i) => !isSentToKitchen(i) && i.status !== 'paid');
+                const hasGrouping = sentGroupItems.length > 0 && draftGroupItems.length > 0;
 
-                const renderItem = (item: typeof allItems[0], isUnsent: boolean) => {
+                // Items to render in main list (when no grouping, show everything)
+                const mainItems = hasGrouping ? sentGroupItems : allItems;
+
+                const renderItem = (item: typeof allItems[0]) => {
                   const isPaid = item.status === 'paid';
+                  const isSent = isSentToKitchen(item);
+                  const isDraft = !isSent && !isPaid;
                   const isFlashing = drawerFlashingIds.has(item.id);
+
+                  const handleMinus = () => {
+                    if (isPaid) return;
+                    if (isSent) { setVoidTarget(item); }
+                    else if (order) { updateItemQuantity(order.id, item.id, -1); }
+                  };
+                  const handleTrash = () => {
+                    if (isPaid) return;
+                    if (isSent) { setVoidTarget(item); }
+                    else if (order) { removeItemFromOrder(order.id, item.id); }
+                  };
+
                   return (
                     <div
                       key={item.id}
                       className="flex items-center gap-2 rounded-xl px-3 py-2.5"
                       style={{
-                        background: isPaid ? 'rgba(255,255,255,0.02)' : isUnsent ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.06)',
-                        border: isPaid ? '1px solid rgba(255,255,255,0.04)' : isUnsent ? '1px solid rgba(251,191,36,0.2)' : '1px solid rgba(255,255,255,0.07)',
+                        background: isPaid
+                          ? 'rgba(255,255,255,0.02)'
+                          : isDraft
+                          ? 'rgba(251,191,36,0.06)'
+                          : 'rgba(15,23,42,0.75)',
+                        border: isPaid
+                          ? '1px solid rgba(255,255,255,0.04)'
+                          : isDraft
+                          ? '1px solid rgba(251,191,36,0.22)'
+                          : '1px solid rgba(30,41,59,0.85)',
                         opacity: isPaid ? 0.5 : 1,
                         transition: 'background 0.25s ease, border-color 0.25s ease',
                         animation: isFlashing ? 'dr-item-flash 0.65s ease' : undefined,
@@ -749,53 +789,83 @@ const OrderScreen = () => {
                               Paid
                             </span>
                           )}
-                          {isUnsent && (
+                          {isSent && !isPaid && (
+                            <span className="flex-shrink-0 flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.14)', color: 'rgba(147,197,253,0.85)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                              <Lock size={8} />
+                              Sent
+                            </span>
+                          )}
+                          {isDraft && (
                             <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.9)' }}>
-                              New
+                              Draft
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-white/40">Rs. {fmt(item.price)} each</p>
                       </div>
                       <div className="flex items-center gap-1.5">
+                        {/* Decrease / void */}
                         <button
-                          onClick={() => !isPaid && order && updateItemQuantity(order.id, item.id, -1)}
+                          onClick={handleMinus}
                           disabled={isPaid}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 active:scale-90 transition-transform disabled:pointer-events-none disabled:opacity-30"
-                          style={{ background: 'rgba(255,255,255,0.07)' }}
+                          aria-label={isSent ? `Void ${item.name}` : `Decrease ${item.name}`}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-transform disabled:pointer-events-none disabled:opacity-30"
+                          style={
+                            isSent && !isPaid
+                              ? { background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: 'rgba(252,165,165,0.8)' }
+                              : { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.55)' }
+                          }
                         >
-                          <span className="text-base leading-none select-none">−</span>
+                          <Minus size={13} />
                         </button>
                         <span className="w-7 text-center font-black text-sm text-white/90 select-none">{item.quantity}</span>
+                        {/* Increase — draft only */}
                         <button
-                          onClick={() => !isPaid && order && updateItemQuantity(order.id, item.id, 1)}
-                          disabled={isPaid}
+                          onClick={() => isDraft && order && updateItemQuantity(order.id, item.id, 1)}
+                          disabled={isPaid || isSent}
+                          aria-label={`Increase ${item.name}`}
                           className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-transform disabled:pointer-events-none disabled:opacity-30"
-                          style={{ background: 'rgba(59,130,246,0.20)', border: '1px solid rgba(59,130,246,0.30)' }}
+                          style={{ background: 'rgba(59,130,246,0.20)', border: '1px solid rgba(59,130,246,0.30)', color: 'rgba(147,197,253,0.9)' }}
                         >
-                          <span className="text-base leading-none text-blue-300 select-none">+</span>
+                          <Plus size={13} />
                         </button>
                       </div>
                       <p className="w-16 text-right text-sm font-bold" style={{ color: isPaid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.8)' }}>
                         Rs. {fmt(item.price * item.quantity)}
                       </p>
+                      {/* Trash / void */}
+                      {!isPaid && (
+                        <button
+                          onClick={handleTrash}
+                          aria-label={isSent ? `Void ${item.name}` : `Remove ${item.name}`}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all"
+                          style={
+                            isSent
+                              ? { color: 'rgba(252,165,165,0.6)', background: 'rgba(239,68,68,0.08)' }
+                              : { color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.04)' }
+                          }
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                      {isPaid && <div className="w-8 h-8 flex-shrink-0" />}
                     </div>
                   );
                 };
 
                 return (
                   <>
-                    {sentItems.map((item) => renderItem(item, false))}
-                    {hasGrouping && unsentItems.length > 0 && (
+                    {mainItems.map((item) => renderItem(item))}
+                    {hasGrouping && draftGroupItems.length > 0 && (
                       <>
                         <div className="flex items-center gap-2 pt-1 pb-0.5">
                           <div className="flex-1 h-px" style={{ background: 'rgba(251,191,36,0.18)' }} />
                           <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(251,191,36,0.55)' }}>
-                            New items
+                            New items — not yet sent
                           </span>
                           <div className="flex-1 h-px" style={{ background: 'rgba(251,191,36,0.18)' }} />
                         </div>
-                        {unsentItems.map((item) => renderItem(item, true))}
+                        {draftGroupItems.map((item) => renderItem(item))}
                       </>
                     )}
                   </>
@@ -828,13 +898,13 @@ const OrderScreen = () => {
                 <span className="text-2xl font-black text-white/95">Rs. {fmt(runningTotal)}</span>
               </div>
 
-              {/* Safety hint — shown in draft or as warning */}
-              {(showKitchenWarning || (kitchenStatus === 'draft' && hasItems)) && (
+              {/* Safety hint — shown when drafts exist */}
+              {(showKitchenWarning || drawerHasDraft) && hasItems && (
                 <p
                   className="text-[11px] text-center font-semibold mb-2 mt-1"
                   style={{ color: showKitchenWarning ? 'rgba(251,191,36,0.9)' : 'rgba(251,191,36,0.5)' }}
                 >
-                  Send to kitchen before payment
+                  ⚠ Send to kitchen before payment
                 </p>
               )}
 
@@ -848,32 +918,30 @@ const OrderScreen = () => {
                 </button>
               )}
 
-              {/* Primary CTA — visual hierarchy by state */}
+              {/* Primary CTA — matches desktop OrderPanel button logic */}
               {(() => {
-                // WAITER role: "Proceed to Payment" is replaced by a disabled marker
-                const isProceed = canPay && kitchenStatus === 'placed' && !hasUnsentItems;
-                const isUpdate = kitchenStatus === 'placed' && hasUnsentItems;
-                const isBtnDisabled = !order || order.items.length === 0 || drawerSendPhase === 'sending';
-                const bg = drawerSendPhase === 'sent'
-                  ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
-                  : isProceed
-                  ? 'linear-gradient(135deg, #1d4ed8 0%, #60a5fa 60%, #3b82f6 100%)'
-                  : isUpdate
-                  ? 'linear-gradient(135deg, #1a3d9e 0%, #2d5dbf 100%)'
-                  : 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)';
-                const shadow = drawerSendPhase === 'sent'
-                  ? '0 4px 20px -4px rgba(16,185,129,0.6)'
-                  : isProceed
-                  ? '0 6px 28px -4px rgba(59,130,246,0.75)'
-                  : isUpdate
-                  ? '0 4px 12px -4px rgba(59,130,246,0.35)'
-                  : '0 4px 20px -4px rgba(59,130,246,0.6)';
-                const py = isUpdate && drawerSendPhase === 'idle' ? '13px' : '15px';
+                const isEmpty = !order || order.items.length === 0;
+                const isBtnDisabled = isEmpty || drawerSendPhase === 'sending';
+
+                let bg: string;
+                let shadow: string;
+                if (drawerSendPhase === 'sent') {
+                  bg = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+                  shadow = '0 4px 20px -4px rgba(16,185,129,0.6)';
+                } else if (drawerAllSent) {
+                  bg = 'linear-gradient(135deg, #1d4ed8 0%, #60a5fa 60%, #3b82f6 100%)';
+                  shadow = '0 6px 28px -4px rgba(59,130,246,0.75)';
+                } else {
+                  bg = 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)';
+                  shadow = '0 4px 20px -4px rgba(59,130,246,0.6)';
+                }
+
                 const ariaLabel = drawerSendPhase === 'sending'
                   ? 'Sending to kitchen, please wait'
                   : drawerSendPhase === 'sent'
                   ? 'Order sent to kitchen'
                   : drawerPrimaryLabel;
+
                 return (
                   <button
                     onClick={handleDrawerPrimary}
@@ -883,12 +951,12 @@ const OrderScreen = () => {
                     data-testid="button-proceed-to-bill"
                     className="w-full rounded-2xl font-black text-base active:scale-[0.97] disabled:opacity-20 disabled:cursor-not-allowed"
                     style={{
-                      paddingTop: py,
-                      paddingBottom: py,
-                      background: bg,
+                      paddingTop: '15px',
+                      paddingBottom: '15px',
+                      background: isEmpty ? 'rgba(59,130,246,0.12)' : bg,
                       color: '#ffffff',
-                      boxShadow: shadow,
-                      transition: 'background 0.35s ease, box-shadow 0.35s ease, padding 0.2s ease',
+                      boxShadow: isEmpty ? 'none' : shadow,
+                      transition: 'background 0.35s ease, box-shadow 0.35s ease',
                       animation: drawerSendPhase === 'sending' ? 'dr-btn-pulse 0.7s ease' : undefined,
                     }}
                   >
@@ -899,6 +967,15 @@ const OrderScreen = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Void Item Modal (portrait drawer) ── */}
+      {voidTarget && (
+        <VoidItemModal
+          item={voidTarget}
+          onConfirm={handleVoidConfirm}
+          onClose={() => setVoidTarget(null)}
+        />
       )}
 
       {/* ── Move Table Modal ── */}
