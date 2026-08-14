@@ -1,0 +1,30 @@
+Directive: Enforce System-Wide Zero Data Loss, Hydration Locks, and Auto-Recovery Across the ENTIRE Codebase
+
+CORE MANDATE:
+Every single piece of application data—Menu Items, Categories, Inventory & Stock, Customers & Khatta Ledgers, Tables & Active Orders, Expenses, Order History, and Settings—must be 100% persistent, accurate, and NEVER wiped out by page refreshes, app restarts, or frontend race conditions.
+
+INSPECT & APPLY SYSTEM-WIDE RULES ACROSS ALL STORES & SYNC HANDLERS:
+
+1. UNIVERSAL HYDRATION LOCK (Read-Before-Write):
+- On app launch, ALL stores must start in a read-only unhydrated state (isHydrated = false).
+- STRICTLY BLOCK any outbound write or sync to Firebase while isHydrated is false.
+- A store becomes hydrated (isHydrated = true) ONLY AFTER the initial snapshot has successfully arrived from Firebase.
+
+2. FIREWALL AGAINST EMPTY STATE OVERWRITES:
+- No sync hook, store subscriber, or effect is allowed to write an empty array [] or empty object {} to any Firebase root path (/menuItems, /inventory, /customers, /tables, /orders, /expenses, /settings).
+- If a local store initializes as empty, it must NEVER push that blank state to Firebase over existing database records.
+
+3. AUTO-HEALING & SEED FALLBACKS:
+- If Firebase is genuinely empty (null/missing) on initial connection:
+  * /menuItems: Auto-populate with the full default menu catalog and sync to Firebase.
+  * /inventory: Auto-populate with default inventory items and sync to Firebase.
+  * /tables: Auto-populate with default restaurant tables (Ground Floor, Cabins, First Floor) and sync to Firebase.
+- This must execute seamlessly in the background on startup without requiring any manual shell commands.
+
+4. TRANSACTIONAL MERGE SAFETY:
+- Customer ledgers, repayments, and order history must always append/merge without overwriting or resetting historical records.
+
+EXECUTION INSTRUCTIONS:
+- Inspect all relevant store files, sync utilities, and root listeners.
+- Implement these safety locks and fallbacks in ONE focused pass.
+- Run 'npm run build' ONCE to verify zero TypeScript errors, then STOP immediately without running test suites or changing ports.

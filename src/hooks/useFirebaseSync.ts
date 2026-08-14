@@ -43,6 +43,15 @@ import {
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
 } from "@/utils/firebaseSync";
+import {
+  DEFAULT_TABLES,
+  DEFAULT_PILLARS,
+  DEFAULT_CATEGORIES,
+  DEFAULT_MENU_ITEMS,
+  DEFAULT_ALCOHOL_PRODUCTS,
+  DEFAULT_BEVERAGE_PRODUCTS,
+  DEFAULT_CIGARETTE_PRODUCTS,
+} from "@/data/defaultSeeds";
 
 export function useFirebaseSync() {
   const orders = usePOSStore((s) => s.orders);
@@ -119,11 +128,17 @@ export function useFirebaseSync() {
   const hasLoadedMeatEntries = useRef(false);
   const hasLoadedMaintenanceExpenses = useRef(false);
 
-  // 1. Subscribe to Cloud Updates (Orders + Tables + Payments + Settings)
+  // 1. Subscribe to Cloud Updates
   useEffect(() => {
     const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
-      const currentOrders = usePOSStore.getState().orders;
       hasLoadedOrders.current = true;
+      const currentOrders = usePOSStore.getState().orders;
+
+      // FIREWALL: never let an empty remote snapshot wipe non-empty local orders
+      if (remoteOrders.length === 0 && currentOrders.length > 0) {
+        pushOrdersToFirebase(currentOrders);
+        return;
+      }
 
       if (JSON.stringify(currentOrders) !== JSON.stringify(remoteOrders)) {
         isRemoteOrderUpdate.current = true;
@@ -132,8 +147,22 @@ export function useFirebaseSync() {
     });
 
     const unsubscribeTables = subscribeToTables((remoteTables) => {
-      const currentTables = usePOSStore.getState().tables;
       hasLoadedTables.current = true;
+      const currentTables = usePOSStore.getState().tables;
+
+      // FIREWALL: never let an empty remote snapshot wipe non-empty local tables.
+      // AUTO-HEAL: seed from defaults when both remote and local are empty.
+      if (remoteTables.length === 0) {
+        if (currentTables.length > 0) {
+          pushTablesToFirebase(currentTables);
+          return;
+        }
+        // Both empty — auto-seed with restaurant defaults
+        isRemoteTableUpdate.current = true;
+        setTables(DEFAULT_TABLES);
+        pushTablesToFirebase(DEFAULT_TABLES);
+        return;
+      }
 
       if (JSON.stringify(currentTables) !== JSON.stringify(remoteTables)) {
         isRemoteTableUpdate.current = true;
@@ -143,14 +172,22 @@ export function useFirebaseSync() {
 
     const store = {
       setPayments: (remotePayments: typeof payments) => {
-        const currentPayments = usePOSStore.getState().payments;
         hasLoadedPayments.current = true;
+        const currentPayments = usePOSStore.getState().payments;
+
+        // Payments are transactional; empty remote means genuinely no payments —
+        // preserve local history and seed Firebase if local has data.
+        if (remotePayments.length === 0 && currentPayments.length > 0) {
+          pushPaymentsToFirebase(currentPayments);
+          return;
+        }
 
         if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
           isRemotePaymentUpdate.current = true;
           setPayments(remotePayments);
         }
       },
+
       setSettings: (remoteSettings: typeof settings) => {
         const currentSettings = usePOSStore.getState().settings;
         hasLoadedSettings.current = true;
@@ -160,87 +197,199 @@ export function useFirebaseSync() {
           setSettings(remoteSettings);
         }
       },
+
       setMenuItems: (remoteMenuItems: typeof menuItems) => {
-        const currentMenuItems = usePOSStore.getState().menuItems;
         hasLoadedMenuItems.current = true;
+        const currentMenuItems = usePOSStore.getState().menuItems;
+
+        // FIREWALL: never wipe non-empty local menu with empty remote.
+        // AUTO-HEAL: seed from full default catalog when both are empty.
+        if (remoteMenuItems.length === 0) {
+          if (currentMenuItems.length > 0) {
+            pushMenuItemsToFirebase(currentMenuItems);
+            return;
+          }
+          // Both empty — auto-seed from the full menu catalog
+          isRemoteMenuItemsUpdate.current = true;
+          setMenuItems(DEFAULT_MENU_ITEMS);
+          pushMenuItemsToFirebase(DEFAULT_MENU_ITEMS);
+          return;
+        }
 
         if (JSON.stringify(currentMenuItems) !== JSON.stringify(remoteMenuItems)) {
           isRemoteMenuItemsUpdate.current = true;
           setMenuItems(remoteMenuItems);
         }
       },
+
       setCategories: (remoteCategories: typeof categories) => {
-        const currentCategories = usePOSStore.getState().categories;
         hasLoadedCategories.current = true;
+        const currentCategories = usePOSStore.getState().categories;
+
+        // FIREWALL + AUTO-HEAL
+        if (remoteCategories.length === 0) {
+          if (currentCategories.length > 0) {
+            pushCategoriesToFirebase(currentCategories);
+            return;
+          }
+          isRemoteCategoriesUpdate.current = true;
+          setCategories(DEFAULT_CATEGORIES);
+          pushCategoriesToFirebase(DEFAULT_CATEGORIES);
+          return;
+        }
 
         if (JSON.stringify(currentCategories) !== JSON.stringify(remoteCategories)) {
           isRemoteCategoriesUpdate.current = true;
           setCategories(remoteCategories);
         }
       },
+
       setPillars: (remotePillars: typeof pillars) => {
-        const currentPillars = usePOSStore.getState().pillars;
         hasLoadedPillars.current = true;
+        const currentPillars = usePOSStore.getState().pillars;
+
+        // FIREWALL + AUTO-HEAL
+        if (remotePillars.length === 0) {
+          if (currentPillars.length > 0) {
+            pushPillarsToFirebase(currentPillars);
+            return;
+          }
+          isRemotePillarsUpdate.current = true;
+          setPillars(DEFAULT_PILLARS);
+          pushPillarsToFirebase(DEFAULT_PILLARS);
+          return;
+        }
 
         if (JSON.stringify(currentPillars) !== JSON.stringify(remotePillars)) {
           isRemotePillarsUpdate.current = true;
           setPillars(remotePillars);
         }
       },
+
       setAreaOrder: (remoteAreaOrder: typeof areaOrder) => {
-        const currentAreaOrder = usePOSStore.getState().areaOrder;
         hasLoadedAreaOrder.current = true;
+        const currentAreaOrder = usePOSStore.getState().areaOrder;
+
+        // FIREWALL: preserve local area order if remote is empty.
+        // No default seeding needed — area order derives from sections.
+        if (remoteAreaOrder.length === 0 && currentAreaOrder.length > 0) {
+          pushAreaOrderToFirebase(currentAreaOrder);
+          return;
+        }
 
         if (JSON.stringify(currentAreaOrder) !== JSON.stringify(remoteAreaOrder)) {
           isRemoteAreaOrderUpdate.current = true;
           setAreaOrder(remoteAreaOrder);
         }
       },
+
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
         hasLoadedAlcoholProducts.current = true;
         const currentProducts = useInventoryStore.getState().alcoholProducts;
+
+        // FIREWALL + AUTO-HEAL for master inventory catalog
+        if (remoteProducts.length === 0) {
+          if (currentProducts.length > 0) {
+            pushAlcoholProductsToFirebase(currentProducts);
+            return;
+          }
+          isRemoteAlcoholProductsUpdate.current = true;
+          setAlcoholProducts(DEFAULT_ALCOHOL_PRODUCTS);
+          pushAlcoholProductsToFirebase(DEFAULT_ALCOHOL_PRODUCTS);
+          return;
+        }
+
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteAlcoholProductsUpdate.current = true;
           setAlcoholProducts(remoteProducts);
         }
       },
+
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
         hasLoadedBeverageProducts.current = true;
         const currentProducts = useInventoryStore.getState().beverageProducts;
+
+        // FIREWALL + AUTO-HEAL
+        if (remoteProducts.length === 0) {
+          if (currentProducts.length > 0) {
+            pushBeverageProductsToFirebase(currentProducts);
+            return;
+          }
+          isRemoteBeverageProductsUpdate.current = true;
+          setBeverageProducts(DEFAULT_BEVERAGE_PRODUCTS);
+          pushBeverageProductsToFirebase(DEFAULT_BEVERAGE_PRODUCTS);
+          return;
+        }
+
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteBeverageProductsUpdate.current = true;
           setBeverageProducts(remoteProducts);
         }
       },
+
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
         hasLoadedCigaretteProducts.current = true;
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
+
+        // FIREWALL + AUTO-HEAL
+        if (remoteProducts.length === 0) {
+          if (currentProducts.length > 0) {
+            pushCigaretteProductsToFirebase(currentProducts);
+            return;
+          }
+          isRemoteCigaretteProductsUpdate.current = true;
+          setCigaretteProducts(DEFAULT_CIGARETTE_PRODUCTS);
+          pushCigaretteProductsToFirebase(DEFAULT_CIGARETTE_PRODUCTS);
+          return;
+        }
+
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteCigaretteProductsUpdate.current = true;
           setCigaretteProducts(remoteProducts);
         }
       },
+
       setGroceryPurchases: (remotePurchases: typeof groceryPurchases) => {
-        const currentPurchases = useInventoryStore.getState().groceryPurchases;
         hasLoadedGroceryPurchases.current = true;
+        const currentPurchases = useInventoryStore.getState().groceryPurchases;
+
+        // FIREWALL: preserve local purchase history if remote is empty
+        if (remotePurchases.length === 0 && currentPurchases.length > 0) {
+          pushGroceryPurchasesToFirebase(currentPurchases);
+          return;
+        }
 
         if (JSON.stringify(currentPurchases) !== JSON.stringify(remotePurchases)) {
           isRemoteGroceryPurchasesUpdate.current = true;
           setGroceryPurchases(remotePurchases);
         }
       },
+
       setInvMovements: (remoteMovements: typeof invMovements) => {
-        const currentMovements = useInventoryStore.getState().invMovements;
         hasLoadedInvMovements.current = true;
+        const currentMovements = useInventoryStore.getState().invMovements;
+
+        // FIREWALL: preserve local movement history if remote is empty
+        if (remoteMovements.length === 0 && currentMovements.length > 0) {
+          pushInvMovementsToFirebase(currentMovements);
+          return;
+        }
 
         if (JSON.stringify(currentMovements) !== JSON.stringify(remoteMovements)) {
           isRemoteInvMovementsUpdate.current = true;
           setInvMovements(remoteMovements);
         }
       },
+
       setInvMappings: (remoteMappings: typeof invMappings) => {
-        const currentMappings = useInventoryStore.getState().invMappings;
         hasLoadedInvMappings.current = true;
+        const currentMappings = useInventoryStore.getState().invMappings;
+
+        // FIREWALL: preserve local mappings if remote is empty
+        if (remoteMappings.length === 0 && currentMappings.length > 0) {
+          pushInvMappingsToFirebase(currentMappings);
+          return;
+        }
 
         if (JSON.stringify(currentMappings) !== JSON.stringify(remoteMappings)) {
           isRemoteInvMappingsUpdate.current = true;
@@ -252,6 +401,13 @@ export function useFirebaseSync() {
     const unsubscribeKitchenPurchases = subscribeToKitchenPurchases((remote) => {
       hasLoadedKitchenPurchases.current = true;
       const current = useKitchenPurchasesStore.getState().purchases;
+
+      // FIREWALL: preserve local purchase history if remote is empty
+      if (remote.length === 0 && current.length > 0) {
+        pushKitchenPurchasesToFirebase(current);
+        return;
+      }
+
       if (JSON.stringify(current) !== JSON.stringify(remote)) {
         isRemoteKitchenPurchasesUpdate.current = true;
         setKitchenPurchases(remote);
@@ -261,6 +417,13 @@ export function useFirebaseSync() {
     const unsubscribeMeatEntries = subscribeToMeatEntries((remote) => {
       hasLoadedMeatEntries.current = true;
       const current = useMeatTrackerStore.getState().meatEntries;
+
+      // FIREWALL: preserve local meat tracker history if remote is empty
+      if (remote.length === 0 && current.length > 0) {
+        pushMeatEntriesToFirebase(current);
+        return;
+      }
+
       if (JSON.stringify(current) !== JSON.stringify(remote)) {
         isRemoteMeatEntriesUpdate.current = true;
         setMeatEntries(remote);
@@ -270,6 +433,13 @@ export function useFirebaseSync() {
     const unsubscribeMaintenanceExpenses = subscribeToMaintenanceExpenses((remote) => {
       hasLoadedMaintenanceExpenses.current = true;
       const current = useMaintenanceStore.getState().expenses;
+
+      // FIREWALL: preserve local expense records if remote is empty
+      if (remote.length === 0 && current.length > 0) {
+        pushMaintenanceExpensesToFirebase(current);
+        return;
+      }
+
       if (JSON.stringify(current) !== JSON.stringify(remote)) {
         isRemoteMaintenanceExpensesUpdate.current = true;
         setMaintenanceExpenses(remote);
@@ -291,6 +461,14 @@ export function useFirebaseSync() {
     const unsubscribeStaff = subscribeToStaff({
       setUsers: (remoteUsers) => {
         const currentUsers = useStaffStore.getState().users;
+
+        // FIREWALL: never wipe non-empty local staff with empty remote.
+        // Staff are critical for login — if Firebase loses them, keep local cache.
+        if (remoteUsers.length === 0 && currentUsers.length > 0) {
+          pushStaffToFirebase(currentUsers);
+          hasLoadedStaff.current = true;
+          return;
+        }
 
         if (JSON.stringify(currentUsers) !== JSON.stringify(remoteUsers)) {
           isRemoteStaffUpdate.current = true;
@@ -342,6 +520,9 @@ export function useFirebaseSync() {
   ]);
 
   // 2. Push Local Order Changes to Cloud
+  // Guard: only after first remote snapshot (hasLoaded) AND skip if the change
+  // came from Firebase itself (isRemoteUpdate).  Also never push an empty
+  // orders array — the subscription firewall already handles re-seeding.
   useEffect(() => {
     if (!hasLoadedOrders.current) return;
     if (isRemoteOrderUpdate.current) {
@@ -358,6 +539,9 @@ export function useFirebaseSync() {
       isRemoteTableUpdate.current = false;
       return;
     }
+    // Never push empty tables — protects against a cold-start race where
+    // localStorage is also empty before the seed fires.
+    if (tables.length === 0) return;
     pushTablesToFirebase(tables);
   }, [tables]);
 
@@ -388,6 +572,8 @@ export function useFirebaseSync() {
       isRemoteMenuItemsUpdate.current = false;
       return;
     }
+    // Never push empty menu — subscription firewall handles seeding
+    if (menuItems.length === 0) return;
     pushMenuItemsToFirebase(menuItems);
   }, [menuItems]);
 
@@ -398,6 +584,7 @@ export function useFirebaseSync() {
       isRemoteCategoriesUpdate.current = false;
       return;
     }
+    if (categories.length === 0) return;
     pushCategoriesToFirebase(categories);
   }, [categories]);
 
@@ -408,6 +595,7 @@ export function useFirebaseSync() {
       isRemotePillarsUpdate.current = false;
       return;
     }
+    if (pillars.length === 0) return;
     pushPillarsToFirebase(pillars);
   }, [pillars]);
 
@@ -428,6 +616,7 @@ export function useFirebaseSync() {
       isRemoteAlcoholProductsUpdate.current = false;
       return;
     }
+    if (alcoholProducts.length === 0) return;
     pushAlcoholProductsToFirebase(alcoholProducts);
   }, [alcoholProducts]);
 
@@ -438,6 +627,7 @@ export function useFirebaseSync() {
       isRemoteBeverageProductsUpdate.current = false;
       return;
     }
+    if (beverageProducts.length === 0) return;
     pushBeverageProductsToFirebase(beverageProducts);
   }, [beverageProducts]);
 
@@ -448,6 +638,7 @@ export function useFirebaseSync() {
       isRemoteCigaretteProductsUpdate.current = false;
       return;
     }
+    if (cigaretteProducts.length === 0) return;
     pushCigaretteProductsToFirebase(cigaretteProducts);
   }, [cigaretteProducts]);
 
@@ -488,6 +679,8 @@ export function useFirebaseSync() {
       isRemoteStaffUpdate.current = false;
       return;
     }
+    // Never push empty staff list — protects login capability
+    if (users.length === 0) return;
     pushStaffToFirebase(users);
   }, [users]);
 
