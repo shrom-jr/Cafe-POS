@@ -344,54 +344,33 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   updateItemQuantity: (orderId, itemId, delta) => {
     set((state) => {
-      let updatedOrders = state.orders.map((o) => {
+      const updatedOrders = state.orders.map((o) => {
         if (o.id !== orderId) return o;
         const items = o.items
           .map((i) => (i.id === itemId ? { ...i, quantity: i.quantity + delta } : i))
           .filter((i) => i.quantity > 0);
+        // Keep the draft order when the last item is removed. Spreading the
+        // existing order preserves its customer, pax-related table state, and
+        // assigned server until staff explicitly clears the table.
         return { ...o, items };
       });
 
-      const order = updatedOrders.find((o) => o.id === orderId);
-      let tables = state.tables;
-
-      if (order && order.items.length === 0) {
-        tables = state.tables.map((t) =>
-          t.id === order.tableId
-            ? { ...t, status: 'free' as const, orderId: undefined, orderStartTime: undefined }
-            : t
-        );
-        updatedOrders = updatedOrders.filter((o) => o.id !== orderId);
-        db.saveTables(tables);
-      }
-
       db.saveOrders(updatedOrders);
-      return { orders: updatedOrders, tables };
+      return { orders: updatedOrders };
     });
   },
 
   removeItemFromOrder: (orderId, itemId) => {
     set((state) => {
-      let updatedOrders = state.orders.map((o) => {
+      const updatedOrders = state.orders.map((o) => {
         if (o.id !== orderId) return o;
+        // Removing the last item only empties the draft. Keep the full order
+        // object so attachedCustomer and the assigned server are retained.
         return { ...o, items: o.items.filter((i) => i.id !== itemId) };
       });
 
-      const order = updatedOrders.find((o) => o.id === orderId);
-      let tables = state.tables;
-
-      if (order && order.items.length === 0) {
-        tables = state.tables.map((t) =>
-          t.id === order.tableId
-            ? { ...t, status: 'free' as const, orderId: undefined, orderStartTime: undefined }
-            : t
-        );
-        updatedOrders = updatedOrders.filter((o) => o.id !== orderId);
-        db.saveTables(tables);
-      }
-
       db.saveOrders(updatedOrders);
-      return { orders: updatedOrders, tables };
+      return { orders: updatedOrders };
     });
   },
 
