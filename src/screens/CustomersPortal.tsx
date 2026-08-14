@@ -366,17 +366,7 @@ const CustomersPortal = () => {
               <p className="text-2xl font-black text-red-400 mt-0.5">Rs. {fmt(collectTarget.currentDue)}</p>
             </div>
             <div>
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <label className="text-xs font-semibold text-slate-400">Amount Received (Rs.)</label>
-                <button
-                  type="button"
-                  onClick={() => { setCollectAmount(String(collectTarget.currentDue)); setCollectError(''); }}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-black text-amber-200 transition-all active:scale-95 hover:bg-amber-400/20"
-                  style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }}
-                >
-                  ⚡ Pay Full: Rs. {fmt(collectTarget.currentDue)}
-                </button>
-              </div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount Received (Rs.)</label>
               <input
                 type="number"
                 min="0"
@@ -388,6 +378,14 @@ const CustomersPortal = () => {
                 autoFocus
                 onKeyDown={(e) => e.key === 'Enter' && handleCollect()}
               />
+              <button
+                type="button"
+                onClick={() => { setCollectAmount(String(collectTarget.currentDue)); setCollectError(''); }}
+                className="w-full mt-2 px-3 py-3 rounded-lg text-xs font-semibold text-amber-300 transition-all active:scale-[0.98] hover:bg-amber-500/25"
+                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)' }}
+              >
+                ⚡ Pay Full Due: Rs. {fmt(collectTarget.currentDue)}
+              </button>
               {collectAmount.trim() !== '' && Number.isFinite(enteredCollectAmount) && enteredCollectAmount >= 0 && enteredCollectAmount < collectTarget.currentDue && (
                 <p className="text-xs text-slate-400 mt-1.5">
                   Remaining balance after payment: <span className="font-bold text-white">Rs. {fmt(collectTarget.currentDue - enteredCollectAmount)}</span>
