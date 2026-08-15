@@ -32,7 +32,7 @@ export const ThemeToggle = () => {
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       data-testid="button-theme-toggle"
-      className="flex items-center justify-center rounded-xl border border-white/10 bg-zinc-900 p-2 text-amber-400 transition-colors hover:bg-zinc-800"
+      className="flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800/90 p-2.5 text-amber-400 transition-colors hover:bg-zinc-700"
     >
       {isDark ? <Sun size={15} /> : <Moon size={15} />}
     </button>
@@ -54,7 +54,7 @@ const Navigation = () => {
               onClick={() => navigate(path)}
               data-testid={`nav-${label.toLowerCase()}`}
                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 font-semibold transition-colors ${
-                 active ? 'bg-white font-bold text-zinc-950 shadow-md' : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                 active ? 'bg-white font-black text-zinc-950 shadow-md' : 'bg-zinc-900/70 text-zinc-100 hover:bg-zinc-800 hover:text-white'
               }`}
             >
               <Icon size={22} />

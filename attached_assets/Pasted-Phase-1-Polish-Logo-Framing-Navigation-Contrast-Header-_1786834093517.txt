@@ -1,0 +1,28 @@
+Phase 1 Polish: Logo Framing, Navigation Contrast & Header De-cramping
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/components/ui/Navigation.tsx`, and `src/screens/TableOverview.tsx`:
+
+1. Logo Framing & Brand Title (`AppLayout.tsx`):
+   - Logo Container: Wrap the café logo in a clean, elevated badge (`bg-white/10 p-1.5 rounded-xl border border-white/20 backdrop-blur-md flex items-center justify-center h-10 w-10 shrink-0`) so the logo details and emblem stand out sharply against the dark header.
+   - Title: Render "S Bamboo Cottage & Sekuwa Corner" in `text-lg font-black text-white tracking-wide`.
+
+2. Top Navigation Links Readability Overhaul (`Navigation.tsx`):
+   - Increase text size and font weight across all top tabs (`text-sm font-bold`).
+   - Active Tab ("Tables"): Keep as crisp solid white (`bg-white text-zinc-950 font-black px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2`).
+   - Inactive Tabs (Customers, Kitchen Portal, Bar Portal, Admin): Upgrade from dim gray to high-contrast bright silver/white tiles (`bg-zinc-900/70 hover:bg-zinc-800 text-zinc-100 hover:text-white font-bold border border-zinc-800/80 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2`).
+
+3. De-Cramp Header Right Area (`AppLayout.tsx`):
+   - Set container spacing to `flex items-center gap-5`.
+   - Theme Toggle: Circular elevated button (`p-2.5 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 border border-zinc-700 text-amber-400 transition-colors`).
+   - User Profile: Display "Sanjib Basnet" in `text-sm font-bold text-white`, with the "Admin" tag inside a vibrant badge (`bg-purple-500/25 text-purple-200 border border-purple-400/30 px-2.5 py-0.5 rounded-md text-xs font-black`).
+   - Add a subtle vertical divider (`h-6 w-px bg-zinc-800`).
+   - Switch User Button: Dedicated bordered button (`bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3.5 py-2 rounded-xl border border-zinc-700 text-xs transition-colors flex items-center gap-2`).
+
+4. Floor Filter Tabs Contrast & Size (`TableOverview.tsx`):
+   - Increase tab size and text contrast:
+     * Active Pill ("All (15)"): `bg-white text-zinc-950 font-black px-4 py-2 rounded-xl shadow-md text-sm`.
+     * Inactive Pills ("Ground Floor (5)", "Cabins (5)", "First Floor (5)"): Upgrade to `bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 hover:text-white font-bold border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-xl text-sm transition-colors`.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

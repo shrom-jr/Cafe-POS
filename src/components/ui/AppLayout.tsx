@@ -22,7 +22,7 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
-  ADMIN:   { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)', text: '#c084fc' },
+  ADMIN:   { bg: 'rgba(168,85,247,0.25)', border: 'rgba(192,132,252,0.3)', text: '#e9d5ff' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399' },
   KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.3)',  text: '#fb923c' },
@@ -54,26 +54,22 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Brand block (logo + name) ───────────────────────────────────────────────
   const brandBlock = (
     <div className="flex items-center gap-2.5 flex-shrink-0 select-none min-w-0">
-      {logoSrc ? (
-        <img
-          src={logoSrc}
-          alt="logo"
-          className="h-8 w-auto object-contain rounded-lg flex-shrink-0"
-          style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
-        />
-      ) : (
-        /* Vector fallback icon */
-        <div
-          className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.3)' }}
-        >
-           <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-accent" stroke="currentColor" strokeWidth={1.8}>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 p-1.5 backdrop-blur-md">
+        {logoSrc ? (
+          <img
+            src={logoSrc}
+            alt="logo"
+            className="h-8 w-auto object-contain"
+            style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
+          />
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-accent" stroke="currentColor" strokeWidth={1.8}>
             <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-        </div>
-      )}
+        )}
+      </div>
       <span
-        className="hidden truncate text-base font-bold tracking-wide text-white leading-tight sm:block"
+        className="hidden truncate text-lg font-black tracking-wide text-white leading-tight sm:block"
       >
         {title}
       </span>
@@ -82,11 +78,11 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
-    <div className="flex items-center gap-2 flex-shrink-0">
+    <div className="flex flex-shrink-0 items-center gap-5">
       <div className="hidden sm:flex flex-col items-end leading-none gap-0.5">
-        <span className="text-xs font-bold text-foreground">{currentUser.name}</span>
+        <span className="text-sm font-bold text-white">{currentUser.name}</span>
         <span
-          className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+          className="rounded-md border border-purple-400/30 bg-purple-500/25 px-2.5 py-0.5 text-xs font-black text-purple-200"
           style={{
             background: ROLE_COLORS[currentUser.role].bg,
             border: `1px solid ${ROLE_COLORS[currentUser.role].border}`,
@@ -96,10 +92,11 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           {ROLE_LABEL[currentUser.role]}
         </span>
       </div>
+      <span className="h-6 w-px bg-zinc-800" aria-hidden="true" />
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-800 hover:text-white active:scale-95"
+         className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-zinc-700 active:scale-95"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -119,10 +116,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-             className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
+             className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
                active
-                 ? 'bg-white font-bold text-zinc-950 shadow-md'
-                 : 'font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
+                 ? 'bg-white px-5 py-2.5 font-black text-zinc-950 shadow-md'
+                 : 'border border-zinc-800/80 bg-zinc-900/70 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-800 hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -141,10 +138,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         key={path}
         onClick={() => navigate(path)}
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-         className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
+         className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
            active
-             ? 'bg-white font-bold text-zinc-950 shadow-md'
-             : 'font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
+             ? 'bg-white px-5 py-2.5 font-black text-zinc-950 shadow-md'
+             : 'border border-zinc-800/80 bg-zinc-900/70 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-800 hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -170,7 +167,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             {desktopNav}
           </div>
            {/* Right: theme + user */}
-           <div className="flex items-center justify-end gap-3.5">
+           <div className="flex items-center justify-end gap-5">
             <ThemeToggle />
             {userBadge}
           </div>
@@ -181,7 +178,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
            {/* Row 1: brand + theme/user */}
            <div className="flex items-center justify-between gap-3 py-2.5">
             {brandBlock}
-             <div className="flex flex-shrink-0 items-center gap-3.5">
+             <div className="flex flex-shrink-0 items-center gap-5">
               <ThemeToggle />
               {userBadge}
             </div>

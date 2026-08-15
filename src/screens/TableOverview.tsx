@@ -183,13 +183,13 @@ const TableOverview = () => {
                       role="tab"
                       aria-selected={active}
                       onClick={() => setSelectedSection(section)}
-                      className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
+                      className={`shrink-0 rounded-xl border px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
-                          ? 'rounded-xl border-white bg-white px-4 py-2 font-bold text-zinc-950 shadow-sm'
-                          : 'rounded-xl border border-zinc-800 bg-zinc-900/90 px-4 py-2 font-semibold text-zinc-300 hover:border-zinc-700 hover:text-white'
+                          ? 'border-white bg-white font-black text-zinc-950 shadow-md'
+                          : 'border-zinc-700 bg-zinc-800/90 font-bold text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700 hover:text-white'
                       }`}
                     >
-                      {section} <span className="text-foreground/70">({count})</span>
+                      {section} <span className={active ? 'text-zinc-950/70' : 'text-zinc-300/80'}>({count})</span>
                     </button>
                   );
                 })}
