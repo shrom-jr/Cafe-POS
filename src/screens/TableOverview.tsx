@@ -142,11 +142,20 @@ const TableOverview = () => {
 
   // Compact status badge + live clock for the table filter row.
   const tableStatusBar = (
-    <div className="flex flex-shrink-0 items-center gap-3 whitespace-nowrap text-sm font-bold text-slate-100 dark:text-slate-100">
-      <span className="rounded-lg border border-border bg-secondary px-3 py-1.5">
-        Available {counts.available} <span className="mx-1 text-foreground/50" aria-hidden="true">•</span> Active {counts.active}
+    <div className="flex flex-shrink-0 items-center gap-3">
+      <span className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/90 px-3.5 py-2 text-xs font-bold">
+        <span className="flex items-center gap-1.5 text-emerald-400">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+          Available {counts.available}
+        </span>
+        <span className="flex items-center gap-1.5 text-amber-400">
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
+          Active {counts.active}
+        </span>
       </span>
-      <span className="font-mono tabular-nums text-foreground dark:text-slate-100">{clock}</span>
+      <span className="rounded-xl border border-zinc-800 bg-zinc-900/90 px-3 py-2 font-mono text-xs font-bold tabular-nums text-zinc-100">
+        {clock}
+      </span>
     </div>
   );
 
@@ -176,8 +185,8 @@ const TableOverview = () => {
                       onClick={() => setSelectedSection(section)}
                       className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
                         active
-                          ? 'border-accent/50 bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.5)]'
-                          : 'border-border bg-secondary text-secondary-foreground hover:border-primary/50 hover:text-foreground'
+                          ? 'rounded-xl border-white bg-white px-4 py-2 font-bold text-zinc-950 shadow-sm'
+                          : 'rounded-xl border border-zinc-800 bg-zinc-900/90 px-4 py-2 font-semibold text-zinc-300 hover:border-zinc-700 hover:text-white'
                       }`}
                     >
                       {section} <span className="text-foreground/70">({count})</span>

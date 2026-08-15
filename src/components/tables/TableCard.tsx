@@ -100,7 +100,7 @@ const TableCard = ({
               {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (
-              <span className="w-fit max-w-full truncate rounded-md bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+              <span className="w-fit max-w-full truncate rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-bold tracking-wide text-white shadow-sm">
                 {customerName}
               </span>
             )}

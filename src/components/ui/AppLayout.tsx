@@ -58,7 +58,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         <img
           src={logoSrc}
           alt="logo"
-          className="h-8 w-8 object-contain rounded-lg flex-shrink-0"
+          className="h-8 w-auto object-contain rounded-lg flex-shrink-0"
           style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
         />
       ) : (
@@ -73,8 +73,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         </div>
       )}
       <span
-        className="font-extrabold text-foreground tracking-tight leading-tight truncate hidden sm:block"
-        style={{ fontSize: '0.8rem', textShadow: '0 0 20px rgba(147,197,253,0.25)' }}
+        className="hidden truncate text-base font-bold tracking-wide text-white leading-tight sm:block"
       >
         {title}
       </span>
@@ -87,7 +86,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       <div className="hidden sm:flex flex-col items-end leading-none gap-0.5">
         <span className="text-xs font-bold text-foreground">{currentUser.name}</span>
         <span
-          className="text-[10px] font-semibold px-1.5 py-[1px] rounded-full"
+          className="rounded-full px-2.5 py-0.5 text-xs font-bold"
           style={{
             background: ROLE_COLORS[currentUser.role].bg,
             border: `1px solid ${ROLE_COLORS[currentUser.role].border}`,
@@ -100,7 +99,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary text-muted-foreground text-xs font-semibold transition-all active:scale-95 hover:brightness-110 flex-shrink-0 dark:border-white/5 dark:bg-[#13151F]"
+         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition-colors hover:bg-zinc-800 hover:text-white active:scale-95"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -120,10 +119,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-             className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
+             className={`relative flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
                active
-                 ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
-                 : 'text-slate-700 hover:bg-black/5 hover:text-foreground dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
+                 ? 'bg-white font-bold text-zinc-950 shadow-md'
+                 : 'font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -142,10 +141,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         key={path}
         onClick={() => navigate(path)}
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-         className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
+         className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
            active
-             ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
-             : 'border border-transparent text-slate-700 hover:bg-black/5 hover:text-foreground dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
+             ? 'bg-white font-bold text-zinc-950 shadow-md'
+             : 'font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -159,9 +158,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       className="h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground dark:bg-[#0A0B0E]"
     >
       {/* ── Header ── */}
-      <header className="flex-shrink-0 border-b border-border bg-card dark:border-white/5 dark:bg-[#0E1017]">
+      <header className="flex-shrink-0 border-b border-white/10 bg-[#10121A] px-6 py-3">
          {/* ── TABLET / DESKTOP: single row (sm+) ── */}
-        <div className="hidden sm:grid items-center h-14 px-5" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+        <div className="hidden h-10 items-center sm:grid" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
           <div className="flex items-center">
             {brandBlock}
@@ -171,7 +170,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             {desktopNav}
           </div>
            {/* Right: theme + user */}
-          <div className="flex items-center justify-end gap-3">
+           <div className="flex items-center justify-end gap-3.5">
             <ThemeToggle />
             {userBadge}
           </div>
@@ -180,9 +179,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         {/* ── MOBILE: two rows (<sm) ── */}
         <div className="sm:hidden">
            {/* Row 1: brand + theme/user */}
-          <div className="flex items-center justify-between px-4 py-2.5 gap-3">
+           <div className="flex items-center justify-between gap-3 py-2.5">
             {brandBlock}
-            <div className="flex items-center gap-2 flex-shrink-0">
+             <div className="flex flex-shrink-0 items-center gap-3.5">
               <ThemeToggle />
               {userBadge}
             </div>

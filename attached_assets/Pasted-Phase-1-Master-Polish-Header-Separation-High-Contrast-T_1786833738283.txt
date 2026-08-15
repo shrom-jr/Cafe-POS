@@ -1,0 +1,33 @@
+Phase 1 Master Polish: Header Separation, High-Contrast Tabs, Color Telemetry & Customer Pill
+
+Refactor `src/components/ui/Navigation.tsx`, `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx`:
+
+1. Header Separation, Title & Logo (`AppLayout.tsx`, `Navigation.tsx`):
+   - Add a distinct header surface and bottom border (`bg-[#10121A] border-b border-white/10 px-6 py-3`).
+   - Title: "S Bamboo Cottage & Sekuwa Corner" in crisp, bold white (`text-base font-bold text-white tracking-wide`).
+   - Logo: Ensure the café logo has a clean, visible presentation container with proper sizing (`h-8 w-auto object-contain`).
+
+2. Replace Harsh Blue Active Tab (`Navigation.tsx`):
+   - Active Tab ("Tables"): Replace saturated blue with a clean, high-contrast active state (`bg-white text-zinc-950 font-bold px-4 py-2 rounded-xl shadow-md`).
+   - Inactive Tabs (Customers, Kitchen Portal, Bar Portal, Admin): High-contrast silver text with smooth hover feedback (`text-zinc-300 hover:text-white hover:bg-white/5 font-semibold px-4 py-2 rounded-xl transition-colors`).
+
+3. Header Right Controls Spacing & Accents (`AppLayout.tsx`):
+   - Group the right-side controls with `flex items-center gap-3.5`.
+   - Theme Toggle: Circular tile (`p-2 rounded-xl bg-zinc-900 border border-white/10 text-amber-400 hover:bg-zinc-800`).
+   - User Badge: Name in bold white ("Sanjib Basnet") and Admin tag in a vibrant purple pill (`bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2.5 py-0.5 rounded-full text-xs font-bold`).
+   - Switch User: Refined button (`bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-white/10 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5`).
+
+4. Floor Filters & Color-Coded Telemetry (`TableOverview.tsx`):
+   - Active Filter Pill ("All (15)"): Replace electric blue with solid white (`bg-white text-zinc-950 font-bold px-4 py-2 rounded-xl shadow-sm`).
+   - Inactive Filter Pills ("Ground Floor", "Cabins", "First Floor"): Legible silver text (`bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700 font-semibold px-4 py-2 rounded-xl`).
+   - Telemetry Badge: Add distinct color coding (`bg-zinc-900/90 border border-zinc-800 px-3.5 py-2 rounded-xl flex items-center gap-3 text-xs font-bold`):
+     * Available: `text-emerald-400 flex items-center gap-1.5` (with a pulsing emerald green dot).
+     * Active: `text-amber-400 flex items-center gap-1.5` (with a warm amber dot).
+   - Live Clock: Digital clock pill (`font-mono text-xs font-bold text-zinc-100 bg-zinc-900/90 border border-zinc-800 px-3 py-2 rounded-xl`).
+
+5. Customer Pill Contrast on Occupied Tables (`TableCard.tsx`):
+   - Update the customer name container (e.g. "[ Amit Dai ]") to a high-contrast badge (`bg-white/15 border border-white/25 text-white font-bold px-3 py-1 rounded-full text-xs tracking-wide shadow-sm`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.
