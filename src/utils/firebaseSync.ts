@@ -199,6 +199,15 @@ export async function pushSettingsToFirebase(settings: Settings) {
   }
 }
 
+/** Keep the shared header logo available as a small, independently subscribable setting. */
+export async function pushLogoToFirebase(logo: string | null) {
+  try {
+    await set(ref(db, "settings/logo"), logo || null);
+  } catch (error) {
+    console.error("❌ [Firebase Logo Push FAILED]:", error);
+  }
+}
+
 // Push Menu Items
 export async function pushMenuItemsToFirebase(menuItems: MenuItem[]) {
   try {
@@ -318,6 +327,14 @@ export function subscribeToSettings(store: FirebaseSyncStore) {
   return onValue(ref(db, "settings"), (snapshot) => {
     const rawData = snapshot.val();
     if (rawData) store.setSettings(rawData as Settings);
+  });
+}
+
+/** Subscribe to the canonical cross-device header logo path. */
+export function subscribeToLogo(callback: (logo: string | null) => void) {
+  return onValue(ref(db, "settings/logo"), (snapshot) => {
+    const value = snapshot.val();
+    callback(typeof value === "string" && value.length > 0 ? value : null);
   });
 }
 

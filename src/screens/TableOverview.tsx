@@ -171,7 +171,7 @@ const TableOverview = () => {
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
             <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
-              <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 no-scrollbar">
+               <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1 no-scrollbar">
                 {['All', ...sections].map((section) => {
                   const count = section === 'All'
                     ? tables.length
@@ -183,13 +183,13 @@ const TableOverview = () => {
                       role="tab"
                       aria-selected={active}
                       onClick={() => setSelectedSection(section)}
-                      className={`shrink-0 rounded-xl border px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
+                       className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
-                          ? 'border-emerald-600 bg-emerald-600 font-bold text-white shadow-md hover:bg-emerald-500'
-                          : 'border-zinc-700 bg-zinc-800/90 font-bold text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700 hover:text-white'
+                           ? 'bg-emerald-600 font-bold text-white shadow-sm'
+                           : 'border-0 bg-transparent font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      {section} <span className={active ? 'text-emerald-100/80' : 'text-zinc-300/80'}>({count})</span>
+                      {section} <span className={active ? 'text-white' : 'text-zinc-300'}>({count})</span>
                     </button>
                   );
                 })}

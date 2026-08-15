@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
@@ -6,6 +6,7 @@ import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
 import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/Navigation';
+import { subscribeToLogo } from '@/utils/firebaseSync';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
@@ -39,8 +40,20 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   const currentUser = useStaffStore((s) => s.currentUser);
   const logout      = useStaffStore((s) => s.logout);
   const settings    = usePOSStore((s) => s.settings);
+  const [remoteLogo, setRemoteLogo] = useState<string | null>(null);
+  const [hasLoadedRemoteLogo, setHasLoadedRemoteLogo] = useState(false);
 
-  const logoSrc = settings?.cafeLogo || settings?.logoUrl || (settings as any)?.logo || null;
+  useEffect(() => {
+    const unsubscribe = subscribeToLogo((logo) => {
+      setRemoteLogo(logo);
+      setHasLoadedRemoteLogo(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  const logoSrc = hasLoadedRemoteLogo
+    ? remoteLogo
+    : settings?.cafeLogo || settings?.logoUrl || (settings as any)?.logo || null;
 
   // Filter nav to only the tabs this user has permission for
   const navItems = currentUser
@@ -54,12 +67,12 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Brand block (logo + name) ───────────────────────────────────────────────
   const brandBlock = (
     <div className="flex items-center gap-2.5 flex-shrink-0 select-none min-w-0">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 p-1.5 backdrop-blur-md">
+      <div className="flex h-10 min-w-10 max-w-[132px] shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-1.5 py-0.5 backdrop-blur-md">
         {logoSrc ? (
           <img
             src={logoSrc}
             alt="logo"
-            className="h-8 w-auto object-contain"
+            className="h-9 w-auto max-w-[120px] rounded-lg object-contain"
             style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
           />
         ) : (
@@ -107,7 +120,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-0.5 rounded-xl border border-border bg-secondary px-1 py-1 dark:border-white/5 dark:bg-[#13151F]"
+      className="flex items-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -116,10 +129,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-             className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+             className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
                active
-                 ? 'bg-emerald-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500'
-                 : 'border border-zinc-700 bg-zinc-800/90 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
+                 ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
+                 : 'border-0 bg-transparent px-4 py-2 font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -138,10 +151,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         key={path}
         onClick={() => navigate(path)}
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-         className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+         className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
            active
-             ? 'bg-emerald-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500'
-             : 'border border-zinc-700 bg-zinc-800/90 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
+             ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
+             : 'border-0 bg-transparent px-4 py-2 font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -185,7 +198,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           </div>
           {/* Row 2: nav tabs (scrollable) */}
           {mobileTabs.length > 0 && (
-            <div className="flex items-center gap-1.5 border-t border-border px-3 pb-2.5 overflow-x-auto no-scrollbar dark:border-white/5">
+             <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1 no-scrollbar">
               {mobileTabs}
             </div>
           )}

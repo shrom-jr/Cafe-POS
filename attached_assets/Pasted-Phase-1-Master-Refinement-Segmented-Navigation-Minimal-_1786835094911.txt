@@ -1,0 +1,28 @@
+Phase 1 Master Refinement: Segmented Navigation, Minimal Occupied Badge, Filter Contrast & Global RTDB Logo Sync
+
+Refactor `src/components/ui/Navigation.tsx`, `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, `src/components/tables/TableCard.tsx`, and the Admin Settings logo handler:
+
+1. Unified Segmented Top Navigation (`Navigation.tsx`):
+   - Replace disconnected floating button boxes with a single unified segmented container:
+     * Outer Track: `bg-zinc-900/90 border border-zinc-800 p-1 rounded-2xl flex items-center gap-1`.
+     * Active Tab (e.g. "Tables"): Solid emerald green pill (`bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl shadow-sm`).
+     * Inactive Tabs (Customers, Kitchen Portal, Bar Portal, Admin): Borderless clean items (`bg-transparent text-zinc-300 hover:text-white hover:bg-white/5 font-semibold px-4 py-2 rounded-xl border-0 transition-colors`).
+
+2. Unified Segmented Floor Filter & Contrast Fix (`TableOverview.tsx`):
+   - Group floor filters into a single segmented track (`bg-zinc-900/90 border border-zinc-800 p-1 rounded-2xl flex items-center gap-1`).
+   - Active Pill ("All (15)"): Ensure BOTH label and count "(15)" are pure bright white (`bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl`).
+   - Inactive Pills: Both label and count in crisp, readable silver (`text-zinc-300 hover:text-white px-4 py-2 rounded-xl font-semibold`).
+
+3. Minimal Outline Occupied Badge (`TableCard.tsx`):
+   - Remove the solid harsh orange box on occupied tables.
+   - Replace with a refined minimal outline pill: `border border-amber-500/60 bg-amber-500/10 text-amber-400 font-semibold text-xs px-2.5 py-0.5 rounded-full tracking-wider`.
+
+4. Global Logo Sync via Firebase Realtime Database (`AppLayout.tsx`, Admin Settings):
+   - When a logo image is uploaded in Admin Settings, convert it to a lightweight Base64 string and save it to Firebase Realtime Database under `/settings/logo` (or `restaurantInfo/logo`).
+   - In `AppLayout.tsx` and all header views, subscribe in real-time to this Firebase RTDB path (`/settings/logo`).
+   - Render the synced logo in the top header (`h-9 w-auto max-w-[120px] object-contain rounded-lg`). If no custom logo is found in RTDB, render a clean fallback icon.
+   - This ensures any logo uploaded from one device is immediately live across all desktops, laptops, and tablets without rebuilding or redeploying.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

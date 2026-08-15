@@ -35,6 +35,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
+import { pushLogoToFirebase } from '@/utils/firebaseSync';
 
 type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff';
@@ -45,6 +46,32 @@ const ACTIVE_STYLE = {
   border: '1px solid rgba(59,130,246,0.28)',
   boxShadow: '0 0 18px -4px rgba(59,130,246,0.3)',
 };
+
+const compressLogoToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Unable to read the logo file.'));
+    reader.onload = () => {
+      const image = document.createElement('img');
+      image.onerror = () => reject(new Error('Unable to decode the logo image.'));
+      image.onload = () => {
+        const maxDimension = 512;
+        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Unable to process the logo image.'));
+          return;
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/webp', 0.82));
+      };
+      image.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
 
 
 const PageHeader = ({
@@ -2148,7 +2175,7 @@ const CompanyProfileSection = () => {
   const [cafePan, setCafePan] = useState(settings.cafePan || '');
   const [vatEnabled, setVatEnabled] = useState(settings.vatEnabled ?? true);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -2156,12 +2183,16 @@ const CompanyProfileSection = () => {
       e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
+    try {
+      const base64 = await compressLogoToBase64(file);
       updateSettings({ cafeLogo: base64, logo: base64, logoUrl: base64 });
-    };
-    reader.readAsDataURL(file);
+      await pushLogoToFirebase(base64);
+    } catch (error) {
+      console.error('[Logo Upload] Failed:', error);
+      toast.error('Unable to process the logo image.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const saveAll = () => {
@@ -2205,7 +2236,13 @@ const CompanyProfileSection = () => {
             {settings.cafeLogo ? (
               <div className="relative w-20 h-20">
                 <img src={settings.cafeLogo} alt="Logo" className="w-full h-full object-contain rounded-xl border border-border bg-white p-1" />
-                <button onClick={() => updateSettings({ cafeLogo: undefined })} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+                <button
+                  onClick={() => {
+                    updateSettings({ cafeLogo: undefined, logo: undefined, logoUrl: undefined });
+                    void pushLogoToFirebase(null);
+                  }}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                >
                   <X size={12} />
                 </button>
               </div>

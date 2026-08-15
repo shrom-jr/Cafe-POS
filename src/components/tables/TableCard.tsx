@@ -46,7 +46,7 @@ const TableCard = ({
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
       ? 'border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300'
-      : 'border-amber-500/40 bg-amber-500/20 text-amber-300';
+      : 'border-amber-500/60 bg-amber-500/10 text-amber-400 font-semibold';
   const statusDot = table.status === 'billing'
       ? 'bg-red-400'
       : 'bg-amber-400';
@@ -82,7 +82,7 @@ const TableCard = ({
               {tableDisplayName(table.number)}
             </span>
 
-            <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold leading-none tracking-[0.08em] ${statusTone}`}>
+            <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-none tracking-wider ${statusTone}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
