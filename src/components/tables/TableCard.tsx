@@ -2,78 +2,6 @@ import { useEffect, useState } from 'react';
 import { CafeTable } from '@/types/pos';
 import { tableDisplayName } from '@/utils/tableName';
 
-const DARK_SURFACE = 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)';
-const HOVER_BORDER = 'rgba(59,130,246,0.50)';
-const HOVER_SHADOW = '0 8px 28px -4px rgba(59,130,246,0.22), inset 0 1px 0 0 rgba(59,130,246,0.06)';
-const BASE_SHADOW  = '0 2px 10px -2px rgba(0,0,0,0.55), inset 0 1px 0 0 rgba(255,255,255,0.03)';
-
-const AMBER_BORDER = 'hsl(32 90% 50% / 0.72)';
-const AMBER_SHADOW = BASE_SHADOW;
-const AMBER_HOVER_SHADOW = HOVER_SHADOW;
-
-const RED_BORDER  = 'hsl(0 72% 51% / 0.65)';
-const RED_SHADOW  = BASE_SHADOW;
-
-const statusConfig = {
-  free: {
-    cardBg: DARK_SURFACE,
-    cardBorder: 'rgba(255,255,255,0.08)',
-    cardShadow: BASE_SHADOW,
-    cardHoverBorder: HOVER_BORDER,
-    cardHoverShadow: HOVER_SHADOW,
-    showDot: false,
-    dotColor: '',
-    dotGlow: '',
-    dotPulse: false,
-    showBadge: false,
-    label: 'Available',
-    labelBg: '',
-    labelColor: '',
-    numberColor: '#ffffff',
-    numberShadow: 'none',
-    paxColor: '',
-    metaColor: '',
-  },
-  occupied: {
-    cardBg: DARK_SURFACE,
-    cardBorder: AMBER_BORDER,
-    cardShadow: AMBER_SHADOW,
-    cardHoverBorder: 'hsl(32 90% 60% / 0.80)',
-    cardHoverShadow: AMBER_HOVER_SHADOW,
-    showDot: false,
-    dotColor: 'hsl(32 90% 55%)',
-    dotGlow: '0 0 6px 2px hsl(32 90% 50% / 0.5)',
-    dotPulse: true,
-    showBadge: true,
-    label: 'OCCUPIED',
-    labelBg: 'hsl(32 90% 50%)',
-    labelColor: '#000000',
-    numberColor: '#ffffff',
-    numberShadow: 'none',
-    paxColor: '#ffffff',
-    metaColor: 'rgba(255,255,255,0.80)',
-  },
-  billing: {
-    cardBg: DARK_SURFACE,
-    cardBorder: RED_BORDER,
-    cardShadow: RED_SHADOW,
-    cardHoverBorder: HOVER_BORDER,
-    cardHoverShadow: HOVER_SHADOW,
-    showDot: false,
-    dotColor: 'hsl(0 72% 55%)',
-    dotGlow: '0 0 6px 2px hsl(0 72% 51% / 0.5)',
-    dotPulse: true,
-    showBadge: true,
-    label: 'BILLING',
-    labelBg: 'hsl(0 72% 51%)',
-    labelColor: '#ffffff',
-    numberColor: '#ffffff',
-    numberShadow: 'none',
-    paxColor: '#ffffff',
-    metaColor: 'rgba(255,255,255,0.80)',
-  },
-};
-
 function useTimer(startTime?: number) {
   const [elapsed, setElapsed] = useState('');
   useEffect(() => {
@@ -99,73 +27,73 @@ function useTimer(startTime?: number) {
 interface TableCardProps {
   table: CafeTable;
   itemCount?: number;
+  customerName?: string;
   onClick: () => void;
   showSection?: boolean;
 }
 
-const TableCard = ({ table, itemCount = 0, onClick, showSection = false }: TableCardProps) => {
+const TableCard = ({
+  table,
+  itemCount = 0,
+  customerName,
+  onClick,
+  showSection = false,
+}: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
-  const cfg = statusConfig[table.status];
   const isActive = table.status !== 'free';
-  const [hovered, setHovered] = useState(false);
+  const statusLabel = table.status === 'free'
+    ? 'FREE'
+    : table.status === 'billing'
+      ? 'BILLING'
+      : 'OCCUPIED';
+  const statusTone = table.status === 'free'
+    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+    : table.status === 'billing'
+      ? 'border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300'
+      : 'border-amber-500/45 bg-amber-500/15 text-amber-700 shadow-[0_0_0_2px_hsl(var(--warning)/0.10)] dark:text-amber-300';
+  const statusDot = table.status === 'free'
+    ? 'bg-emerald-400'
+    : table.status === 'billing'
+      ? 'bg-red-400'
+      : 'bg-amber-400';
 
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       data-testid={`table-card-${table.id}`}
-      className="relative flex flex-col items-center justify-center p-4 rounded-2xl w-full min-h-[148px] transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0"
-      style={{
-        background: cfg.cardBg,
-        border: `1px solid ${hovered ? cfg.cardHoverBorder : cfg.cardBorder}`,
-        boxShadow: hovered ? cfg.cardHoverShadow : cfg.cardShadow,
-      }}
+      className="group relative flex min-h-[148px] w-full flex-col items-center justify-center rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
     >
-      {/* Top inner highlight */}
-      <div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
-        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 40%)' }}
-      />
-
       {/* Table name */}
       <span
         title={tableDisplayName(table.number)}
-        className="block w-full min-w-0 truncate text-center text-xl sm:text-2xl font-bold tracking-tight leading-tight"
-        style={{ color: cfg.numberColor, textShadow: cfg.numberShadow }}
+        className="block w-full min-w-0 truncate text-center text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl"
       >
         {tableDisplayName(table.number)}
       </span>
 
       {showSection && (
-        <span className="mt-1 max-w-full truncate text-[10px] font-medium text-white/40" title={table.section || 'Ground Floor'}>
+        <span className="mt-1 max-w-full truncate text-[10px] font-medium text-muted-foreground" title={table.section || 'Ground Floor'}>
           {table.section || 'Ground Floor'}
         </span>
       )}
 
-      {/* Status badge — only for occupied/billing, hidden for free */}
-      {cfg.showBadge && (
-        <span
-          className="mt-2 text-[11px] font-bold leading-none px-3 py-1 rounded-full tracking-wide"
-          style={{ background: cfg.labelBg, color: cfg.labelColor }}
-        >
-          {cfg.label}
-        </span>
-      )}
+      {/* Status badge */}
+      <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none tracking-[0.08em] ${statusTone}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
+        {statusLabel}
+      </span>
 
-      {/* Active/Billing metrics — emoji format */}
+      {/* Active/Billing metrics */}
       {isActive && (
         <div className="mt-2.5 flex w-full flex-col items-center gap-1">
-          <span className="text-sm font-bold leading-tight" style={{ color: cfg.paxColor }}>
+          <span className="text-sm font-bold leading-tight text-foreground">
             👥 {table.pax ?? 1} Pax
           </span>
-          <span
-            className="max-w-full truncate text-[11px] font-semibold leading-tight tabular-nums"
-            style={{ color: cfg.metaColor }}
-          >
-            📦 {itemCount} Item{itemCount !== 1 ? 's' : ''}
-            {timer ? `  ⏱ ${timer}` : ''}
-          </span>
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] font-semibold leading-tight tabular-nums text-muted-foreground">
+            {timer && <span>⏱ {timer}</span>}
+            {customerName && <span className="max-w-full truncate text-foreground/80">👤 {customerName}</span>}
+            <span>📦 {itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
+          </div>
         </div>
       )}
     </button>

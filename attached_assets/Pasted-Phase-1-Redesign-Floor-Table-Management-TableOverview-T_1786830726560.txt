@@ -1,0 +1,32 @@
+Phase 1: Redesign Floor & Table Management (TableOverview & TableCard)
+
+Refactor `src/screens/TableOverview.tsx` and `src/components/tables/TableCard.tsx` to match the new high-contrast, adaptive theme design:
+
+1. Adaptive Theme Tokens & Card Surfaces:
+   - Remove all hardcoded dark classes (e.g. `bg-[#0b...], bg-slate-900`).
+   - Use dynamic semantic Tailwind tokens (`bg-card`, `text-card-foreground`, `border-border`, `bg-background`).
+   - In Dark Mode: Elevated matte slate-charcoal cards with crisp borders.
+   - In Light Mode: Crisp pure white cards with soft ambient shadow and defined borders.
+
+2. Table Card Content & Layout (`TableCard.tsx`):
+   - Table Name: Prominent, bold heading (100% pure white in dark mode, deep jet-black in light mode).
+   - Status Badge:
+     * Free: Crisp mint-green dot/badge.
+     * Occupied: High-visibility warm amber badge with a subtle glowing border/ring.
+   - Occupied Details (when table is active):
+     * Pax Count (e.g., "👥 2 Pax") in high-contrast text.
+     * Live Timer (e.g., "⏱ 49m") in high-contrast ice-silver (dark) / dark charcoal (light).
+     * Customer Name (e.g., "👤 Amit Dai") displayed only if a customer is attached.
+     * Do NOT display the total amount on the table card.
+
+3. Floor Headers & Filter Bar (`TableOverview.tsx`):
+   - Redesign the top area filter pills ("All", "Ground Floor", "Cabins", "First Floor") with crisp active highlight states.
+   - Upgrade area section headers ("GROUND FLOOR", "CABINS", "FIRST FLOOR") with high-visibility summary badges ("4 Free", "1 Active").
+
+4. Tactile Interactions:
+   - Add smooth hover lift (`hover:-translate-y-0.5 hover:border-primary/50 transition-all duration-150`).
+   - Ensure clean tactile press feedback on tap.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation (`navigate(/order/${table.id})`), table store actions (`usePOSStore`, `useTables`), timer calculations, or Firebase database synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

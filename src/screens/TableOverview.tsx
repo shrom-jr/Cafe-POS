@@ -30,7 +30,7 @@ export const AREA_COLORS = [
   // Slot 4 - Royal Indigo
   { text: 'text-indigo-400', bg: 'bg-indigo-500', glow: 'shadow-indigo-500/50', border: 'border-indigo-500/30' },
   // Slot 5 - Silver
-  { text: 'text-slate-200',  bg: 'bg-slate-300',  glow: 'shadow-slate-300/50',  border: 'border-slate-300/30'  },
+  { text: 'text-muted-foreground', bg: 'bg-muted-foreground', glow: 'shadow-muted-foreground/40', border: 'border-border' },
 ];
 
 // ── Area section box ──────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ interface AreaBoxProps {
   areaName: string;
   areaIndex: number;
   tables: CafeTable[];
-  tableOrderData: Record<string, { itemCount: number }>;
+  tableOrderData: Record<string, { itemCount: number; customerName?: string }>;
   onTableClick: (table: CafeTable) => void;
 }
 
@@ -61,14 +61,12 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
 
         {/* Status chips */}
         {freeCount > 0 && (
-          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-            style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', color: '#34d399' }}>
+          <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             🟢 {freeCount} Free
           </span>
         )}
         {occupiedCount > 0 && (
-          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-            style={{ background: 'hsl(32 90% 50% / 0.12)', border: '1px solid hsl(32 90% 50% / 0.30)', color: 'hsl(32 90% 68%)' }}>
+          <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
             🟠 {occupiedCount} Active
           </span>
         )}
@@ -83,6 +81,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
               key={table.id}
               table={table}
               itemCount={data.itemCount}
+              customerName={data.customerName}
               showSection={false}
               onClick={() => onTableClick(table)}
             />
@@ -104,11 +103,14 @@ const TableOverview = () => {
   const [selectedSection, setSelectedSection] = useState('All');
 
   const tableOrderData = useMemo(() => {
-    const map: Record<string, { itemCount: number }> = {};
+    const map: Record<string, { itemCount: number; customerName?: string }> = {};
     orders.forEach((order) => {
       if (order.status === 'active' || order.status === 'billed') {
         const itemCount = order.items.reduce((s, i) => s + i.quantity, 0);
-        map[order.tableId] = { itemCount };
+        map[order.tableId] = {
+          itemCount,
+          customerName: order.attachedCustomer?.name,
+        };
       }
     });
     return map;
@@ -155,21 +157,15 @@ const TableOverview = () => {
   const headerRight = (
     <>
       <span
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold flex-shrink-0"
-        style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.10)',
-          color: 'rgba(255,255,255,0.85)',
-          whiteSpace: 'nowrap',
-        }}
+        className="flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold text-foreground"
       >
-        <span style={{ color: '#34d399' }}>🟢</span>
-        <span style={{ color: '#34d399' }}>{counts.available}</span>
-        <span className="text-white/25 mx-0.5">|</span>
-        <span style={{ color: 'hsl(32 90% 65%)' }}>🟠</span>
-        <span style={{ color: 'hsl(32 90% 65%)' }}>{counts.active}</span>
+        <span className="text-emerald-500">🟢</span>
+        <span className="text-emerald-600 dark:text-emerald-300">{counts.available}</span>
+        <span className="mx-0.5 text-muted-foreground/50">|</span>
+        <span className="text-amber-500">🟠</span>
+        <span className="text-amber-600 dark:text-amber-300">{counts.active}</span>
       </span>
-      <span className="font-mono text-xs font-medium text-white/40 tabular-nums flex-shrink-0 hidden sm:inline">
+      <span className="hidden flex-shrink-0 font-mono text-xs font-medium tabular-nums text-muted-foreground sm:inline">
         {clock}
       </span>
     </>
@@ -198,17 +194,11 @@ const TableOverview = () => {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setSelectedSection(section)}
-                    className="shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150"
-                    style={active ? {
-                      background: 'rgba(59,130,246,0.85)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(59,130,246,0.5)',
-                      boxShadow: '0 1px 8px -2px rgba(59,130,246,0.5)',
-                    } : {
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(100,116,139,0.45)',
-                      color: 'rgb(226,232,240)',
-                    }}
+                    className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
+                      active
+                        ? 'border-accent/50 bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.5)]'
+                        : 'border-border bg-secondary text-secondary-foreground hover:border-primary/50 hover:text-foreground'
+                    }`}
                   >
                     {section} <span className="opacity-60">({count})</span>
                   </button>
