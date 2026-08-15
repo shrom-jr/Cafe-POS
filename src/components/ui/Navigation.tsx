@@ -1,11 +1,44 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutGrid, History, Settings, ChevronLeft } from 'lucide-react';
+import { LayoutGrid, History, Settings, ChevronLeft, Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const navItems = [
   { path: '/', icon: LayoutGrid, label: 'Tables' },
   { path: '/history', icon: History, label: 'History' },
   { path: '/admin', icon: Settings, label: 'Admin' },
 ];
+
+type Theme = 'dark' | 'light';
+
+function getStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
+  return window.localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+}
+
+/** Shared theme controller used by both app header variants. */
+export const ThemeToggle = () => {
+  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    window.localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const isDark = theme === 'dark';
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      data-testid="button-theme-toggle"
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-colors hover:bg-accent/15 hover:text-accent"
+    >
+      {isDark ? <Sun size={15} /> : <Moon size={15} />}
+    </button>
+  );
+};
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -44,24 +77,20 @@ export const TopBar = ({
   showBack?: boolean;
   onBack?: () => void;
 }) => (
-  <header
-    className="sticky top-0 z-40 backdrop-blur-sm flex-shrink-0 px-3 py-2.5 flex items-center gap-2"
-    style={{
-      background: 'linear-gradient(135deg, #0a1228 0%, #0d1a2e 100%)',
-      borderBottom: '1px solid rgba(59,130,246,0.18)',
-    }}
-  >
+  <header className="sticky top-0 z-40 flex flex-shrink-0 items-center gap-2 border-b border-border bg-card/95 px-3 py-2.5 backdrop-blur-sm">
     {showBack && (
       <button
         onClick={onBack}
         data-testid="button-back"
-        className="flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 transition-all active:scale-90"
-        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.75)' }}
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-muted-foreground transition-all active:scale-90"
       >
         <ChevronLeft size={18} strokeWidth={2.5} />
       </button>
     )}
-    <h1 className="text-base font-extrabold text-white tracking-tight truncate">{title}</h1>
+    <h1 className="truncate text-base font-extrabold tracking-tight text-foreground">{title}</h1>
+    <div className="ml-auto">
+      <ThemeToggle />
+    </div>
   </header>
 );
 

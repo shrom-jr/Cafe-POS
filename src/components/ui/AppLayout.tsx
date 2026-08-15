@@ -5,6 +5,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
 import { LogOut, LayoutGrid, Clock, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/Navigation';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
@@ -68,13 +69,13 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
           className="flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center"
           style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.3)' }}
         >
-          <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" stroke="rgba(147,197,253,0.9)" strokeWidth={1.8}>
+           <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-accent" stroke="currentColor" strokeWidth={1.8}>
             <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       )}
       <span
-        className="font-extrabold text-white tracking-tight leading-tight truncate hidden sm:block"
+        className="font-extrabold text-foreground tracking-tight leading-tight truncate hidden sm:block"
         style={{ fontSize: '0.8rem', textShadow: '0 0 20px rgba(147,197,253,0.25)' }}
       >
         {title}
@@ -86,7 +87,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
   const userBadge = currentUser ? (
     <div className="flex items-center gap-2 flex-shrink-0">
       <div className="hidden sm:flex flex-col items-end leading-none gap-0.5">
-        <span className="text-xs font-bold text-white/90">{currentUser.name}</span>
+        <span className="text-xs font-bold text-foreground">{currentUser.name}</span>
         <span
           className="text-[10px] font-semibold px-1.5 py-[1px] rounded-full"
           style={{
@@ -101,12 +102,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 hover:brightness-110 flex-shrink-0"
-        style={{
-          background: 'rgba(255,255,255,0.07)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          color: 'rgba(255,255,255,0.65)',
-        }}
+         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary text-muted-foreground text-xs font-semibold transition-all active:scale-95 hover:brightness-110 flex-shrink-0"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -117,8 +113,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-0.5 rounded-xl px-1 py-1"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+      className="flex items-center gap-0.5 rounded-xl border border-border bg-secondary px-1 py-1"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -127,16 +122,13 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-            className="relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95"
-            style={active ? {
-              background: 'rgba(59,130,246,0.85)',
-              color: '#ffffff',
-              boxShadow: '0 1px 8px -2px rgba(59,130,246,0.55)',
-            } : {
-              color: 'rgba(255,255,255,0.70)',
-            }}
+             className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+               active
+                 ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
+                 : 'text-muted-foreground hover:text-foreground'
+             }`}
           >
-            <span style={{ opacity: active ? 1 : 0.75 }}>{icon}</span>
+             <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
             {label}
           </button>
         );
@@ -152,17 +144,13 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
         key={path}
         onClick={() => navigate(path)}
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-        className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95"
-        style={active ? {
-          background: 'rgba(59,130,246,0.85)',
-          color: '#ffffff',
-          boxShadow: '0 1px 8px -2px rgba(59,130,246,0.55)',
-        } : {
-          color: 'rgba(255,255,255,0.70)',
-          border: '1px solid transparent',
-        }}
+         className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+           active
+             ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
+             : 'text-muted-foreground hover:text-foreground border border-transparent'
+         }`}
       >
-        <span style={{ opacity: active ? 1 : 0.75 }}>{icon}</span>
+         <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
         {label}
       </button>
     );
@@ -170,17 +158,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
 
   return (
     <div
-      className="h-[100dvh] flex flex-col overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #020617 100%)' }}
+      className="h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground"
     >
       {/* ── Header ── */}
-      <header
-        className="flex-shrink-0"
-        style={{
-          background: 'linear-gradient(135deg, #0a1228 0%, #0d1a2e 100%)',
-          borderBottom: '1px solid rgba(59,130,246,0.22)',
-        }}
-      >
+      <header className="flex-shrink-0 border-b border-border bg-card">
         {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden sm:grid items-center h-14 px-5" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
@@ -194,6 +175,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
           {/* Right: status + user */}
           <div className="flex items-center justify-end gap-3">
             {headerRight}
+            <ThemeToggle />
             {userBadge}
           </div>
         </div>
@@ -205,15 +187,13 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
             {brandBlock}
             <div className="flex items-center gap-2 flex-shrink-0">
               {headerRight}
+              <ThemeToggle />
               {userBadge}
             </div>
           </div>
           {/* Row 2: nav tabs (scrollable) */}
           {mobileTabs.length > 0 && (
-            <div
-              className="flex items-center gap-1.5 px-3 pb-2.5 overflow-x-auto no-scrollbar"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-            >
+            <div className="flex items-center gap-1.5 border-t border-border px-3 pb-2.5 overflow-x-auto no-scrollbar">
               {mobileTabs}
             </div>
           )}

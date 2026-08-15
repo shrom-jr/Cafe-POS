@@ -15,23 +15,72 @@
 
 @layer base {
   :root {
-    --background: 222 47% 8%;
-    --foreground: 210 20% 92%;
+    /* Light mode: soft porcelain canvas, white elevated surfaces. */
+    --background: 210 24% 97%;
+    --foreground: 222 47% 11%;
 
-    --card: 222 40% 10%;
-    --card-foreground: 210 20% 92%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 222 40% 10%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 160 84% 39%;
+    /* Electric blue is the primary action color in both themes. */
+    --primary: 217 91% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 35% 15%;
-    --secondary-foreground: 215 20% 65%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 215 19% 35%;
 
-    --muted: 222 35% 13%;
-    --muted-foreground: 215 15% 50%;
+    --muted: 210 20% 93%;
+    --muted-foreground: 215 16% 43%;
+
+    --accent: 217 91% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 86%;
+    --input: 214 20% 86%;
+    --ring: 217 91% 55%;
+
+    --radius: 0.75rem;
+
+    --highlight: 217 91% 60%;
+    --success: 160 70% 38%;
+    --warning: 32 90% 50%;
+    --danger: 0 72% 51%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 20% 86%;
+    --sidebar-ring: 217 91% 55%;
+  }
+
+  .dark {
+    /* Dark mode: deep matte carbon/slate canvas and elevated charcoal cards. */
+    --background: 222 24% 9%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 22% 13%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 222 22% 14%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 18% 17%;
+    --secondary-foreground: 215 18% 75%;
+
+    --muted: 222 18% 15%;
+    --muted-foreground: 215 16% 62%;
 
     --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
@@ -39,24 +88,22 @@
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 28% 20%;
-    --input: 222 28% 20%;
+    --border: 218 18% 25%;
+    --input: 218 18% 25%;
     --ring: 217 91% 60%;
-
-    --radius: 0.75rem;
 
     --highlight: 217 91% 65%;
     --success: 160 84% 39%;
     --warning: 32 90% 50%;
     --danger: 0 72% 51%;
 
-    --sidebar-background: 222 42% 9%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-background: 222 24% 10%;
+    --sidebar-foreground: 210 20% 94%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 35% 15%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 222 28% 20%;
+    --sidebar-accent: 222 18% 17%;
+    --sidebar-accent-foreground: 210 20% 94%;
+    --sidebar-border: 218 18% 25%;
     --sidebar-ring: 217 91% 60%;
   }
 }
@@ -73,6 +120,22 @@
     user-select: none;
     overscroll-behavior: none;
     touch-action: manipulation;
+  }
+
+  /* Tactile 150ms press feedback for interactive controls and cards. */
+  button,
+  [role="button"],
+  [class~="cursor-pointer"],
+  [class~="bg-card"] {
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+
+  button:active,
+  [role="button"]:active,
+  [class~="cursor-pointer"]:active,
+  [class~="bg-card"]:active {
+    transform: scale(0.98);
   }
 
   ::-webkit-scrollbar {
