@@ -1,10 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutGrid, History, Settings, ChevronLeft, Moon, Sun } from 'lucide-react';
+import { LayoutGrid, Settings, ChevronLeft, Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const navItems = [
   { path: '/', icon: LayoutGrid, label: 'Tables' },
-  { path: '/history', icon: History, label: 'History' },
   { path: '/admin', icon: Settings, label: 'Admin' },
 ];
 
@@ -54,8 +53,8 @@ const Navigation = () => {
               key={path}
               onClick={() => navigate(path)}
               data-testid={`nav-${label.toLowerCase()}`}
-              className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-all ${
-                active ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+               className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                 active ? 'text-accent' : 'text-slate-200 hover:bg-white/10 hover:text-white'
               }`}
             >
               <Icon size={22} />

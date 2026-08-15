@@ -140,22 +140,18 @@ const TableOverview = () => {
     navigate(`/order/${table.id}`);
   };
 
-  // Compact combined status badge + clock
-  const headerRight = (
-    <>
-      <span className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-secondary px-3 py-1 text-sm font-semibold text-foreground">
-        <span className="text-emerald-700 dark:text-emerald-300">Available {counts.available}</span>
-        <span className="text-foreground/50" aria-hidden="true">·</span>
-        <span className="text-orange-700 dark:text-orange-300">Active {counts.active}</span>
+  // Compact status badge + live clock for the table filter row.
+  const tableStatusBar = (
+    <div className="flex flex-shrink-0 items-center gap-3 whitespace-nowrap text-sm font-bold text-slate-100 dark:text-slate-100">
+      <span className="rounded-lg border border-border bg-secondary px-3 py-1.5">
+        Available {counts.available} <span className="mx-1 text-foreground/50" aria-hidden="true">•</span> Active {counts.active}
       </span>
-      <span className="hidden flex-shrink-0 font-mono text-sm font-medium tabular-nums text-foreground/70 sm:inline">
-        {clock}
-      </span>
-    </>
+      <span className="font-mono tabular-nums text-foreground dark:text-slate-100">{clock}</span>
+    </div>
   );
 
   return (
-    <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'} headerRight={headerRight}>
+    <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 pb-20">
         {tables.length === 0 ? (
           <div className="py-20 text-center text-foreground">
@@ -165,28 +161,31 @@ const TableOverview = () => {
         ) : (
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label="Table sections">
-              {['All', ...sections].map((section) => {
-                const count = section === 'All'
-                  ? tables.length
-                  : tables.filter((t) => (t.section?.trim() || 'Ground Floor') === section).length;
-                const active = selectedSection === section;
-                return (
-                  <button
-                    key={section}
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setSelectedSection(section)}
-                    className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
-                      active
-                        ? 'border-accent/50 bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.5)]'
-                        : 'border-border bg-secondary text-secondary-foreground hover:border-primary/50 hover:text-foreground'
-                    }`}
-                  >
-                    {section} <span className="text-foreground/70">({count})</span>
-                  </button>
-                );
-              })}
+            <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
+              <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {['All', ...sections].map((section) => {
+                  const count = section === 'All'
+                    ? tables.length
+                    : tables.filter((t) => (t.section?.trim() || 'Ground Floor') === section).length;
+                  const active = selectedSection === section;
+                  return (
+                    <button
+                      key={section}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setSelectedSection(section)}
+                      className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all duration-150 active:scale-[0.98] ${
+                        active
+                          ? 'border-accent/50 bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.5)]'
+                          : 'border-border bg-secondary text-secondary-foreground hover:border-primary/50 hover:text-foreground'
+                      }`}
+                    >
+                      {section} <span className="text-foreground/70">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {tableStatusBar}
             </div>
 
             {/* ── Area sections — table cards float on the page background ── */}

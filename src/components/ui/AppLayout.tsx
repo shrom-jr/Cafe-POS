@@ -4,14 +4,13 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
-import { LogOut, LayoutGrid, Clock, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
+import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/Navigation';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
 const PERM_NAV: { path: string; label: string; perm: keyof StaffPermissions; icon: ReactNode }[] = [
   { path: '/',        label: 'Tables',         perm: 'pos',     icon: <LayoutGrid  size={13} /> },
-  { path: '/history', label: 'History',        perm: 'pos',     icon: <Clock       size={13} /> },
   { path: '/customers', label: 'Customers',    perm: 'canViewCustomers', icon: <Users size={13} /> },
   { path: '/kitchen', label: 'Kitchen Portal', perm: 'kitchen', icon: <ChefHat     size={13} /> },
   { path: '/bar',     label: 'Bar Portal',     perm: 'bar',     icon: <GlassWater  size={13} /> },
@@ -31,11 +30,10 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
 
 interface AppLayoutProps {
   title: string;
-  headerRight?: ReactNode;
   children: ReactNode;
 }
 
-const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
+const AppLayout = ({ title, children }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useStaffStore((s) => s.currentUser);
@@ -122,10 +120,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-             className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+             className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
                active
                  ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
-                 : 'text-muted-foreground hover:text-foreground'
+                 : 'text-slate-700 hover:bg-black/5 hover:text-foreground dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -144,10 +142,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
         key={path}
         onClick={() => navigate(path)}
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-         className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
+         className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
            active
              ? 'bg-accent text-accent-foreground shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.55)]'
-             : 'text-muted-foreground hover:text-foreground border border-transparent'
+             : 'border border-transparent text-slate-700 hover:bg-black/5 hover:text-foreground dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -162,7 +160,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
     >
       {/* ── Header ── */}
       <header className="flex-shrink-0 border-b border-border bg-card dark:border-white/5 dark:bg-[#0E1017]">
-        {/* ── TABLET / DESKTOP: single row (sm+) ── */}
+         {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden sm:grid items-center h-14 px-5" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
           <div className="flex items-center">
@@ -172,9 +170,8 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
           <div className="flex items-center justify-center">
             {desktopNav}
           </div>
-          {/* Right: status + user */}
+           {/* Right: theme + user */}
           <div className="flex items-center justify-end gap-3">
-            {headerRight}
             <ThemeToggle />
             {userBadge}
           </div>
@@ -182,11 +179,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
 
         {/* ── MOBILE: two rows (<sm) ── */}
         <div className="sm:hidden">
-          {/* Row 1: brand + status/user */}
+           {/* Row 1: brand + theme/user */}
           <div className="flex items-center justify-between px-4 py-2.5 gap-3">
             {brandBlock}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {headerRight}
               <ThemeToggle />
               {userBadge}
             </div>

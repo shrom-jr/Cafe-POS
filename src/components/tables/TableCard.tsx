@@ -51,16 +51,16 @@ const TableCard = ({
       ? 'bg-red-400'
       : 'bg-orange-950';
   const cardTone = table.status === 'free'
-    ? 'border border-border bg-card dark:border-white/10 dark:bg-[#13151F] hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-lg'
+    ? 'bg-gradient-to-b from-[#1C1F2B] to-[#12141D] border border-white/10 rounded-2xl shadow-md hover:border-blue-500/60 hover:-translate-y-1 hover:shadow-lg'
     : table.status === 'billing'
-      ? 'border-2 border-red-500 bg-card shadow-[0_0_12px_rgba(239,68,68,0.12)] dark:bg-[#13151F] hover:border-red-400'
-      : 'border-2 border-orange-500 bg-card shadow-[0_0_15px_rgba(249,115,22,0.15)] dark:bg-[#13151F] hover:border-orange-400';
+      ? 'border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)] bg-gradient-to-b from-[#281D17] to-[#141217] hover:border-red-400'
+      : 'border-2 border-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.18)] bg-gradient-to-b from-[#281D17] to-[#141217] hover:border-orange-400';
 
   return (
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative flex min-h-[176px] w-full flex-col rounded-2xl p-4 text-card-foreground shadow-sm transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone}`}
+      className={`group relative flex min-h-[176px] w-full flex-col rounded-2xl p-4 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone}`}
     >
       {table.status === 'free' ? (
         <div className="relative flex w-full flex-1 items-center justify-center">
@@ -107,7 +107,7 @@ const TableCard = ({
           </div>
 
           {/* Bottom footer zone */}
-          <div className="flex items-center justify-between border-t border-border/60 pt-2 text-sm font-bold text-foreground dark:border-white/10 dark:text-slate-100">
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-sm font-bold text-slate-100">
             <span className="tabular-nums">{timer || '—'}</span>
             <span>{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
           </div>

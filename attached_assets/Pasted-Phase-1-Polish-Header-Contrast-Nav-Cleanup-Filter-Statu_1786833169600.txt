@@ -1,0 +1,28 @@
+Phase 1 Polish: Header Contrast, Nav Cleanup, Filter Status Bar & Elevated Table Cards
+
+Refactor `src/components/ui/Navigation.tsx`, `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx`:
+
+1. Top Navigation Polish & Remove History (`Navigation.tsx`, `AppLayout.tsx`):
+   - Completely remove the "History" tab link from the top navigation.
+   - Boost contrast for all inactive navigation links (Tables, Customers, Kitchen Portal, Bar Portal, Admin): upgrade from dull gray to crisp, high-contrast text (`text-slate-200 hover:text-white hover:bg-white/10 font-semibold px-4 py-2 rounded-lg transition-colors`).
+   - Remove the live status pill ("Available... • Active...") and the clock from the top header bar so the header stays clean and minimal.
+
+2. Reposition Status Pill & Clock to Filter Row (`TableOverview.tsx`):
+   - In `TableOverview.tsx`, redesign the area filter row to use `flex justify-between items-center w-full`:
+     * Left side: Floor filter pills ("All (15)", "Ground Floor (5)", "Cabins (5)", "First Floor (5)").
+     * Right side: Place the live status badge ("Available 13 • Active 2") alongside the Live Digital Clock (e.g. "04:12 AM") with bold high-contrast styling (`text-slate-100 font-bold`).
+
+3. Premium Elevated Table Cards (`TableCard.tsx`):
+   - Base Card Surface: Replace flat black with an elevated subtle dark gradient tile (`bg-gradient-to-b from-[#1C1F2B] to-[#12141D] border border-white/10 rounded-2xl shadow-md`).
+   - Free Table:
+     * Clean, uncluttered tile with large, bold Table Name centered (`text-3xl font-black text-white tracking-wide`).
+     * Tactile hover: smooth lift and subtle electric-blue border glow (`hover:border-blue-500/60 hover:-translate-y-1 hover:shadow-lg transition-all duration-150`).
+   - Occupied Table:
+     * Solid 2px bright orange border (`border-2 border-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.18)] bg-gradient-to-b from-[#281D17] to-[#141217]`).
+     * Header: Table Name (left) and solid bright orange "OCCUPIED" pill (right).
+     * Center: Bold guest count ("1 Guest") + Customer pill ("Amit Dai") centered underneath.
+     * Footer: Hairline divider with live timer (left) and item count (right) in bright white font.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.
