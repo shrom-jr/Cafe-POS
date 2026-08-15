@@ -462,6 +462,14 @@ function twoColTotals(label: string, value: string): number[][] {
  * browser-accessible WebSocket relay.  The relay listens on ws://ip:port/ws
  * and proxies raw bytes to the TCP socket.
  *
+ * HTTPS constraint: browsers block unencrypted ws:// connections from HTTPS
+ * pages as "active mixed content".  sendToNetworkPrinter detects this at
+ * runtime and returns 'error' without attempting the connection, so no
+ * browser security warning is triggered.  Network mode is only viable when
+ * the app runs over HTTP (e.g. Electron, local dev server, or a local LAN
+ * deployment without TLS).  On the public HTTPS deployment use WebUSB or
+ * System / Browser Print instead.
+ *
  * If no relay is reachable the function falls back gracefully (no throw and
  * no browser print dialog). Real relay integration requires a sidecar service
  * (e.g. node-escpos-server) running on the LAN.
@@ -546,6 +554,29 @@ export async function sendToNetworkPrinter(
   ip: string,
   port = 9100,
 ): Promise<'ok' | 'error'> {
+  // ── HTTPS mixed-content guard ──────────────────────────────────────────────
+  // Browsers block unencrypted ws:// connections initiated from an HTTPS page
+  // as "active mixed content" — the browser drops the request before it even
+  // leaves the machine, so no bytes reach the printer and a console error is
+  // logged.  We detect this situation and bail early so no warning fires.
+  //
+  // Network / WebSocket mode is only viable in:
+  //   • Electron desktop app (loads the cloud URL but runs Chromium locally,
+  //     where ws:// to LAN IPs is treated as a local resource — allowed)
+  //   • A plain HTTP deployment (LAN-only, no public TLS)
+  //   • Local development server (http://localhost)
+  //
+  // On the public HTTPS deployment (pos.sbamboocottage.com.np) use WebUSB or
+  // System / Browser Print instead.
+  if (typeof window !== 'undefined' && window.location?.protocol === 'https:') {
+    console.warn(
+      `[escpos] Network printer ws://${ip}:${port}/ws skipped — ws:// connections` +
+      ` are blocked as mixed content on HTTPS pages. Switch to WebUSB or` +
+      ` System / Browser Print, or use the Electron desktop app for network printing.`,
+    );
+    return 'error';
+  }
+
   const wsUrl = `ws://${ip}:${port}/ws`;
   return new Promise((resolve) => {
     try {
