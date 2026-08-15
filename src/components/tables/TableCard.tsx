@@ -51,69 +51,68 @@ const TableCard = ({
       ? 'bg-red-400'
       : 'bg-orange-950';
   const cardTone = table.status === 'free'
-    ? 'border-border/60'
+    ? 'border border-border bg-card dark:border-white/10 dark:bg-[#13151F] hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-lg'
     : table.status === 'billing'
-      ? 'border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)]'
-      : 'border-2 border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.18)]';
+      ? 'border-2 border-red-500 bg-card shadow-[0_0_12px_rgba(239,68,68,0.12)] dark:bg-[#13151F] hover:border-red-400'
+      : 'border-2 border-orange-500 bg-card shadow-[0_0_15px_rgba(249,115,22,0.15)] dark:bg-[#13151F] hover:border-orange-400';
 
   return (
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative flex min-h-[176px] w-full flex-col justify-start rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg active:translate-y-0 active:scale-[0.98] ${cardTone}`}
+      className={`group relative flex min-h-[176px] w-full flex-col rounded-2xl p-4 text-card-foreground shadow-sm transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone}`}
     >
-      <div className="flex w-full flex-1 flex-col">
-        {/* Top header zone */}
-        <div className="flex items-center justify-between gap-3">
+      {table.status === 'free' ? (
+        <div className="relative flex w-full flex-1 items-center justify-center">
           <span
             title={tableDisplayName(table.number)}
-            className="min-w-0 truncate text-left text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl"
+            className="text-3xl font-black tracking-wide text-foreground dark:text-white"
           >
             {tableDisplayName(table.number)}
           </span>
+        </div>
+      ) : (
+        <div className="flex w-full flex-1 flex-col">
+          {/* Top header zone */}
+          <div className="flex items-center justify-between gap-3">
+            <span
+              title={tableDisplayName(table.number)}
+              className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-left text-foreground dark:text-white"
+            >
+              {tableDisplayName(table.number)}
+            </span>
 
-          {isActive && (
             <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold leading-none tracking-[0.08em] ${statusTone}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
+          </div>
+
+          {showSection && (
+            <span className="mt-1 max-w-full truncate text-sm font-medium text-foreground/70" title={table.section || 'Ground Floor'}>
+              {table.section || 'Ground Floor'}
+            </span>
           )}
-        </div>
 
-        {showSection && (
-          <span className="mt-1 max-w-full truncate text-sm font-medium text-foreground/70" title={table.section || 'Ground Floor'}>
-            {table.section || 'Ground Floor'}
-          </span>
-        )}
-
-        {/* Middle body zone */}
-        <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
-          {isActive ? (
-            <>
-              <span className="text-sm font-bold leading-tight text-foreground">
-                {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
+          {/* Middle body zone */}
+          <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
+            <span className="text-sm font-bold leading-tight text-foreground dark:text-white">
+              {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
+            </span>
+            {customerName && (
+              <span className="w-fit max-w-full truncate rounded-md bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+                {customerName}
               </span>
-              {customerName && (
-                <span className="w-fit max-w-full truncate rounded-md bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
-                  {customerName}
-                </span>
-              )}
-            </>
-          ) : null}
-        </div>
+            )}
+          </div>
 
-        {/* Bottom footer zone */}
-        <div className="flex items-center justify-between border-t border-border/60 pt-2 text-sm text-foreground">
-          {isActive ? (
-            <>
-              <span className="font-semibold tabular-nums">{timer || '—'}</span>
-              <span className="font-semibold">{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
-            </>
-          ) : (
-            <span className="font-medium">Open Table</span>
-          )}
+          {/* Bottom footer zone */}
+          <div className="flex items-center justify-between border-t border-border/60 pt-2 text-sm font-bold text-foreground dark:border-white/10 dark:text-slate-100">
+            <span className="tabular-nums">{timer || '—'}</span>
+            <span>{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
+          </div>
         </div>
-      </div>
+      )}
     </button>
   );
 };

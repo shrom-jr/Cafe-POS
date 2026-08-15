@@ -102,7 +102,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary text-muted-foreground text-xs font-semibold transition-all active:scale-95 hover:brightness-110 flex-shrink-0"
+         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-secondary text-muted-foreground text-xs font-semibold transition-all active:scale-95 hover:brightness-110 flex-shrink-0 dark:border-white/5 dark:bg-[#13151F]"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -113,7 +113,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-0.5 rounded-xl border border-border bg-secondary px-1 py-1"
+      className="flex items-center gap-0.5 rounded-xl border border-border bg-secondary px-1 py-1 dark:border-white/5 dark:bg-[#13151F]"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -158,10 +158,10 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
 
   return (
     <div
-      className="h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground"
+      className="h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground dark:bg-[#0A0B0E]"
     >
       {/* ── Header ── */}
-      <header className="flex-shrink-0 border-b border-border bg-card">
+      <header className="flex-shrink-0 border-b border-border bg-card dark:border-white/5 dark:bg-[#0E1017]">
         {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden sm:grid items-center h-14 px-5" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
@@ -193,7 +193,7 @@ const AppLayout = ({ title, headerRight, children }: AppLayoutProps) => {
           </div>
           {/* Row 2: nav tabs (scrollable) */}
           {mobileTabs.length > 0 && (
-            <div className="flex items-center gap-1.5 border-t border-border px-3 pb-2.5 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 border-t border-border px-3 pb-2.5 overflow-x-auto no-scrollbar dark:border-white/5">
               {mobileTabs}
             </div>
           )}

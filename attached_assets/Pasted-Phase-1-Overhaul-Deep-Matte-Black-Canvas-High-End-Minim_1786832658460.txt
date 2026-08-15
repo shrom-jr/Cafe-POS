@@ -1,0 +1,27 @@
+Phase 1 Overhaul: Deep Matte Black Canvas & High-End Minimalist Table Cards
+
+Apply these exact visual styling updates to `src/index.css`, `src/components/ui/AppLayout.tsx`, and `src/components/tables/TableCard.tsx`:
+
+1. Deep Matte Black Canvas & Header:
+   - In Dark Mode, update the global background to a true deep matte carbon-black (`#0A0B0E` / `zinc-950`).
+   - Eliminate any residual washed-out navy/blue background wash.
+   - Style the main layout and header with sleek elevated dark graphite surfaces (`#0E1017`) and subtle borders (`border-white/5`).
+
+2. Unoccupied / Free Table Cards (`TableCard.tsx`):
+   - Free tables must NOT render any divider lines, footer zones, or "Open Table" text.
+   - Center the Table Name (e.g. "R2", "Cabin 1", "H1") perfectly both vertically and horizontally.
+   - Render the free table name in large, prominent typography (`text-3xl font-black text-white tracking-wide`).
+   - Base Surface: Elevated dark graphite card (`bg-[#13151F] border border-white/10 rounded-2xl`).
+   - Add a smooth hover lift and soft electric-blue border glow (`hover:border-blue-500/50 hover:-translate-y-1 hover:shadow-lg transition-all duration-150`).
+
+3. Occupied Table Cards (`TableCard.tsx`):
+   - Border: Solid 2px bright orange border (`border-2 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)]`).
+   - Top Header: Table Name (`text-xl font-black text-white`) on the left; solid bright orange "OCCUPIED" badge on the right.
+   - Middle Body (Centered):
+     * Guest count in bold crisp white (e.g. "1 Guest", "4 Guests").
+     * Attached customer name centered directly underneath in a sleek pill container (`[ Amit Dai ]`).
+   - Footer Zone: Crisp hairline divider line (`border-t border-white/10 pt-2 flex justify-between items-center`) with Live Timer (left) and Item Count (right) in high-contrast bright text (`text-sm font-bold text-slate-100`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation (`navigate(/order/${table.id})`), table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

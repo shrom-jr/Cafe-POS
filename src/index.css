@@ -63,23 +63,23 @@
   }
 
   .dark {
-    /* Dark mode: deep matte carbon/slate canvas and elevated charcoal cards. */
-    --background: 222 24% 9%;
+    /* Dark mode: true matte carbon canvas with elevated graphite surfaces. */
+    --background: 228 17% 5%;
     --foreground: 210 20% 96%;
 
-    --card: 222 22% 13%;
+    --card: 228 24% 10%;
     --card-foreground: 210 20% 96%;
 
-    --popover: 222 22% 14%;
+    --popover: 228 24% 11%;
     --popover-foreground: 210 20% 96%;
 
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 18% 17%;
+    --secondary: 228 18% 14%;
     --secondary-foreground: 215 18% 75%;
 
-    --muted: 222 18% 15%;
+    --muted: 228 18% 12%;
     --muted-foreground: 215 16% 62%;
 
     --accent: 217 91% 60%;
@@ -88,8 +88,8 @@
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 218 18% 25%;
-    --input: 218 18% 25%;
+    --border: 218 18% 22%;
+    --input: 218 18% 22%;
     --ring: 217 91% 60%;
 
     --highlight: 217 91% 65%;
@@ -97,13 +97,13 @@
     --warning: 32 90% 50%;
     --danger: 0 72% 51%;
 
-    --sidebar-background: 222 24% 10%;
+    --sidebar-background: 228 24% 7%;
     --sidebar-foreground: 210 20% 94%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 18% 17%;
+    --sidebar-accent: 228 18% 14%;
     --sidebar-accent-foreground: 210 20% 94%;
-    --sidebar-border: 218 18% 25%;
+    --sidebar-border: 218 18% 22%;
     --sidebar-ring: 217 91% 60%;
   }
 }
@@ -266,7 +266,7 @@
   left: 0;
   right: 0;
   height: 40px;
-  background: linear-gradient(to bottom, transparent, rgba(11,16,32,0.92));
+  background: linear-gradient(to bottom, transparent, rgba(10,11,14,0.92));
   pointer-events: none;
   z-index: 1;
 }
@@ -349,20 +349,20 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(10, 11, 14, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #27272a;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
 }
 
 /* Firefox support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 rgba(15, 23, 42, 0.6);
+  scrollbar-color: #27272a rgba(10, 11, 14, 0.8);
 }
