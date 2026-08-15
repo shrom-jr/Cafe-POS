@@ -1,0 +1,33 @@
+Phase 1 Polish: Overhaul TableCard into a Structured 3-Zone POS Tile
+
+Refactor `src/components/tables/TableCard.tsx` and `src/screens/TableOverview.tsx` to replace the centered floating layout with a high-end, structured card hierarchy:
+
+1. Structured 3-Zone Card Layout (`TableCard.tsx`):
+   - Redesign each table tile into 3 distinct zones with flex layout:
+     * TOP HEADER ZONE (flex justify-between items-center):
+       - Left: Large, bold Table Name (e.g., "R1", "Cabin 3", "H1") in prominent, high-contrast typography (100% bright white `#FFFFFF` in dark mode, deep jet-black in light mode).
+       - Right: Crisp status badge:
+         • Free: Clean mint green badge with status dot ("AVAILABLE").
+         • Occupied: Solid, high-visibility amber badge ("OCCUPIED" or "DINING").
+         • Billing: High-visibility red/coral badge ("BILLING").
+     * MIDDLE BODY ZONE (min-h-[48px] flex flex-col justify-center gap-1.5 py-2):
+       - When Free: Clean and spacious, no messy centered pills.
+       - When Occupied:
+         • Guest count (e.g., "👥 2 Guests") in bold, high-contrast text.
+         • Customer badge (e.g., "👤 Amit Dai") with subtle pill background if attached.
+     * BOTTOM FOOTER ZONE (border-t border-border/40 pt-2 flex justify-between items-center text-xs text-muted-foreground):
+       - Left: Live timer (e.g., "⏱ 58m") with crisp font.
+       - Right: Item count (e.g., "📦 2 Items") only when occupied.
+
+2. Card Visual Styling & Occupancy Glow:
+   - Free Table: Elevated card surface (`bg-card border border-border/60 rounded-xl p-4`), crisp and uncluttered.
+   - Occupied Table: Add a vibrant amber border and subtle warm glow (`border-amber-500/70 shadow-[0_0_12px_rgba(245,158,11,0.15)]`) or top accent bar so occupied tables are instantly distinguishable from across the room.
+   - Light Mode: Pure white cards with clean borders and subtle depth shadow.
+
+3. Overview Headers & Floor Filters (`TableOverview.tsx`):
+   - Refine the area filter bar ("All", "Ground Floor", "Cabins", "First Floor") with clean pill containers and sharp active states.
+   - Keep section headers ("GROUND FLOOR", "CABINS", "FIRST FLOOR") crisp with clear summary counts.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation (`navigate(/order/${table.id})`), state store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.
