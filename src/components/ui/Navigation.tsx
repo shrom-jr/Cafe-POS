@@ -54,7 +54,7 @@ const Navigation = () => {
               onClick={() => navigate(path)}
               data-testid={`nav-${label.toLowerCase()}`}
                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 font-semibold transition-colors ${
-                 active ? 'bg-white font-black text-zinc-950 shadow-md' : 'bg-zinc-900/70 text-zinc-100 hover:bg-zinc-800 hover:text-white'
+                 active ? 'bg-emerald-600 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500' : 'border border-zinc-700 bg-zinc-800/90 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
               }`}
             >
               <Icon size={22} />

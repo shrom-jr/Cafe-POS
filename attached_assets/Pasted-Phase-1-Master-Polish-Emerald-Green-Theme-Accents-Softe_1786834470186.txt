@@ -1,0 +1,28 @@
+Phase 1 Master Polish: Emerald Green Theme Accents, Softened Occupancy & Symmetric User Header
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/components/ui/Navigation.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx`:
+
+1. Emerald Green Active States (`Navigation.tsx`, `TableOverview.tsx`):
+   - Replace harsh pure white active tab backgrounds with rich Emerald Green:
+     * Active Navigation Tab ("Tables"): `bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-950/50 flex items-center gap-2 transition-all`.
+     * Active Floor Filter Pill ("All (15)"): `bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl shadow-md text-sm transition-all`.
+   - Inactive Navigation Tabs & Floor Filter Pills: Keep high-contrast slate-charcoal tiles with crisp white/silver text (`bg-zinc-800/90 text-zinc-100 hover:text-white hover:bg-zinc-700 border border-zinc-700 font-bold`).
+
+2. Softened, High-End Occupied Table Styling (`TableCard.tsx`):
+   - Replace the harsh 2px solid orange neon border with a refined warm amber treatment:
+     * Border: `border border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.12)]`.
+     * Card Background: Warm amber-tinted dark surface (`bg-gradient-to-b from-[#221813] to-[#14100E]`).
+     * Status Badge: Refined amber pill (`bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full text-xs font-black`).
+   - Occupied Content:
+     * Center: Guest count ("1 Guest", "4 Guests") in bold crisp white, with attached customer name ("Amit Dai") centered underneath in a clean translucent badge (`bg-white/10 text-white border border-white/20 px-3 py-1 rounded-full text-xs font-bold`).
+     * Footer: Hairline divider with live timer (left) and item count (right) in high-contrast text.
+
+3. Symmetrical User Profile & "Switch User" Accent (`AppLayout.tsx`):
+   - User Profile Container: Use `flex flex-col items-center justify-center text-center gap-0.5`:
+     * Top: "Sanjib Basnet" in `text-sm font-bold text-white tracking-wide`.
+     * Bottom: "Admin" badge perfectly centered underneath (`bg-purple-500/25 text-purple-200 border border-purple-400/30 px-2.5 py-0.5 rounded-md text-[11px] font-black`).
+   - Switch User Button: Add an emerald accent to bring it to life (`bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

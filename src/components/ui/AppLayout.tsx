@@ -79,10 +79,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
     <div className="flex flex-shrink-0 items-center gap-5">
-      <div className="hidden sm:flex flex-col items-end leading-none gap-0.5">
+      <div className="hidden flex-col items-center justify-center gap-0.5 text-center sm:flex">
         <span className="text-sm font-bold text-white">{currentUser.name}</span>
         <span
-          className="rounded-md border border-purple-400/30 bg-purple-500/25 px-2.5 py-0.5 text-xs font-black text-purple-200"
+          className="rounded-md border border-purple-400/30 bg-purple-500/25 px-2.5 py-0.5 text-[11px] font-black text-purple-200"
           style={{
             background: ROLE_COLORS[currentUser.role].bg,
             border: `1px solid ${ROLE_COLORS[currentUser.role].border}`,
@@ -96,7 +96,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-zinc-700 active:scale-95"
+         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-all hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -118,8 +118,8 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
              className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
                active
-                 ? 'bg-white px-5 py-2.5 font-black text-zinc-950 shadow-md'
-                 : 'border border-zinc-800/80 bg-zinc-900/70 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-800 hover:text-white'
+                 ? 'bg-emerald-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500'
+                 : 'border border-zinc-700 bg-zinc-800/90 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -140,8 +140,8 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
          className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-all duration-200 select-none active:scale-95 ${
            active
-             ? 'bg-white px-5 py-2.5 font-black text-zinc-950 shadow-md'
-             : 'border border-zinc-800/80 bg-zinc-900/70 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-800 hover:text-white'
+             ? 'bg-emerald-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500'
+             : 'border border-zinc-700 bg-zinc-800/90 px-4 py-2.5 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>

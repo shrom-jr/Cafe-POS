@@ -46,15 +46,15 @@ const TableCard = ({
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
       ? 'border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300'
-      : 'border-orange-500 bg-orange-500 text-orange-950';
+      : 'border-amber-500/40 bg-amber-500/20 text-amber-300';
   const statusDot = table.status === 'billing'
       ? 'bg-red-400'
-      : 'bg-orange-950';
+      : 'bg-amber-400';
   const cardTone = table.status === 'free'
     ? 'bg-gradient-to-b from-[#1C1F2B] to-[#12141D] border border-white/10 rounded-2xl shadow-md hover:border-blue-500/60 hover:-translate-y-1 hover:shadow-lg'
     : table.status === 'billing'
       ? 'border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)] bg-gradient-to-b from-[#281D17] to-[#141217] hover:border-red-400'
-      : 'border-2 border-orange-500 shadow-[0_0_16px_rgba(249,115,22,0.18)] bg-gradient-to-b from-[#281D17] to-[#141217] hover:border-orange-400';
+      : 'border border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.12)] bg-gradient-to-b from-[#221813] to-[#14100E] hover:border-amber-400';
 
   return (
     <button

@@ -185,11 +185,11 @@ const TableOverview = () => {
                       onClick={() => setSelectedSection(section)}
                       className={`shrink-0 rounded-xl border px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
-                          ? 'border-white bg-white font-black text-zinc-950 shadow-md'
+                          ? 'border-emerald-600 bg-emerald-600 font-bold text-white shadow-md hover:bg-emerald-500'
                           : 'border-zinc-700 bg-zinc-800/90 font-bold text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700 hover:text-white'
                       }`}
                     >
-                      {section} <span className={active ? 'text-zinc-950/70' : 'text-zinc-300/80'}>({count})</span>
+                      {section} <span className={active ? 'text-emerald-100/80' : 'text-zinc-300/80'}>({count})</span>
                     </button>
                   );
                 })}
