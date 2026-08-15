@@ -1,0 +1,36 @@
+Phase 1 Fix: Synchronize Dark & Light Mode Theme Tokens Across Floor & Header
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/components/ui/Navigation.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx` to ensure complete, flawless Light and Dark mode rendering without text or card color collisions:
+
+1. Unified Layout Shell & Header (`AppLayout.tsx`, `Navigation.tsx`):
+   - Shell Background: `bg-slate-50 dark:bg-[#0A0B0E] text-slate-900 dark:text-slate-100 min-h-screen transition-colors`.
+   - Top Header Bar: `bg-white dark:bg-[#10121A] border-b border-slate-200 dark:border-white/10 px-6 py-3 shadow-sm`.
+   - Top Navigation Segmented Container:
+     * Track: `bg-slate-100 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 p-1 rounded-2xl flex items-center gap-1`.
+     * Active Tab: `bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl shadow-sm`.
+     * Inactive Tabs: `text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 font-semibold px-4 py-2 rounded-xl border-0 transition-colors`.
+   - Brand Title: `text-lg font-black text-slate-900 dark:text-white tracking-wide`.
+
+2. Floor Filters & Telemetry Bar (`TableOverview.tsx`):
+   - Do NOT stretch the filter container across the entire screen. Keep it inline/shrink-wrapped: `inline-flex bg-slate-100 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 p-1 rounded-2xl items-center gap-1`.
+   - Inactive Filter Pills: `text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white px-4 py-2 rounded-xl font-semibold`.
+   - Telemetry Badge & Clock: `bg-white dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 px-3.5 py-2 rounded-xl shadow-sm`.
+   - Area Section Titles (GROUND FLOOR, CABINS, FIRST FLOOR): `text-sm font-black tracking-wider text-slate-800 dark:text-emerald-400`.
+
+3. Dual-Theme Table Cards (`TableCard.tsx`):
+   - Free Table Cards:
+     * Dark Mode: Elevated dark graphite card (`dark:bg-[#13151F] dark:border-white/10 text-white`).
+     * Light Mode: Crisp pure white card (`bg-white border border-slate-200/80 shadow-sm text-slate-950`).
+     * Table Name: `text-3xl font-black text-slate-950 dark:text-white tracking-wide text-center`.
+     * Hover: `hover:border-emerald-500/60 hover:-translate-y-1 hover:shadow-md transition-all duration-150`.
+   - Occupied Table Cards:
+     * Dark Mode: `dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] dark:border-amber-500/80`.
+     * Light Mode: `bg-amber-50/60 border-2 border-amber-500 shadow-sm`.
+     * Status Badge: `border border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold text-xs px-2.5 py-0.5 rounded-full`.
+     * Guest Count: `text-sm font-bold text-slate-900 dark:text-white`.
+     * Customer Pill: `bg-slate-200/80 dark:bg-white/10 text-slate-900 dark:text-white border border-slate-300 dark:border-white/20 px-3 py-1 rounded-full text-xs font-bold`.
+     * Footer: Hairline divider with Live Timer and Item Count in `text-sm font-bold text-slate-700 dark:text-slate-200`.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

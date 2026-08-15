@@ -45,16 +45,16 @@ const TableCard = ({
       ? 'BILLING'
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
-      ? 'border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300'
-      : 'border-amber-500/60 bg-amber-500/10 text-amber-400 font-semibold';
+      ? 'border-red-500/35 bg-red-500/10 font-bold text-red-700 dark:text-red-300'
+      : 'border-amber-500/60 bg-amber-500/15 font-bold text-amber-700 dark:text-amber-400';
   const statusDot = table.status === 'billing'
       ? 'bg-red-400'
       : 'bg-amber-400';
   const cardTone = table.status === 'free'
-    ? 'bg-gradient-to-b from-[#1C1F2B] to-[#12141D] border border-white/10 rounded-2xl shadow-md hover:border-blue-500/60 hover:-translate-y-1 hover:shadow-lg'
+    ? 'border border-slate-200/80 bg-white text-slate-950 shadow-sm dark:border-white/10 dark:bg-[#13151F] dark:text-white hover:-translate-y-1 hover:border-emerald-500/60 hover:shadow-md'
     : table.status === 'billing'
-      ? 'border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)] bg-gradient-to-b from-[#281D17] to-[#141217] hover:border-red-400'
-      : 'border border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.12)] bg-gradient-to-b from-[#221813] to-[#14100E] hover:border-amber-400';
+      ? 'border-2 border-red-500 bg-red-50/60 shadow-sm dark:bg-gradient-to-b dark:from-[#281D17] dark:to-[#141217] dark:border-red-500 hover:border-red-400'
+      : 'border-2 border-amber-500 bg-amber-50/60 shadow-sm dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] dark:border-amber-500/80 hover:border-amber-400';
 
   return (
     <button
@@ -66,7 +66,7 @@ const TableCard = ({
         <div className="relative flex w-full flex-1 items-center justify-center">
           <span
             title={tableDisplayName(table.number)}
-            className="text-3xl font-black tracking-wide text-foreground dark:text-white"
+            className="text-center text-3xl font-black tracking-wide text-slate-950 dark:text-white"
           >
             {tableDisplayName(table.number)}
           </span>
@@ -77,7 +77,7 @@ const TableCard = ({
           <div className="flex items-center justify-between gap-3">
             <span
               title={tableDisplayName(table.number)}
-              className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-left text-foreground dark:text-white"
+               className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-left text-slate-900 dark:text-white"
             >
               {tableDisplayName(table.number)}
             </span>
@@ -89,25 +89,25 @@ const TableCard = ({
           </div>
 
           {showSection && (
-            <span className="mt-1 max-w-full truncate text-sm font-medium text-foreground/70" title={table.section || 'Ground Floor'}>
+            <span className="mt-1 max-w-full truncate text-sm font-medium text-slate-600 dark:text-slate-300" title={table.section || 'Ground Floor'}>
               {table.section || 'Ground Floor'}
             </span>
           )}
 
           {/* Middle body zone */}
           <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
-            <span className="text-sm font-bold leading-tight text-foreground dark:text-white">
+            <span className="text-sm font-bold leading-tight text-slate-900 dark:text-white">
               {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (
-              <span className="w-fit max-w-full truncate rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-bold tracking-wide text-white shadow-sm">
+              <span className="w-fit max-w-full truncate rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-xs font-bold tracking-wide text-slate-900 shadow-sm dark:border-white/20 dark:bg-white/10 dark:text-white">
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Bottom footer zone */}
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-sm font-bold text-slate-100">
+          <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
             <span className="tabular-nums">{timer || '—'}</span>
             <span>{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
           </div>

@@ -53,7 +53,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
         <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
 
         {/* Area name */}
-        <span className={`text-sm font-bold tracking-widest uppercase ${theme.text}`}>
+        <span className="text-sm font-black tracking-wider uppercase text-slate-800 dark:text-emerald-400">
           {areaName}
         </span>
 
@@ -143,17 +143,17 @@ const TableOverview = () => {
   // Compact status badge + live clock for the table filter row.
   const tableStatusBar = (
     <div className="flex flex-shrink-0 items-center gap-3">
-      <span className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/90 px-3.5 py-2 text-xs font-bold">
-        <span className="flex items-center gap-1.5 text-emerald-400">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+        <span className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+        <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 dark:bg-emerald-400" />
           Available {counts.available}
         </span>
-        <span className="flex items-center gap-1.5 text-amber-400">
-          <span className="h-2 w-2 rounded-full bg-amber-400" />
+        <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+          <span className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400" />
           Active {counts.active}
         </span>
       </span>
-      <span className="rounded-xl border border-zinc-800 bg-zinc-900/90 px-3 py-2 font-mono text-xs font-bold tabular-nums text-zinc-100">
+      <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs font-bold tabular-nums text-slate-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-slate-200">
         {clock}
       </span>
     </div>
@@ -171,7 +171,7 @@ const TableOverview = () => {
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
             <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
-               <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1 no-scrollbar">
+                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
                 {['All', ...sections].map((section) => {
                   const count = section === 'All'
                     ? tables.length
@@ -186,10 +186,10 @@ const TableOverview = () => {
                        className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
                            ? 'bg-emerald-600 font-bold text-white shadow-sm'
-                           : 'border-0 bg-transparent font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
+                           : 'border-0 bg-transparent font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
                       }`}
                     >
-                      {section} <span className={active ? 'text-white' : 'text-zinc-300'}>({count})</span>
+                      {section} <span className={active ? 'text-white' : 'text-slate-600 dark:text-zinc-300'}>({count})</span>
                     </button>
                   );
                 })}

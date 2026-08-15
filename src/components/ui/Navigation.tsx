@@ -32,7 +32,7 @@ export const ThemeToggle = () => {
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       data-testid="button-theme-toggle"
-      className="flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800/90 p-2.5 text-amber-400 transition-colors hover:bg-zinc-700"
+      className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 text-amber-600 transition-colors hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-amber-400 dark:hover:bg-zinc-700"
     >
       {isDark ? <Sun size={15} /> : <Moon size={15} />}
     </button>
@@ -44,8 +44,8 @@ const Navigation = () => {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border pos-shadow">
-      <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10121A]">
+      <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-900/90">
         {navItems.map(({ path, icon: Icon, label }) => {
           const active = location.pathname === path;
           return (
@@ -54,7 +54,7 @@ const Navigation = () => {
               onClick={() => navigate(path)}
               data-testid={`nav-${label.toLowerCase()}`}
                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 font-semibold transition-colors ${
-                 active ? 'bg-emerald-600 font-bold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500' : 'border border-zinc-700 bg-zinc-800/90 font-bold text-zinc-100 hover:bg-zinc-700 hover:text-white'
+                 active ? 'bg-emerald-600 font-bold text-white shadow-sm' : 'border-0 bg-transparent font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
               }`}
             >
               <Icon size={22} />
@@ -76,17 +76,17 @@ export const TopBar = ({
   showBack?: boolean;
   onBack?: () => void;
 }) => (
-  <header className="sticky top-0 z-40 flex flex-shrink-0 items-center gap-2 border-b border-border bg-card/95 px-3 py-2.5 backdrop-blur-sm">
+  <header className="sticky top-0 z-40 flex flex-shrink-0 items-center gap-2 border-b border-slate-200 bg-white/95 px-3 py-2.5 backdrop-blur-sm dark:border-white/10 dark:bg-[#10121A]/95">
     {showBack && (
       <button
         onClick={onBack}
         data-testid="button-back"
-        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-muted-foreground transition-all active:scale-90"
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-600 transition-all active:scale-90 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
       >
         <ChevronLeft size={18} strokeWidth={2.5} />
       </button>
     )}
-    <h1 className="truncate text-base font-extrabold tracking-tight text-foreground">{title}</h1>
+    <h1 className="truncate text-base font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h1>
     <div className="ml-auto">
       <ThemeToggle />
     </div>

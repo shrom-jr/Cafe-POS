@@ -67,7 +67,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Brand block (logo + name) ───────────────────────────────────────────────
   const brandBlock = (
     <div className="flex items-center gap-2.5 flex-shrink-0 select-none min-w-0">
-      <div className="flex h-10 min-w-10 max-w-[132px] shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-1.5 py-0.5 backdrop-blur-md">
+      <div className="flex h-10 min-w-10 max-w-[132px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-1.5 py-0.5 backdrop-blur-md dark:border-white/20 dark:bg-white/10">
         {logoSrc ? (
           <img
             src={logoSrc}
@@ -76,13 +76,13 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
           />
         ) : (
-          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-accent" stroke="currentColor" strokeWidth={1.8}>
+          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-emerald-700 dark:text-accent" stroke="currentColor" strokeWidth={1.8}>
             <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </div>
       <span
-        className="hidden truncate text-lg font-black tracking-wide text-white leading-tight sm:block"
+        className="hidden truncate text-lg font-black tracking-wide text-slate-900 leading-tight dark:text-white sm:block"
       >
         {title}
       </span>
@@ -93,7 +93,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   const userBadge = currentUser ? (
     <div className="flex flex-shrink-0 items-center gap-5">
       <div className="hidden flex-col items-center justify-center gap-0.5 text-center sm:flex">
-        <span className="text-sm font-bold text-white">{currentUser.name}</span>
+        <span className="text-sm font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
         <span
           className="rounded-md border border-purple-400/30 bg-purple-500/25 px-2.5 py-0.5 text-[11px] font-black text-purple-200"
           style={{
@@ -105,11 +105,11 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           {ROLE_LABEL[currentUser.role]}
         </span>
       </div>
-      <span className="h-6 w-px bg-zinc-800" aria-hidden="true" />
+      <span className="h-6 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden="true" />
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-all hover:bg-emerald-500/20 hover:text-emerald-200 active:scale-95"
+         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-emerald-600/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-500/20 hover:text-emerald-800 active:scale-95 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:text-emerald-200"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -120,7 +120,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1"
+      className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-900/90"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -132,7 +132,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
              className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
                active
                  ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
-                 : 'border-0 bg-transparent px-4 py-2 font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
+                 : 'border-0 bg-transparent px-4 py-2 font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
              }`}
           >
              <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -154,7 +154,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
          className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
            active
              ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
-             : 'border-0 bg-transparent px-4 py-2 font-semibold text-zinc-300 hover:bg-white/5 hover:text-white'
+             : 'border-0 bg-transparent px-4 py-2 font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
          }`}
       >
          <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
@@ -165,10 +165,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   return (
     <div
-      className="h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground dark:bg-[#0A0B0E]"
+      className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-slate-50 text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-      <header className="flex-shrink-0 border-b border-white/10 bg-[#10121A] px-6 py-3">
+      <header className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
          {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden h-10 items-center sm:grid" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
@@ -198,7 +198,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           </div>
           {/* Row 2: nav tabs (scrollable) */}
           {mobileTabs.length > 0 && (
-             <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/90 p-1 no-scrollbar">
+             <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
               {mobileTabs}
             </div>
           )}
