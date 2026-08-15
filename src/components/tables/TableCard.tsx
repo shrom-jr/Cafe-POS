@@ -41,26 +41,20 @@ const TableCard = ({
 }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
   const isActive = table.status !== 'free';
-  const statusLabel = table.status === 'free'
-    ? 'AVAILABLE'
-    : table.status === 'billing'
+  const statusLabel = table.status === 'billing'
       ? 'BILLING'
       : 'OCCUPIED';
-  const statusTone = table.status === 'free'
-    ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-    : table.status === 'billing'
+  const statusTone = table.status === 'billing'
       ? 'border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300'
-      : 'border-amber-500/70 bg-amber-500/15 text-amber-700 dark:text-amber-300';
-  const statusDot = table.status === 'free'
-    ? 'bg-emerald-400'
-    : table.status === 'billing'
+      : 'border-orange-500 bg-orange-500 text-orange-950';
+  const statusDot = table.status === 'billing'
       ? 'bg-red-400'
-      : 'bg-amber-400';
+      : 'bg-orange-950';
   const cardTone = table.status === 'free'
     ? 'border-border/60'
     : table.status === 'billing'
       ? 'border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)]'
-      : 'border-2 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.15)]';
+      : 'border-2 border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.18)]';
 
   return (
     <button
@@ -78,28 +72,30 @@ const TableCard = ({
             {tableDisplayName(table.number)}
           </span>
 
-          <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold leading-none tracking-[0.08em] ${statusTone}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
-            {statusLabel}
-          </span>
+          {isActive && (
+            <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold leading-none tracking-[0.08em] ${statusTone}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
+              {statusLabel}
+            </span>
+          )}
         </div>
 
         {showSection && (
-          <span className="mt-1 max-w-full truncate text-[10px] font-medium text-muted-foreground" title={table.section || 'Ground Floor'}>
+          <span className="mt-1 max-w-full truncate text-sm font-medium text-foreground/70" title={table.section || 'Ground Floor'}>
             {table.section || 'Ground Floor'}
           </span>
         )}
 
         {/* Middle body zone */}
-        <div className="flex min-h-[48px] flex-col items-start justify-center gap-1.5 py-2">
+        <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
           {isActive ? (
             <>
-              <span className="px-2 text-sm font-bold leading-tight text-foreground">
-                👥 {table.pax ?? 1} Guests
+              <span className="text-sm font-bold leading-tight text-foreground">
+                {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
               </span>
               {customerName && (
-                <span className="w-fit max-w-full truncate rounded-md bg-secondary px-2 py-1 text-xs font-semibold text-secondary-foreground">
-                  👤 {customerName}
+                <span className="w-fit max-w-full truncate rounded-md bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
+                  {customerName}
                 </span>
               )}
             </>
@@ -107,14 +103,14 @@ const TableCard = ({
         </div>
 
         {/* Bottom footer zone */}
-        <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs font-medium text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border/60 pt-2 text-sm text-foreground">
           {isActive ? (
             <>
-              <span className="tabular-nums">{timer ? `⏱ ${timer}` : '⏱ —'}</span>
-              <span>📦 {itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
+              <span className="font-semibold tabular-nums">{timer || '—'}</span>
+              <span className="font-semibold">{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
             </>
           ) : (
-            <span>Ready for order</span>
+            <span className="font-medium">Open Table</span>
           )}
         </div>
       </div>

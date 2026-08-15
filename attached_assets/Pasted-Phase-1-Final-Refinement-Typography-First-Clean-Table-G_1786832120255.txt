@@ -1,0 +1,31 @@
+Phase 1 Final Refinement: Typography-First Clean Table Grid (Zero Emoji Clutter)
+
+Refactor `src/screens/TableOverview.tsx` and `src/components/tables/TableCard.tsx` to establish a clean, enterprise-grade typography layout:
+
+1. Remove All Emoji Icons & Badge Noise:
+   - Strip all emoji characters (e.g. 👥, 👤, ⏱, 📦, 🟢, 🟠) across `TableCard.tsx` and `TableOverview.tsx`.
+   - Remove the repetitive "AVAILABLE" pill badges from all free table cards.
+   - Remove the occupancy count badges (e.g. "4 Free • 1 Active", "5 Free") from section titles in `TableOverview.tsx` so area headers remain pure, bold text ("GROUND FLOOR", "CABINS", "FIRST FLOOR").
+
+2. Free Table Card Layout (`TableCard.tsx`):
+   - Header: Large, bold Table Name (e.g., "R2", "Cabin 1", "H1") in high-contrast text (bright white `#FFFFFF` in dark mode, jet-black `#09090B` in light mode).
+   - Body: Clean and uncluttered empty canvas with balanced height.
+   - Footer: Crisp divider line (`border-t border-border/60`) with a clean status label: "Open Table" in legible, high-contrast text (`text-sm font-medium text-slate-200 dark:text-slate-200 light:text-slate-700`).
+
+3. Occupied Table Card Layout (`TableCard.tsx`):
+   - Border: Solid, high-visibility 2px bright orange/amber border (`border-2 border-orange-500`).
+   - Header: Bold Table Name on the left, and a solid, clean "OCCUPIED" (or "DINING") badge on the right.
+   - Body (Center Aligned):
+     * Guest count displayed prominently in the center (e.g., "1 Guest" or "2 Guests") using clean, bold typography.
+     * Attached customer name placed directly underneath the guest count, centered inside a sleek minimal pill (e.g., "[ Amit Dai ]") with crisp text.
+   - Footer:
+     * Left: Live timer (e.g., "1h 02m") in bold, high-contrast tabular font (`text-sm font-semibold text-slate-100 dark:text-slate-100 light:text-slate-900`).
+     * Right: Item count (e.g., "2 Items" or "5 Items") in bold, high-contrast font.
+
+4. Typography & Readability Overhaul:
+   - Eliminate all low-contrast muddy gray subtext (`text-muted-foreground` in small sizes).
+   - Standardize subtext and timers to minimum 14px (`text-sm`) with high legibility across dark and light modes.
+
+STRICT CONSTRAINTS:
+- DO NOT alter table click navigation (`navigate(/order/${table.id})`), table store hooks (`usePOSStore`, `useTables`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

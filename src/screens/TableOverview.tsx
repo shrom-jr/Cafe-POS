@@ -30,7 +30,7 @@ export const AREA_COLORS = [
   // Slot 4 - Royal Indigo
   { text: 'text-indigo-400', bg: 'bg-indigo-500', glow: 'shadow-indigo-500/50', border: 'border-indigo-500/30' },
   // Slot 5 - Silver
-  { text: 'text-muted-foreground', bg: 'bg-muted-foreground', glow: 'shadow-muted-foreground/40', border: 'border-border' },
+  { text: 'text-foreground', bg: 'bg-foreground', glow: 'shadow-foreground/40', border: 'border-border' },
 ];
 
 // ── Area section box ──────────────────────────────────────────────────────────
@@ -143,16 +143,12 @@ const TableOverview = () => {
   // Compact combined status badge + clock
   const headerRight = (
     <>
-      <span
-        className="flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold text-foreground"
-      >
-        <span className="text-emerald-500">🟢</span>
-        <span className="text-emerald-600 dark:text-emerald-300">{counts.available}</span>
-        <span className="mx-0.5 text-muted-foreground/50">|</span>
-        <span className="text-amber-500">🟠</span>
-        <span className="text-amber-600 dark:text-amber-300">{counts.active}</span>
+      <span className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-secondary px-3 py-1 text-sm font-semibold text-foreground">
+        <span className="text-emerald-700 dark:text-emerald-300">Available {counts.available}</span>
+        <span className="text-foreground/50" aria-hidden="true">·</span>
+        <span className="text-orange-700 dark:text-orange-300">Active {counts.active}</span>
       </span>
-      <span className="hidden flex-shrink-0 font-mono text-xs font-medium tabular-nums text-muted-foreground sm:inline">
+      <span className="hidden flex-shrink-0 font-mono text-sm font-medium tabular-nums text-foreground/70 sm:inline">
         {clock}
       </span>
     </>
@@ -162,9 +158,9 @@ const TableOverview = () => {
     <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'} headerRight={headerRight}>
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 pb-20">
         {tables.length === 0 ? (
-          <div className="text-center text-muted-foreground py-20">
+          <div className="py-20 text-center text-foreground">
             <p className="text-lg">No tables configured.</p>
-            <p className="text-sm mt-1">Go to Admin → Tables to add tables.</p>
+            <p className="mt-1 text-sm text-foreground/70">Go to Admin → Tables to add tables.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
@@ -187,7 +183,7 @@ const TableOverview = () => {
                         : 'border-border bg-secondary text-secondary-foreground hover:border-primary/50 hover:text-foreground'
                     }`}
                   >
-                    {section} <span className="opacity-60">({count})</span>
+                    {section} <span className="text-foreground/70">({count})</span>
                   </button>
                 );
               })}
