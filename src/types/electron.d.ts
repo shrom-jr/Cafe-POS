@@ -25,12 +25,14 @@ declare global {
     electronAPI?: {
       /**
        * Send a complete HTML document string to the Electron main process for
-       * silent printing on the default Windows thermal printer.
+       * silent printing on a Windows thermal printer.
        * Resolves immediately (fire-and-forget via IPC).
        *
-       * @param htmlContent - Full HTML document including embedded <style>.
+       * @param htmlContent  - Full HTML document including embedded <style>.
+       * @param printerName  - Optional Windows printer name (e.g. 'Kitchen Printer').
+       *                       When omitted the OS default printer is used.
        */
-      printSilent: (htmlContent: string) => void;
+      printSilent: (htmlContent: string, printerName?: string) => void;
 
       /** True when running inside the Electron desktop container. */
       isElectron: boolean;

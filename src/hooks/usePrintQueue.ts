@@ -25,7 +25,9 @@ import {
   buildBOT,
   buildVoidTicket,
   dispatchEscpos,
+  resolvePrinterMode,
 } from '@/utils/escpos';
+import { browserPrintKOT } from '@/utils/browserPrint';
 import { autoReconnectUSB } from '@/utils/webusbPrinter';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
@@ -123,7 +125,28 @@ export function usePrintQueue() {
       const isKitchenTicket = ticket.ticketType === 'KOT' || ticket.ticketType === 'VOID_KOT';
       const target = isKitchenTicket ? 'kitchen' : 'reception';
 
-      // Build the ESC/POS buffer
+      // ── System/Browser Print path for KOT ─────────────────────────────────
+      // When the kitchen printer is set to 'System / Browser Print', route KOT
+      // tickets through the HTML renderer instead of raw ESC/POS bytes.
+      // In Electron this prints silently to the named kitchen printer;
+      // in a web browser it opens the OS print dialog.
+      if (ticket.ticketType === 'KOT' && resolvePrinterMode(settings, 'kitchen') === 'system') {
+        const success = await browserPrintKOT({
+          cafeName,
+          ticket,
+          pax,
+          buzzer: settings.kitchenPrinterBuzzer ?? false,
+        });
+        if (!success) {
+          console.warn(
+            `[print-queue] browserPrintKOT failed for KOT #${ticket.ticketNumber} in system mode.`,
+          );
+        }
+        if (success) markPrinted(ticket.id);
+        return;
+      }
+
+      // ── ESC/POS path (WebUSB or network) ──────────────────────────────────
       let buffer: Uint8Array | null = null;
 
       if (ticket.ticketType === 'KOT') {
@@ -145,24 +168,25 @@ export function usePrintQueue() {
         // stays pending for visibility, while processedTicketIds prevents a
         // retry loop during this browser session.
         console.warn(
-          `[print-queue] Could not dispatch ${ticket.ticketType} #${ticket.ticketNumber}; no browser print fallback was attempted.`,
+          `[print-queue] Could not dispatch ${ticket.ticketType} #${ticket.ticketNumber}.`,
         );
       }
 
-      if (success) {
-        // Mark ticket as printed so other devices skip it
-        const currentOrders = usePOSStore.getState().orders;
-        const updatedOrders = currentOrders.map((o) => {
-          if (!o.tickets?.some((t) => t.id === ticket.id)) return o;
-          return {
-            ...o,
-            tickets: o.tickets.map((t) =>
-              t.id === ticket.id ? { ...t, status: 'printed' as const } : t,
-            ),
-          };
-        });
-        setOrders(updatedOrders);
-      }
+      if (success) markPrinted(ticket.id);
+    }
+
+    function markPrinted(ticketId: string) {
+      const currentOrders = usePOSStore.getState().orders;
+      const updatedOrders = currentOrders.map((o) => {
+        if (!o.tickets?.some((t) => t.id === ticketId)) return o;
+        return {
+          ...o,
+          tickets: o.tickets.map((t) =>
+            t.id === ticketId ? { ...t, status: 'printed' as const } : t,
+          ),
+        };
+      });
+      setOrders(updatedOrders);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, isHub]);

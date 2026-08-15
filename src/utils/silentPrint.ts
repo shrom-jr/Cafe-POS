@@ -6,7 +6,10 @@
  * Accepts KITCHEN_KOT / PRE_BILL / TAX_INVOICE jobs and routes each to the
  * correct print path based on the configured printer mode:
  *
- *   KITCHEN_KOT → always ESC/POS (WebUSB or network)
+ *   KITCHEN_KOT → kitchen printer mode:
+ *                   'system'  → browserPrintKOT()         (window.print or Electron silent)
+ *                   'webusb'  → dispatchEscpos → sendRawToUSB
+ *                   'network' → dispatchEscpos → sendToNetworkPrinter
  *   PRE_BILL    → reception printer mode:
  *                   'system'  → browserPrintPreBill()   (window.print via iframe)
  *                   'webusb'  → dispatchEscpos → sendRawToUSB
@@ -31,6 +34,7 @@ import {
   type EscTaxInvoiceOptions,
 } from '@/utils/escpos';
 import {
+  browserPrintKOT,
   browserPrintPreBill,
   browserPrintTaxInvoice,
 } from '@/utils/browserPrint';
@@ -54,6 +58,17 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         createdAt: new Date(d.timestamp).toISOString(),
         status: 'pending',
       };
+
+      // System/Browser Print mode: render HTML and route to window.print or Electron.
+      if (resolvePrinterMode(settings, 'kitchen') === 'system') {
+        return browserPrintKOT({
+          cafeName: d.cafeName,
+          ticket,
+          pax: d.pax,
+          buzzer: settings.kitchenPrinterBuzzer ?? false,
+        });
+      }
+
       const buffer = buildKOT({
         cafeName: d.cafeName,
         ticket,

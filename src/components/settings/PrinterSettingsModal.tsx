@@ -42,7 +42,7 @@ import {
   getUSBPrinterName,
   isWebUSBSupported,
 } from '@/utils/webusbPrinter';
-import { browserPrintBOT } from '@/utils/browserPrint';
+import { browserPrintKOT, browserPrintBOT } from '@/utils/browserPrint';
 import { Settings, Ticket } from '@/types/pos';
 
 // ── Shared style ──────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const inputCls =
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type KitchenMode   = 'webusb' | 'network';
+type KitchenMode   = 'webusb' | 'network' | 'system';
 type ReceptionMode = 'webusb' | 'network' | 'system';
 
 // ── Test-ticket factory ───────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function makeTestTicket(ticketType: 'KOT' | 'BOT'): Ticket {
   };
 }
 
-// ── Kitchen connection panel (WebUSB | Network) ───────────────────────────────
+// ── Kitchen connection panel (WebUSB | Network | System) ─────────────────────
 
 function KitchenConnectionPanel({
   mode, onModeChange,
@@ -94,19 +94,18 @@ function KitchenConnectionPanel({
   pairing: boolean;
 }) {
   const MODES: { id: KitchenMode; label: string; Icon: typeof Cable }[] = [
-    { id: 'webusb',  label: 'WebUSB (Direct Cable)', Icon: Cable },
-    { id: 'network', label: 'Wi-Fi / Network IP',    Icon: Wifi  },
+    { id: 'webusb',  label: 'WebUSB (Direct Cable)',   Icon: Cable   },
+    { id: 'network', label: 'Wi-Fi / Network IP',      Icon: Wifi    },
+    { id: 'system',  label: 'System / Browser Print',  Icon: Monitor },
   ];
 
   return (
     <>
       <ModeToggle modes={MODES} active={mode} onChange={onModeChange} />
 
-      {mode === 'webusb' ? (
-        <USBPanel usbConnected={usbConnected} usbName={usbName} onPair={onPair} pairing={pairing} />
-      ) : (
-        <NetworkPanel ip={ip} onIpChange={onIpChange} port={port} onPortChange={onPortChange} placeholder="192.168.1.200" />
-      )}
+      {mode === 'webusb'  && <USBPanel usbConnected={usbConnected} usbName={usbName} onPair={onPair} pairing={pairing} />}
+      {mode === 'network' && <NetworkPanel ip={ip} onIpChange={onIpChange} port={port} onPortChange={onPortChange} placeholder="192.168.1.200" />}
+      {mode === 'system'  && <KitchenSystemPrintPanel />}
     </>
   );
 }
@@ -249,6 +248,28 @@ function NetworkPanel({
   );
 }
 
+function KitchenSystemPrintPanel() {
+  return (
+    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Monitor size={14} className="text-emerald-400 flex-shrink-0" />
+        <p className="text-sm font-semibold text-emerald-300">System / Browser Print active</p>
+      </div>
+      <p className="text-[11.5px] text-slate-300 leading-relaxed">
+        KOT tickets open the OS print dialog styled for an 80mm thermal roll.
+        No USB pairing or IP address needed — Windows routes the job to whichever printer
+        is set as default (or to a printer named <b>Kitchen Printer</b> when running in the
+        desktop app).
+      </p>
+      <p className="text-[11px] text-slate-400">
+        Tip: In Chrome, set <b>Destination → your kitchen printer</b> and enable <b>Save as default</b>
+        to skip the dialog on every print. In the desktop app, name your Windows printer
+        <b> Kitchen Printer</b> to route silently without a dialog.
+      </p>
+    </div>
+  );
+}
+
 function SystemPrintPanel() {
   return (
     <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-1.5">
@@ -276,9 +297,12 @@ const PrinterSettingsSection = () => {
   const updateSettings = usePOSStore((s) => s.updateSettings);
 
   // Kitchen state
-  const [kitchenMode, setKitchenMode] = useState<KitchenMode>(
-    settings.kitchenPrinterMode === 'webusb' ? 'webusb' : 'network',
-  );
+  const [kitchenMode, setKitchenMode] = useState<KitchenMode>(() => {
+    const m = settings.kitchenPrinterMode;
+    if (m === 'webusb') return 'webusb';
+    if (m === 'system') return 'system';
+    return 'network';
+  });
   const [kitchenIp,     setKitchenIp]     = useState(settings.kitchenPrinterIp ?? '');
   const [kitchenPort,   setKitchenPort]   = useState(String(settings.kitchenPrinterPort ?? 9100));
   const [kitchenBuzzer, setKitchenBuzzer] = useState(settings.kitchenPrinterBuzzer ?? false);
@@ -361,6 +385,15 @@ const PrinterSettingsSection = () => {
     setTesting('kot');
     try {
       const ticket = makeTestTicket('KOT');
+
+      if (kitchenMode === 'system') {
+        // System mode: render HTML and route through OS print dialog (or Electron silent print).
+        const ok = await browserPrintKOT({ cafeName: settings.cafeName, ticket, pax: 2, buzzer: kitchenBuzzer });
+        if (!ok) toast.error('Browser print failed — check browser permissions');
+        else toast.success('Test KOT opened in print dialog');
+        return;
+      }
+
       const buffer = buildKOT({
         cafeName: settings.cafeName,
         ticket,
@@ -457,7 +490,11 @@ const PrinterSettingsSection = () => {
           disabled={testing !== null}
           className="w-full py-2.5 rounded-xl bg-secondary border border-border text-sm font-semibold text-foreground transition-all active:scale-[0.98] hover:bg-secondary/70 disabled:opacity-50"
         >
-          {testing === 'kot' ? 'Sending test…' : 'Test Print KOT'}
+          {testing === 'kot'
+            ? 'Sending test…'
+            : kitchenMode === 'system'
+              ? 'Test Print KOT (Browser Dialog)'
+              : 'Test Print KOT'}
         </button>
       </div>
 

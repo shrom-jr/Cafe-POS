@@ -15,12 +15,13 @@
  *   - All failures resolve false; nothing throws.
  *
  * Exported surface:
+ *   browserPrintKOT(data)         — Kitchen Order Ticket
  *   browserPrintBOT(data)         — Bar Order Ticket
  *   browserPrintPreBill(data)     — Pre-bill / estimate slip
  *   browserPrintTaxInvoice(data)  — Final tax invoice / receipt
  */
 
-import type { EscBOTOptions, EscPreBillOptions, EscTaxInvoiceOptions } from '@/utils/escpos';
+import type { EscKOTOptions, EscBOTOptions, EscPreBillOptions, EscTaxInvoiceOptions } from '@/utils/escpos';
 
 // ── Shared CSS ────────────────────────────────────────────────────────────────
 
@@ -197,11 +198,11 @@ ${bodyHTML}
  *     The caller (System/Browser Print mode) has already explained to the
  *     user that a dialog will appear.
  */
-function fireBrowserPrint(html: string): Promise<boolean> {
+function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> {
   // ── Electron path ──────────────────────────────────────────────────────────
   if (typeof window !== 'undefined' && window.electronAPI?.printSilent) {
     try {
-      window.electronAPI.printSilent(html);
+      window.electronAPI.printSilent(html, printerName);
       return Promise.resolve(true);
     } catch (err) {
       console.warn('[browserPrint] electronAPI.printSilent threw:', err);
@@ -277,6 +278,39 @@ function formatDate(ts: number | string): string {
 
 function fmtRs(n: number): string {
   return `Rs. ${n.toFixed(2)}`;
+}
+
+// ── KOT (Kitchen Order Ticket) ────────────────────────────────────────────────
+
+export async function browserPrintKOT({ cafeName, ticket, pax = 1 }: EscKOTOptions): Promise<boolean> {
+  const itemRows = ticket.items.map((item) => `
+    <div class="ticket-item">
+      <div class="tqty">${item.quantity}×</div>
+      <div class="tname">
+        ${esc(item.name)}
+        ${item.notes ? `<div class="tnotes">&raquo; ${esc(item.notes)}</div>` : ''}
+      </div>
+    </div>`).join('');
+
+  const body = `
+    <div class="cafe-name">${esc(cafeName)}</div>
+    <div class="doc-title">KITCHEN ORDER TICKET</div>
+    <div class="doc-title">KOT #${ticket.ticketNumber}</div>
+    <hr>
+    <div class="meta-row"><span>Table: <b>${esc(ticket.tableName)}</b></span><span>Pax: ${pax}</span></div>
+    <div class="meta-row"><span>Waiter: ${esc(ticket.serverName || 'N/A')}</span><span>${formatDate(ticket.createdAt)}</span></div>
+    ${ticket.customerName ? `<div class="meta-row"><span>Customer: ${esc(ticket.customerName)}</span></div>` : ''}
+    <hr>
+    <div class="bold" style="font-size:8.5pt;margin-bottom:1mm;">QTY  ITEM</div>
+    <hr class="solid">
+    <div class="ticket-items">${itemRows}</div>
+    <hr>
+    <div class="notice">*** KITCHEN COPY — NO PRICING ***</div>
+  `;
+
+  // Pass 'Kitchen Printer' as the target so the Electron main process can
+  // route this job to a dedicated kitchen printer (deviceName in webContents.print).
+  return fireBrowserPrint(buildFullHTML(body), 'Kitchen Printer');
 }
 
 // ── BOT (Bar Order Ticket) ────────────────────────────────────────────────────

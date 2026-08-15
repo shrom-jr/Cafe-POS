@@ -65,13 +65,20 @@ function createMainWindow() {
 // ── Silent print IPC handler ───────────────────────────────────────────────────
 
 /**
- * Receives a complete HTML string from the renderer, loads it into a hidden
- * off-screen window, and prints it silently to the default Windows printer.
+ * Receives an HTML receipt string from the renderer, loads it into a hidden
+ * off-screen window, and prints it silently to a Windows thermal printer.
+ *
+ * Arguments (via IPC):
+ *   htmlContent  {string}      — Full HTML document (includes @page 80mm CSS).
+ *   printerName  {string|null} — Optional Windows printer name for routing.
+ *                                Pass null / omit to use the OS default printer.
+ *                                Pass 'Kitchen Printer' (exact Windows name) to
+ *                                send the job to a dedicated kitchen thermal printer.
  *
  * The @page CSS inside the HTML already sets size: 80mm auto; margin: 0 so
  * the OS receives exactly the right paper geometry for the thermal roll.
  */
-ipcMain.on('silent-print', (_event, htmlContent) => {
+ipcMain.on('silent-print', (_event, htmlContent, printerName) => {
   if (typeof htmlContent !== 'string' || htmlContent.length === 0) {
     console.warn('[electron] silent-print: received empty or non-string payload — ignored.');
     return;
@@ -94,18 +101,28 @@ ipcMain.on('silent-print', (_event, htmlContent) => {
   printWin.loadURL(dataUrl);
 
   printWin.webContents.once('did-finish-load', () => {
+    /** @type {Electron.WebContentsPrintOptions} */
+    const printOptions = {
+      silent:          true,
+      printBackground: true,
+      margins:         { marginType: 'none' },
+      // pageSize can be overridden here; the @page CSS declaration inside
+      // the HTML is already setting 80mm × auto, which Chromium honours.
+      pageSize: 'A4',   // fallback for drivers that ignore @page
+    };
+
+    // Route to a specific Windows printer when a name is provided.
+    // The name must match exactly as it appears in Windows Settings → Printers.
+    // Example: name the kitchen printer 'Kitchen Printer' in Windows to use it here.
+    if (typeof printerName === 'string' && printerName.length > 0) {
+      printOptions.deviceName = printerName;
+    }
+
     printWin.webContents.print(
-      {
-        silent:          true,
-        printBackground: true,
-        margins:         { marginType: 'none' },
-        // pageSize can be overridden here; the @page CSS declaration inside
-        // the HTML is already setting 80mm × auto, which Chromium honours.
-        pageSize: 'A4',   // fallback for drivers that ignore @page
-      },
+      printOptions,
       (success, errorType) => {
         if (!success) {
-          console.warn('[electron] Print job failed:', errorType);
+          console.warn(`[electron] Print job failed (printer: ${printerName ?? 'default'}):`, errorType);
         }
         // Destroy regardless so hidden windows don't accumulate.
         try { printWin.destroy(); } catch { /* already destroyed */ }

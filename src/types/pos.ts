@@ -377,7 +377,7 @@ export interface Settings {
   printerAddress?: string;
   // ── Printer hardware configuration ──────────────────────────────────────────
   /** Connection mode for the kitchen thermal printer (default 'network') */
-  kitchenPrinterMode?: 'webusb' | 'network';
+  kitchenPrinterMode?: 'webusb' | 'network' | 'system';
   /** IP address of the kitchen thermal printer (e.g. 192.168.1.200) */
   kitchenPrinterIp?: string;
   /** TCP port of the kitchen thermal printer (default 9100) */

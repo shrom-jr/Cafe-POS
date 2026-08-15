@@ -488,6 +488,7 @@ export function resolvePrinterMode(
 ): 'webusb' | 'network' | 'system' {
   if (target === 'kitchen') {
     if (settings.kitchenPrinterMode === 'webusb') return 'webusb';
+    if (settings.kitchenPrinterMode === 'system') return 'system';
     return 'network';
   }
   // Reception
