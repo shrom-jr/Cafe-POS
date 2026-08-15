@@ -1,0 +1,30 @@
+Phase 1 Master Polish: Light Mode Contrast, Card Shadows & Badge Readability
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/components/ui/Navigation.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx` to fix all light mode contrast and elevation issues while keeping dark mode pristine:
+
+1. Global Shell & Canvas Separation (`AppLayout.tsx`):
+   - Page Canvas: In light mode, set background to cool studio porcelain slate (`bg-slate-100 dark:bg-[#0A0B0E]`).
+   - Top Header Bar: Pure white surface with defined separation (`bg-white dark:bg-[#10121A] border-b border-slate-200 dark:border-white/10 shadow-sm`).
+   - Admin Badge Text Fix: Ensure the Admin tag is sharp in light mode (`bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-500/25 dark:text-purple-200 dark:border-purple-400/30 font-bold px-2 py-0.5 rounded text-[11px]`).
+   - Brand Title: `text-slate-900 dark:text-white font-black`.
+
+2. Segmented Navigation & Floor Filter Track Contrast (`Navigation.tsx`, `TableOverview.tsx`):
+   - In Light Mode, style the outer segmented tracks with distinct slate surface (`bg-slate-200/80 border border-slate-300/80 dark:bg-zinc-900/90 dark:border-zinc-800`).
+   - Inactive Nav Items & Floor Filter Pills: Crisp slate text (`text-slate-700 hover:text-slate-950 hover:bg-white/60 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-white/5 font-bold transition-all`).
+   - Telemetry Pill & Clock: `bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-800 shadow-sm`.
+
+3. Table Tile Depth & Elevation (`TableCard.tsx`):
+   - Free Table Cards:
+     * Light Mode: Pure white card with tactile depth (`bg-white border border-slate-300/80 shadow-sm hover:shadow-md hover:border-emerald-500/80 hover:-translate-y-1 transition-all rounded-2xl`).
+     * Table Name: Bold jet-black typography (`text-slate-900 dark:text-white text-3xl font-black text-center`).
+   - Occupied Table Cards:
+     * Light Mode: Warm cream-amber surface (`bg-amber-50/90 border-2 border-amber-500 shadow-sm rounded-2xl`).
+     * Status Pill: `bg-amber-100 text-amber-900 border border-amber-400 text-xs font-bold px-2.5 py-0.5 rounded-full`.
+     * Guest Count & Item Count: `text-slate-900 dark:text-white font-bold`.
+     * Customer Pill: `bg-slate-200/90 text-slate-900 border border-slate-300 dark:bg-white/10 dark:text-white dark:border-white/20 font-bold px-3 py-1 rounded-full text-xs`.
+     * Footer Timer & Items: Crisp dark text in light mode (`text-slate-800 dark:text-slate-100 font-bold`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter dark mode color tokens that are already working.
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

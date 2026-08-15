@@ -143,7 +143,7 @@ const TableOverview = () => {
   // Compact status badge + live clock for the table filter row.
   const tableStatusBar = (
     <div className="flex flex-shrink-0 items-center gap-3">
-        <span className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+        <span className="flex items-center gap-3 rounded-xl border border-slate-300/80 bg-white px-3.5 py-2 text-xs font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 dark:bg-emerald-400" />
           Available {counts.available}
@@ -153,7 +153,7 @@ const TableOverview = () => {
           Active {counts.active}
         </span>
       </span>
-      <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs font-bold tabular-nums text-slate-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-slate-200">
+      <span className="rounded-xl border border-slate-300/80 bg-white px-3 py-2 font-mono text-xs font-bold tabular-nums text-slate-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-slate-200">
         {clock}
       </span>
     </div>
@@ -171,7 +171,7 @@ const TableOverview = () => {
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
             <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
-                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
+                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300/80 bg-slate-200/80 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
                 {['All', ...sections].map((section) => {
                   const count = section === 'All'
                     ? tables.length
@@ -186,10 +186,10 @@ const TableOverview = () => {
                        className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
                            ? 'bg-emerald-600 font-bold text-white shadow-sm'
-                           : 'border-0 bg-transparent font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
+                           : 'border-0 bg-transparent font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
                       }`}
                     >
-                      {section} <span className={active ? 'text-white' : 'text-slate-600 dark:text-zinc-300'}>({count})</span>
+                      {section} <span className={active ? 'text-white' : 'text-slate-700 dark:text-zinc-300'}>({count})</span>
                     </button>
                   );
                 })}

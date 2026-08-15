@@ -46,15 +46,15 @@ const TableCard = ({
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
       ? 'border-red-500/35 bg-red-500/10 font-bold text-red-700 dark:text-red-300'
-      : 'border-amber-500/60 bg-amber-500/15 font-bold text-amber-700 dark:text-amber-400';
+      : 'border-amber-400 bg-amber-100 font-bold text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
   const statusDot = table.status === 'billing'
       ? 'bg-red-400'
       : 'bg-amber-400';
   const cardTone = table.status === 'free'
-    ? 'border border-slate-200/80 bg-white text-slate-950 shadow-sm dark:border-white/10 dark:bg-[#13151F] dark:text-white hover:-translate-y-1 hover:border-emerald-500/60 hover:shadow-md'
+    ? 'border border-slate-300/80 bg-white text-slate-950 shadow-sm dark:border-white/10 dark:bg-[#13151F] dark:text-white hover:-translate-y-1 hover:border-emerald-500/80 hover:shadow-md'
     : table.status === 'billing'
       ? 'border-2 border-red-500 bg-red-50/60 shadow-sm dark:bg-gradient-to-b dark:from-[#281D17] dark:to-[#141217] dark:border-red-500 hover:border-red-400'
-      : 'border-2 border-amber-500 bg-amber-50/60 shadow-sm dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] dark:border-amber-500/80 hover:border-amber-400';
+      : 'border-2 border-amber-500 bg-amber-50/90 shadow-sm dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] dark:border-amber-500/80 hover:border-amber-400';
 
   return (
     <button
@@ -66,7 +66,7 @@ const TableCard = ({
         <div className="relative flex w-full flex-1 items-center justify-center">
           <span
             title={tableDisplayName(table.number)}
-            className="text-center text-3xl font-black tracking-wide text-slate-950 dark:text-white"
+            className="text-center text-3xl font-black tracking-wide text-slate-900 dark:text-white"
           >
             {tableDisplayName(table.number)}
           </span>
@@ -100,14 +100,14 @@ const TableCard = ({
               {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (
-              <span className="w-fit max-w-full truncate rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-xs font-bold tracking-wide text-slate-900 shadow-sm dark:border-white/20 dark:bg-white/10 dark:text-white">
+              <span className="w-fit max-w-full truncate rounded-full border border-slate-300 bg-slate-200/90 px-3 py-1 text-xs font-bold tracking-wide text-slate-900 shadow-sm dark:border-white/20 dark:bg-white/10 dark:text-white">
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Bottom footer zone */}
-          <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+          <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm font-bold text-slate-800 dark:border-white/10 dark:text-slate-100">
             <span className="tabular-nums">{timer || '—'}</span>
             <span>{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
           </div>

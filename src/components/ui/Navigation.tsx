@@ -45,7 +45,7 @@ const Navigation = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10121A]">
-      <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-zinc-900/90">
+      <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-slate-300/80 bg-slate-200/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/90">
         {navItems.map(({ path, icon: Icon, label }) => {
           const active = location.pathname === path;
           return (
@@ -54,7 +54,7 @@ const Navigation = () => {
               onClick={() => navigate(path)}
               data-testid={`nav-${label.toLowerCase()}`}
                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 font-semibold transition-colors ${
-                 active ? 'bg-emerald-600 font-bold text-white shadow-sm' : 'border-0 bg-transparent font-semibold text-slate-600 hover:bg-slate-200/60 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
+                 active ? 'bg-emerald-600 font-bold text-white shadow-sm' : 'border-0 bg-transparent font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
               }`}
             >
               <Icon size={22} />
