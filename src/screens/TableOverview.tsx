@@ -43,14 +43,12 @@ interface AreaBoxProps {
 }
 
 const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
-  const freeCount     = tables.filter((t) => t.status === 'free').length;
-  const occupiedCount = tables.filter((t) => t.status !== 'free').length;
   const theme         = AREA_COLORS[areaIndex % AREA_COLORS.length];
 
   return (
     <div>
-      {/* Section header — no outer card, just a clean divider row */}
-      <div className="flex items-center gap-3 px-1 mb-3">
+      {/* Section header — clean and intentionally free of occupancy chips */}
+      <div className="mb-3 flex items-center gap-3 px-1">
         {/* Colored accent bar */}
         <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
 
@@ -59,17 +57,6 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
           {areaName}
         </span>
 
-        {/* Status chips */}
-        {freeCount > 0 && (
-          <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            🟢 {freeCount} Free
-          </span>
-        )}
-        {occupiedCount > 0 && (
-          <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
-            🟠 {occupiedCount} Active
-          </span>
-        )}
       </div>
 
       {/* Table grid — cards float on the page background */}
