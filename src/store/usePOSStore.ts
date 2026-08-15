@@ -31,6 +31,8 @@ interface POSState {
 
   addTable: (number: string, section?: string) => void;
   updateTable: (id: string, updates: Partial<CafeTable>) => void;
+  /** Update the guest count for an occupied or free table. */
+  updateTableGuests: (id: string, guests: number) => void;
   deleteTable: (id: string) => void;
   resetTable: (id: string) => void;
 
@@ -165,6 +167,22 @@ export const usePOSStore = create<POSState>((set, get) => ({
         updates = { ...updates, section: updates.section.trim() || 'Ground Floor' };
       }
       const tables = state.tables.map((t) => (t.id === id ? { ...t, ...updates } : t));
+      db.saveTables(tables);
+      return { tables };
+    });
+  },
+
+  updateTableGuests: (id, guests) => {
+    set((state) => {
+      const current = state.tables.find((table) => table.id === id);
+      if (!current) return state;
+
+      const pax = Math.max(1, Math.floor(guests));
+      if (current.pax === pax) return state;
+
+      const tables = state.tables.map((table) =>
+        table.id === id ? { ...table, pax } : table,
+      );
       db.saveTables(tables);
       return { tables };
     });

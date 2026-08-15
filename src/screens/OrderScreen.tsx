@@ -36,7 +36,7 @@ const OrderScreen = () => {
   const location = useLocation();
 
   const { tables } = useTables();
-  const updateTable = usePOSStore((s) => s.updateTable);
+  const updateTableGuests = usePOSStore((s) => s.updateTableGuests);
   const moveOrder = usePOSStore((s) => s.moveOrder);
   const {
     getActiveOrder,
@@ -276,7 +276,7 @@ const OrderScreen = () => {
   };
 
   const handlePaxChange = (newPax: number) => {
-    if (tableId) updateTable(tableId, { pax: newPax });
+    if (tableId) updateTableGuests(tableId, newPax);
   };
 
   const freeTables = useMemo(
