@@ -1,0 +1,30 @@
+Phase 2 Critical Fix: Eliminate Text Clipping on Occupied Table Cards & Fix Grid Slot Heights
+
+Refactor `src/screens/TableOverview.tsx` and `src/components/tables/TableCard.tsx` to fix bottom-row text clipping on all occupied table cards:
+
+1. Update Grid Slot Heights (`TableOverview.tsx`):
+   - Increase standard card heights from `h-[70px]`/`h-[75px]` to `h-[92px]` so 3 distinct rows of text fit with comfortable padding without clipping:
+     * First Floor Hut 3 & Hut 2 cards: `h-[92px]` for each tier (`H3-B`, `H3-A`, `T-1`, `H2-B`, `H2-A`, `T-2`).
+     * Hall H1: `h-full min-h-[292px]` (spanning the exact height of the 3 stacked hut cards plus gaps).
+     * Sofa & Lounge: `Sofa` at `h-[80px]`, `L1`–`L4` at `h-[92px]`.
+     * Bar Counter: `Bar 1` and `Bar 2` at `h-[80px]`.
+     * Private Cabins: Back quad (`R1`–`R4`) at `h-[92px]`, Front strip (`R5`–`R7`) at `h-[80px]`.
+
+2. Fix Occupied Card Layout & Prevent Overflow (`TableCard.tsx`):
+   - Structure the occupied card container as `h-full w-full flex flex-col justify-between p-2.5 box-border overflow-hidden`:
+     * Row 1 (Header): Table Name (`text-lg font-black leading-tight`) on the left; Occupied status pill (`text-[10px] font-bold px-2 py-0.5 rounded-md`) on the right.
+     * Row 2 (Middle info): `flex items-center gap-1.5 text-xs font-semibold text-slate-300 dark:text-slate-300`:
+       - Guest count: `👤 {guests}g` or `{guests} Guest`
+       - Customer pill: `bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded text-[11px] font-bold truncate max-w-[110px]`
+     * Row 3 (Footer): `flex items-center justify-between text-xs font-bold text-slate-300 dark:text-slate-300 pt-1 border-t border-white/5`:
+       - Timer: `⏱️ {timer}` in `text-amber-400`
+       - Items: `{itemCount} {itemCount === 1 ? 'Item' : 'Items'}`
+   - Ensure NO margins or excessive paddings push Row 3 outside the card boundary.
+
+3. Free Table Cards (`TableCard.tsx`):
+   - Keep free table cards at `h-full w-full flex items-center justify-center p-2`.
+   - Table name centered in `text-xl font-black`.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
