@@ -1,0 +1,47 @@
+Phase 2 High-Contrast Polish: Remove Table Avatars, Enlarge Phone Numbers & Fix All Dim Modal Typography
+
+Refactor `src/screens/CustomersPortal.tsx` (or `CustomersScreen.tsx` and all Customer modal sub-components):
+
+1. Customer Directory Table Refinements (`CustomersPortal.tsx`):
+   - REMOVE the initial avatar boxes completely (`[ T ]`, `[ A ]`, `[ S ]` initial square chips removed).
+   - Customer Column: Start directly with the customer name in `text-base font-black text-white tracking-wide`.
+   - Phone Column:
+     * Increase font size and contrast: `text-sm font-bold font-mono text-zinc-100 dark:text-zinc-100 tracking-wider`.
+     * If empty/null, display `—` in `text-sm font-bold text-zinc-500`.
+
+2. Eliminate All Low-Contrast / Muddy Gray Text Across All Customer Modals:
+   - Apply high-contrast typography and clear visual hierarchy across all 4 modals:
+
+   A. REGISTER / EDIT CUSTOMER MODAL:
+      - Field Labels ("FULL NAME *", "PHONE NUMBER"):
+        * Replace dim text with: `text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block`.
+      - Input Fields:
+        * `w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl px-4 py-3.5 text-sm font-bold text-white placeholder:text-zinc-400 outline-none transition-all shadow-inner`.
+      - Submit Button: `w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2`.
+
+   B. CUSTOMER LEDGER MODAL:
+      - Header Title: `text-lg font-black text-white flex items-center gap-2`.
+      - Sub-details:
+        * Phone line: Replace dark gray with `text-xs font-bold text-zinc-200 tracking-wide`.
+        * Balance label: `text-xs font-black uppercase tracking-wider text-zinc-300`.
+      - Empty State Box:
+        * Replace muddy text with: `py-16 px-6 flex flex-col items-center justify-center gap-2 text-center`.
+        * Empty state message: `<p className="text-sm font-bold text-zinc-200">No transaction history recorded yet.</p>`.
+        * Empty state icon: `text-3xl text-zinc-400 mb-1`.
+
+   C. COLLECT PAYMENT MODAL:
+      - Top Banner ("Current Outstanding"):
+        * Label: `text-xs font-black uppercase tracking-widest text-rose-300`.
+        * Value: `text-3xl font-black text-rose-400 mt-1 drop-shadow-[0_0_12px_rgba(244,63,94,0.35)]`.
+      - Field Labels ("AMOUNT RECEIVED (RS.)", "PAYMENT METHOD"):
+        * Style as: `text-xs font-black uppercase tracking-wider text-zinc-200 mb-1.5 block`.
+      - Input Field:
+        * `w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 rounded-xl px-4 py-3.5 text-base font-black text-white placeholder:text-zinc-400 outline-none transition-all`.
+      - Quick Pay Full Due Button:
+        * `w-full py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all mt-2 flex items-center justify-center gap-1.5`.
+
+3. Retain System & Business Logic Integrity:
+   - Keep all customer balances, Khata calculations, active table listeners, POS layout, and PIN login screens 100% untouched.
+
+STRICT CONSTRAINTS:
+- Run `npm run build` to confirm zero TypeScript or build errors.

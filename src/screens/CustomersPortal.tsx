@@ -36,7 +36,8 @@ const Modal = ({ onClose, children, title }: ModalProps) => (
 );
 
 // ── shared input class ─────────────────────────────────────────────────────────
-const inputClass = "w-full bg-[#161824] border-2 border-white/20 focus:border-amber-400 rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder-zinc-500 outline-none transition-all shadow-inner";
+const inputClass = "w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl px-4 py-3.5 text-sm font-bold text-white placeholder:text-zinc-400 outline-none transition-all shadow-inner";
+const collectInputClass = "w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 rounded-xl px-4 py-3.5 text-base font-black text-white placeholder:text-zinc-400 outline-none transition-all";
 
 // ── main component ─────────────────────────────────────────────────────────────
 
@@ -226,16 +227,13 @@ const CustomersPortal = () => {
                       <tr key={c.id} className="border-b border-white/10 hover:bg-white/[0.03] transition-colors">
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-[#1E2235] border border-white/20 flex items-center justify-center text-sm font-black text-white shadow-inner flex-shrink-0">
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-base font-black text-white tracking-wide">{c.name}</p>
-                            </div>
+                            <p className="text-base font-black text-white tracking-wide">{c.name}</p>
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="text-xs font-bold text-zinc-300 font-mono">{c.phone || '—'}</span>
+                          {c.phone
+                            ? <span className="text-sm font-bold font-mono text-zinc-100 dark:text-zinc-100 tracking-wider">{c.phone}</span>
+                            : <span className="text-sm font-bold text-zinc-500">—</span>}
                         </td>
                         <td className="py-4 px-6">
                           {c.currentDue > 0
@@ -292,7 +290,7 @@ const CustomersPortal = () => {
         <Modal title="Register New Customer" onClose={() => { setShowRegister(false); setRegisterError(''); }}>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name *</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Full Name *</label>
               <input
                 className={inputClass}
                 placeholder="e.g. Ram Shrestha"
@@ -303,7 +301,7 @@ const CustomersPortal = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Phone Number</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Phone Number</label>
               <input
                 className={inputClass}
                 placeholder="e.g. 9800000000"
@@ -317,7 +315,7 @@ const CustomersPortal = () => {
             )}
             <button
               onClick={handleRegister}
-              className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-base shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98]"
+              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2"
             >
               Register Customer
             </button>
@@ -330,7 +328,7 @@ const CustomersPortal = () => {
         <Modal title="Edit Customer" onClose={() => setEditTarget(null)}>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Full Name</label>
               <input
                 className={inputClass}
                 value={editName}
@@ -339,7 +337,7 @@ const CustomersPortal = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Phone Number</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Phone Number</label>
               <input
                 className={inputClass}
                 value={editPhone}
@@ -349,7 +347,7 @@ const CustomersPortal = () => {
             </div>
             <button
               onClick={handleEdit}
-              className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-base shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98]"
+              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2"
             >
               Save Changes
             </button>
@@ -363,16 +361,16 @@ const CustomersPortal = () => {
           <div className="space-y-3">
             {/* Balance display */}
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/40 flex flex-col items-center justify-center text-center">
-              <p className="text-[11px] font-black uppercase tracking-widest text-rose-400">Current Outstanding</p>
-              <p className="text-3xl font-black text-rose-400 mt-1">Rs. {fmt(collectTarget.currentDue)}</p>
+              <p className="text-xs font-black uppercase tracking-widest text-rose-300">Current Outstanding</p>
+              <p className="text-3xl font-black text-rose-400 mt-1 drop-shadow-[0_0_12px_rgba(244,63,94,0.35)]">Rs. {fmt(collectTarget.currentDue)}</p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount Received (Rs.)</label>
+              <label className="text-xs font-black uppercase tracking-wider text-zinc-200 mb-1.5 block">Amount Received (Rs.)</label>
               <input
                 type="number"
                 min="0"
                 inputMode="decimal"
-                className={inputClass}
+                className={collectInputClass}
                 placeholder={`Max Rs. ${fmt(collectTarget.currentDue)}`}
                 value={collectAmount}
                 onChange={(e) => { setCollectAmount(e.target.value); setCollectError(''); }}
@@ -382,7 +380,7 @@ const CustomersPortal = () => {
               <button
                 type="button"
                 onClick={() => { setCollectAmount(String(collectTarget.currentDue)); setCollectError(''); }}
-                className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black tracking-wider uppercase transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all mt-2 flex items-center justify-center gap-1.5"
               >
                 ⚡ Pay Full Due: Rs. {fmt(collectTarget.currentDue)}
               </button>
@@ -396,7 +394,7 @@ const CustomersPortal = () => {
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payment Method</label>
+              <label className="text-xs font-black uppercase tracking-wider text-zinc-200 mb-1.5 block">Payment Method</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['cash', 'fonepay'] as const).map((m) => (
                   <button
@@ -473,11 +471,11 @@ const CustomersPortal = () => {
                   <BookOpen size={14} className="text-amber-400" />
                   {ledgerTarget.name}'s Ledger
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">{ledgerTarget.phone || 'No phone'}</p>
+                <p className="text-xs font-bold text-zinc-200 tracking-wide mt-0.5">{ledgerTarget.phone || 'No phone'}</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-[10px] text-slate-500">Balance</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-zinc-300">Balance</p>
                   <p className={`text-sm font-black ${ledgerTarget.currentDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {ledgerTarget.currentDue > 0 ? `Rs. ${fmt(ledgerTarget.currentDue)}` : '✓ Clear'}
                   </p>
@@ -493,7 +491,10 @@ const CustomersPortal = () => {
             {/* Entries */}
             <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2">
               {ledgerEntries.length === 0 ? (
-                <p className="py-12 flex flex-col items-center justify-center text-center text-zinc-400 font-bold text-sm gap-2">No history recorded yet.</p>
+                <div className="py-16 px-6 flex flex-col items-center justify-center gap-2 text-center">
+                  <BookOpen size={30} className="text-3xl text-zinc-400 mb-1" />
+                  <p className="text-sm font-bold text-zinc-200">No transaction history recorded yet.</p>
+                </div>
               ) : (
                 ledgerEntries.map((e, i) => (
                   <div key={i} className="rounded-xl px-3 py-2.5 bg-white/[0.03] border border-white/[0.06]">
