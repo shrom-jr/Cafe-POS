@@ -1,0 +1,69 @@
+Phase 2 Complete Polish: Admin Reports & Financial Analytics High-Contrast Redesign
+
+Refactor `src/screens/AdminReports.tsx` (and all associated sub-reports, export handlers, and analytic charts):
+
+1. Header & Primary Navigation Sub-Tabs (`AdminReports.tsx`):
+   - Header Title:
+     * Title: `text-2xl sm:text-3xl font-black text-white tracking-tight` ("Financial Reports & Analytics").
+     * Subtitle: `text-xs font-black uppercase tracking-widest text-amber-400 mt-1` ("AUDITED REVENUE, NET MARGINS & EXPENSE LEDGERS").
+   - Sub-Navigation Tabs (`Sales Reports` vs `Kitchen & Meat Analytics`):
+     * Active Tab: `px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2`.
+     * Inactive Tab: `px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2`.
+
+2. Period Filter Bar & Export Actions Row:
+   - Container: `flex flex-wrap items-center justify-between gap-4 mt-6`.
+   - Date Filter Pills (`Today`, `Yesterday`, `Last 7 Days`, `This Month`, `Custom`):
+     * Active Pill: `px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20`.
+     * Inactive Pill: `px-4 py-2 rounded-xl bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider transition-all`.
+   - Export Actions (`CSV`, `PDF`):
+     * Buttons: `px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm`.
+
+3. High-Contrast 6-Card Financial Telemetry Grid:
+   - Grid Container: `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6`.
+   
+   A. GROSS SALES:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 shadow-xl shadow-sky-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-sky-400`.
+      - Value: `text-3xl font-black text-white tracking-tight mt-1`.
+
+   B. NET SALES:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-emerald-400`.
+      - Value: `text-3xl font-black text-white tracking-tight mt-1`.
+
+   C. TOTAL REVENUE:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-amber-400`.
+      - Value: `text-3xl font-black text-white tracking-tight mt-1`.
+
+   D. DISCOUNTS GIVEN:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-purple-500/40 shadow-xl shadow-purple-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-purple-400`.
+      - Value: `text-3xl font-black text-white tracking-tight mt-1`.
+
+   E. MAINTENANCE & EXPENSES:
+      - Container: `p-6 rounded-2xl bg-[#181116] border-2 border-rose-500/40 shadow-xl shadow-rose-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-rose-400`.
+      - Value: `text-3xl font-black text-rose-400 tracking-tight mt-1 drop-shadow-[0_0_12px_rgba(244,63,94,0.3)]`.
+
+   F. NET PROFIT MARGIN:
+      - Container: `p-6 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/50 shadow-xl shadow-emerald-500/10 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-emerald-400`.
+      - Value: `text-3xl font-black text-emerald-400 tracking-tight mt-1 drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]`.
+
+   - REMOVE all dim/muddy sub-labels like "Item totals before discounts", "0 orders discounted", and "0 expenses this period".
+
+4. Analytics Charts & Distribution Panels:
+   - Container: `grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6`.
+   - Category Breakdown & Payment Breakdown Containers:
+     * Surface: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[340px]`.
+     * Title: `text-base font-black text-white tracking-wide`.
+     * Empty State Box:
+       - `flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4`.
+       - Icon: `text-4xl text-amber-400 mb-2`.
+       - Text: `<p className="text-sm font-black text-white">No sales data recorded for this period.</p>`.
+       - Subtext: `<p className="text-xs font-bold text-zinc-300 mt-1">Analytics will populate automatically as customer bills are finalized.</p>`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any financial formula calculations, tax math, discount deductions, CSV/PDF export generation, or Firebase listeners.
+- Run `npm run build` to confirm zero TypeScript or build errors.

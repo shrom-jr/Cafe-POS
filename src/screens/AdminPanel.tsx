@@ -538,6 +538,13 @@ const AdminPanel = () => {
                     Manage floor areas, dining tables &amp; capacity
                   </p>
                 </div>
+              ) : activeTab === 'reports' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Financial Reports &amp; Analytics</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Audited revenue, net margins &amp; expense ledgers
+                  </p>
+                </div>
               ) : (
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
@@ -548,7 +555,7 @@ const AdminPanel = () => {
             {activeTab === 'reports'   && (
               <div className="space-y-5">
                 {/* Report type toggle */}
-                <div className="flex gap-2 flex-wrap border-b border-white/[0.06] pb-4">
+                <div className="flex gap-2 flex-wrap">
                   {([
                     { id: 'sales',   label: '📊 Sales Reports' },
                     { id: 'kitchen', label: '🍳 Kitchen & Meat Analytics' },
@@ -556,11 +563,9 @@ const AdminPanel = () => {
                     <button
                       key={id}
                       onClick={() => setReportView(id)}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
-                      style={reportView === id
-                        ? { background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.35)', color: '#93c5fd' }
-                        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
-                      }
+                      className={reportView === id
+                        ? 'px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 active:scale-95'
+                        : 'px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95'}
                     >
                       {label}
                     </button>
@@ -2520,24 +2525,23 @@ const ReportsSection = () => {
   };
 
   // shared date-input style
-  const dateInputCls = 'px-2.5 py-1.5 text-sm rounded-lg bg-white/[0.05] border border-white/[0.1] text-foreground focus:outline-none focus:border-blue-500/40 [color-scheme:dark]';
+  const dateInputCls = 'px-4 py-2 rounded-xl bg-[#13151F] border border-white/15 text-white font-bold text-xs focus:outline-none focus:border-amber-400 [color-scheme:dark]';
 
   return (
     <div className="space-y-5">
       {/* ── Header toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
         <div className="flex items-center gap-1.5 flex-wrap">
           {(Object.entries(PERIOD_LABELS) as [ReportPeriod, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => changePeriod(key)}
               data-testid={`button-report-period-${key}`}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all ${
                 period === key
-                  ? 'text-white'
-                  : 'bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white/80'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                  : 'bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 font-bold'
               }`}
-              style={period === key ? ACTIVE_STYLE : {}}
             >
               {label}
             </button>
@@ -2547,13 +2551,13 @@ const ReportsSection = () => {
           <button
             onClick={exportCSV}
             data-testid="button-export-csv"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
           >
             <Download size={14} /> CSV
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-blue-400 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
           >
             <Printer size={14} /> PDF
           </button>
@@ -2562,8 +2566,8 @@ const ReportsSection = () => {
 
       {/* ── Custom date range inputs (shown only when Custom is active) ── */}
       {period === 'custom' && (
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-blue-500/20 bg-blue-500/[0.06]">
-          <span className="text-xs font-semibold text-blue-400 flex-shrink-0">Date Range</span>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06]">
+          <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex-shrink-0">Date Range</span>
           <div className="flex items-center gap-2 flex-wrap">
             <input
               type="date"
@@ -2572,7 +2576,7 @@ const ReportsSection = () => {
               onChange={(e) => { setCustomStart(e.target.value); setPage(1); }}
               className={dateInputCls}
             />
-            <span className="text-xs text-muted-foreground">to</span>
+            <span className="text-xs font-bold text-zinc-300">to</span>
             <input
               type="date"
               value={customEnd}
@@ -2582,57 +2586,58 @@ const ReportsSection = () => {
               className={dateInputCls}
             />
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs font-bold text-zinc-300">
             {periodPayments.length} transaction{periodPayments.length !== 1 ? 's' : ''} in range
           </span>
         </div>
       )}
 
       {/* ── Data cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
         {[
-          { label: 'Gross Sales',               value: `Rs. ${fmt(grossSales)}`,                sub: 'Item totals before discounts/tax',     color: 'blue',    icon: <TrendingUp size={14} /> },
-          { label: 'Net Sales',                 value: `Rs. ${fmt(netSales)}`,                  sub: 'Gross minus discounts (pre-tax)',       color: 'emerald', icon: <DollarSign size={14} /> },
-          { label: 'Total Revenue',             value: `Rs. ${fmt(totalRevenue)}`,              sub: 'Collected after discounts & tax',      color: 'indigo',  icon: <Receipt size={14} /> },
-          { label: 'Discounts Given',           value: `Rs. ${fmt(totalDiscounts)}`,            sub: `${discountedCount} orders discounted`, color: 'amber',   icon: <X size={14} /> },
-          { label: 'Maintenance Expenses',      value: `Rs. ${fmt(totalMaintenanceExpenses)}`,  sub: `${periodMaintenanceExpenses.length} expense${periodMaintenanceExpenses.length !== 1 ? 's' : ''} this period`, color: 'red', icon: <Wrench size={14} /> },
-          { label: 'Net Profit',                value: `Rs. ${fmt(totalRevenue - totalOperatingExpenses)}`, sub: 'Revenue − kitchen, bar & maintenance costs', color: totalRevenue - totalOperatingExpenses >= 0 ? 'emerald' : 'red', icon: <TrendingUp size={14} /> },
+          { label: 'Gross Sales',          value: `Rs. ${fmt(grossSales)}`,                         color: 'sky',     icon: <TrendingUp size={16} /> },
+          { label: 'Net Sales',            value: `Rs. ${fmt(netSales)}`,                           color: 'emerald', icon: <DollarSign size={16} /> },
+          { label: 'Total Revenue',        value: `Rs. ${fmt(totalRevenue)}`,                       color: 'amber',  icon: <Receipt size={16} /> },
+          { label: 'Discounts Given',      value: `Rs. ${fmt(totalDiscounts)}`,                     color: 'purple', icon: <X size={16} /> },
+          { label: 'Maintenance & Expenses', value: `Rs. ${fmt(totalMaintenanceExpenses)}`,        color: 'rose',   icon: <Wrench size={16} /> },
+          { label: 'Net Profit Margin',    value: `Rs. ${fmt(totalRevenue - totalOperatingExpenses)}`, color: totalRevenue - totalOperatingExpenses >= 0 ? 'profit' : 'loss', icon: <TrendingUp size={16} /> },
         ].map((card, i) => {
           const c = {
-            blue:    { b: 'border-blue-500/25',    bg: 'bg-blue-500/[0.08]',    ic: 'text-blue-400',    val: 'text-blue-300' },
-            emerald: { b: 'border-emerald-500/25', bg: 'bg-emerald-500/[0.08]', ic: 'text-emerald-400', val: 'text-emerald-300' },
-            indigo:  { b: 'border-indigo-500/25',  bg: 'bg-indigo-500/[0.08]',  ic: 'text-indigo-400',  val: 'text-indigo-300' },
-            amber:   { b: 'border-amber-500/25',   bg: 'bg-amber-500/[0.08]',   ic: 'text-amber-400',   val: 'text-amber-300' },
-            red:     { b: 'border-red-500/25',     bg: 'bg-red-500/[0.08]',     ic: 'text-red-400',     val: 'text-red-300' },
+            sky:     { b: 'border-sky-500/40',     bg: 'bg-[#13151F]', ic: 'text-sky-400',     label: 'text-sky-400',     val: 'text-white',     shadow: 'shadow-sky-500/5' },
+            emerald: { b: 'border-emerald-500/40', bg: 'bg-[#13151F]', ic: 'text-emerald-400', label: 'text-emerald-400', val: 'text-white',     shadow: 'shadow-emerald-500/5' },
+            amber:   { b: 'border-amber-500/40',   bg: 'bg-[#13151F]', ic: 'text-amber-400',   label: 'text-amber-400',   val: 'text-white',     shadow: 'shadow-amber-500/5' },
+            purple:  { b: 'border-purple-500/40',  bg: 'bg-[#13151F]', ic: 'text-purple-400',  label: 'text-purple-400',  val: 'text-white',     shadow: 'shadow-purple-500/5' },
+            rose:    { b: 'border-rose-500/40',    bg: 'bg-[#181116]', ic: 'text-rose-400',    label: 'text-rose-400',    val: 'text-rose-400 drop-shadow-[0_0_12px_rgba(244,63,94,0.3)]', shadow: 'shadow-rose-500/5' },
+            profit:  { b: 'border-emerald-500/50', bg: 'bg-[#0F1916]', ic: 'text-emerald-400', label: 'text-emerald-400', val: 'text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]', shadow: 'shadow-emerald-500/10' },
+            loss:    { b: 'border-rose-500/50',    bg: 'bg-[#181116]', ic: 'text-rose-400',    label: 'text-rose-400',    val: 'text-rose-400', shadow: 'shadow-rose-500/5' },
           }[card.color]!;
           return (
-            <div key={i} className={`rounded-2xl border ${c.b} bg-slate-900/60 backdrop-blur-md p-4`}>
-              <div className={`w-8 h-8 rounded-lg ${c.bg} border ${c.b} flex items-center justify-center mb-3`}>
+            <div key={i} className={`p-6 rounded-2xl ${c.bg} border-2 ${c.b} shadow-xl ${c.shadow} flex flex-col justify-between min-h-[140px]`}>
+              <div className={`w-9 h-9 rounded-xl bg-white/5 border ${c.b} flex items-center justify-center mb-4`}>
                 <span className={c.ic}>{card.icon}</span>
               </div>
-              <p className={`text-xl font-bold ${c.val} leading-tight`}>{card.value}</p>
-              <p className="text-xs font-bold text-slate-100 mt-0.5">{card.label}</p>
-              <p className="text-[10px] text-slate-300 mt-0.5">{card.sub}</p>
+              <div>
+                <p className={`text-xs font-black uppercase tracking-wider ${c.label}`}>{card.label}</p>
+                <p className={`text-3xl font-black tracking-tight mt-1 ${c.val}`}>{card.value}</p>
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* ── Analytics grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
         {/* Sales by category — donut */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
-          <h3 className="font-semibold text-foreground mb-4">Sales by Category</h3>
+        <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[340px]">
+          <h3 className="text-base font-black text-white tracking-wide">Category Breakdown</h3>
           {catData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <BarChart3 size={20} className="text-slate-300 opacity-70" />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">No category data</p>
-              <p className="text-xs text-slate-400 mt-0.5">Appears after orders close</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
+              <BarChart3 size={36} className="text-amber-400 mb-2" />
+              <p className="text-sm font-black text-white">No sales data recorded for this period.</p>
+              <p className="text-xs font-bold text-zinc-300 mt-1">Analytics will populate automatically as customer bills are finalized.</p>
             </div>
           ) : (
-            <div className="flex items-center gap-5">
+            <div className="flex-1 flex items-center gap-5 mt-4">
               <div className="flex-shrink-0">
                 <PieChart width={150} height={150}>
                   <Pie data={catData} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={46} outerRadius={68} paddingAngle={3} strokeWidth={0}>
@@ -2674,17 +2679,16 @@ const ReportsSection = () => {
         </div>
 
         {/* Payment breakdown */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
-          <h3 className="font-semibold text-foreground mb-4">Payment Breakdown</h3>
+        <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[340px]">
+          <h3 className="text-base font-black text-white tracking-wide">Payment Breakdown</h3>
           {paymentEntries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <CreditCard size={20} className="text-slate-300 opacity-70" />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">No payments this period</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
+              <CreditCard size={36} className="text-amber-400 mb-2" />
+              <p className="text-sm font-black text-white">No sales data recorded for this period.</p>
+              <p className="text-xs font-bold text-zinc-300 mt-1">Analytics will populate automatically as customer bills are finalized.</p>
             </div>
           ) : (
-            <div className="space-y-3.5">
+            <div className="flex-1 flex flex-col justify-center space-y-3.5 mt-4">
               {paymentEntries.map(([method, total], i) => {
                 const pct   = totalRevenue > 0 ? Math.round((total / totalRevenue) * 100) : 0;
                 const label = resolvePaymentLabel(method, settings);
@@ -2714,9 +2718,9 @@ const ReportsSection = () => {
       </div>
 
       {/* ── Transactions table ── */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h3 className="font-semibold text-foreground">Detailed Transactions</h3>
+          <h3 className="text-base font-black text-white tracking-wide">Detailed Transactions</h3>
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
@@ -2724,23 +2728,21 @@ const ReportsSection = () => {
               placeholder="Search bill, table, staff…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-8 pr-3 py-1.5 text-sm rounded-lg bg-white/[0.05] border border-white/[0.1] text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:border-blue-500/40 w-52"
+              className="pl-8 pr-3 py-2 rounded-xl bg-[#181B26] border-2 border-white/20 text-white font-bold text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400 w-52"
             />
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-300">
-            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-              <Receipt size={20} className="text-slate-300 opacity-70" />
-            </div>
-            <p className="text-sm font-semibold text-slate-300">{search ? 'No matching transactions' : 'No transactions this period'}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{search ? 'Try a different search term' : 'Completed orders will appear here'}</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02]">
+            <Receipt size={36} className="text-amber-400 mb-2" />
+            <p className="text-sm font-black text-white">{search ? 'No matching transactions' : 'No transactions this period'}</p>
+            <p className="text-xs font-bold text-zinc-300 mt-1">{search ? 'Try a different search term' : 'Completed orders will appear here'}</p>
           </div>
         ) : (
           <>
             {/* Column headers */}
-            <div className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-white/[0.06] mb-1">
+            <div className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-1.5 text-[10px] font-black text-zinc-300 uppercase tracking-wider border-b border-white/10 mb-1">
               <span>Time</span><span>Bill #</span><span>Table</span>
               <span className="text-center">Items</span><span>Method</span>
               <span className="text-right">Discount</span><span className="text-right">Total</span><span>Staff</span>
@@ -2749,39 +2751,39 @@ const ReportsSection = () => {
               {paginated.map((p) => (
                 <div
                   key={p.id}
-                  className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+                  className="hidden sm:grid grid-cols-[90px_56px_80px_52px_110px_80px_96px_1fr] gap-2 px-3 py-2.5 rounded-xl hover:bg-white/[0.06] transition-colors"
                 >
-                  <span className="text-xs text-muted-foreground tabular-nums">{format(p.createdAt, 'hh:mm a')}</span>
-                  <span className="text-xs font-mono text-muted-foreground">#{p.billNumber}</span>
-                  <span className="text-xs font-medium text-foreground truncate">{tableDisplayName(p.tableNumber)}</span>
-                  <span className="text-xs text-center text-muted-foreground">{p.items.reduce((s, i) => s + i.quantity, 0)}</span>
+                  <span className="text-xs text-zinc-300 tabular-nums">{format(p.createdAt, 'hh:mm a')}</span>
+                  <span className="text-xs font-mono text-zinc-300">#{p.billNumber}</span>
+                  <span className="text-xs font-bold text-white truncate">{tableDisplayName(p.tableNumber)}</span>
+                  <span className="text-xs text-center text-zinc-300">{p.items.reduce((s, i) => s + i.quantity, 0)}</span>
                   <span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-semibold capitalize">
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-black capitalize">
                       {resolvePaymentLabel(p.method, settings)}
                     </span>
                   </span>
                   <span className="text-xs text-right font-medium text-amber-400">{p.discount > 0 ? `Rs. ${fmt(p.discount)}` : '—'}</span>
-                  <span className="text-sm text-right font-bold text-foreground">Rs. {fmt(p.total)}</span>
-                  <span className="text-xs text-muted-foreground truncate">{p.processedBy?.name || p.takenBy?.name || '—'}</span>
+                  <span className="text-sm text-right font-black text-white">Rs. {fmt(p.total)}</span>
+                  <span className="text-xs text-zinc-300 truncate">{p.processedBy?.name || p.takenBy?.name || '—'}</span>
                 </div>
               ))}
               {/* Mobile fallback rows */}
               {paginated.map((p) => (
-                <div key={`m-${p.id}`} className="sm:hidden flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors">
+                <div key={`m-${p.id}`} className="sm:hidden flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.06] transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-muted-foreground">#{p.billNumber}</span>
-                      <span className="text-xs font-medium text-foreground">{tableDisplayName(p.tableNumber)}</span>
+                      <span className="text-xs font-mono text-zinc-300">#{p.billNumber}</span>
+                      <span className="text-xs font-bold text-white">{tableDisplayName(p.tableNumber)}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-muted-foreground">{format(p.createdAt, 'hh:mm a')}</span>
-                      <span className="text-[10px] text-muted-foreground">{p.processedBy?.name || p.takenBy?.name || ''}</span>
+                      <span className="text-[10px] text-zinc-300">{format(p.createdAt, 'hh:mm a')}</span>
+                      <span className="text-[10px] text-zinc-300">{p.processedBy?.name || p.takenBy?.name || ''}</span>
                     </div>
                   </div>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent font-semibold capitalize flex-shrink-0">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-black capitalize flex-shrink-0">
                     {resolvePaymentLabel(p.method, settings)}
                   </span>
-                  <span className="text-sm font-bold text-foreground flex-shrink-0">Rs. {fmt(p.total)}</span>
+                  <span className="text-sm font-black text-white flex-shrink-0">Rs. {fmt(p.total)}</span>
                 </div>
               ))}
             </div>
