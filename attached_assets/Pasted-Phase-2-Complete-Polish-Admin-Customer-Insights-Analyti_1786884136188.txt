@@ -1,0 +1,45 @@
+Phase 2 Complete Polish: Admin Customer Insights & Analytics High-Contrast Redesign
+
+Refactor `src/screens/AdminCustomers.tsx` (or the Admin Customer Analytics management screen):
+
+1. Header Section (`AdminCustomers.tsx`):
+   - Title: `text-2xl sm:text-3xl font-black text-white tracking-tight` ("Customers").
+   - Subtitle: `text-xs font-black uppercase tracking-widest text-amber-400 mt-1` ("CUSTOMER KHATA BALANCES, REPAYMENTS & LIFETIME REVENUE ANALYTICS").
+
+2. High-Contrast 3-Card Analytics Summary Grid:
+   - Grid: `grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6`.
+   
+   A. TOTAL CUSTOMER REVENUE:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-amber-400`.
+      - Value: `text-3xl font-black text-white tracking-tight mt-2`.
+
+   B. OUTSTANDING CREDIT RATIO:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-emerald-400`.
+      - Value Stack: `flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-200 mt-2`.
+      - Dual Progress Track: `h-3 rounded-full bg-white/10 overflow-hidden flex mt-2`.
+
+   C. FOOD VS BEVERAGE CONSUMPTION:
+      - Container: `p-6 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 shadow-xl shadow-sky-500/5 flex flex-col justify-between min-h-[140px]`.
+      - Label: `text-xs font-black uppercase tracking-wider text-sky-400`.
+      - Value Stack: `flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-200 mt-2`.
+      - Dual Progress Track: `h-3 rounded-full bg-white/10 overflow-hidden flex mt-2`.
+
+   - REMOVE all dim/muddy sub-labels like "9 customers · 7 total visits".
+
+3. Customer Analytics Directory Table:
+   - Container: `bg-[#13151F] border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 mt-8`.
+   - Table Header: `bg-white/[0.04] border-b border-white/10 text-xs font-black uppercase tracking-widest text-zinc-200 py-4 px-6`.
+   - Table Rows: `border-b border-white/10 hover:bg-white/[0.03] transition-colors py-4 px-6 items-center`:
+     * Name: `text-base font-black text-white tracking-wide`.
+     * Phone: `text-sm font-bold font-mono text-zinc-100` (display `—` if empty in `text-zinc-500`).
+     * Lifetime Revenue: `text-sm font-black text-amber-400 font-mono`.
+     * Outstanding Status Pill:
+       - Clear: `inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-black shadow-sm` ("Clear").
+       - Due: `inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/50 text-rose-300 text-xs font-black shadow-sm` ("Rs. {due}").
+     * Visits & Last Visit: `text-xs font-bold text-zinc-200 font-mono`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any customer revenue calculations, Khata ledger balances, Firebase listeners, or other screens.
+- Run `npm run build` to confirm zero TypeScript or build errors.

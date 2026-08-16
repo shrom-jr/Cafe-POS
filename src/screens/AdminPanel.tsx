@@ -104,11 +104,11 @@ const RatioBar = ({
   const leftPct = total > 0 ? Math.round((leftValue / total) * 100) : 50;
   return (
     <div>
-      <div className="flex justify-between text-xs mb-1.5">
+      <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-200 mt-2">
         <span className="font-semibold" style={{ color: leftColor }}>{leftLabel}</span>
         <span className="font-semibold" style={{ color: rightColor }}>{rightLabel}</span>
       </div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06] flex">
+      <div className="h-3 rounded-full bg-white/10 overflow-hidden flex mt-2">
         <div className="h-full" style={{ width: `${leftPct}%`, background: leftColor }} />
         <div className="h-full flex-1" style={{ background: rightColor }} />
       </div>
@@ -154,24 +154,21 @@ const AdminCustomerAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customer Analytics" subtitle="Financial and consumption analytics across all registered customers" />
-
       {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div className="rounded-2xl p-4" style={cardStyle}>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Customer Revenue Generated</p>
-          <p className="mt-1 text-2xl font-bold text-white" data-testid="stat-customer-revenue">Rs. {fmt(totalRevenue)}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{customers.length} customers · {customers.reduce((s, c) => s + c.visits, 0)} total visits</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
+        <div className="p-6 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 flex flex-col justify-between min-h-[140px]">
+          <p className="text-xs font-black uppercase tracking-wider text-amber-400">Total Customer Revenue</p>
+          <p className="text-3xl font-black text-white tracking-tight mt-2" data-testid="stat-customer-revenue">Rs. {fmt(totalRevenue)}</p>
         </div>
-        <div className="rounded-2xl p-4" style={cardStyle}>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Outstanding Credit Ratio</p>
+        <div className="p-6 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/5 flex flex-col justify-between min-h-[140px]">
+          <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Outstanding Credit Ratio</p>
           <RatioBar
             leftLabel={`Paid Rs. ${fmt(totalPaid)}`} rightLabel={`Unpaid Rs. ${fmt(totalDue)}`}
             leftValue={totalPaid} rightValue={totalDue} leftColor="#34d399" rightColor="#f87171"
           />
         </div>
-        <div className="rounded-2xl p-4" style={cardStyle}>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Food vs Beverage Consumption</p>
+        <div className="p-6 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 shadow-xl shadow-sky-500/5 flex flex-col justify-between min-h-[140px]">
+          <p className="text-xs font-black uppercase tracking-wider text-sky-400">Food vs Beverage Consumption</p>
           <RatioBar
             leftLabel={`Food ${totalFood}`} rightLabel={`Beverage ${totalBev}`}
             leftValue={totalFood} rightValue={totalBev} leftColor="#fbbf24" rightColor="#60a5fa"
@@ -180,39 +177,39 @@ const AdminCustomerAnalytics = () => {
       </div>
 
       {/* Customer table */}
-      <div className="overflow-x-auto rounded-2xl" style={cardStyle}>
+      <div className="bg-[#13151F] border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 mt-8">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.08] text-left text-xs uppercase tracking-wide text-slate-400">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Phone</th>
-              <th className="px-4 py-3 font-medium">Lifetime Revenue</th>
-              <th className="px-4 py-3 font-medium">Outstanding</th>
-              <th className="px-4 py-3 font-medium">Visits</th>
-              <th className="px-4 py-3 font-medium">Last Visit</th>
+            <tr className="bg-white/[0.04] border-b border-white/10 text-left text-xs font-black uppercase tracking-widest text-zinc-200">
+              <th className="py-4 px-6">Name</th>
+              <th className="py-4 px-6">Phone</th>
+              <th className="py-4 px-6">Lifetime Revenue</th>
+              <th className="py-4 px-6">Outstanding</th>
+              <th className="py-4 px-6">Visits</th>
+              <th className="py-4 px-6">Last Visit</th>
             </tr>
           </thead>
           <tbody>
             {customers.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No customers registered yet.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-10 text-center text-sm font-bold text-zinc-300">No customers registered yet.</td></tr>
             )}
             {customers.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => { setSelectedId(c.id); setDrawerTab('financials'); }}
-                className="cursor-pointer border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.04]"
+                className="cursor-pointer border-b border-white/10 transition-colors last:border-0 hover:bg-white/[0.03]"
                 data-testid={`row-analytics-customer-${c.id}`}
               >
-                <td className="px-4 py-3 font-medium text-white">{c.name}</td>
-                <td className="px-4 py-3 text-slate-300">{c.phone}</td>
-                <td className="px-4 py-3 text-slate-200">Rs. {fmt(c.totalSpend)}</td>
-                <td className="px-4 py-3">
+                <td className="py-4 px-6 text-base font-black text-white tracking-wide">{c.name}</td>
+                <td className={`py-4 px-6 text-sm font-bold font-mono ${c.phone ? 'text-zinc-100' : 'text-zinc-500'}`}>{c.phone || '—'}</td>
+                <td className="py-4 px-6 text-sm font-black text-amber-400 font-mono">Rs. {fmt(c.totalSpend)}</td>
+                <td className="py-4 px-6">
                   {c.currentDue > 0
-                    ? <span className="font-semibold text-red-400">Rs. {fmt(c.currentDue)}</span>
-                    : <span className="font-semibold text-emerald-400">Clear</span>}
+                    ? <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/50 text-rose-300 text-xs font-black shadow-sm">Rs. {fmt(c.currentDue)}</span>
+                    : <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-black shadow-sm">Clear</span>}
                 </td>
-                <td className="px-4 py-3 text-slate-300">{c.visits}</td>
-                <td className="px-4 py-3 text-slate-400">
+                <td className="py-4 px-6 text-xs font-bold text-zinc-200 font-mono">{c.visits}</td>
+                <td className="py-4 px-6 text-xs font-bold text-zinc-200 font-mono">
                   {c.lastVisit ? format(new Date(c.lastVisit), 'dd MMM yyyy, hh:mm a') : '—'}
                 </td>
               </tr>
@@ -543,6 +540,13 @@ const AdminPanel = () => {
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Financial Reports &amp; Analytics</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Audited revenue, net margins &amp; expense ledgers
+                  </p>
+                </div>
+              ) : activeTab === 'customers' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Customers</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Customer khata balances, repayments &amp; lifetime revenue analytics
                   </p>
                 </div>
               ) : (
