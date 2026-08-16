@@ -308,39 +308,45 @@ const OrderPanel = ({
           )}
         </div>
 
-        {/* Customer and pax */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+        {/* Customer name and outstanding due */}
+        <div className="pt-2 border-t border-white/10">
           {attachedCustomer ? (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-xs font-black text-amber-300 truncate">
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#181B26] border border-white/10 shadow-inner">
+              <span className="text-sm font-black text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
                 👤 {attachedCustomer.name}
               </span>
-              {attachedCustomer.currentDue > 0 && (
-                <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/30 border-2 border-rose-500 text-rose-200 text-xs font-black font-mono shadow-[0_0_10px_rgba(244,63,94,0.4)] whitespace-nowrap">
-                  DUE: Rs. {fmt(attachedCustomer.currentDue)}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => handleCustomerChange(null)}
-                className="text-zinc-400 hover:text-white transition-colors p-0.5 flex-shrink-0"
-                title="Detach customer"
-              >
-                <XIcon size={12} />
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {attachedCustomer.currentDue > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/30 border-2 border-rose-500 text-rose-200 text-xs font-black font-mono shadow-[0_0_10px_rgba(244,63,94,0.4)] whitespace-nowrap">
+                    DUE: Rs. {fmt(attachedCustomer.currentDue)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleCustomerChange(null)}
+                  className="p-1 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Detach customer"
+                >
+                  <XIcon size={12} />
+                </button>
+              </div>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setShowCustomerPicker(true)}
-              className="px-3 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1"
+              className="w-full py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
               + Attach Customer
             </button>
           )}
+        </div>
 
+        {/* Server metadata and pax */}
+        <div className="flex items-center justify-between text-xs font-bold text-zinc-200 pt-1">
+          <span>{serverName ? `Served by ${serverName}` : 'No server assigned'} • {itemCount} item{itemCount !== 1 ? 's' : ''}</span>
           <div className="flex items-center gap-1.5 bg-[#181B26] border border-white/15 px-2.5 py-1 rounded-xl flex-shrink-0">
-            <span className="text-[10px] font-black uppercase text-zinc-300 mr-1">Pax</span>
+            <span className="text-[10px] font-black uppercase text-amber-400 mr-1">Pax</span>
             <button
               type="button"
               onClick={() => onPaxChange?.(Math.max(1, pax - 1))}
@@ -358,12 +364,6 @@ const OrderPanel = ({
               +
             </button>
           </div>
-        </div>
-
-        {/* Server metadata */}
-        <div className="text-[11px] font-bold text-zinc-300 flex items-center justify-between">
-          <span>{serverName ? `Served by ${serverName}` : 'No server assigned'}</span>
-          <span className="font-mono">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
         </div>
       </div>
 

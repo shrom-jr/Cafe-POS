@@ -1,5 +1,4 @@
 import { MenuItem } from '@/types/pos';
-import { Plus } from 'lucide-react';
 import { fmt } from '@/utils/format';
 
 interface MenuItemCardProps {
@@ -10,7 +9,7 @@ interface MenuItemCardProps {
   compact?: boolean;
 }
 
-const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, compact = false }: MenuItemCardProps) => {
+const MenuItemCard = ({ item, onAdd, disabled = false, compact = false }: MenuItemCardProps) => {
   if (compact) {
     /* ── LANDSCAPE COMPACT: horizontal row ── */
     return (
@@ -40,25 +39,14 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
 
         {/* Name + price */}
         <div className="flex-1 min-w-0 px-3 py-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <span className="block text-sm font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
-              {item.name}
-            </span>
-            {quantityInOrder > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-sm flex-shrink-0">
-                {quantityInOrder} in Cart
-              </span>
-            )}
-          </div>
+          <span className="block text-sm font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
+            {item.name}
+          </span>
           <span className="text-sm font-black text-amber-400 font-mono mt-1 block">
             Rs. {fmt(item.price)}
           </span>
         </div>
 
-        {/* Add button */}
-        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
-          <Plus size={17} strokeWidth={3} />
-        </div>
       </button>
     );
   }
@@ -85,23 +73,13 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
 
       {/* ── Text + controls ── */}
       <div className="flex-1 px-0 pt-3 flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-base font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
-            {item.name}
-          </span>
-          {quantityInOrder > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-sm flex-shrink-0">
-              {quantityInOrder} in Cart
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
+        <span className="text-base font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
+          {item.name}
+        </span>
+        <div className="mt-2.5">
           <span className="text-base font-black text-amber-400 font-mono tracking-tight">
             Rs. {fmt(item.price)}
           </span>
-          <div className="w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
-            <Plus size={17} strokeWidth={3} />
-          </div>
         </div>
       </div>
     </button>
