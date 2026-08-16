@@ -1,0 +1,43 @@
+Phase 2 Complete Redesign: Premium Hospitality Staff Login & PIN Keypad Portal
+
+Refactor `src/screens/LoginScreen.tsx` (or `StaffSelect.tsx`, `AuthModal.tsx`, and PIN components) to give the login experience a modern, tactile design that matches the POS screen:
+
+1. Hero Header & Branding (`LoginScreen.tsx`):
+   - Top-right corner: Place a floating theme toggle button (`☀️ / 🌙`) so staff can switch themes before logging in.
+   - Centered Brand Header:
+     * Restaurant Logo: Scaled, rounded container (`h-16 w-16 rounded-2xl ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/10 mb-3 mx-auto`).
+     * Brand Name: `text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white`.
+     * Subtitle: `text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 tracking-wider uppercase mt-1`.
+     * Selection Indicator: Clean pill badge `[ 👤 Select Your Profile to Continue ]` (`bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 px-4 py-1.5 rounded-full text-xs font-bold text-slate-600 dark:text-zinc-400 mt-4`).
+
+2. Staff Profile Cards Grid (`LoginScreen.tsx`):
+   - Render dynamic staff profiles in a centered responsive grid (`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8 px-4`):
+   - Card Styling:
+     * Surface: `relative group p-5 rounded-3xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center text-center`.
+     * Light Mode: `bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-900 shadow-sm hover:shadow-xl hover:-translate-y-1.5`.
+     * Dark Mode: `bg-[#13151F] hover:bg-[#1A1D2B] border border-white/10 hover:border-white/25 shadow-lg shadow-black/40 hover:shadow-2xl hover:-translate-y-1.5`.
+   - Card Content:
+     * Role Avatar Pill:
+       - `h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-md mb-3 transition-transform duration-200 group-hover:scale-105`:
+       - Admin: `bg-gradient-to-tr from-purple-600 to-indigo-500 shadow-purple-500/20`
+       - Cashier: `bg-gradient-to-tr from-sky-500 to-blue-600 shadow-sky-500/20`
+       - Waiter: `bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-emerald-500/20`
+       - Kitchen: `bg-gradient-to-tr from-amber-500 to-orange-600 shadow-orange-500/20`
+     * Staff Name: `text-lg font-black text-slate-900 dark:text-white tracking-wide truncate w-full`.
+     * Role Pill Badge: `mt-2 px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase border`:
+       - Admin: `bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/30`
+       - Cashier: `bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30`
+       - Waiter: `bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30`
+       - Kitchen: `bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/30`
+
+3. Tactile PIN Keypad Modal (`PinModal.tsx` / `LoginScreen.tsx`):
+   - When a staff card is tapped, open a smooth modal overlay (`backdrop-blur-md bg-black/70`):
+   - Keypad Modal Card (`max-w-xs w-full p-6 rounded-3xl bg-white dark:bg-[#12141E] border border-slate-200 dark:border-white/10 shadow-2xl`):
+     * Selected Staff Info: Show their avatar initial, name, and role badge at top.
+     * PIN Dots: 4 distinct animated indicator circles that fill in with solid amber/emerald when keys are typed (`h-3.5 w-3.5 rounded-full border-2 border-slate-300 dark:border-zinc-700 transition-all`). Add error shake animation on wrong PIN.
+     * Number Grid: 3x4 grid of circular/rounded-2xl tactile buttons (`h-14 w-14 rounded-2xl text-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 active:scale-95 transition-all text-slate-900 dark:text-white`).
+     * Backspace (`⌫`) and Cancel (`✕`) buttons included cleanly in bottom row.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, role permission routing, or Firebase Auth tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
