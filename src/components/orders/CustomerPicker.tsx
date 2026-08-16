@@ -39,16 +39,13 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
   };
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div
-        className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      />
-
-      {/* Centered Modal Container */}
-      <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4 max-h-[85vh] z-50"
+        className="w-full max-w-md bg-[#0E1017] border border-white/20 rounded-[28px] p-6 shadow-2xl shadow-black relative flex flex-col gap-4 max-h-[85vh] mx-auto overflow-hidden"
+        onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -170,7 +167,7 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -73,6 +73,7 @@ const OrderScreen = () => {
   const [moveIsProcessing, setMoveIsProcessing] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const attachCustomerToOrder = usePOSStore((s) => s.attachCustomerToOrder);
+  const attachCustomerToTable = usePOSStore((s) => s.attachCustomerToTable);
   const voidOrderItem = usePOSStore((s) => s.voidOrderItem);
   const [voidTarget, setVoidTarget] = useState<OrderItem | null>(null);
   const [moveSuccessBanner, setMoveSuccessBanner] = useState<string | null>(
@@ -181,8 +182,11 @@ const OrderScreen = () => {
   const attachedCustomer = order?.attachedCustomer ?? null;
 
   const handleAttachCustomer = (customer: Customer | null) => {
-    if (!order) return;
-    attachCustomerToOrder(order.id, customer);
+    if (order) {
+      attachCustomerToOrder(order.id, customer);
+    } else if (customer && table) {
+      attachCustomerToTable(table.id, table.number, customer);
+    }
   };
 
   // Fallback safety — default to draft if unexpected value
@@ -493,6 +497,7 @@ const OrderScreen = () => {
               serverName={order?.takenBy?.name}
               attachedCustomer={attachedCustomer}
               onAttachCustomer={handleAttachCustomer}
+              onRequestAttachCustomer={() => setShowCustomerPicker(true)}
             />
           </div>
         )}
@@ -629,14 +634,6 @@ const OrderScreen = () => {
                 </button>
               )}
             </div>
-
-            {/* Customer picker overlay — portrait */}
-            {showCustomerPicker && (
-              <CustomerPicker
-                onSelect={(c) => { handleAttachCustomer(c); setShowCustomerPicker(false); }}
-                onClose={() => setShowCustomerPicker(false)}
-              />
-            )}
 
             {/* Guests (Pax) selector */}
             <div
@@ -1032,6 +1029,14 @@ const OrderScreen = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Root-level customer picker — centered against the full viewport. */}
+      {showCustomerPicker && (
+        <CustomerPicker
+          onSelect={(c) => { handleAttachCustomer(c); setShowCustomerPicker(false); }}
+          onClose={() => setShowCustomerPicker(false)}
+        />
       )}
 
     </div>

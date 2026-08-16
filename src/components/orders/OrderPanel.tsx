@@ -7,7 +7,6 @@ import { fmt } from '@/utils/format';
 import { tableDisplayName } from '@/utils/tableName';
 import { SEND_DELAY, SUCCESS_DURATION, FLASH_DURATION, NOW_TICK_INTERVAL } from '@/utils/kitchenTimings';
 import { Minus, Plus, Trash2, ShoppingBag, Users, ArrowRightLeft, UserCircle, X as XIcon, Lock } from 'lucide-react';
-import CustomerPicker from './CustomerPicker';
 import VoidItemModal from './VoidItemModal';
 import {
   AlertDialog,
@@ -39,6 +38,8 @@ interface OrderPanelProps {
   attachedCustomer?: Customer | null;
   /** Called when the cashier attaches or detaches a customer. */
   onAttachCustomer?: (customer: Customer | null) => void;
+  /** Opens the root-level customer picker so it is centered against the viewport. */
+  onRequestAttachCustomer?: () => void;
 }
 
 const BLUE_BTN = { background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.20)' };
@@ -72,6 +73,7 @@ const OrderPanel = ({
   serverName,
   attachedCustomer,
   onAttachCustomer,
+  onRequestAttachCustomer,
 }: OrderPanelProps) => {
   const { tableId } = useParams<{ tableId: string }>();
   const table = usePOSStore((s) => s.tables.find((candidate) => candidate.id === tableId));
@@ -80,7 +82,6 @@ const OrderPanel = ({
   const currentUser = useStaffStore((s) => s.currentUser);
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [voidTarget, setVoidTarget] = useState<OrderItem | null>(null);
   const [sendPhase, setSendPhase] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [sentAt, setSentAt] = useState<number | null>(
@@ -334,7 +335,7 @@ const OrderPanel = ({
           ) : (
             <button
               type="button"
-              onClick={() => setShowCustomerPicker(true)}
+              onClick={onRequestAttachCustomer}
               className="w-full py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
               + Attach Customer
@@ -366,14 +367,6 @@ const OrderPanel = ({
           </div>
         </div>
       </div>
-
-      {/* Customer picker overlay */}
-      {showCustomerPicker && (
-        <CustomerPicker
-          onSelect={(c) => { handleCustomerChange(c); setShowCustomerPicker(false); }}
-          onClose={() => setShowCustomerPicker(false)}
-        />
-      )}
 
       {/* Item list */}
       <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-2.5 pr-1">
