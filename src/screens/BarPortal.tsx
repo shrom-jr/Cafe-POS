@@ -82,12 +82,9 @@ function StatCard({
 }) {
   const isSpend = color === '#34d399';
   return (
-    <div className={isSpend
-      ? 'py-2.5 px-4 rounded-xl bg-[#0F1916] border border-emerald-500/50 flex flex-col justify-center h-[72px] shadow-md shadow-emerald-500/10'
-      : 'py-2.5 px-4 rounded-xl bg-[#13151F] border border-white/15 flex flex-col justify-center h-[72px] shadow-md'
-    }>
+    <div className="p-5 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl flex flex-col justify-center">
       <p className={`text-[10px] font-black uppercase tracking-wider ${isSpend ? 'text-emerald-400' : 'text-amber-400'}`}>{label}</p>
-      <p className={`text-2xl font-black mt-0.5 ${isSpend ? 'text-emerald-400' : 'text-white'}`}>{value}</p>
+      <p className={`text-3xl font-black mt-1 ${isSpend ? 'text-emerald-400' : 'text-white'}`}>{value}</p>
     </div>
   );
 }
@@ -367,16 +364,16 @@ const BarPortal = () => {
     toast.success('Entry removed and stock corrected');
   };
 
-  const barInputClass = 'w-full bg-[#181B26] border border-white/20 focus:border-amber-400 text-white font-bold rounded-lg px-3 py-2 text-xs placeholder:text-zinc-500 outline-none shadow-inner';
-  const barLabelClass = 'text-[11px] font-black uppercase tracking-wider text-amber-400 mb-0.5 block';
+  const barInputClass = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-2.5 text-sm placeholder:text-zinc-500 outline-none shadow-inner';
+  const barLabelClass = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block';
 
   // ── Render ──
   return (
     <AppLayout title="Bar Portal">
-      <div className="max-w-7xl mx-auto px-4 py-3.5 h-[calc(100vh-68px)] flex flex-col justify-between gap-3 overflow-hidden">
+      <div className="w-full px-6 py-4 flex flex-col gap-4">
 
         {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
           <StatCard
             label="Today's Entries"
             value={todayEntries.length}
@@ -395,10 +392,10 @@ const BarPortal = () => {
         </div>
 
         {/* ── Main Content: Form + Ledger ── */}
-    <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-3.5 flex-1 min-h-0 items-stretch">
+    <div className="grid grid-cols-12 gap-5 w-full items-stretch">
 
           {/* ── Log Entry Form ── */}
-          <div className="bg-[#13151F] border border-white/15 p-4 rounded-2xl shadow-xl flex flex-col justify-between flex-1 min-h-0 gap-2">
+          <div className="col-span-12 lg:col-span-4 bg-[#13151F] border border-white/15 p-5 rounded-3xl shadow-xl flex flex-col gap-3.5">
             {/* Header */}
             <div className="flex items-center gap-2">
               <PackagePlus size={17} className="text-amber-400" />
@@ -428,7 +425,7 @@ const BarPortal = () => {
             {/* Entry type toggle */}
             <div>
               <label className={barLabelClass}>Entry Type</label>
-              <div className="flex rounded-lg p-1 gap-1 bg-black/30 border border-white/10">
+              <div className="flex rounded-xl p-1 gap-1 bg-black/30 border border-white/10">
                 {(['Restock', 'Spill/Loss'] as const).map((t) => {
                   const active = entryType === t;
                   const m = ENTRY_TYPE_META[t];
@@ -439,9 +436,9 @@ const BarPortal = () => {
                       onClick={() => setEntryType(t)}
                       className={active
                         ? t === 'Restock'
-                           ? 'flex-1 py-1.5 px-3 rounded-lg bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider border border-amber-400 shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5'
-                           : 'flex-1 py-1.5 px-3 rounded-lg bg-rose-500 text-white font-black text-xs uppercase tracking-wider border border-rose-400 shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-1.5'
-                        : 'flex-1 py-1.5 px-3 rounded-lg bg-white/5 text-zinc-300 hover:text-white border border-white/15 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5'}
+                           ? 'flex-1 py-2.5 px-3 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider border-2 border-amber-400 shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5'
+                           : 'flex-1 py-2.5 px-3 rounded-xl bg-rose-500 text-white font-black text-xs uppercase tracking-wider border-2 border-rose-400 shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-1.5'
+                        : 'flex-1 py-2.5 px-3 rounded-xl bg-white/5 text-zinc-300 hover:text-white border border-white/15 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5'}
                     >
                       <Icon size={13} />
                       {t}
@@ -473,7 +470,7 @@ const BarPortal = () => {
                         key={key}
                         type="button"
                         onClick={() => setPortionKey(key)}
-                         className="flex flex-col items-center justify-center py-1.5 rounded-md text-center transition-all"
+                         className="flex flex-col items-center justify-center py-2 rounded-md text-center transition-all"
                         style={active ? {
                           background: 'rgba(129,140,248,0.2)',
                           border: '1px solid rgba(129,140,248,0.4)',
@@ -586,17 +583,17 @@ const BarPortal = () => {
             {/* Submit */}
             <button
               onClick={handleSubmit}
-                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all"
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] mt-1"
             >
               + Log {entryType}
             </button>
           </div>
 
           {/* ── Today's Ledger ── */}
-          <div className="bg-[#13151F] border border-white/15 p-4 rounded-2xl shadow-xl flex flex-col flex-1 min-h-0">
+          <div className="col-span-12 lg:col-span-8 bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[420px]">
             {/* Ledger header */}
             <div
-              className="flex items-center justify-between mb-3"
+              className="text-base font-black text-white flex items-center justify-between"
             >
               <span className="text-base font-black text-white tracking-wide">Today's Restocks</span>
               <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-black font-mono text-zinc-200">
@@ -606,7 +603,7 @@ const BarPortal = () => {
 
             {/* Ledger body */}
             {todayEntries.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
                 <GlassWater size={36} className="text-4xl text-zinc-400 mb-1" />
                 <p className="text-sm font-black text-white">No restock entries recorded today.</p>
                 <p className="text-xs font-bold text-zinc-300">Use the form on the left to record incoming stock or loss.</p>
