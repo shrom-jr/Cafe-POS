@@ -1,0 +1,45 @@
+Phase 2 Complete Redesign: Executive Hospitality Staff Login & PIN Keypad (Pure POS Theme Match)
+
+Refactor `src/screens/LoginScreen.tsx` (and related staff selection / PIN modal components) to match the carbon-black and graphite theme of the POS floor view:
+
+1. Color Palette & Dark Theme Synchronization (`LoginScreen.tsx`):
+   - REMOVE all navy blue / midnight blue background styles (`#0d1527`, `#0b101b`, `#1a2035`).
+   - Match the POS theme tokens exactly:
+     * Dark Mode Canvas: Deep carbon black (`bg-[#0A0B0E] text-white min-h-screen`).
+     * Light Mode Canvas: Crisp off-white (`bg-slate-50 text-slate-950 min-h-screen`).
+     * Staff Card Surfaces:
+       - Dark Mode: `bg-[#13151F] border border-white/10 hover:border-amber-500/60 hover:bg-[#181B28] shadow-lg shadow-black/40 hover:shadow-amber-500/5 hover:-translate-y-1`.
+       - Light Mode: `bg-white border-2 border-slate-900 hover:bg-slate-50 shadow-sm hover:shadow-md hover:-translate-y-1`.
+
+2. High-Impact Brand Header (`LoginScreen.tsx`):
+   - Top-right corner: Place floating theme toggle button (`☀️ / 🌙`).
+   - Centered Brand Section:
+     * Logo: Render the restaurant logo prominently (`h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-2 border-amber-500/40 bg-[#13151F] p-2 shadow-xl shadow-amber-500/10 mb-4 mx-auto object-contain`).
+     * Restaurant Name: `text-2xl sm:text-3xl font-black tracking-tight text-white dark:text-white`.
+     * System Title: `text-xs sm:text-sm font-bold tracking-widest text-amber-500 dark:text-amber-400 uppercase mt-1` -> "POS & MANAGEMENT SYSTEM".
+     * Instruction Badge: `inline-flex items-center gap-2 mt-4 px-4 py-1.5 rounded-full bg-[#13151F] border border-white/10 text-xs font-bold text-slate-300 shadow-sm` -> "Select Your Profile to Continue".
+
+3. Professional Staff Profile Cards (NO Cartoon Emojis):
+   - Grid layout: `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 max-w-4xl mx-auto mt-8 px-4`.
+   - Card dimensions: `p-6 rounded-3xl flex flex-col items-center justify-between min-h-[190px] cursor-pointer transition-all duration-200`.
+   - Avatar Monogram (Replace all emojis/clip-art):
+     * Render sleek dual-letter/single-letter initials in a high-contrast circular or rounded-2xl badge:
+       `h-16 w-16 rounded-2xl bg-[#1E2235] border border-white/15 flex items-center justify-center text-xl font-black text-white shadow-inner mb-3 group-hover:scale-105 transition-transform`.
+   - Staff Name: `text-base sm:text-lg font-black text-white dark:text-white tracking-wide truncate w-full text-center mt-1`.
+   - Role Badge: Clean, modern outline pill:
+     * Admin: `bg-purple-500/15 border border-purple-500/40 text-purple-300 text-[11px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider mt-2`.
+     * Cashier: `bg-sky-500/15 border border-sky-500/40 text-sky-300 text-[11px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider mt-2`.
+     * Waiter: `bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider mt-2`.
+     * Kitchen: `bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider mt-2`.
+
+4. Sleek PIN Keypad Modal (`PinModal.tsx`):
+   - Backdrop: `fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4`.
+   - Modal Container: `max-w-xs w-full p-6 rounded-3xl bg-[#13151F] border border-white/15 shadow-2xl flex flex-col items-center`.
+   - Header: Staff avatar initial, name, and role badge at top with a clean close `✕` button.
+   - PIN Dots: 4 distinct indicator dots (`h-3.5 w-3.5 rounded-full border-2 border-white/20 transition-all`) that fill with solid amber (`bg-amber-500 border-amber-500 shadow-md shadow-amber-500/40`) as digits are typed.
+   - Keypad Grid: 3x4 grid of circular buttons (`h-14 w-14 rounded-2xl text-xl font-bold bg-[#1E2235] hover:bg-[#282D45] border border-white/10 active:scale-95 transition-all text-white flex items-center justify-center`).
+   - Include backspace (`⌫`) and cancel (`✕`) buttons cleanly in the bottom row.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, role permission routing, or Firebase Auth tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.

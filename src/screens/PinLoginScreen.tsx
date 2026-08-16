@@ -11,54 +11,22 @@ import { ThemeToggle } from '@/components/ui/Navigation';
 
 const EMAILJS_SERVICE_ID  = 'service_mgnjpll';
 const EMAILJS_TEMPLATE_ID = 'template_od1a97s';
-const EMAILJS_PUBLIC_KEY  = 'ct_T99fLZJzPB5zut';
+const EMAILJS_PUBLIC_KEY  = 'ct_T99fLZJzJzPB5zut';
 
-// ── Role colour tokens ────────────────────────────────────────────────────────
-type RoleTokens = {
-  avatarGradient: string;
-  avatarShadow: string;
-  pillBg: string;
-  pillText: string;
-  pillBorder: string;
+// ── Role pill tokens (card grid only) ─────────────────────────────────────────
+const ROLE_PILL: Record<Role, string> = {
+  ADMIN:   'bg-purple-500/15 border border-purple-500/40 text-purple-300',
+  CASHIER: 'bg-sky-500/15 border border-sky-500/40 text-sky-300',
+  WAITER:  'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300',
+  KITCHEN: 'bg-amber-500/15 border border-amber-500/40 text-amber-300',
 };
 
-const ROLE_TOKENS: Record<Role, RoleTokens> = {
-  ADMIN: {
-    avatarGradient: 'from-purple-600 to-indigo-500',
-    avatarShadow:   'shadow-purple-500/20',
-    pillBg:     'bg-purple-500/15',
-    pillText:   'text-purple-600 dark:text-purple-300',
-    pillBorder: 'border-purple-500/30',
-  },
-  CASHIER: {
-    avatarGradient: 'from-sky-500 to-blue-600',
-    avatarShadow:   'shadow-sky-500/20',
-    pillBg:     'bg-sky-500/15',
-    pillText:   'text-sky-600 dark:text-sky-300',
-    pillBorder: 'border-sky-500/30',
-  },
-  WAITER: {
-    avatarGradient: 'from-emerald-500 to-teal-600',
-    avatarShadow:   'shadow-emerald-500/20',
-    pillBg:     'bg-emerald-500/15',
-    pillText:   'text-emerald-600 dark:text-emerald-300',
-    pillBorder: 'border-emerald-500/30',
-  },
-  KITCHEN: {
-    avatarGradient: 'from-amber-500 to-orange-600',
-    avatarShadow:   'shadow-orange-500/20',
-    pillBg:     'bg-orange-500/15',
-    pillText:   'text-orange-600 dark:text-orange-300',
-    pillBorder: 'border-orange-500/30',
-  },
-};
-
-// Legacy inline-style colours used only inside the dark-only PinModal
+// Modal inline colours (dark-only surface — unchanged logic)
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
-  ADMIN:   { bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.35)', text: '#c084fc' },
-  CASHIER: { bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.35)', text: '#60a5fa' },
-  WAITER:  { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)', text: '#34d399' },
-  KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.35)',  text: '#fb923c' },
+  ADMIN:   { bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.40)', text: '#c084fc' },
+  CASHIER: { bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.40)', text: '#60a5fa' },
+  WAITER:  { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.40)', text: '#34d399' },
+  KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.40)',  text: '#fb923c' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -68,19 +36,19 @@ const ROLE_LABEL: Record<Role, string> = {
   KITCHEN: 'Kitchen',
 };
 
-const ROLE_EMOJI: Record<Role, string> = {
-  ADMIN:   '👑',
-  CASHIER: '💳',
-  WAITER:  '🍽️',
-  KITCHEN: '👨‍🍳',
-};
-
 // ── Keypad keys ───────────────────────────────────────────────────────────────
 const KEYPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 const OTP_DURATION = 300;
 
 type ModalView = 'pin' | 'email' | 'otp' | 'newpin';
+
+// ── Initials helper ───────────────────────────────────────────────────────────
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
 
 // ── PIN Keypad Modal ──────────────────────────────────────────────────────────
 const PinModal = ({
@@ -124,6 +92,7 @@ const PinModal = ({
   confirmPinRef.current = confirmPin;
   newPinStepRef.current = newPinStep;
 
+  // ── OTP countdown ──
   useEffect(() => {
     if (view !== 'otp') return;
     setTimeLeft(OTP_DURATION);
@@ -134,6 +103,7 @@ const PinModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, otpKey]);
 
+  // ── Send / resend OTP ──
   const sendOtp = async () => {
     setIsSending(true);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -160,6 +130,7 @@ const PinModal = ({
     setIsSending(false);
   };
 
+  // ── Verify OTP ──
   const verifyOtp = () => {
     if (Date.now() > expiresAt.current) { setOtpError('Code expired — tap Resend to get a new one.'); return; }
     if (otpInput !== generatedOtp.current) { setOtpError('Incorrect code. Please try again.'); return; }
@@ -168,6 +139,7 @@ const PinModal = ({
     setView('newpin');
   };
 
+  // ── PIN handlers ──
   const handleDigit = (digit: string) => {
     if (shakeRef.current) return;
     const current = pinRef.current;
@@ -196,6 +168,7 @@ const PinModal = ({
     }
   };
 
+  // ── New-PIN handlers ──
   const handleNewPinDigit = (digit: string) => {
     if (newPinStepRef.current === 'enter') {
       const cur = newPinRef.current;
@@ -227,6 +200,7 @@ const PinModal = ({
 
   useEffect(() => { containerRef.current?.focus(); }, []);
 
+  // ── Keyboard handler (refs stay fresh) ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const v = viewRef.current;
@@ -250,8 +224,12 @@ const PinModal = ({
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Tactile keypad ────────────────────────────────────────────────────────
-  const Keypad = ({ onDigit, onBack, small }: { onDigit: (d: string) => void; onBack: () => void; small?: boolean }) => (
+  // ── Shared tactile keypad ─────────────────────────────────────────────────
+  const Keypad = ({ onDigit, onBack, small }: {
+    onDigit: (d: string) => void;
+    onBack: () => void;
+    small?: boolean;
+  }) => (
     <div className={`grid grid-cols-3 ${small ? 'gap-2' : 'gap-2.5'}`}>
       {KEYPAD_KEYS.map((key, idx) => {
         if (!key) return <div key={idx} />;
@@ -260,7 +238,13 @@ const PinModal = ({
           <button
             key={idx}
             onClick={() => (isBack ? onBack() : onDigit(key))}
-            className={`${small ? 'h-11 text-sm' : 'h-14 w-14 mx-auto text-xl'} w-full rounded-2xl font-bold transition-all duration-150 active:scale-95 select-none border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-900 dark:border-white/10 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-white`}
+            className={`${small ? 'h-11 text-sm' : 'h-14 text-xl'} w-full rounded-2xl font-bold transition-all duration-150 active:scale-95 select-none flex items-center justify-center text-white`}
+            style={{
+              background: '#1E2235',
+              border: '1px solid rgba(255,255,255,0.10)',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#282D45'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#1E2235'; }}
           >
             {key}
           </button>
@@ -269,57 +253,72 @@ const PinModal = ({
     </div>
   );
 
-  // ── Avatar chip (reused across pin/newpin views) ──────────────────────────
-  const AvatarChip = () => (
-    <div className="text-center">
-      <div
-        className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-xl font-black text-white mb-3 shadow-md"
-        style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
-      >
-        {user.name.charAt(0).toUpperCase()}
+  // ── Staff header chip (pin + newpin views) ────────────────────────────────
+  const StaffChip = ({ label }: { label?: string }) => (
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-3">
+        <div
+          className="h-10 w-10 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0"
+          style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
+        >
+          {initials(user.name)}
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-black text-white leading-tight">{user.name}</p>
+          <span
+            className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block mt-0.5"
+            style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
+          >
+            {ROLE_LABEL[user.role]}
+          </span>
+        </div>
       </div>
-      <p className="font-bold text-slate-900 dark:text-white">{user.name}</p>
-      <span
-        className="text-xs font-black px-2.5 py-0.5 rounded-full mt-1.5 inline-block tracking-wider uppercase border"
-        style={{ background: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
-      >
-        {ROLE_LABEL[user.role]}
-      </span>
+      {label && <span className="text-xs font-bold text-white/40">{label}</span>}
+      {!label && (
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg transition-colors text-white/30 hover:text-white/70"
+          aria-label="Close"
+        >
+          <X size={15} />
+        </button>
+      )}
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/70 p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`w-full max-w-xs rounded-3xl p-6 space-y-5 outline-none bg-white dark:bg-[#12141E] border border-slate-200 dark:border-white/10 shadow-2xl transition-transform ${
+        className={`max-w-xs w-full p-6 rounded-3xl flex flex-col gap-5 outline-none shadow-2xl transition-transform ${
           (shake && view === 'pin') || (newPinShake && view === 'newpin') ? 'animate-shake' : ''
         }`}
+        style={{ background: '#13151F', border: '1px solid rgba(255,255,255,0.15)' }}
       >
 
         {/* ══════════════════════════════ PIN VIEW ══════════════════════════════ */}
         {view === 'pin' && (
           <>
-            <AvatarChip />
+            <StaffChip />
 
             {/* PIN dots */}
-            <div className="flex justify-center gap-4 py-1">
+            <div className="flex justify-center gap-4">
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className={`h-3.5 w-3.5 rounded-full border-2 transition-all duration-150 ${
                     pin.length > i
-                      ? 'bg-amber-500 border-amber-500 scale-110'
-                      : 'bg-transparent border-slate-300 dark:border-zinc-700'
+                      ? 'bg-amber-500 border-amber-500 shadow-md shadow-amber-500/40 scale-110'
+                      : 'bg-transparent border-white/20'
                   }`}
                 />
               ))}
             </div>
 
-            {/* Error */}
+            {/* Error row */}
             <p
-              className="text-center text-sm font-semibold transition-opacity duration-200 text-red-500"
+              className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200"
               style={{ opacity: showError ? 1 : 0, minHeight: '1.25rem' }}
             >
               Invalid PIN
@@ -331,14 +330,14 @@ const PinModal = ({
               {user.email && (
                 <button
                   onClick={() => setView('email')}
-                  className="w-full py-1.5 text-xs font-medium text-blue-500 hover:text-blue-400 transition-colors"
+                  className="w-full py-1.5 text-xs font-semibold text-blue-400/70 hover:text-blue-300 transition-colors"
                 >
                   Forgot PIN?
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white/30 hover:text-white/60 transition-colors flex items-center justify-center gap-1.5"
               >
                 <X size={13} /> Cancel
               </button>
@@ -352,27 +351,33 @@ const PinModal = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setView('pin')}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/70 transition-colors"
+                className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"
               >
                 <ArrowLeft size={16} />
               </button>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">Reset PIN</h3>
-                <p className="text-xs text-slate-500 dark:text-white/40 mt-0.5">We'll send a verification code to your email</p>
+                <h3 className="font-bold text-white text-sm">Reset PIN</h3>
+                <p className="text-xs text-white/40 mt-0.5">We'll send a verification code to your email</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/20">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-100 border border-blue-200 dark:bg-blue-500/15 dark:border-blue-500/25">
-                <Mail size={15} className="text-blue-500 dark:text-blue-400" />
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl"
+              style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}
+            >
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)' }}
+              >
+                <Mail size={15} className="text-blue-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-slate-500 dark:text-white/40 mb-0.5 uppercase tracking-wide font-medium">Sending to</p>
-                <p className="text-sm font-semibold text-slate-800 dark:text-white/85 truncate">{user.email}</p>
+                <p className="text-[11px] text-white/40 mb-0.5 uppercase tracking-wide font-medium">Sending to</p>
+                <p className="text-sm font-semibold text-white/85 truncate">{user.email}</p>
               </div>
             </div>
 
-            <div className="space-y-2.5 pt-1">
+            <div className="space-y-2.5">
               <button
                 onClick={sendOtp}
                 disabled={isSending}
@@ -388,7 +393,7 @@ const PinModal = ({
               </button>
               <button
                 onClick={() => setView('pin')}
-                className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white/60 transition-colors"
+                className="w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors"
               >
                 Back
               </button>
@@ -402,13 +407,13 @@ const PinModal = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setView('email')}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/70 transition-colors"
+                className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"
               >
                 <ArrowLeft size={16} />
               </button>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">Enter Code</h3>
-                <p className="text-xs text-slate-500 dark:text-white/40 mt-0.5">Check your email inbox for the 6-digit code</p>
+                <h3 className="font-bold text-white text-sm">Enter Code</h3>
+                <p className="text-xs text-white/40 mt-0.5">Check your email for the 6-digit code</p>
               </div>
             </div>
 
@@ -416,8 +421,8 @@ const PinModal = ({
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold border ${
                   timeLeft > 60
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400'
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
                 }`}
               >
                 {timeLeft > 0 ? `Expires in ${fmtTime(timeLeft)}` : 'Code expired'}
@@ -429,17 +434,17 @@ const PinModal = ({
                 {[0, 1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className={`w-10 h-12 rounded-xl flex items-center justify-center text-lg font-black transition-all border ${
-                      otpInput[i]
-                        ? 'bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-500/18 dark:border-blue-500/40 dark:text-white/90'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 dark:bg-white/5 dark:border-white/10 dark:text-white/30'
-                    }`}
+                    className="w-10 h-12 rounded-xl flex items-center justify-center text-lg font-black text-white/90 transition-all"
+                    style={{
+                      background: otpInput[i] ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${otpInput[i] ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    }}
                   >
                     {otpInput[i] ?? ''}
                   </div>
                 ))}
               </div>
-              {otpError && <p className="text-center text-xs font-semibold text-red-500 dark:text-red-400">{otpError}</p>}
+              {otpError && <p className="text-center text-xs font-semibold text-red-400">{otpError}</p>}
             </div>
 
             <Keypad
@@ -463,7 +468,7 @@ const PinModal = ({
               <button
                 onClick={sendOtp}
                 disabled={isSending || timeLeft > OTP_DURATION - 30}
-                className="w-full py-2 text-xs font-semibold text-blue-500 hover:text-blue-400 dark:text-blue-400/60 dark:hover:text-blue-300 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-35"
+                className="w-full py-2 text-xs font-semibold text-blue-400/60 hover:text-blue-300 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-35"
               >
                 <RotateCcw size={11} /> Resend Code
               </button>
@@ -474,23 +479,10 @@ const PinModal = ({
         {/* ════════════════════════════ NEW PIN VIEW ════════════════════════════ */}
         {view === 'newpin' && (
           <>
-            <div className="text-center">
-              <div
-                className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-xl font-black text-white mb-3 shadow-md"
-                style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
-              >
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <p className="font-bold text-slate-900 dark:text-white">
-                {newPinStep === 'enter' ? 'Set New PIN' : 'Confirm PIN'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-white/40 mt-1">
-                {newPinStep === 'enter' ? 'Enter a new 4-digit PIN' : 'Re-enter your new PIN to confirm'}
-              </p>
-            </div>
+            <StaffChip label={newPinStep === 'enter' ? 'Set New PIN' : 'Confirm PIN'} />
 
             {/* PIN dots */}
-            <div className="flex justify-center gap-4 py-1">
+            <div className="flex justify-center gap-4">
               {[0, 1, 2, 3].map((i) => {
                 const cur = newPinStep === 'enter' ? newPin : confirmPin;
                 return (
@@ -500,16 +492,20 @@ const PinModal = ({
                       cur.length > i
                         ? newPinShake
                           ? 'bg-red-500 border-red-500 scale-110'
-                          : 'bg-emerald-500 border-emerald-500 scale-110'
-                        : 'bg-transparent border-slate-300 dark:border-zinc-700'
+                          : 'bg-amber-500 border-amber-500 shadow-md shadow-amber-500/40 scale-110'
+                        : 'bg-transparent border-white/20'
                     }`}
                   />
                 );
               })}
             </div>
 
+            <p className="text-center text-xs text-white/40">
+              {newPinStep === 'enter' ? 'Enter a new 4-digit PIN' : 'Re-enter your new PIN to confirm'}
+            </p>
+
             {newPinShake && (
-              <p className="text-center text-xs font-semibold text-red-500 dark:text-red-400 -mt-2">
+              <p className="text-center text-xs font-semibold text-red-400 -mt-3">
                 PINs don't match — try again
               </p>
             )}
@@ -518,7 +514,7 @@ const PinModal = ({
 
             <button
               onClick={onClose}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-600 dark:text-white/40 dark:hover:text-white/60 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white/30 hover:text-white/60 transition-colors flex items-center justify-center gap-1.5"
             >
               <X size={13} /> Cancel
             </button>
@@ -539,91 +535,92 @@ const PinLoginScreen = () => {
   const activeUsers = users.filter((u) => u.active);
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0d0f1a]">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0A0B0E] text-slate-950 dark:text-white">
 
-      {/* ── Theme toggle ── */}
+      {/* ── Theme toggle — top-right ── */}
       <div className="absolute top-4 right-4 z-40">
         <ThemeToggle />
       </div>
 
-      {/* ── Hero header ── */}
-      <header className="flex-shrink-0 flex flex-col items-center justify-center px-6 pt-12 pb-6">
-        {/* Logo container */}
-        <div className="h-16 w-16 rounded-2xl ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/10 mb-3 mx-auto overflow-hidden bg-white dark:bg-zinc-900 flex items-center justify-center">
+      {/* ── Hero brand header ── */}
+      <header className="flex-shrink-0 flex flex-col items-center justify-center px-6 pt-14 pb-6">
+        {/* Logo */}
+        <div
+          className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-2 border-amber-500/40 p-2 shadow-xl shadow-amber-500/10 mb-4 mx-auto overflow-hidden flex items-center justify-center"
+          style={{ background: '#13151F' }}
+        >
           {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt={settings.cafeName} className="h-full w-full object-cover" />
+            <img src={settings.logoUrl} alt={settings.cafeName} className="h-full w-full object-contain" />
           ) : (
-            <span className="text-2xl font-black text-amber-500">
+            <span className="text-3xl font-black text-amber-500">
               {settings.cafeName?.charAt(0)?.toUpperCase() ?? '🍽'}
             </span>
           )}
         </div>
 
-        {/* Brand name */}
+        {/* Restaurant name */}
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white text-center">
           {settings.cafeName}
         </h1>
 
-        {/* Subtitle */}
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 tracking-wider uppercase mt-1">
-          Staff Portal
+        {/* System title */}
+        <p className="text-xs sm:text-sm font-bold tracking-widest text-amber-500 dark:text-amber-400 uppercase mt-1">
+          POS &amp; Management System
         </p>
 
-        {/* Selection indicator pill */}
-        <div className="mt-4 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 px-4 py-1.5 rounded-full">
-          <span className="text-xs font-bold text-slate-600 dark:text-zinc-400">
-            👤 Select Your Profile to Continue
-          </span>
+        {/* Instruction badge */}
+        <div
+          className="inline-flex items-center gap-2 mt-4 px-4 py-1.5 rounded-full shadow-sm"
+          style={{ background: '#13151F', border: '1px solid rgba(255,255,255,0.10)' }}
+        >
+          <span className="text-xs font-bold text-slate-300">Select Your Profile to Continue</span>
         </div>
       </header>
 
       {/* ── Staff profile grid ── */}
-      <div className="flex-1 overflow-y-auto flex items-start justify-center p-6 pb-10">
-        <div className="w-full max-w-4xl">
+      <div className="flex-1 overflow-y-auto flex items-start justify-center px-4 pb-10">
+        <div className="w-full max-w-4xl mt-2">
           {activeUsers.length === 0 ? (
             <div className="text-center py-20 text-slate-400 dark:text-white/30">
               <p className="text-sm font-semibold">No active staff accounts found.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeUsers.map((user) => {
-                const tokens = ROLE_TOKENS[user.role];
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() => setSelectedUser(user)}
-                    className="relative group p-5 rounded-3xl cursor-pointer transition-all duration-200 flex flex-col items-center justify-center text-center
-                      bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-900 shadow-sm hover:shadow-xl hover:-translate-y-1.5
-                      dark:bg-[#13151F] dark:hover:bg-[#1A1D2B] dark:border dark:border-white/10 dark:hover:border-white/25 dark:shadow-lg dark:shadow-black/40 dark:hover:shadow-2xl
-                      active:scale-[0.97] select-none"
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              {activeUsers.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => setSelectedUser(user)}
+                  className="group p-6 rounded-3xl flex flex-col items-center justify-between min-h-[190px] cursor-pointer transition-all duration-200 active:scale-[0.97] select-none
+                    bg-white border-2 border-slate-900 hover:bg-slate-50 shadow-sm hover:shadow-md hover:-translate-y-1
+                    dark:bg-[#13151F] dark:border dark:border-white/10 dark:hover:border-amber-500/60 dark:hover:bg-[#181B28] dark:shadow-lg dark:shadow-black/40 dark:hover:shadow-amber-500/5"
+                >
+                  {/* Monogram avatar */}
+                  <div
+                    className="h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-inner mb-3 transition-transform duration-200 group-hover:scale-105"
+                    style={{ background: '#1E2235', border: '1px solid rgba(255,255,255,0.15)' }}
                   >
-                    {/* Role avatar pill */}
-                    <div
-                      className={`h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-md mb-3 transition-transform duration-200 group-hover:scale-105 bg-gradient-to-tr ${tokens.avatarGradient} ${tokens.avatarShadow}`}
-                    >
-                      {ROLE_EMOJI[user.role]}
-                    </div>
+                    {initials(user.name)}
+                  </div>
 
-                    {/* Name */}
-                    <p className="text-lg font-black text-slate-900 dark:text-white tracking-wide truncate w-full">
-                      {user.name}
-                    </p>
+                  {/* Name */}
+                  <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-wide truncate w-full text-center mt-1">
+                    {user.name}
+                  </p>
 
-                    {/* Role pill badge */}
-                    <span
-                      className={`mt-2 px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase border ${tokens.pillBg} ${tokens.pillText} ${tokens.pillBorder}`}
-                    >
-                      {ROLE_LABEL[user.role]}
-                    </span>
-                  </button>
-                );
-              })}
+                  {/* Role pill */}
+                  <span
+                    className={`text-[11px] font-black uppercase px-3 py-0.5 rounded-full tracking-wider mt-2 ${ROLE_PILL[user.role]}`}
+                  >
+                    {ROLE_LABEL[user.role]}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── PIN Modal ── */}
+      {/* ── PIN modal ── */}
       {selectedUser && (
         <PinModal user={selectedUser} onClose={() => setSelectedUser(null)} />
       )}
