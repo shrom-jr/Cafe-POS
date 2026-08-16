@@ -38,7 +38,7 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
           )}
           {/* Quantity badge — top-left of thumbnail */}
           {quantityInOrder > 0 && (
-             <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/40 border-2 border-[#13151F] animate-in zoom-in-75 duration-150 z-10">
+             <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-[#10121A] animate-in zoom-in-75 duration-150 z-10">
               {quantityInOrder}
             </span>
           )}
@@ -93,7 +93,7 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
 
         {/* Quantity badge — top-right corner of the card */}
         {quantityInOrder > 0 && (
-          <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/40 border-2 border-[#13151F] animate-in zoom-in-75 duration-150 z-10">
+          <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-[#10121A] animate-in zoom-in-75 duration-150 z-10">
             {quantityInOrder}
           </span>
         )}

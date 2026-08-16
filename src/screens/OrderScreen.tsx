@@ -195,10 +195,10 @@ const OrderScreen = () => {
     kitchenStatus === 'draft' ? 'Draft' : hasUnsentItems ? 'Updated' : 'Sent';
   const drawerStatusStyle =
     kitchenStatus === 'draft'
-      ? { background: 'rgba(148,163,184,0.12)', color: 'rgba(148,163,184,0.7)', border: '1px solid rgba(148,163,184,0.2)' }
+      ? { background: 'rgba(245,158,11,0.20)', color: 'rgb(253,186,116)', border: '1px solid rgba(245,158,11,0.40)' }
       : hasUnsentItems
       ? { background: 'rgba(251,191,36,0.12)', color: 'rgba(251,191,36,0.8)', border: '1px solid rgba(251,191,36,0.25)' }
-      : { background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.8)', border: '1px solid rgba(52,211,153,0.25)' };
+      : { background: 'rgba(16,185,129,0.20)', color: 'rgb(110,231,183)', border: '1px solid rgba(16,185,129,0.40)' };
 
   /** True when the item has already been sent to the kitchen (backwards-compatible). */
   const isSentToKitchen = (item: OrderItem) =>
@@ -345,9 +345,9 @@ const OrderScreen = () => {
       {/* Kitchen status label */}
       {order && (
         <div className="flex items-center gap-2 px-4 py-1.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <span className="text-xs font-semibold text-white/35">Order status:</span>
+          <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Order status:</span>
           <span
-            className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+            className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider"
             style={drawerStatusStyle}
           >
             {drawerStatusLabel}
@@ -383,7 +383,7 @@ const OrderScreen = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search-menu"
-                className="w-full bg-[#13151F] border-2 border-white/15 focus:border-amber-400 text-white font-bold rounded-2xl px-5 py-3.5 pl-11 text-sm placeholder:text-zinc-400 outline-none shadow-inner mb-0"
+                className="w-full bg-[#13151F] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-2xl px-5 py-3.5 pl-11 text-sm placeholder:text-zinc-400 outline-none shadow-inner mb-0"
               />
               {search && (
                 <button
@@ -408,7 +408,7 @@ const OrderScreen = () => {
                     className={`flex-1 px-6 py-3 rounded-xl whitespace-nowrap transition-all active:scale-95 ${
                       activePillar === pillar
                         ? 'bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25'
-                        : 'bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white font-bold text-xs uppercase tracking-wider'
+                        : 'bg-[#13151F] border border-white/20 text-zinc-100 hover:text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider'
                     }`}
                   >
                     {pillar}
@@ -425,8 +425,8 @@ const OrderScreen = () => {
                     data-testid={`button-category-${cat.id}`}
                     className={`px-4 py-2 rounded-xl whitespace-nowrap transition-all active:scale-95 ${
                       activeSubCat === cat.id
-                        ? 'bg-amber-500/20 text-amber-300 border-2 border-amber-500/50 font-black text-xs uppercase tracking-wider shadow-sm'
-                        : 'bg-[#13151F] border border-white/10 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider'
+                        ? 'bg-amber-500/20 text-amber-300 border-2 border-amber-500/60 font-black text-xs uppercase tracking-wider shadow-sm'
+                        : 'bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider'
                     }`}
                   >
                     {cat.name}
@@ -590,20 +590,21 @@ const OrderScreen = () => {
             <div
               className="flex items-center gap-3 px-0 py-3 flex-shrink-0 border-b border-white/10"
             >
-              <UserCircle size={14} style={{ color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
-              <span className="text-sm font-black text-white flex-1">Customer</span>
+              <UserCircle size={14} className="text-amber-400 flex-shrink-0" />
+              <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5 flex-1">Customer</span>
               {attachedCustomer ? (
-                <div className="flex items-center gap-1.5 max-w-[55%]">
-                  <span className="text-xs font-semibold truncate" style={{ color: 'rgba(147,197,253,0.88)' }}>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-white shadow-sm max-w-[70%]">
+                  <span className="text-xs font-bold text-amber-300 truncate">
                     👤 {attachedCustomer.name.split(' ')[0]}
-                    {attachedCustomer.currentDue > 0 && (
-                      <span style={{ color: 'hsl(32 90% 68%)' }}> · Rs.{fmt(attachedCustomer.currentDue)}</span>
-                    )}
                   </span>
+                  {attachedCustomer.currentDue > 0 && (
+                    <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black font-mono whitespace-nowrap">
+                      Due: Rs. {fmt(attachedCustomer.currentDue)}
+                    </span>
+                  )}
                   <button
                     onClick={() => handleAttachCustomer(null)}
-                    className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                    className="text-zinc-400 hover:text-white transition-colors ml-1 p-0.5 flex-shrink-0"
                   >
                     <X size={10} />
                   </button>
@@ -721,18 +722,18 @@ const OrderScreen = () => {
                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                            <span className="text-xs font-bold text-zinc-300 font-mono">Rs. {fmt(item.price)} each</span>
                           {isPaid && (
-                            <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.7)' }}>
+                             <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider font-mono">
                               Paid
                             </span>
                           )}
                           {isSent && !isPaid && (
-                            <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.14)', color: 'rgba(147,197,253,0.85)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                             <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider font-mono">
                               <Lock size={8} />
                               Sent
                             </span>
                           )}
                           {isDraft && (
-                            <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.9)' }}>
+                             <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider font-mono">
                               Draft
                             </span>
                           )}
@@ -743,7 +744,7 @@ const OrderScreen = () => {
                           onClick={handleMinus}
                           disabled={isPaid}
                           aria-label={isSent ? `Void ${item.name}` : `Decrease ${item.name}`}
-                           className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
+                            className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 active:scale-90 border border-white/20 text-white font-black flex items-center justify-center transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-30"
                           style={
                             isSent && !isPaid
                               ? { background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: 'rgba(252,165,165,0.8)' }
@@ -758,7 +759,7 @@ const OrderScreen = () => {
                           onClick={() => isDraft && order && updateItemQuantity(order.id, item.id, 1)}
                           disabled={isPaid || isSent}
                           aria-label={`Increase ${item.name}`}
-                           className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
+                            className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 active:scale-90 border border-white/20 text-white font-black flex items-center justify-center transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-30"
                         >
                           <Plus size={13} />
                         </button>
@@ -766,7 +767,7 @@ const OrderScreen = () => {
                              <button
                                onClick={handleTrash}
                                aria-label={isSent ? `Void ${item.name}` : `Remove ${item.name}`}
-                               className="p-1 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors flex-shrink-0"
+                                className="p-1.5 rounded-lg text-zinc-300 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer flex-shrink-0"
                                style={isSent ? { color: 'rgba(252,165,165,0.6)', background: 'rgba(239,68,68,0.08)' } : undefined}
                              >
                                <Trash2 size={13} />

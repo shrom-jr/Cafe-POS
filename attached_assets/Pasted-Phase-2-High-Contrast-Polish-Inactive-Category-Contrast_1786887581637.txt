@@ -1,0 +1,60 @@
+Phase 2 High-Contrast Polish: Inactive Category Contrast, Cart Steppers, Customer Chip & Badge Alignment
+
+Refactor `src/screens/OrderScreen.tsx` and `src/components/order/CartDrawer.tsx` (and related menu item card components):
+
+1. High-Contrast Category & Subcategory Navigation (`OrderScreen.tsx`):
+   - Main Category Tabs (`Food`, `Beverages`, `Alcohol`, `Others`):
+     * Active: `px-6 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all`.
+     * Inactive: Replace dark/dim gray with high-contrast text:
+       `px-6 py-3 rounded-xl bg-[#13151F] border border-white/20 text-zinc-100 hover:text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider transition-all`.
+   - Subcategory Filter Pills (`Burgers & Sandwiches`, `Soups`, `Domestic Spirits`, etc.):
+     * Active: `px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 border-2 border-amber-500/60 font-black text-xs uppercase tracking-wider shadow-sm`.
+     * Inactive: Replace dark gray with legible silver text:
+       `px-4 py-2 rounded-xl bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 font-bold text-xs uppercase tracking-wider transition-all`.
+   - Search Input:
+     * `w-full bg-[#13151F] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-2xl px-5 py-3.5 text-sm placeholder:text-zinc-400 outline-none shadow-inner`.
+
+2. Top Bar & Telemetry Subtext Contrast (`OrderScreen.tsx`):
+   - Back Button & Table Tag: `text-base font-black text-white flex items-center gap-2`.
+   - Top Order Status:
+     * Label: `text-xs font-black uppercase tracking-wider text-zinc-300` ("ORDER STATUS:").
+     * Badge: `px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider` ("SENT").
+
+3. Redesign Attached Customer Chip in Cart (`CartDrawer.tsx`):
+   - Replace the dark navy/purple box with a styled carbon/amber chip:
+     `<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-white shadow-sm">
+        <span className="text-xs font-bold text-amber-300">👤 {customer.name}</span>
+        {customer.due > 0 && (
+          <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black font-mono">
+            Due: Rs. {customer.due}
+          </span>
+        )}
+        <button type="button" onClick={handleRemoveCustomer} className="text-zinc-400 hover:text-white transition-colors ml-1 p-0.5">
+          ✕
+        </button>
+      </div>`
+   - Customer Label on left: `text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5`.
+
+4. High-Contrast Cart Item Cards & Steppers (`CartDrawer.tsx`):
+   - Header Sub-label: `Served by {staffName} • {count} items` in `text-xs font-bold text-zinc-200 block px-4 py-1.5 bg-white/[0.03]`.
+   - Cart Item Row:
+     * Item Name: `text-sm font-black text-white tracking-wide`.
+     * Unit Price: `text-xs font-bold text-zinc-200 font-mono` ("Rs. {price} each").
+     * Status Badge: `px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider font-mono` (DRAFT: `bg-amber-500/20 text-amber-300 border border-amber-500/40`, SENT: `bg-emerald-500/20 text-emerald-300 border border-emerald-500/40`).
+     * Line Total: `text-base font-black text-amber-400 font-mono`.
+     * Stepper Buttons (`-`, `+`):
+       `w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 active:scale-90 border border-white/20 text-white font-black flex items-center justify-center transition-all cursor-pointer`.
+     * Quantity Number: `text-sm font-black text-white font-mono w-4 text-center`.
+     * Delete Trash Button: `p-1.5 rounded-lg text-zinc-300 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer`.
+
+5. Menu Item Card Corner Badge Positioning (`MenuItemCard.tsx` / `OrderScreen.tsx`):
+   - Anchor the quantity counter badge directly to the top-right corner with a high-contrast container border:
+     `{itemQty > 0 && (
+        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-[#10121A] z-10">
+          {itemQty}
+        </span>
+      )}`
+
+STRICT CONSTRAINTS:
+- Do NOT alter any item pricing logic, tax calculations, KOT dispatching, or Firebase listeners.
+- Run `npm run build` to confirm zero TypeScript or build errors.
