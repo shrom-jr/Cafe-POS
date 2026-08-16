@@ -67,25 +67,22 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   // ── Brand block (logo + name) ───────────────────────────────────────────────
   const brandBlock = (
-    <div className="flex items-center flex-shrink-0 select-none min-w-0">
-      <div className="w-12 h-12 rounded-2xl bg-white/10 border-2 border-white/20 p-1.5 shadow-xl shadow-black/60 flex items-center justify-center overflow-hidden flex-shrink-0">
-        {logoSrc ? (
-          <img
-            src={logoSrc}
-            alt="logo"
-            className="w-full h-full object-contain rounded-xl drop-shadow-md"
-          />
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" className="w-full h-full rounded-xl text-amber-400 drop-shadow-md" stroke="currentColor" strokeWidth={1.8}>
-            <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        )}
+    <div className="flex items-center flex-shrink-0 min-w-0">
+      <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-white/[0.08] border-2 border-amber-500/40 p-1 flex items-center justify-center flex-shrink-0 shadow-lg shadow-black/60 overflow-hidden group">
+        <img
+          src={logoSrc || '/logo.png'}
+          alt="Restaurant Logo"
+          className="w-full h-full object-contain rounded-xl drop-shadow-md"
+        />
       </div>
-      <span
-        className="hidden text-lg sm:text-xl font-black tracking-tight text-white select-none whitespace-nowrap ml-3 drop-shadow-sm lg:block"
-      >
-        {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
-      </span>
+      <div className="flex flex-col ml-3.5 select-none min-w-0">
+        <span className="text-base sm:text-lg font-black tracking-tight text-white leading-tight whitespace-nowrap">
+          {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400 mt-0.5">
+          POS Terminal
+        </span>
+      </div>
     </div>
   );
 
@@ -142,7 +139,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
        className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-white text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-        <header className="flex-shrink-0 w-full h-[72px] bg-[#0A0B0E]/95 backdrop-blur-xl border-b border-white/15 px-6 sticky top-0 z-40 lg:flex lg:items-center">
+        <header className="flex-shrink-0 h-20 w-full bg-[#0A0B0E]/95 backdrop-blur-xl border-b border-white/15 px-6 flex items-center justify-between sticky top-0 z-40">
          {/* ── TABLET / DESKTOP: single row (lg+) ── */}
          <div className="hidden h-full w-full items-center justify-between gap-6 lg:flex">
           {/* Left: brand */}
@@ -157,20 +154,17 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         </div>
 
         {/* ── MOBILE: compact bar + slide-over drawer (<lg) ── */}
-        <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-white/15 bg-[#0A0B0E]/95 px-4 backdrop-blur-xl lg:hidden">
+        <div className="sticky top-0 z-40 flex h-20 w-full items-center justify-between border-b border-white/15 bg-[#0A0B0E]/95 px-4 backdrop-blur-xl lg:hidden">
           <div className="flex min-w-0 items-center gap-2">
-             <div className="w-10 h-10 rounded-xl bg-white/10 border-2 border-white/20 p-1 shadow-xl shadow-black/60 flex items-center justify-center overflow-hidden shrink-0">
-              {logoSrc ? (
-                 <img src={logoSrc} alt="logo" className="w-full h-full rounded-lg object-contain drop-shadow-md" />
-              ) : (
-                 <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-amber-400" stroke="currentColor" strokeWidth={1.8}>
-                  <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
+             <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-white/[0.08] border-2 border-amber-500/40 p-1 flex items-center justify-center overflow-hidden shrink-0">
+               <img src={logoSrc || '/logo.png'} alt="Restaurant Logo" className="w-full h-full rounded-xl object-contain drop-shadow-md" />
             </div>
-             <span className="truncate text-sm font-black tracking-tight text-white sm:text-base">
-              {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
-            </span>
+             <div className="flex flex-col ml-1.5 select-none min-w-0">
+               <span className="truncate text-sm sm:text-base font-black tracking-tight text-white leading-tight">
+                 {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
+               </span>
+               <span className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-400 mt-0.5">POS Terminal</span>
+             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <ThemeToggle />
