@@ -46,15 +46,15 @@ const TableCard = ({
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
       ? 'border-red-500/35 bg-red-500/10 font-bold text-red-700 dark:text-red-300'
-      : 'border-amber-400 bg-amber-100 font-bold text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
+       : 'border border-amber-500/60 bg-amber-500/15 font-bold text-amber-800 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
   const statusDot = table.status === 'billing'
       ? 'bg-red-400'
       : 'bg-amber-400';
-  const cardTone = table.status === 'free'
-    ? 'border border-slate-300/80 bg-white text-slate-950 shadow-sm dark:border-white/10 dark:bg-[#13151F] dark:text-white hover:-translate-y-1 hover:border-emerald-500/80 hover:shadow-md'
+   const cardTone = table.status === 'free'
+     ? 'border border-slate-300/90 bg-gradient-to-b from-white to-slate-50/90 text-slate-800 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-white/10 dark:bg-gradient-to-b dark:from-[#1C1F2B] dark:to-[#12141D] dark:text-white'
     : table.status === 'billing'
       ? 'border-2 border-red-500 bg-red-50/60 shadow-sm dark:bg-gradient-to-b dark:from-[#281D17] dark:to-[#141217] dark:border-red-500 hover:border-red-400'
-      : 'border-2 border-amber-500 bg-amber-50/90 shadow-sm dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] dark:border-amber-500/80 hover:border-amber-400';
+       : 'border-2 border-amber-500 bg-gradient-to-b from-amber-50/90 to-amber-100/40 shadow-sm dark:border-amber-500/80 dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] hover:border-amber-400';
 
   return (
     <button
@@ -66,7 +66,7 @@ const TableCard = ({
         <div className="relative flex w-full flex-1 items-center justify-center">
           <span
             title={tableDisplayName(table.number)}
-            className="text-center text-3xl font-black tracking-wide text-slate-900 dark:text-white"
+             className="text-center text-2xl font-black tracking-wide text-slate-800 dark:text-white"
           >
             {tableDisplayName(table.number)}
           </span>
@@ -82,7 +82,7 @@ const TableCard = ({
               {tableDisplayName(table.number)}
             </span>
 
-            <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-none tracking-wider ${statusTone}`}>
+             <span className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold leading-none tracking-wider ${statusTone}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
@@ -96,7 +96,7 @@ const TableCard = ({
 
           {/* Middle body zone */}
           <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
-            <span className="text-sm font-bold leading-tight text-slate-900 dark:text-white">
+             <span className="text-sm font-bold leading-tight text-slate-900 dark:text-white">
               {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (

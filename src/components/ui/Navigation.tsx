@@ -45,7 +45,7 @@ const Navigation = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10121A]">
-      <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-slate-300/80 bg-slate-200/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/90">
+       <div className="flex h-16 max-w-lg mx-auto items-center justify-around gap-1 rounded-2xl border border-slate-300 bg-slate-300/60 p-1 dark:border-zinc-800 dark:bg-zinc-900/90">
         {navItems.map(({ path, icon: Icon, label }) => {
           const active = location.pathname === path;
           return (

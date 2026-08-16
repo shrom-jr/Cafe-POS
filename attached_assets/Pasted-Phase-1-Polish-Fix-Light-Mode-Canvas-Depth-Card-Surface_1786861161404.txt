@@ -1,0 +1,30 @@
+Phase 1 Polish: Fix Light Mode Canvas Depth, Card Surface Gradient & Tactile Shadows
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx` to fix light mode starkness while preserving all dark mode styling:
+
+1. Canvas Background Separation (`AppLayout.tsx`, `TableOverview.tsx`):
+   - In Light Mode, set the main page canvas to a rich studio porcelain slate (`bg-slate-200/70 dark:bg-[#0A0B0E]`).
+   - Top Header Bar: Pure crisp white (`bg-white dark:bg-[#10121A] border-b border-slate-300/80 dark:border-white/10 shadow-sm`).
+   - Admin Badge in Light Mode: `bg-purple-100 text-purple-800 border border-purple-300 font-bold px-2 py-0.5 rounded text-[11px]`.
+
+2. Tactile Station Cards in Light Mode (`TableCard.tsx`):
+   - Free Table Cards:
+     * Surface: `bg-gradient-to-b from-white to-slate-50/90 dark:bg-gradient-to-b dark:from-[#1C1F2B] dark:to-[#12141D]`.
+     * Border & Shadow: `border border-slate-300/90 dark:border-white/10 shadow-sm hover:shadow-md hover:border-emerald-500 hover:-translate-y-0.5 transition-all duration-150 rounded-2xl`.
+     * Table Name: `text-slate-800 dark:text-white text-2xl font-black tracking-wide text-center`.
+   - Occupied Table Cards:
+     * Surface: `bg-gradient-to-b from-amber-50/90 to-amber-100/40 dark:from-[#221813] dark:to-[#14100E]`.
+     * Border: `border-2 border-amber-500 shadow-sm`.
+     * Status Badge: `border border-amber-500/60 bg-amber-500/15 text-amber-800 dark:text-amber-400 font-bold text-xs px-2.5 py-0.5 rounded-full`.
+     * Guest Count & Timers: `text-slate-900 dark:text-white font-bold text-sm`.
+     * Customer Pill: `bg-slate-200 text-slate-900 border border-slate-300 dark:bg-white/10 dark:text-white dark:border-white/20 font-bold px-3 py-1 rounded-full text-xs`.
+
+3. Segmented Navigation & Floor Filters (`Navigation.tsx`, `TableOverview.tsx`):
+   - Segmented Outer Track: `bg-slate-300/60 border border-slate-300 dark:bg-zinc-900/90 dark:border-zinc-800 p-1 rounded-2xl`.
+   - Inactive Nav Items & Filter Pills: `text-slate-700 hover:text-slate-950 font-bold dark:text-zinc-300 dark:hover:text-white px-4 py-2 rounded-xl transition-all`.
+   - Telemetry Pill & Clock: `bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 shadow-sm`.
+
+STRICT CONSTRAINTS:
+- DO NOT alter dark mode color tokens that are already working.
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

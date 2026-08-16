@@ -97,7 +97,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         <span
           className={`rounded border px-2 py-0.5 text-[11px] font-bold ${
             currentUser.role === 'ADMIN'
-              ? 'border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-400/30 dark:bg-purple-500/25 dark:text-purple-200'
+               ? 'border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-400/30 dark:bg-purple-500/25 dark:text-purple-200'
               : 'border-purple-400/30 bg-purple-500/25 text-purple-200'
           }`}
           style={currentUser.role === 'ADMIN' ? undefined : {
@@ -124,7 +124,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-1 rounded-2xl border border-slate-300/80 bg-slate-200/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/90"
+      className="flex items-center gap-1 rounded-2xl border border-slate-300 bg-slate-300/60 p-1 dark:border-zinc-800 dark:bg-zinc-900/90"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -169,10 +169,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   return (
     <div
-      className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-slate-100 text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
+       className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-slate-200/70 text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-      <header className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
+       <header className="flex-shrink-0 border-b border-slate-300/80 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
          {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden h-10 items-center sm:grid" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}
@@ -202,7 +202,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           </div>
           {/* Row 2: nav tabs (scrollable) */}
           {mobileTabs.length > 0 && (
-             <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300/80 bg-slate-200/80 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
+              <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300 bg-slate-300/60 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
               {mobileTabs}
             </div>
           )}
