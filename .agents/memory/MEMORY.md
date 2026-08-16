@@ -10,3 +10,4 @@
 - [Maintenance Expenses Architecture](maintenance-expenses.md) — Firebase-backed expense store; Admin "Expenses" tab between Inventory and Settings; Net Profit card in Reports = Revenue − Maintenance Expenses
 - [Khatta Customer Ledger](khatta-system.md) — Customer type in pos.ts; useCustomerStore (localStorage); attachCustomerToOrder in usePOSStore; CustomerPicker component; Khatta button + due checkbox in ReviewScreen
 - [Review screen responsive branches](review-screen-responsive-branches.md) — desktop, tablet-landscape, and portrait payment layouts are separate render branches and must be edited with wrapper balance intact
+- [Firebase menu hard reset](firebase-menu-hard-reset.md) — stale connected clients can recreate deprecated menu nodes immediately after a DELETE

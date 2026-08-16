@@ -204,4 +204,10 @@ export const db = {
     Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
     localStorage.removeItem('pos_initialized');
   },
+
+  clearMenuCache: () => {
+    localStorage.removeItem(KEYS.categories);
+    localStorage.removeItem(KEYS.menuItems);
+    localStorage.removeItem(KEYS.pillars);
+  },
 };

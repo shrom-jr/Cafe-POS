@@ -43,13 +43,14 @@ export const DEFAULT_TABLES: CafeTable[] = [
 
 // ─── Pillars ─────────────────────────────────────────────────────────────────
 
-export const DEFAULT_PILLARS: string[] = ['Food', 'Beverages', 'Alcohol', 'Others'];
+export const DEFAULT_PILLARS: string[] = [];
 
 // ─── Categories ──────────────────────────────────────────────────────────────
 // Aligned with scripts/seedMenu.mjs and menu/categories in Firebase.
 // printRoute drives KOT (kitchen printer) vs BOT (bar/bottle printer).
 
-export const DEFAULT_CATEGORIES: Category[] = [
+export const DEFAULT_CATEGORIES: Category[] = [];
+/*
   // KOT — kitchen printer
   { id: 'cat-hot-bev',       name: 'Hot Beverages',              order: 1,  parentCategory: 'Beverages', subGroup: 'Non-Alcoholic', sendToKitchen: true,  printRoute: 'KOT' },
   { id: 'cat-crafted-cold',  name: 'Crafted Cold Beverages',     order: 2,  parentCategory: 'Beverages', subGroup: 'Non-Alcoholic', sendToKitchen: true,  printRoute: 'KOT' },
@@ -69,6 +70,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-imp-spirits',   name: 'Imported Spirits',           order: 15, parentCategory: 'Alcohol',   subGroup: 'Alcoholic',     sendToKitchen: false, printRoute: 'BOT' },
   { id: 'cat-hookah-cigs',   name: 'Hookah & Cigarettes',        order: 16, parentCategory: 'Others',    sendToKitchen: false, printRoute: 'BOT' },
 ];
+*/
 
 // ─── Menu Items ───────────────────────────────────────────────────────────────
 // Mirrors scripts/seedMenu.mjs (menu/items in Firebase) exactly, including
@@ -92,7 +94,8 @@ const kot = (categoryId: string, name: string, price: number): MenuItem =>
 const bot = (categoryId: string, name: string, price: number): MenuItem =>
   mi(categoryId, name, price, 'BOT');
 
-export const DEFAULT_MENU_ITEMS: MenuItem[] = [
+export const DEFAULT_MENU_ITEMS: MenuItem[] = [];
+/*
   // HOT BEVERAGES (KOT)
   kot('cat-hot-bev', 'Tea (Black)', 30),
   kot('cat-hot-bev', 'Tea (Milk)', 60),
@@ -426,6 +429,7 @@ export const DEFAULT_MENU_ITEMS: MenuItem[] = [
   bot('cat-hookah-cigs', 'Surya Arctic', 30),
   bot('cat-hookah-cigs', 'Shikhar Ice', 25),
 ];
+*/
 
 // ─── Inventory Products ───────────────────────────────────────────────────────
 

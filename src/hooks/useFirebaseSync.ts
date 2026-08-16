@@ -5,6 +5,7 @@ import { useInventoryStore } from "@/store/useInventoryStore";
 import { useKitchenPurchasesStore } from "@/store/useKitchenPurchasesStore";
 import { useMeatTrackerStore } from "@/store/useMeatTrackerStore";
 import { useMaintenanceStore } from "@/store/useMaintenanceStore";
+import { db } from "@/storage/db";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -130,6 +131,13 @@ export function useFirebaseSync() {
 
   // 1. Subscribe to Cloud Updates
   useEffect(() => {
+    // Hard-reset menu state before subscriptions so stale browser data cannot
+    // be pushed back after the Firebase menu nodes are intentionally wiped.
+    db.clearMenuCache();
+    setMenuItems([]);
+    setCategories([]);
+    setPillars([]);
+
     const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
       hasLoadedOrders.current = true;
       const currentOrders = usePOSStore.getState().orders;
@@ -212,7 +220,9 @@ export function useFirebaseSync() {
           // Both empty — auto-seed from the full menu catalog
           isRemoteMenuItemsUpdate.current = true;
           setMenuItems(DEFAULT_MENU_ITEMS);
-          pushMenuItemsToFirebase(DEFAULT_MENU_ITEMS);
+          if (DEFAULT_MENU_ITEMS.length > 0) {
+            pushMenuItemsToFirebase(DEFAULT_MENU_ITEMS);
+          }
           return;
         }
 
@@ -234,7 +244,9 @@ export function useFirebaseSync() {
           }
           isRemoteCategoriesUpdate.current = true;
           setCategories(DEFAULT_CATEGORIES);
-          pushCategoriesToFirebase(DEFAULT_CATEGORIES);
+          if (DEFAULT_CATEGORIES.length > 0) {
+            pushCategoriesToFirebase(DEFAULT_CATEGORIES);
+          }
           return;
         }
 
@@ -256,7 +268,9 @@ export function useFirebaseSync() {
           }
           isRemotePillarsUpdate.current = true;
           setPillars(DEFAULT_PILLARS);
-          pushPillarsToFirebase(DEFAULT_PILLARS);
+          if (DEFAULT_PILLARS.length > 0) {
+            pushPillarsToFirebase(DEFAULT_PILLARS);
+          }
           return;
         }
 
