@@ -13,20 +13,22 @@ const EMAILJS_SERVICE_ID  = 'service_mgnjpll';
 const EMAILJS_TEMPLATE_ID = 'template_od1a97s';
 const EMAILJS_PUBLIC_KEY  = 'ct_T99fLZJzJzPB5zut';
 
-// ── Role pill tokens (badge cards) ───────────────────────────────────────────
+const FALLBACK_NAME = 'S Bamboo Cottage & Sekuwa Corner';
+
+// ── Role pill tokens ──────────────────────────────────────────────────────────
 const ROLE_PILL: Record<Role, string> = {
   ADMIN:   'bg-purple-500/15 text-purple-300 border-purple-500/30',
   CASHIER: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   WAITER:  'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  KITCHEN: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+  KITCHEN: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
 };
 
-// ── Role colours for modal surfaces ──────────────────────────────────────────
+// ── Role colours for modal ────────────────────────────────────────────────────
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
   ADMIN:   { bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.40)', text: '#c084fc' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.40)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.40)', text: '#34d399' },
-  KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.40)',  text: '#fb923c' },
+  KITCHEN: { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.40)',  text: '#fbbf24' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -36,7 +38,6 @@ const ROLE_LABEL: Record<Role, string> = {
 const OTP_DURATION = 300;
 type ModalView = 'pin' | 'email' | 'otp' | 'newpin';
 
-// ── Initials helper ───────────────────────────────────────────────────────────
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -44,7 +45,7 @@ function initials(name: string): string {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PIN Terminal Modal
+// Tactile Glass PIN Terminal Modal
 // ══════════════════════════════════════════════════════════════════════════════
 const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) => {
   const { login, updateUser } = useStaffStore();
@@ -92,7 +93,6 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, otpKey]);
 
-  // Send / resend OTP
   const sendOtp = async () => {
     setIsSending(true);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -119,16 +119,14 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     setIsSending(false);
   };
 
-  // Verify OTP
   const verifyOtp = () => {
-    if (Date.now() > expiresAt.current) { setOtpError('Code expired — tap Resend to get a new one.'); return; }
-    if (otpInput !== generatedOtp.current) { setOtpError('Incorrect code. Please try again.'); return; }
+    if (Date.now() > expiresAt.current) { setOtpError('Code expired — tap Resend.'); return; }
+    if (otpInput !== generatedOtp.current) { setOtpError('Incorrect code. Try again.'); return; }
     setOtpError('');
     setNewPin(''); setConfirmPin(''); setNewPinStep('enter');
     setView('newpin');
   };
 
-  // PIN handlers
   const handleDigit = (digit: string) => {
     if (shakeRef.current) return;
     const current = pinRef.current;
@@ -157,7 +155,6 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     }
   };
 
-  // New-PIN handlers
   const handleNewPinDigit = (digit: string) => {
     if (newPinStepRef.current === 'enter') {
       const cur = newPinRef.current;
@@ -189,7 +186,6 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 
   useEffect(() => { containerRef.current?.focus(); }, []);
 
-  // Keyboard handler
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const v = viewRef.current;
@@ -213,54 +209,35 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Circular keypad (1-9 top, then ⌫ / 0 / ✕ bottom row) ──────────────────
-  const CircularKeypad = ({
-    onDigit,
-    onBack,
-    onCancel,
-    small,
-  }: {
-    onDigit: (d: string) => void;
-    onBack: () => void;
-    onCancel?: () => void;
-    small?: boolean;
-  }) => {
-    const sz = small ? 'h-11 w-11 text-sm' : 'h-14 w-14 text-xl';
-    const BtnBase = 'rounded-full font-bold transition-all duration-150 active:scale-90 select-none flex items-center justify-center text-white border border-white/10 bg-white/5 hover:bg-white/15 active:border-amber-500/50';
+  // ── Circular glass keypad — 1-9 then ⌫/0/✕ ──────────────────────────────
+  const BtnCls = 'h-14 w-14 rounded-full text-xl font-bold bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 active:border-amber-500/50 text-white flex items-center justify-center transition-all duration-150 select-none';
+  const SmBtnCls = 'h-11 w-11 rounded-full text-sm font-bold bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 active:border-amber-500/50 text-white flex items-center justify-center transition-all duration-150 select-none';
 
+  const Keypad = ({
+    onDigit, onBack, onCancel, small,
+  }: { onDigit: (d: string) => void; onBack: () => void; onCancel?: () => void; small?: boolean }) => {
+    const cls = small ? SmBtnCls : BtnCls;
     return (
-      <div className="flex flex-col items-center gap-2.5">
-        {/* Rows 1–3: digits 1–9 */}
+      <div className="flex flex-col items-center gap-3">
         {[[1,2,3],[4,5,6],[7,8,9]].map((row, ri) => (
-          <div key={ri} className="flex gap-2.5">
+          <div key={ri} className="flex gap-3">
             {row.map((d) => (
-              <button
-                key={d}
-                onClick={() => onDigit(String(d))}
-                className={`${sz} ${BtnBase}`}
-              >
-                {d}
-              </button>
+              <button key={d} onClick={() => onDigit(String(d))} className={cls}>{d}</button>
             ))}
           </div>
         ))}
-        {/* Bottom row: ⌫ / 0 / ✕ */}
-        <div className="flex gap-2.5">
-          <button onClick={onBack} className={`${sz} ${BtnBase}`}>⌫</button>
-          <button onClick={() => onDigit('0')} className={`${sz} ${BtnBase}`}>0</button>
-          {onCancel ? (
-            <button onClick={onCancel} className={`${sz} ${BtnBase} text-white/50 hover:text-white/90`}>
-              <X size={small ? 14 : 18} />
-            </button>
-          ) : (
-            <div className={`${sz}`} /> /* spacer when no cancel */
-          )}
+        <div className="flex gap-3">
+          <button onClick={onBack} className={cls}>⌫</button>
+          <button onClick={() => onDigit('0')} className={cls}>0</button>
+          {onCancel
+            ? <button onClick={onCancel} className={`${cls} text-white/50 hover:text-white/90`}><X size={small ? 14 : 18} /></button>
+            : <div className={small ? 'h-11 w-11' : 'h-14 w-14'} />}
         </div>
       </div>
     );
   };
 
-  // ── Modal staff header row ────────────────────────────────────────────────
+  // ── Modal header with staff chip ─────────────────────────────────────────
   const ModalHeader = ({ label }: { label?: string }) => (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-3">
@@ -290,7 +267,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     </div>
   );
 
-  // ── PIN dots ──────────────────────────────────────────────────────────────
+  // ── Glowing PIN dots ──────────────────────────────────────────────────────
   const PinDots = ({ filled, error }: { filled: number; error?: boolean }) => (
     <div className="flex justify-center gap-4">
       {[0,1,2,3].map((i) => (
@@ -313,32 +290,27 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`max-w-xs w-full p-6 rounded-3xl flex flex-col items-center gap-5 outline-none shadow-2xl transition-transform ${
+        className={`max-w-xs w-full p-6 rounded-3xl bg-[#12141D] border border-white/15 shadow-2xl shadow-black flex flex-col items-center gap-5 outline-none transition-transform ${
           (shake && view === 'pin') || (newPinShake && view === 'newpin') ? 'animate-shake' : ''
         }`}
-        style={{ background: '#11131A', border: '1px solid rgba(255,255,255,0.15)' }}
       >
 
-        {/* ══════════════════════════════ PIN VIEW ══════════════════════════════ */}
+        {/* ═══════════════════════════ PIN VIEW ════════════════════════════════ */}
         {view === 'pin' && (
           <>
             <ModalHeader />
-
             <PinDots filled={pin.length} error={shake} />
-
             <p
               className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200 -mt-2"
               style={{ opacity: showError ? 1 : 0, minHeight: '1.25rem' }}
             >
               Invalid PIN
             </p>
-
-            <CircularKeypad
+            <Keypad
               onDigit={(d) => { if (pin.length < 4) handleDigit(d); }}
               onBack={handleBackspace}
               onCancel={onClose}
             />
-
             {user.email && (
               <button
                 onClick={() => setView('email')}
@@ -350,30 +322,24 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
           </>
         )}
 
-        {/* ══════════════════════════════ EMAIL VIEW ════════════════════════════ */}
+        {/* ═══════════════════════════ EMAIL VIEW ══════════════════════════════ */}
         {view === 'email' && (
           <>
             <div className="flex items-center gap-3 w-full">
-              <button
-                onClick={() => setView('pin')}
-                className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"
-              >
+              <button onClick={() => setView('pin')} className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors">
                 <ArrowLeft size={16} />
               </button>
               <div>
                 <h3 className="font-bold text-white text-sm">Reset PIN</h3>
-                <p className="text-xs text-white/40 mt-0.5">We'll send a verification code to your email</p>
+                <p className="text-xs text-white/40 mt-0.5">We'll send a code to your email</p>
               </div>
             </div>
-
             <div
               className="flex items-center gap-3 p-4 rounded-xl w-full"
               style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}
             >
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)' }}
-              >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)' }}>
                 <Mail size={15} className="text-blue-400" />
               </div>
               <div className="min-w-0">
@@ -381,39 +347,29 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
                 <p className="text-sm font-semibold text-white/85 truncate">{user.email}</p>
               </div>
             </div>
-
             <div className="space-y-2.5 w-full">
               <button
                 onClick={sendOtp}
                 disabled={isSending}
                 className="w-full py-3 rounded-xl text-sm font-black text-white transition-all active:scale-[0.97] disabled:opacity-60"
-                style={{
-                  background: 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)',
-                  boxShadow: '0 4px 16px -4px rgba(59,130,246,0.55)',
-                }}
+                style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)', boxShadow: '0 4px 16px -4px rgba(59,130,246,0.55)' }}
               >
                 {isSending
                   ? <span className="flex items-center justify-center gap-2"><Loader2 size={15} className="animate-spin" />Sending…</span>
                   : 'Send Code'}
               </button>
-              <button
-                onClick={() => setView('pin')}
-                className="w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors"
-              >
+              <button onClick={() => setView('pin')} className="w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors">
                 Back
               </button>
             </div>
           </>
         )}
 
-        {/* ═══════════════════════════════ OTP VIEW ═════════════════════════════ */}
+        {/* ═══════════════════════════ OTP VIEW ════════════════════════════════ */}
         {view === 'otp' && (
           <>
             <div className="flex items-center gap-3 w-full">
-              <button
-                onClick={() => setView('email')}
-                className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors"
-              >
+              <button onClick={() => setView('email')} className="p-1.5 rounded-lg text-white/40 hover:text-white/70 transition-colors">
                 <ArrowLeft size={16} />
               </button>
               <div>
@@ -421,50 +377,36 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
                 <p className="text-xs text-white/40 mt-0.5">Check your email for the 6-digit code</p>
               </div>
             </div>
-
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                timeLeft > 60
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                  : 'bg-red-500/10 border-red-500/20 text-red-400'
-              }`}
-            >
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+              timeLeft > 60 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}>
               {timeLeft > 0 ? `Expires in ${fmtTime(timeLeft)}` : 'Code expired'}
             </span>
-
             <div className="w-full">
               <div className="flex justify-center gap-1.5 mb-2">
                 {[0,1,2,3,4,5].map((i) => (
-                  <div
-                    key={i}
-                    className="w-10 h-12 rounded-xl flex items-center justify-center text-lg font-black text-white/90 transition-all"
+                  <div key={i} className="w-10 h-12 rounded-xl flex items-center justify-center text-lg font-black text-white/90 transition-all"
                     style={{
                       background: otpInput[i] ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.05)',
                       border: `1px solid ${otpInput[i] ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                    }}
-                  >
+                    }}>
                     {otpInput[i] ?? ''}
                   </div>
                 ))}
               </div>
               {otpError && <p className="text-center text-xs font-semibold text-red-400">{otpError}</p>}
             </div>
-
-            <CircularKeypad
+            <Keypad
               small
               onDigit={(d) => { if (otpInput.length < 6) { setOtpInput((p) => p + d); setOtpError(''); } }}
               onBack={() => { setOtpInput((p) => p.slice(0, -1)); setOtpError(''); }}
             />
-
             <div className="space-y-1.5 w-full">
               <button
                 onClick={verifyOtp}
                 disabled={otpInput.length !== 6 || timeLeft === 0}
                 className="w-full py-3 rounded-xl text-sm font-black text-white transition-all active:scale-[0.97] disabled:opacity-40"
-                style={{
-                  background: 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)',
-                  boxShadow: '0 4px 16px -4px rgba(59,130,246,0.55)',
-                }}
+                style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)', boxShadow: '0 4px 16px -4px rgba(59,130,246,0.55)' }}
               >
                 Verify
               </button>
@@ -479,31 +421,18 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
           </>
         )}
 
-        {/* ════════════════════════════ NEW PIN VIEW ════════════════════════════ */}
+        {/* ═══════════════════════════ NEW PIN VIEW ════════════════════════════ */}
         {view === 'newpin' && (
           <>
             <ModalHeader label={newPinStep === 'enter' ? 'Set New PIN' : 'Confirm PIN'} />
-
-            <PinDots
-              filled={newPinStep === 'enter' ? newPin.length : confirmPin.length}
-              error={newPinShake}
-            />
-
+            <PinDots filled={newPinStep === 'enter' ? newPin.length : confirmPin.length} error={newPinShake} />
             <p className="text-center text-xs text-white/40 -mt-2">
               {newPinStep === 'enter' ? 'Enter a new 4-digit PIN' : 'Re-enter to confirm'}
             </p>
-
             {newPinShake && (
-              <p className="text-center text-xs font-semibold text-red-400 -mt-3">
-                PINs don't match — try again
-              </p>
+              <p className="text-center text-xs font-semibold text-red-400 -mt-3">PINs don't match — try again</p>
             )}
-
-            <CircularKeypad
-              onDigit={handleNewPinDigit}
-              onBack={handleNewPinBackspace}
-              onCancel={onClose}
-            />
+            <Keypad onDigit={handleNewPinDigit} onBack={handleNewPinBackspace} onCancel={onClose} />
           </>
         )}
 
@@ -513,7 +442,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Main Login Screen
+// Main Login Screen — Luxury Ambient Command Hub
 // ══════════════════════════════════════════════════════════════════════════════
 const PinLoginScreen = () => {
   const users    = useStaffStore((state) => state.users);
@@ -523,68 +452,70 @@ const PinLoginScreen = () => {
   const activeUsers = users.filter((u) => u.active);
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0A0B0E] text-slate-950 dark:text-white">
+    <div className="bg-slate-100 dark:bg-[#07080B] min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
 
-      {/* Theme toggle — top right */}
-      <div className="absolute top-4 right-4 z-40">
+      {/* Ambient backlight glow — dark mode only */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none dark:block hidden" />
+
+      {/* Floating theme toggle */}
+      <div className="absolute top-6 right-6 z-30">
         <ThemeToggle />
       </div>
 
-      {/* ── Hero brand header ── */}
-      <header className="flex-shrink-0 flex flex-col items-center px-6 pt-12 pb-6">
-        {/* Logo */}
-        <div
-          className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-2 border-amber-500/40 p-2 shadow-xl shadow-amber-500/10 mb-3 mx-auto overflow-hidden flex items-center justify-center"
-          style={{ background: '#12141D' }}
-        >
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt={settings.cafeName} className="h-full w-full object-contain" />
-          ) : (
-            <span className="text-2xl font-black text-amber-500">
-              {settings.cafeName?.charAt(0)?.toUpperCase() ?? '🍽'}
-            </span>
-          )}
+      {/* ── Elevated glassmorphic hub card ── */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto rounded-3xl p-8 sm:p-12 backdrop-blur-2xl bg-white/80 dark:bg-[#10121A]/90 border border-black/10 dark:border-white/10 shadow-2xl dark:shadow-black/80 flex flex-col items-center">
+
+        {/* ── Brand hero ── */}
+        <div className="flex flex-col items-center mb-2">
+          {/* Logo */}
+          <div
+            className="w-20 h-20 rounded-2xl border-2 border-amber-500/50 p-2.5 shadow-xl shadow-amber-500/15 mb-4 overflow-hidden flex items-center justify-center"
+            style={{ background: '#161822' }}
+          >
+            {settings?.logoUrl ? (
+              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-2xl font-black text-amber-400">
+                {(settings?.cafeName || FALLBACK_NAME).charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          {/* Restaurant name — never empty */}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white text-center">
+            {settings?.cafeName || FALLBACK_NAME}
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-xs font-black tracking-[0.25em] text-amber-400 uppercase mt-1.5 text-center">
+            STAFF ACCESS • POS TERMINAL
+          </p>
+
+          {/* Instruction badge */}
+          <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-400 dark:text-zinc-300">
+            Tap Your Profile to Sign In
+          </div>
         </div>
 
-        {/* Restaurant name */}
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white text-center">
-          {settings.cafeName}
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-xs font-bold tracking-widest text-amber-400 uppercase mt-1 text-center">
-          STAFF ACCESS • POS TERMINAL
-        </p>
-
-        {/* Instruction pill */}
-        <div
-          className="inline-flex items-center justify-center mt-3 px-4 py-1 rounded-full shadow-sm mx-auto"
-          style={{ background: '#12141D', border: '1px solid rgba(255,255,255,0.10)' }}
-        >
-          <span className="text-xs font-bold text-slate-300">Tap Your Profile to Sign In</span>
-        </div>
-      </header>
-
-      {/* ── Staff horizontal badge list ── */}
-      <div className="flex-1 overflow-y-auto flex items-start justify-center px-4 pb-10">
+        {/* ── Luxury staff profile cards ── */}
         {activeUsers.length === 0 ? (
-          <div className="text-center py-20 text-slate-400 dark:text-white/30">
+          <div className="text-center py-16 text-slate-400 dark:text-white/30">
             <p className="text-sm font-semibold">No active staff accounts found.</p>
           </div>
         ) : (
-          <div className="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto mt-8">
+          <div className="flex flex-wrap justify-center gap-4 w-full mt-8 max-w-3xl mx-auto">
             {activeUsers.map((user) => (
               <button
                 key={user.id}
                 onClick={() => setSelectedUser(user)}
-                className="group w-[230px] sm:w-[240px] p-3.5 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-200 active:scale-[0.97] select-none
-                  bg-white border-2 border-slate-900 hover:bg-slate-50 shadow-sm hover:shadow-md hover:-translate-y-1
-                  dark:bg-[#12141C] dark:border dark:border-white/10 dark:hover:border-amber-500/60 dark:hover:bg-[#181B26] dark:shadow-lg dark:shadow-black/40 dark:hover:shadow-amber-500/10"
+                className="group w-[230px] sm:w-[240px] p-4 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-200 active:scale-[0.97] select-none
+                  bg-slate-100 border border-slate-300 hover:bg-slate-200 hover:border-amber-500/60 shadow-sm hover:shadow-amber-500/10 hover:-translate-y-1
+                  dark:bg-[#161824] dark:border-white/10 dark:hover:bg-[#1C2030] dark:hover:border-amber-500/60 dark:shadow-lg dark:hover:shadow-amber-500/10"
               >
                 {/* Monogram avatar */}
                 <div
                   className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black text-white shadow-inner transition-transform duration-200 group-hover:scale-105"
-                  style={{ background: '#1A1D2A', border: '1px solid rgba(255,255,255,0.10)' }}
+                  style={{ background: '#202436', border: '1px solid rgba(255,255,255,0.15)' }}
                 >
                   {initials(user.name)}
                 </div>
@@ -595,7 +526,7 @@ const PinLoginScreen = () => {
                     {user.name}
                   </span>
                   <span
-                    className={`mt-1 self-start px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${ROLE_PILL[user.role]}`}
+                    className={`mt-1 self-start px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${ROLE_PILL[user.role]}`}
                   >
                     {ROLE_LABEL[user.role]}
                   </span>
