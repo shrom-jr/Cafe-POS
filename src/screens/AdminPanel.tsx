@@ -524,6 +524,13 @@ const AdminPanel = () => {
                     Overview of your business &amp; revenue performance
                   </p>
                 </div>
+              ) : activeTab === 'menu' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Menu Catalog</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Manage categories, items &amp; pricing
+                  </p>
+                </div>
               ) : (
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
@@ -1086,28 +1093,19 @@ const MenuSection = () => {
 
   return (
     <>
-    <div className="grid md:grid-cols-[280px_1fr] gap-5">
+    <div className="grid grid-cols-12 gap-5 w-full items-stretch">
       {/* ── Left: Categories ── */}
-      <div className="space-y-3 md:sticky md:top-0 md:self-start">
-        <div className="bg-card rounded-2xl border border-border p-4">
+      <div className="col-span-12 lg:col-span-4">
+        <div className="bg-[#13151F] border border-white/15 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
           {/* ── Header row ── */}
-          <div className="mb-3">
+          <div>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground text-sm">Categories</h3>
+              <h3 className="text-base font-black text-white tracking-wide">Categories</h3>
               {/* + Add Category always visible */}
               <button
                 onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
                 data-testid="button-toggle-add-category"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
-                style={showAddCat ? {
-                  background: 'rgba(59,130,246,0.22)',
-                  color: 'rgba(147,197,253,0.95)',
-                  border: '1px solid rgba(59,130,246,0.35)',
-                } : {
-                  background: 'rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.5)',
-                  border: '1px solid rgba(255,255,255,0.09)',
-                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1"
               >
                 <Plus size={11} strokeWidth={2.5} />
                 Add Category
@@ -1170,20 +1168,16 @@ const MenuSection = () => {
 
           {/* ── Inline add form (toggleable) ── */}
           {showAddCat && (
-            <div className="mb-3 p-3 rounded-xl border border-accent/25 space-y-2" style={{ background: 'rgba(59,130,246,0.06)' }}>
+            <div className="p-4 rounded-2xl bg-[#0E1017] border border-white/20 shadow-xl space-y-3">
               {/* Mode toggle */}
-              <div className="flex gap-1 p-0.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.25)' }}>
+              <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
                 {(['sub', 'pillar'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => { setAddMode(mode); setNewCat(''); }}
-                    className="flex-1 py-1 rounded-md text-[11px] font-semibold transition-all"
-                    style={addMode === mode ? {
-                      background: 'rgba(59,130,246,0.35)',
-                      color: 'rgba(255,255,255,0.95)',
-                    } : {
-                      color: 'rgba(255,255,255,0.38)',
-                    }}
+                    className={addMode === mode
+                      ? 'flex-1 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-black uppercase tracking-wider transition-all'
+                      : 'flex-1 py-1.5 rounded-lg text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all'}
                   >
                     {mode === 'sub' ? 'Sub-Category' : 'Main Category'}
                   </button>
@@ -1204,7 +1198,7 @@ const MenuSection = () => {
                 placeholder={addMode === 'pillar' ? 'New pillar name (e.g. Desserts)' : 'Sub-category name'}
                 autoFocus
                 data-testid="input-new-category"
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
               />
 
               <div className="flex gap-1.5">
@@ -1212,7 +1206,7 @@ const MenuSection = () => {
                   <select
                     value={newCatParent}
                     onChange={(e) => setNewCatParent(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                    className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none"
                   >
                     {pillars.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -1220,33 +1214,25 @@ const MenuSection = () => {
                 <button
                   onClick={addMode === 'pillar' ? handleAddPillar : handleAddSubCategory}
                   data-testid="button-add-category"
-                  className="px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-xs font-semibold hover:brightness-110 transition-all active:scale-95"
+                  className="flex-1 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all"
                 >Add</button>
                 <button
                   onClick={() => { setShowAddCat(false); setNewCat(''); }}
-                  className="px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all"
                 ><X size={13} /></button>
               </div>
             </div>
           )}
 
           {/* ── Pillar filter tabs — single row, no wrap ── */}
-          <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
+          <div className="flex flex-wrap gap-2">
             {(['All', ...pillars]).map((f) => (
               <button
                 key={f}
                 onClick={() => handleSetPillarFilter(f)}
-                className="flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all"
-                style={pillarFilter === f ? {
-                  background: 'rgba(59,130,246,0.22)',
-                  color: 'rgba(255,255,255,0.9)',
-                  border: '1px solid rgba(59,130,246,0.35)',
-                } : {
-                  background: 'rgba(255,255,255,0.05)',
-                  color: 'rgba(255,255,255,0.38)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }}
+                className={pillarFilter === f
+                  ? 'px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20'
+                  : 'px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-200 text-xs font-bold uppercase tracking-wider transition-colors'}
               >
                 {f}
               </button>
@@ -1280,18 +1266,15 @@ const MenuSection = () => {
                   </div>
                 ) : (
                   <div
-                    className={`flex items-start justify-between px-3 py-2 rounded-xl cursor-pointer transition-all group ${
-                      selectedCat === c.id
-                        ? 'text-white'
-                        : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                    }`}
-                    style={selectedCat === c.id ? ACTIVE_STYLE : {}}
+                    className={selectedCat === c.id
+                      ? 'p-4 rounded-2xl bg-[#181B28] border-2 border-amber-500/50 border-l-4 border-l-amber-400 shadow-lg shadow-amber-500/10 flex items-center justify-between cursor-pointer transition-all group'
+                      : 'p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 flex items-center justify-between cursor-pointer transition-all group'}
                     onClick={() => setSelectedCat(c.id)}
                   >
                     <div className="flex-1 min-w-0 mr-1">
-                      <span className="text-sm font-medium break-words leading-snug">{c.name}</span>
+                      <span className="text-sm font-black text-white tracking-wide break-words leading-snug">{c.name}</span>
                       {c.parentCategory && (
-                        <span className="block text-[10px] mt-0.5 font-semibold" style={{ color: 'rgba(147,197,253,0.55)' }}>
+                        <span className="block text-[11px] font-bold uppercase tracking-wider text-amber-400/90 mt-0.5">
                           {c.subGroup ? `${c.parentCategory} • ${c.subGroup}` : c.parentCategory}
                         </span>
                       )}
@@ -1304,12 +1287,7 @@ const MenuSection = () => {
                           updateCategory(c.id, { sendToKitchen: !c.sendToKitchen });
                         }}
                         title={c.sendToKitchen ? 'KOT: ON — sends to kitchen' : 'KOT: OFF — counter/bar item'}
-                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition-all"
-                        style={
-                          c.sendToKitchen
-                            ? { background: 'rgba(251,146,60,0.18)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.35)' }
-                            : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.08)' }
-                        }
+                        className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-zinc-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"
                       >
                         {c.sendToKitchen ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
                         <span>KOT</span>
@@ -1318,7 +1296,7 @@ const MenuSection = () => {
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); setEditCatParent(c.parentCategory || ''); }}
-                          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
+                          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
                         ><Edit3 size={11} /></button>
                         <button
                           onClick={(e) => {
@@ -1330,7 +1308,7 @@ const MenuSection = () => {
                               onConfirm: () => { deleteCategory(c.id); closeModal(); toast.success('Category deleted'); },
                             });
                           }}
-                          className="p-1 rounded hover:bg-danger/20 text-white/40 hover:text-danger"
+                          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
                         ><Trash2 size={11} /></button>
                       </div>
                     </div>
@@ -1351,37 +1329,42 @@ const MenuSection = () => {
       </div>
 
       {/* ── Right: Menu Items ── */}
-      <div className="space-y-4">
-        <div className="bg-card rounded-2xl border border-border p-5">
-          <div className="flex items-center justify-between mb-4">
+      <div className="col-span-12 lg:col-span-8">
+        <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[500px]">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-foreground">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
                 {selectedCatName ? `${selectedCatName} Items` : 'Menu Items'}
+                <span className="text-xs font-bold text-zinc-300">({catItems.length})</span>
               </h3>
-              <p className="text-xs text-slate-300 mt-0.5">{catItems.length} item{catItems.length !== 1 ? 's' : ''}</p>
             </div>
             <button
               onClick={() => { setShowAddItem(!showAddItem); setItemName(''); setItemPrice(''); setItemImage(undefined); }}
               data-testid="button-toggle-add-item"
-              className="px-3.5 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold flex items-center gap-1.5 hover:brightness-110 transition-all active:scale-95"
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-1.5 hover:-translate-y-0.5"
             >
               <Plus size={14} /> Add Item
             </button>
           </div>
 
           {showAddItem && (
-            <div className="mb-4 p-4 bg-secondary/40 rounded-xl border border-white/[0.07] space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">New Item</p>
+            <div className="my-4 p-5 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+              <p className="text-lg font-black text-white tracking-tight">Add New Item</p>
               <ItemImageField image={itemImage} onChange={setItemImage} onRemove={() => setItemImage(undefined)} />
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3 items-end">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Item Name</label>
                 <input
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
                   placeholder="Item name"
                   data-testid="input-item-name"
-                  className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
                 />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Price</label>
                 <input
                   value={itemPrice}
                   onChange={(e) => setItemPrice(e.target.value)}
@@ -1389,45 +1372,46 @@ const MenuSection = () => {
                   placeholder="Price"
                   type="number"
                   data-testid="input-item-price"
-                  className="w-24 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                    className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
                 />
+                </div>
                 <button
                   onClick={handleAddItem}
                   data-testid="button-add-item-confirm"
-                  className="px-4 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:brightness-110 transition-all active:scale-95"
-                >Add</button>
+                  className="w-full sm:w-auto py-4 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all"
+                >Add Item</button>
               </div>
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="mt-4">
             {catItems.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-white/[0.06] overflow-hidden"
+                className="p-4 rounded-2xl bg-[#161824] hover:bg-[#1C2030] border border-white/10 hover:border-white/25 flex items-center justify-between transition-all group shadow-sm mb-3"
                 data-testid={`menu-item-row-${item.id}`}
               >
                 {editItem === item.id ? (
-                  <div className="p-3 space-y-3 bg-secondary/30">
+                  <div className="w-full p-3 space-y-3 bg-[#181B28] rounded-xl">
                     <ItemImageField image={editItemImage} onChange={setEditItemImage} onRemove={() => setEditItemImage(undefined)} />
                     <div className="flex gap-2 items-center">
-                      <input value={editItemName} onChange={(e) => setEditItemName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
-                      <input value={editItemPrice} onChange={(e) => setEditItemPrice(e.target.value)} type="number" className="w-24 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
-                      <button onClick={handleSaveEdit} className="p-2 rounded-lg bg-success/15 text-success hover:bg-success/25 transition-colors"><Save size={15} /></button>
-                      <button onClick={() => setEditItem(null)} className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"><X size={15} /></button>
+                      <input value={editItemName} onChange={(e) => setEditItemName(e.target.value)} className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none" />
+                      <input value={editItemPrice} onChange={(e) => setEditItemPrice(e.target.value)} type="number" className="w-28 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none" />
+                      <button onClick={handleSaveEdit} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><Save size={15} /></button>
+                      <button onClick={() => setEditItem(null)} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><X size={15} /></button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3.5 px-4 py-3 bg-secondary/20 hover:bg-secondary/40 transition-colors group">
+                  <div className="flex items-center gap-3.5 w-full">
                     {item.image && (
                       <img src={item.image} alt={item.name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                      <p className="text-xs text-slate-200 font-semibold mt-0.5">Rs. {fmt(item.price)}</p>
+                      <p className="text-base font-black text-white tracking-wide group-hover:text-amber-200 transition-colors truncate">{item.name}</p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => startEdit(item)} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"><Edit3 size={14} /></button>
+                    <span className="text-base font-black text-amber-400 tracking-tight font-mono whitespace-nowrap">Rs. {fmt(item.price)}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(item)} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><Edit3 size={14} /></button>
                       <button
                         onClick={() => setConfirmModal({
                           open: true,
@@ -1435,7 +1419,7 @@ const MenuSection = () => {
                           description: `This will permanently remove "${item.name}" from the menu.`,
                           onConfirm: () => { deleteMenuItem(item.id); closeModal(); toast.success('Item deleted'); },
                         })}
-                        className="p-2 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-colors"
+                        className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
                       ><Trash2 size={14} /></button>
                     </div>
                   </div>
