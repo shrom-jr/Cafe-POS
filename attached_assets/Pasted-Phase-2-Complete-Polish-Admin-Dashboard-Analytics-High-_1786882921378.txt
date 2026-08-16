@@ -1,0 +1,63 @@
+Phase 2 Complete Polish: Admin Dashboard & Analytics High-Contrast Carbon Redesign
+
+Refactor `src/screens/AdminPortal.tsx` (and related sub-components like `AdminDashboard.tsx`, `AdminSidebar.tsx`, and analytics charts):
+
+1. High-Contrast Admin Sidebar (`AdminSidebar.tsx`):
+   - Container: `w-64 bg-[#13151F] border-r border-white/15 min-h-[calc(100vh-64px)] p-4 flex flex-col justify-between`.
+   - Navigation Links:
+     * Active Tab (e.g. Dashboard): `w-full px-4 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm tracking-wide shadow-lg shadow-amber-500/25 flex items-center gap-3 transition-all`.
+     * Inactive Tabs (Menu, Tables, Reports, Customers, Inventory, Expenses, Settings):
+       `w-full px-4 py-3 rounded-xl bg-transparent text-zinc-200 hover:text-white hover:bg-white/10 font-bold text-sm tracking-wide flex items-center gap-3 transition-all`.
+   - Remove the dim "CAFÉ POS" footer text at the bottom.
+
+2. Hero Header & Live Status Telemetry Bar (`AdminDashboard.tsx`):
+   - Header Title:
+     * Title: `text-2xl sm:text-3xl font-black text-white tracking-tight` ("Executive Dashboard").
+     * Subtitle: `text-xs font-black uppercase tracking-widest text-amber-400 mt-1` ("OVERVIEW OF YOUR BUSINESS & REVENUE PERFORMANCE").
+   - Live Café Status Strip:
+     * Container: `mt-5 p-4 rounded-2xl bg-[#13151F] border border-emerald-500/40 shadow-lg shadow-emerald-500/5 flex flex-wrap items-center justify-between gap-3`.
+     * Left Status: `<div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" /> LIVE VENUE TELEMETRY</div>`.
+     * Metric Chips:
+       - Active Tables: `px-3.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider`.
+       - Open Orders: `px-3.5 py-1 rounded-xl bg-sky-500/15 border border-sky-500/40 text-sky-300 text-xs font-black uppercase tracking-wider`.
+
+3. High-Contrast 4-Column Metric Summary Grid:
+   - Grid: `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6`.
+   - Card 1 (Today's Revenue):
+     * Container: `p-5 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 flex flex-col justify-between min-h-[140px]`.
+     * Label: `text-xs font-black uppercase tracking-wider text-amber-400`.
+     * Value: `text-3xl font-black text-white tracking-tight mt-2`.
+   - Card 2 (Total Orders Today):
+     * Container: `p-5 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 shadow-xl shadow-sky-500/5 flex flex-col justify-between min-h-[140px]`.
+     * Label: `text-xs font-black uppercase tracking-wider text-sky-400`.
+     * Value: `text-3xl font-black text-white tracking-tight mt-2`.
+   - Card 3 (Avg. Order Value):
+     * Container: `p-5 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/5 flex flex-col justify-between min-h-[140px]`.
+     * Label: `text-xs font-black uppercase tracking-wider text-emerald-400`.
+     * Value: `text-3xl font-black text-white tracking-tight mt-2`.
+   - Card 4 (Digital vs Cash Share):
+     * Container: `p-5 rounded-2xl bg-[#13151F] border-2 border-purple-500/40 shadow-xl shadow-purple-500/5 flex flex-col justify-between min-h-[140px]`.
+     * Label: `text-xs font-black uppercase tracking-wider text-purple-400`.
+     * Value: `text-3xl font-black text-white tracking-tight mt-2`.
+     * Progress Track: `h-2 rounded-full bg-white/10 overflow-hidden flex mt-2`.
+
+4. Analytics & Peak Hours Section:
+   - Layout: `grid grid-cols-12 gap-5 mt-6`.
+   - Left Card (Today's Peak Hours - `col-span-12 lg:col-span-8`):
+     * Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[380px]`.
+     * Header: `text-base font-black text-white tracking-wide` with subtitle `text-xs font-bold text-amber-400 tracking-wider uppercase mt-0.5`.
+     * Axis Labels & Gridlines:
+       - Y-Axis & X-Axis: Replace dark gray with high-contrast `text-xs font-mono font-bold text-zinc-200`.
+       - Grid dashed lines: `border-white/15`.
+   - Right Card (Top Selling Items - `col-span-12 lg:col-span-4`):
+     * Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[380px]`.
+     * Header: `text-base font-black text-white tracking-wide`.
+     * Empty State Box:
+       - `flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4`.
+       - Icon: `text-4xl text-amber-400 mb-2`.
+       - Text: `<p className="text-sm font-black text-white">No sales recorded today yet.</p>`.
+       - Subtext: `<p className="text-xs font-bold text-zinc-300 mt-1">Items will appear here in real-time as orders are paid.</p>`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any revenue aggregation formulas, order state calculations, Firebase listeners, or other screens.
+- Run `npm run build` to confirm zero TypeScript or build errors.

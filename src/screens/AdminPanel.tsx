@@ -470,15 +470,13 @@ const AdminPanel = () => {
         {/* ── Sidebar ── */}
         <aside
           className={`
-            flex-shrink-0 flex flex-col border-r border-white/[0.06] z-50
+            w-64 bg-[#13151F] border-r border-white/15 min-h-[calc(100vh-64px)] p-4 flex flex-col justify-between flex-shrink-0 z-50
             fixed sm:static inset-y-0 left-0
-            w-52
             transition-transform duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}
           `}
-          style={{ background: SIDEBAR_BG }}
         >
-          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto pt-5">
+          <nav className="flex-1 space-y-1 overflow-y-auto">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -486,22 +484,16 @@ const AdminPanel = () => {
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
                   data-testid={`tab-admin-${tab.id}`}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
-                    isActive
-                      ? 'text-white'
-                      : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                  style={isActive ? ACTIVE_STYLE : {}}
+                  className={isActive
+                    ? 'w-full px-4 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm tracking-wide shadow-lg shadow-amber-500/25 flex items-center gap-3 transition-all text-left'
+                    : 'w-full px-4 py-3 rounded-xl bg-transparent text-zinc-200 hover:text-white hover:bg-white/10 font-bold text-sm tracking-wide flex items-center gap-3 transition-all text-left'}
                 >
-                  <span className={isActive ? 'text-blue-400' : ''}>{tab.icon}</span>
+                  <span className={isActive ? 'text-slate-950' : 'text-zinc-300'}>{tab.icon}</span>
                   {tab.label}
                 </button>
               );
             })}
           </nav>
-          <div className="p-4 border-t border-white/[0.05]">
-            <p className="text-[10px] text-white/20 uppercase tracking-widest font-semibold">Café POS</p>
-          </div>
         </aside>
 
         {/* ── Main content ── */}
@@ -525,7 +517,16 @@ const AdminPanel = () => {
 
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
             <div className="hidden sm:block">
-              <PageHeader title={active.label} subtitle={active.subtitle} />
+              {activeTab === 'dashboard' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Executive Dashboard</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Overview of your business &amp; revenue performance
+                  </p>
+                </div>
+              ) : (
+                <PageHeader title={active.label} subtitle={active.subtitle} />
+              )}
             </div>
             {activeTab === 'dashboard' && <DashboardSection />}
             {activeTab === 'menu'      && <MenuSection />}
@@ -679,89 +680,54 @@ const DashboardSection = () => {
   return (
     <div className="space-y-5">
       {/* ── Live status bar ── */}
-      <div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800/80 bg-slate-900/50 text-xs text-muted-foreground"
-      >
-        <span className="relative flex h-2 w-2 flex-shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-        </span>
-        <span className="font-semibold text-emerald-400">Live Café Status</span>
-        <span className="text-slate-600">·</span>
-        <span><span className="font-semibold text-foreground">{activeTables}</span> Active Table{activeTables !== 1 ? 's' : ''}</span>
-        <span className="text-slate-600">·</span>
-        <span><span className="font-semibold text-foreground">{openOrders}</span> Open Order{openOrders !== 1 ? 's' : ''}</span>
-      </div>
-
-      {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Revenue */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-blue-500/30 hover:shadow-[0_0_20px_-4px_rgba(59,130,246,0.25)] transition-all cursor-default">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <DollarSign size={14} className="text-blue-400" />
-            </div>
-            <TrendBadge curr={todaySales} prev={yesterdaySales} />
+        <div className="mt-5 p-4 rounded-2xl bg-[#13151F] border border-emerald-500/40 shadow-lg shadow-emerald-500/5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            LIVE VENUE TELEMETRY
           </div>
-          <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(todaySales)}</p>
-          <p className="text-xs font-semibold text-slate-200 mt-1">Today's Revenue</p>
-        </div>
-
-        {/* Orders */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-emerald-500/30 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.25)] transition-all cursor-default">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <ShoppingCart size={14} className="text-emerald-400" />
-            </div>
-            <TrendBadge curr={todayOrders} prev={yesterdayOrders} />
-          </div>
-          <p className="text-2xl font-bold text-foreground leading-tight">{todayOrders}</p>
-          <p className="text-xs font-semibold text-slate-200 mt-1">Total Orders Today</p>
-        </div>
-
-        {/* AOV */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-amber-500/30 hover:shadow-[0_0_20px_-4px_rgba(245,158,11,0.25)] transition-all cursor-default">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <TrendingUp size={14} className="text-amber-400" />
-            </div>
-            <TrendBadge curr={todayAOV} prev={yesterdayAOV} />
-          </div>
-          <p className="text-2xl font-bold text-foreground leading-tight">Rs. {fmt(Math.round(todayAOV))}</p>
-          <p className="text-xs font-semibold text-slate-200 mt-1">Avg. Order Value</p>
-        </div>
-
-        {/* Cash vs Digital — FIX: show 0% digital when revenue is zero */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 hover:border-slate-700 hover:border-purple-500/30 hover:shadow-[0_0_20px_-4px_rgba(168,85,247,0.25)] transition-all cursor-default">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <CreditCard size={14} className="text-purple-400" />
-            </div>
-            <span className="text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
-              {todaySales > 0 ? `${Math.round(cashRatio)}%` : '0%'} Cash
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-3.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider">
+              Active Tables: {activeTables}
+            </span>
+            <span className="px-3.5 py-1 rounded-xl bg-sky-500/15 border border-sky-500/40 text-sky-300 text-xs font-black uppercase tracking-wider">
+              Open Orders: {openOrders}
             </span>
           </div>
-          <p className="text-2xl font-bold text-foreground leading-tight">{digitalShare}%</p>
-          <p className="text-xs font-semibold text-slate-200 mt-1">Digital Share</p>
-          <div className="mt-2.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${cashRatio}%`, background: 'linear-gradient(90deg,#f59e0b,#8b5cf6)' }}
-            />
+        </div>
+
+      {/* ── KPI cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div className="p-5 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 flex flex-col justify-between min-h-[140px]">
+            <p className="text-xs font-black uppercase tracking-wider text-amber-400">Today's Revenue</p>
+            <p className="text-3xl font-black text-white tracking-tight mt-2">Rs. {fmt(todaySales)}</p>
           </div>
-          <div className="flex justify-between mt-1 text-[10px] font-medium text-slate-300">
-            <span>Cash</span><span>Digital</span>
+          <div className="p-5 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 shadow-xl shadow-sky-500/5 flex flex-col justify-between min-h-[140px]">
+            <p className="text-xs font-black uppercase tracking-wider text-sky-400">Total Orders Today</p>
+            <p className="text-3xl font-black text-white tracking-tight mt-2">{todayOrders}</p>
+          </div>
+          <div className="p-5 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/5 flex flex-col justify-between min-h-[140px]">
+            <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Avg. Order Value</p>
+            <p className="text-3xl font-black text-white tracking-tight mt-2">Rs. {fmt(Math.round(todayAOV))}</p>
+          </div>
+          <div className="p-5 rounded-2xl bg-[#13151F] border-2 border-purple-500/40 shadow-xl shadow-purple-500/5 flex flex-col justify-between min-h-[140px]">
+            <p className="text-xs font-black uppercase tracking-wider text-purple-400">Digital vs Cash Share</p>
+            <p className="text-3xl font-black text-white tracking-tight mt-2">{digitalShare}% Digital</p>
+            <div className="h-2 rounded-full bg-white/10 overflow-hidden flex mt-2">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${cashRatio}%`, background: 'linear-gradient(90deg,#f59e0b,#8b5cf6)' }}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
       {/* ── Main grid: peak hours + top items ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[65%_1fr] gap-4">
+      <div className="grid grid-cols-12 gap-5 mt-6">
         {/* Peak hours bar chart — Y-axis shows Rs. revenue */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
-          <h3 className="font-semibold text-foreground">Today's Peak Hours</h3>
-          <p className="text-xs text-slate-300 mt-0.5 mb-4">Hourly revenue (Rs.)</p>
-          <ResponsiveContainer width="100%" height={200}>
+        <div className="col-span-12 lg:col-span-8 bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[380px]">
+          <h3 className="text-base font-black text-white tracking-wide">Today's Peak Hours</h3>
+          <p className="text-xs font-bold text-amber-400 tracking-wider uppercase mt-0.5">Hourly revenue (Rs.)</p>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={hourlyData} barSize={8} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
@@ -769,12 +735,12 @@ const DashboardSection = () => {
                   <stop offset="100%" stopColor="rgba(99,102,241,0.45)" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-              <XAxis dataKey="hour" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 500 }} tickLine={false} axisLine={false} interval={0} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={false} />
+              <XAxis dataKey="hour" stroke="#e4e4e7" tick={{ fill: '#e4e4e7', fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }} tickLine={false} axisLine={false} interval={0} />
               {/* FIX: Y-axis values formatted as Rs. */}
-              <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
+              <YAxis stroke="#e4e4e7" tick={{ fill: '#e4e4e7', fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }} tickLine={false} axisLine={false} width={56} tickFormatter={yAxisFmt} domain={[0, (dataMax: number) => Math.max(1000, dataMax)]} />
               <Tooltip
-                contentStyle={{ background: '#0d1525', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12 }}
+                contentStyle={{ background: '#12141D', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 12 }}
                 formatter={(v: number) => [`Rs. ${fmt(v)}`, 'Revenue']}
               />
               <Bar dataKey="sales" fill="url(#peakGrad)" radius={[6, 6, 0, 0]} />
@@ -783,15 +749,13 @@ const DashboardSection = () => {
         </div>
 
         {/* Top selling items */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
-          <h3 className="font-semibold text-foreground mb-4">Top Selling Items</h3>
+        <div className="col-span-12 lg:col-span-4 bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[380px]">
+          <h3 className="text-base font-black text-white tracking-wide">Top Selling Items</h3>
           {topItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-slate-300">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <ShoppingCart size={20} className="text-slate-300 opacity-70" />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">No sales today yet</p>
-              <p className="text-xs text-slate-400 mt-0.5">Items appear after orders close</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
+              <ShoppingCart size={36} className="text-4xl text-amber-400 mb-2" />
+              <p className="text-sm font-black text-white">No sales recorded today yet.</p>
+              <p className="text-xs font-bold text-zinc-300 mt-1">Items will appear here in real-time as orders are paid.</p>
             </div>
           ) : (
             <div className="space-y-3.5">
