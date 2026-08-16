@@ -102,7 +102,7 @@ const OverflowGrid = ({
 // ── Area-specific blueprint sections ─────────────────────────────────────────
 
 /**
- * First Floor (Huts & Hall) — proportional 12-column deck blueprint
+ * First Floor (Huts) — proportional 12-column deck blueprint
  *
  *  Col 1 │ H3-B 75px │
  *         │ H3-A 75px │
@@ -110,7 +110,7 @@ const OverflowGrid = ({
  *  Col 2 │ H2-B 75px │
  *         │ H2-A 75px │
  *         │ T-2  75px │
- *  Col 3 │ H1 full-height hall │
+ *  Col 3 │ H1 standard hut │
  */
 const FirstFloorBlueprint = ({
   tables, orderData, onTableClick,
@@ -126,7 +126,7 @@ const FirstFloorBlueprint = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-12 items-stretch gap-4">
+      <div className="grid grid-cols-12 items-start gap-4">
         {/* Hut 3 */}
         <div className="col-span-4 flex flex-col gap-2">
           <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
@@ -139,9 +139,9 @@ const FirstFloorBlueprint = ({
           <Slot table={h2a} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
           <Slot table={t2} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
         </div>
-        {/* Hall – full column height */}
-        <div className="col-span-4 flex min-h-[292px] flex-col">
-          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="table-card-tall h-full min-h-[292px] flex-1" />
+        {/* Hut 1 */}
+        <div className="col-span-4 flex flex-col">
+          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="h-[140px] min-h-[140px]" />
         </div>
       </div>
       <OverflowGrid tables={overflow} orderData={orderData} onTableClick={onTableClick} />

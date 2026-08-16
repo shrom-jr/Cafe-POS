@@ -39,11 +39,7 @@ const TableCard = ({
 }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
   const isActive = table.status !== 'free';
-  const isGroupHall = table.number.trim().toUpperCase() === 'H1';
-  const isTall = className.split(/\s+/).some(c => c === 'table-card-tall' || c === 'h-full');
-  const displayName = isTall && isGroupHall
-    ? 'H1 - GROUP HALL'
-    : tableDisplayName(table.number);
+  const displayName = tableDisplayName(table.number);
 
   const statusLabel = table.status === 'billing' ? 'BILLING' : 'OCCUPIED';
   const statusDot   = table.status === 'billing'
@@ -75,12 +71,12 @@ const TableCard = ({
         </div>
       ) : (
         /* ── OCCUPIED / BILLING state ── */
-        <div className="h-full w-full flex flex-col justify-between p-2.5 box-border overflow-hidden">
+        <div className="h-full w-full flex flex-col justify-between p-3 box-border overflow-hidden">
           {/* Row 1: table name + status badge */}
           <div className="flex min-w-0 items-center justify-between gap-1.5">
             <span
               title={displayName}
-              className="min-w-0 truncate text-lg font-black leading-tight tracking-tight text-slate-950 dark:text-white"
+              className="min-w-0 truncate text-lg font-black leading-tight tracking-tight text-white dark:text-white"
             >
               {displayName}
             </span>
@@ -97,18 +93,18 @@ const TableCard = ({
           )}
 
           {/* Row 2: guest count + optional customer pill */}
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-            <span>👤 {table.pax ?? 1}{(table.pax ?? 1) === 1 ? ' Guest' : 'g'}</span>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 dark:text-slate-300">
+            <span>👤 {table.pax ?? 1} Guests</span>
             {customerName && (
-              <span className="max-w-[110px] min-w-0 truncate rounded border border-amber-500/30 bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+              <span className="max-w-[120px] min-w-0 truncate rounded border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Row 3: timer + item count */}
-          <div className="flex items-center justify-between border-t border-white/5 pt-1 text-xs font-bold text-slate-700 dark:text-slate-300">
-            <span className="tabular-nums text-amber-600 dark:text-amber-400">⏱️ {timer || '—'}</span>
+          <div className="flex items-center justify-between border-t border-white/10 pt-1.5 text-xs font-bold text-slate-300 dark:text-slate-300">
+            <span className="tabular-nums text-amber-400">⏱️ {timer || '—'}</span>
             <span>{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
           </div>
         </div>
