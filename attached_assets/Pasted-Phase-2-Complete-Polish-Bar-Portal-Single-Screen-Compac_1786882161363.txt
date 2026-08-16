@@ -1,0 +1,42 @@
+Phase 2 Complete Polish: Bar Portal Single-Screen Compact Layout & Carbon-Black Downward Dropdown
+
+Refactor `src/screens/BarPortal.tsx` (and related dropdown/modal subcomponents) to fit the entire page within a single desktop viewport (zero scrolling) and replace the upward navy select with a custom downward carbon menu:
+
+1. Single-Screen Viewport Fit (`BarPortal.tsx`):
+   - Wrap the entire page inside a fixed-height layout container:
+     `max-w-7xl mx-auto px-4 py-3.5 h-[calc(100vh-68px)] flex flex-col justify-between gap-3 overflow-hidden`.
+   
+   A. COMPACT TOP METRICS (Reduced Height):
+      - Container Grid: `grid grid-cols-3 gap-3.5`.
+      - Cards (Entries, Total Spend, Items Updated):
+        * Container: `py-2.5 px-4 rounded-xl bg-[#13151F] border border-white/15 flex flex-col justify-center h-[72px] shadow-md`.
+        * Label: `text-[10px] font-black uppercase tracking-wider text-amber-400`.
+        * Value: `text-2xl font-black text-white mt-0.5`. (Total Spend in `text-emerald-400 font-black text-2xl`).
+
+   B. COMPACT "LOG BAR ENTRY" FORM (Left Column):
+      - Container: `bg-[#13151F] border border-white/15 p-4 rounded-2xl shadow-xl flex flex-col justify-between flex-1 min-h-0 gap-2`.
+      - Labels ("PRODUCT", "ENTRY TYPE", "QUANTITY", "TOTAL COST", "SUPPLIER"):
+        * `text-[11px] font-black uppercase tracking-wider text-amber-400 mb-0.5 block`.
+      - Inputs: `w-full bg-[#181B26] border border-white/20 focus:border-amber-400 text-white font-bold rounded-lg px-3 py-2 text-xs placeholder:text-zinc-500 outline-none shadow-inner`.
+      - Entry Type Toggle: `py-1.5 px-3 rounded-lg text-xs font-black uppercase`.
+      - Submit Button: `w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-[0.98] transition-all`.
+
+   C. RIGHT COLUMN ("TODAY'S RESTOCKS"):
+      - Container: `bg-[#13151F] border border-white/15 p-4 rounded-2xl shadow-xl flex flex-col flex-1 min-h-0`.
+      - Empty State Box: `flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-white/10 rounded-xl bg-white/[0.02]`.
+
+2. Custom Downward Carbon Dropdown (NO Navy Blue, NO Upward Flipping):
+   - Replace the native `<select>` element with a custom clickable dropdown component (`relative w-full`):
+     * Trigger Box: `w-full bg-[#181B26] border border-white/20 hover:border-amber-400 focus:border-amber-400 text-white font-bold rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer shadow-inner`.
+     * Dropdown Menu (Forces Downward Display):
+       `absolute top-full left-0 right-0 mt-1.5 z-50 max-h-56 overflow-y-auto rounded-xl bg-[#12141D] border-2 border-white/15 shadow-2xl shadow-black p-1.5 flex flex-col gap-0.5`.
+     * Category Headers (e.g., "ALCOHOL", "BEVERAGES"):
+       `px-2.5 py-1 text-[10px] font-black tracking-widest text-amber-400 uppercase bg-white/[0.03] rounded-md sticky top-0`.
+     * Option Items:
+       `px-3 py-1.5 rounded-lg text-xs font-bold text-zinc-100 hover:bg-amber-500 hover:text-slate-950 cursor-pointer transition-colors flex items-center justify-between`.
+
+3. Keep Business Logic Intact:
+   - Retain all bar stock increment/decrement math, product creation modal logic, and Firebase sync handlers.
+
+STRICT CONSTRAINTS:
+- Run `npm run build` to confirm zero TypeScript or build errors.
