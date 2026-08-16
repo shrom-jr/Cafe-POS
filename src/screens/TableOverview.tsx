@@ -24,14 +24,16 @@ function useClock() {
 const AREA_FIRST_FLOOR = 'First Floor (Huts & Hall)';
 const AREA_LOUNGE      = 'Sofa & Lounge';
 const AREA_BAR         = 'Bar Counter';
+const AREA_HUTS        = 'Private Huts';
 const AREA_CABINS      = 'Private Cabins';
-const KNOWN_VENUE_AREAS = new Set([AREA_FIRST_FLOOR, AREA_LOUNGE, AREA_BAR, AREA_CABINS]);
+const KNOWN_VENUE_AREAS = new Set([AREA_FIRST_FLOOR, AREA_LOUNGE, AREA_BAR, AREA_HUTS, AREA_CABINS]);
 
 // Canonical table names per area (lowercase for membership check)
 const KNOWN_FIRST_FLOOR = new Set(['h3-b','h3-a','t-1','h2-b','h2-a','t-2','h1']);
 const KNOWN_LOUNGE      = new Set(['sofa','l4','l3','l2','l1']);
 const KNOWN_BAR         = new Set(['bar 1','bar 2']);
-const KNOWN_CABINS      = new Set(['r1','r2','r3','r4','r5','r6','r7']);
+const KNOWN_HUTS        = new Set(['r1','r2','r3','r4']);
+const KNOWN_CABINS      = new Set(['r5','r6','r7']);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function findTable(tables: CafeTable[], name: string): CafeTable | undefined {
@@ -152,17 +154,19 @@ const FirstFloorBlueprint = ({
 /**
  * Ground Floor 3-column composite blueprint.
  *
- *  LEFT (Sofa & Lounge) │ MIDDLE (Bar Counter) │ RIGHT (Private Cabins)
+ *  LEFT (Sofa & Lounge) │ MIDDLE (Bar Counter) │ RIGHT (Private Huts + Cabins)
  *  Sofa h-70px          │ Bar 1 │ Bar 2 h-70px  │ R3 │ R1  h-75px
  *  L4 │ L3  h-75px      │ 🅿️ Parking badge     │ R4 │ R2  h-75px
- *  L2 │ L1               │ ⛩️ Main Gate badge    │ R5 │ R6 │ R7 h-70px
+ *  L2 │ L1               │ ⛩️ Main Gate badge    │ R5 │ R6
+ *  📺 TV Area            │                       │ R7
  *  📺 TV Area            │                       │
  */
 const GroundFloorBlueprint = ({
-  loungeTs, barTs, cabinTs, orderData, onTableClick,
+  loungeTs, barTs, hutTs, cabinTs, orderData, onTableClick,
 }: {
   loungeTs: CafeTable[];
   barTs:    CafeTable[];
+  hutTs:    CafeTable[];
   cabinTs:  CafeTable[];
   orderData: OrderData;
   onTableClick: (t: CafeTable) => void;
@@ -178,13 +182,14 @@ const GroundFloorBlueprint = ({
   const bar2 = findTable(barTs, 'Bar 2');
   const overflowBar = overflowTables(barTs, KNOWN_BAR);
 
-  const r1 = findTable(cabinTs, 'R1');
-  const r2 = findTable(cabinTs, 'R2');
-  const r3 = findTable(cabinTs, 'R3');
-  const r4 = findTable(cabinTs, 'R4');
+  const r1 = findTable(hutTs, 'R1');
+  const r2 = findTable(hutTs, 'R2');
+  const r3 = findTable(hutTs, 'R3');
+  const r4 = findTable(hutTs, 'R4');
   const r5 = findTable(cabinTs, 'R5');
   const r6 = findTable(cabinTs, 'R6');
   const r7 = findTable(cabinTs, 'R7');
+  const overflowHuts = overflowTables(hutTs, KNOWN_HUTS);
   const overflowCabins = overflowTables(cabinTs, KNOWN_CABINS);
 
   return (
@@ -217,21 +222,24 @@ const GroundFloorBlueprint = ({
         <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
-      {/* ── RIGHT: Private Cabins ── */}
+      {/* ── RIGHT: Private Huts + Private Cabins ── */}
       <div className="col-span-4 flex flex-col gap-3">
-        <AreaHeader label="Private Cabins" areaIndex={3} />
-        {/* Back Quad: R3/R1 top row, R4/R2 bottom row */}
+        <AreaHeader label="Private Huts" areaIndex={3} />
+        {/* Private Huts: R3/R1 top row, R4/R2 bottom row */}
         <div className="grid grid-cols-2 gap-3">
           <Slot table={r3} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
           <Slot table={r1} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
           <Slot table={r4} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
           <Slot table={r2} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
-        {/* Front Strip: all three cabins stacked vertically */}
-        <div className="flex flex-col gap-3">
-          <Slot table={r5} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
-          <Slot table={r6} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
-          <Slot table={r7} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
+        <OverflowGrid tables={overflowHuts} orderData={orderData} onTableClick={onTableClick} />
+
+        <AreaHeader label="Private Cabins" areaIndex={4} />
+        {/* Private Cabins: R5/R6 top row, R7 on the lower-left */}
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={r5} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={r6} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={r7} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
         <OverflowGrid tables={overflowCabins} orderData={orderData} onTableClick={onTableClick} />
       </div>
@@ -255,8 +263,9 @@ const VenueBlueprintRenderer = ({
   const firstFloorTs    = tablesByArea[AREA_FIRST_FLOOR] ?? [];
   const loungeTs        = tablesByArea[AREA_LOUNGE]      ?? [];
   const barTs           = tablesByArea[AREA_BAR]         ?? [];
+  const hutTs           = tablesByArea[AREA_HUTS]        ?? [];
   const cabinTs         = tablesByArea[AREA_CABINS]      ?? [];
-  const groundFloorVisible = loungeTs.length > 0 || barTs.length > 0 || cabinTs.length > 0;
+  const groundFloorVisible = loungeTs.length > 0 || barTs.length > 0 || hutTs.length > 0 || cabinTs.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4">
@@ -284,6 +293,7 @@ const VenueBlueprintRenderer = ({
           <GroundFloorBlueprint
             loungeTs={loungeTs}
             barTs={barTs}
+            hutTs={hutTs}
             cabinTs={cabinTs}
             orderData={tableOrderData}
             onTableClick={onTableClick}
@@ -335,11 +345,12 @@ const SectionRenderer = ({
     );
   }
 
-  if (section === AREA_LOUNGE || section === AREA_BAR || section === AREA_CABINS) {
+  if (section === AREA_LOUNGE || section === AREA_BAR || section === AREA_HUTS || section === AREA_CABINS) {
     return (
       <GroundFloorBlueprint
         loungeTs={section === AREA_LOUNGE ? tables : (tablesByArea[AREA_LOUNGE] ?? [])}
         barTs={section === AREA_BAR ? tables : (tablesByArea[AREA_BAR] ?? [])}
+        hutTs={section === AREA_HUTS ? tables : (tablesByArea[AREA_HUTS] ?? [])}
         cabinTs={section === AREA_CABINS ? tables : (tablesByArea[AREA_CABINS] ?? [])}
         orderData={tableOrderData}
         onTableClick={onTableClick}

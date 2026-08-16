@@ -15,6 +15,7 @@ export const VENUE_AREA_ORDER = [
   'First Floor (Huts & Hall)',
   'Sofa & Lounge',
   'Bar Counter',
+  'Private Huts',
   'Private Cabins',
 ];
 
@@ -36,18 +37,21 @@ export const VENUE_TABLES: Array<{ number: string; section: string }> = [
   // Area 3 – Bar Counter
   { number: 'Bar 1', section: 'Bar Counter' },
   { number: 'Bar 2', section: 'Bar Counter' },
-  // Area 4 – Private Cabins
-  { number: 'R1', section: 'Private Cabins' },
-  { number: 'R2', section: 'Private Cabins' },
-  { number: 'R3', section: 'Private Cabins' },
-  { number: 'R4', section: 'Private Cabins' },
+  // Area 4 – Private Huts
+  { number: 'R1', section: 'Private Huts' },
+  { number: 'R2', section: 'Private Huts' },
+  { number: 'R3', section: 'Private Huts' },
+  { number: 'R4', section: 'Private Huts' },
+  // Area 5 – Private Cabins
   { number: 'R5', section: 'Private Cabins' },
   { number: 'R6', section: 'Private Cabins' },
   { number: 'R7', section: 'Private Cabins' },
 ];
 
-// Cabin table numbers (lowercase) — any of these in a legacy section get migrated
-const CABIN_TABLE_NAMES = new Set(['r1','r2','r3','r4','r5','r6','r7']);
+// Private hut/cabin table numbers (lowercase) — migrated to their canonical areas
+const PRIVATE_HUT_NAMES = new Set(['r1','r2','r3','r4']);
+const PRIVATE_CABIN_NAMES = new Set(['r5','r6','r7']);
+const PRIVATE_TABLE_NAMES = new Set([...PRIVATE_HUT_NAMES, ...PRIVATE_CABIN_NAMES]);
 
 // Legacy phantom section names that should never appear as filter tabs
 const LEGACY_SECTIONS = new Set([
@@ -83,7 +87,8 @@ function canonicalSection(tableNumber: string): string | undefined {
  *
  * Also runs a one-shot migration: any table whose `section` is a legacy phantom
  * (e.g. "ground-floor") is re-assigned to the correct canonical area, and any
- * cabin table (R1–R7) in a non-canonical section is moved to "Private Cabins".
+ * private hut/cabin table (R1–R7) in a non-canonical section is moved to its
+ * dedicated canonical area.
  */
 export async function ensureVenueSeed(currentTables: CafeTable[]): Promise<void> {
   let tables = [...currentTables];
@@ -103,17 +108,18 @@ export async function ensureVenueSeed(currentTables: CafeTable[]): Promise<void>
         return { ...t, section: correct };
       }
       // Unknown table in a legacy section — assign to bar/lounge catch-all
-      if (CABIN_TABLE_NAMES.has(tableKey)) {
+      if (PRIVATE_TABLE_NAMES.has(tableKey)) {
         dirty = true;
-        return { ...t, section: 'Private Cabins' };
+        return { ...t, section: canonicalSection(t.number) ?? 'Private Cabins' };
       }
     }
 
-    // Fix known cabin tables that are in any non-canonical section
-    if (CABIN_TABLE_NAMES.has(tableKey) && t.section !== 'Private Cabins') {
+    // Fix known private hut/cabin tables that are in any non-canonical section
+    const canonical = canonicalSection(t.number);
+    if (PRIVATE_TABLE_NAMES.has(tableKey) && canonical && t.section !== canonical) {
       dirty = true;
-      console.log(`[Venue Seed] Migrating cabin "${t.number}" from "${t.section}" → "Private Cabins"`);
-      return { ...t, section: 'Private Cabins' };
+      console.log(`[Venue Seed] Migrating private table "${t.number}" from "${t.section}" → "${canonical}"`);
+      return { ...t, section: canonical };
     }
 
     return t;
