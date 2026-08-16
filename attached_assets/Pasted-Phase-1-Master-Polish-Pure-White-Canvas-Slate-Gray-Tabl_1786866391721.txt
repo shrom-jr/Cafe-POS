@@ -1,0 +1,28 @@
+Phase 1 Master Polish: Pure White Canvas & Slate-Gray Table Tiles in Light Mode
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx` to invert the light-mode contrast hierarchy while keeping Dark Mode completely untouched:
+
+1. Pure White Canvas & Header (`AppLayout.tsx`, `TableOverview.tsx`):
+   - Page Canvas: In Light Mode, set the main page background to pure bright white (`bg-white dark:bg-[#0A0B0E]`). Remove any gray or cyan background tints.
+   - Header Bar: Pure white with clean hairline divider (`bg-white dark:bg-[#10121A] border-b border-slate-200 dark:border-white/10`).
+   - Floor Filter Track: Light slate segmented container (`bg-slate-100 border border-slate-200 dark:bg-zinc-900/90 dark:border-zinc-800 p-1 rounded-2xl`).
+
+2. Free Table Cards as Distinct Slate Tiles (`TableCard.tsx`):
+   - Surface: Soft matte slate-gray tile in Light Mode (`bg-slate-100 hover:bg-slate-200/90 dark:bg-[#13151F]`).
+   - Border & Edge: Clean hairline border with soft elevation (`border border-slate-300/80 dark:border-white/10 rounded-2xl shadow-sm hover:shadow-md hover:border-emerald-600 transition-all duration-150`).
+   - Table Name: Centered in large, bold deep charcoal (`text-slate-900 dark:text-white text-2xl font-black tracking-wide text-center`).
+   - Clean tile: Zero lines, zero footer, zero empty gaps.
+
+3. Occupied Table Cards (`TableCard.tsx`):
+   - Surface: Warm cream-amber surface (`bg-amber-50/90 dark:from-[#221813] dark:to-[#14100E]`).
+   - Border: Solid 2px amber/orange border (`border-2 border-amber-500 shadow-md shadow-amber-500/10 rounded-2xl`).
+   - Header: Table Name on left, solid vibrant amber badge (`bg-amber-500 text-white font-bold text-xs px-2.5 py-0.5 rounded-full`) on right.
+   - Body (Centered):
+     * Guest count in bold dark slate (`text-slate-900 dark:text-white font-black text-sm`).
+     * Customer name pill (`bg-slate-900 text-white dark:bg-white/10 dark:text-white font-bold px-3 py-1 rounded-full text-xs shadow-sm`).
+   - Footer: Hairline divider with Live Timer and Item Count in sharp dark slate font (`text-slate-800 dark:text-slate-100 font-bold text-sm`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter dark mode color tokens that are already working.
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

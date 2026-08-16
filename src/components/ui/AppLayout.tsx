@@ -169,7 +169,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   return (
     <div
-       className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-[#F8F9FB] text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
+       className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-white text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
         <header className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
