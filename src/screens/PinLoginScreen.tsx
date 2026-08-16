@@ -210,8 +210,8 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   // ── Circular glass keypad — 1-9 then ⌫/0/✕ ──────────────────────────────
-  const BtnCls = 'h-14 w-14 rounded-full text-xl font-bold bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 active:border-amber-500/50 text-white flex items-center justify-center transition-all duration-150 select-none';
-  const SmBtnCls = 'h-11 w-11 rounded-full text-sm font-bold bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 active:border-amber-500/50 text-white flex items-center justify-center transition-all duration-150 select-none';
+  const BtnCls = 'h-14 w-14 rounded-full text-2xl font-bold bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 active:border-amber-400 text-white flex items-center justify-center transition-all shadow-sm select-none';
+  const SmBtnCls = 'h-11 w-11 rounded-full text-base font-bold bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 active:border-amber-400 text-white flex items-center justify-center transition-all shadow-sm select-none';
 
   const Keypad = ({
     onDigit, onBack, onCancel, small,
@@ -277,8 +277,8 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
             filled > i
               ? error
                 ? 'bg-red-500 border-red-500 scale-110'
-                : 'bg-amber-500 border-amber-500 shadow-md shadow-amber-500/50 scale-110'
-              : 'bg-transparent border-white/20'
+                : 'bg-amber-400 border-amber-400 shadow-md shadow-amber-400/60 scale-110'
+              : 'bg-transparent border-white/30'
           }`}
         />
       ))}
@@ -290,7 +290,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`max-w-xs w-full p-6 rounded-3xl bg-[#12141D] border border-white/15 shadow-2xl shadow-black flex flex-col items-center gap-5 outline-none transition-transform ${
+        className={`max-w-xs w-full p-6 rounded-3xl bg-black/95 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black flex flex-col items-center gap-5 z-50 outline-none transition-transform ${
           (shake && view === 'pin') || (newPinShake && view === 'newpin') ? 'animate-shake' : ''
         }`}
       >
@@ -314,7 +314,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
             {user.email && (
               <button
                 onClick={() => setView('email')}
-                className="text-xs font-semibold text-blue-400/70 hover:text-blue-300 transition-colors"
+                className="mt-4 text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors tracking-wide"
               >
                 Forgot PIN?
               </button>
@@ -452,10 +452,7 @@ const PinLoginScreen = () => {
   const activeUsers = users.filter((u) => u.active);
 
   return (
-    <div className="bg-slate-100 dark:bg-[#07080B] min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
-
-      {/* Ambient backlight glow — dark mode only */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none dark:block hidden" />
+    <div className="bg-slate-100 dark:bg-[#0A0B0E] text-slate-950 dark:text-white min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
 
       {/* Floating theme toggle */}
       <div className="absolute top-6 right-6 z-30">
@@ -467,27 +464,24 @@ const PinLoginScreen = () => {
 
         {/* ── Brand hero ── */}
         <div className="flex flex-col items-center mb-2">
-          {/* Logo */}
-          <div
-            className="w-20 h-20 rounded-2xl border-2 border-amber-500/50 p-2.5 shadow-xl shadow-amber-500/15 mb-4 overflow-hidden flex items-center justify-center"
-            style={{ background: '#161822' }}
-          >
+          {/* Logo — clean glass container, no amber border */}
+          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 p-2 shadow-xl mb-4 mx-auto flex items-center justify-center overflow-hidden">
             {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain" />
+              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain rounded-xl" />
             ) : (
               <span className="text-2xl font-black text-amber-400">
-                {(settings?.cafeName || FALLBACK_NAME).charAt(0).toUpperCase()}
+                {(settings?.cafeName || settings?.restaurantName || 'Point of Sale').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
 
-          {/* Restaurant name — never empty */}
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white text-center">
-            {settings?.cafeName || FALLBACK_NAME}
+          {/* Restaurant name — dynamic with generic fallback */}
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white dark:text-white text-center">
+            {settings?.cafeName || settings?.restaurantName || 'Point of Sale'}
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xs font-black tracking-[0.25em] text-amber-400 uppercase mt-1.5 text-center">
+          <p className="text-xs font-black tracking-[0.2em] text-amber-400 uppercase mt-1.5 text-center">
             STAFF ACCESS • POS TERMINAL
           </p>
 
@@ -510,7 +504,7 @@ const PinLoginScreen = () => {
                 onClick={() => setSelectedUser(user)}
                 className="group w-[230px] sm:w-[240px] p-4 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-200 active:scale-[0.97] select-none
                   bg-slate-100 border border-slate-300 hover:bg-slate-200 hover:border-amber-500/60 shadow-sm hover:shadow-amber-500/10 hover:-translate-y-1
-                  dark:bg-[#161824] dark:border-white/10 dark:hover:bg-[#1C2030] dark:hover:border-amber-500/60 dark:shadow-lg dark:hover:shadow-amber-500/10"
+                  dark:bg-[#13151F] dark:border-white/10 dark:hover:border-amber-500/60 dark:hover:bg-[#181B26] dark:shadow-lg dark:hover:shadow-amber-500/10"
               >
                 {/* Monogram avatar */}
                 <div
