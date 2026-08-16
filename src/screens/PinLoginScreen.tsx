@@ -303,13 +303,13 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
         {view === 'pin' && (
           <>
             <div className="flex flex-col items-center text-center">
-              <LockKeyhole className="text-xl text-zinc-400 mb-1" size={20} aria-hidden="true" />
-              <p className="text-xs font-bold text-zinc-400 tracking-wider uppercase">
-                Enter your PIN to access
+              <LockKeyhole className="text-xl text-amber-400 mb-1.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]" size={20} aria-hidden="true" />
+              <p className="text-xs font-black tracking-widest text-slate-200 dark:text-zinc-200 uppercase">
+                ENTER YOUR PIN TO ACCESS
               </p>
               <div className="flex items-center gap-2 mt-1 mb-5">
-                <span className="text-sm font-black text-white">{user.name}</span>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-white/10 text-amber-300 border border-amber-500/30">
+                <span className="text-base font-black text-white tracking-wide">{user.name}</span>
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 tracking-wider">
                   {ROLE_LABEL[user.role]}
                 </span>
               </div>
@@ -329,9 +329,10 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
               <button
                 type="button"
                 onClick={handleForgotPin}
-                className="mt-6 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+                className="mt-6 px-5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-black tracking-wider uppercase transition-all duration-150 shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
               >
-                Forgot PIN?
+                <span>🔑</span>
+                <span>Forgot PIN?</span>
               </button>
             )}
           </>
