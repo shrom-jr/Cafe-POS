@@ -461,7 +461,7 @@ const OrderScreen = () => {
         {/* ── Cart panel — JS-conditional, shown in landscape on any device ── */}
         {isLandscape && (
           <div
-            className="w-80 lg:w-[360px] flex-shrink-0 flex flex-col min-h-0 overflow-hidden bg-[#10121A] border-l border-white/15 shadow-2xl"
+            className="w-full lg:w-[400px] h-[calc(100vh-76px)] p-4 pr-5 pl-2 flex flex-col flex-shrink-0 min-h-0"
           >
             <OrderPanel
               order={order}

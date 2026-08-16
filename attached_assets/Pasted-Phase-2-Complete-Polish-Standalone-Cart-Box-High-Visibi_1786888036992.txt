@@ -1,0 +1,54 @@
+Phase 2 Complete Polish: Standalone Cart Box, High-Visibility Header Controls, Clean Customer Chip & Menu Badge Fix
+
+Refactor `src/screens/OrderScreen.tsx` and `src/components/order/CartDrawer.tsx` (and `MenuItemCard.tsx`):
+
+1. Dedicated Standalone Order Box (Fix Right-Side Screen Clipping):
+   - Outer Layout: Wrap the right cart column in a dedicated padded container with safe margins:
+     `w-full lg:w-[400px] h-[calc(100vh-76px)] p-4 pr-5 pl-2 flex flex-col`.
+   - Standalone Card Shell (`CartDrawer.tsx`):
+     `w-full h-full rounded-3xl bg-[#13151F] border border-white/15 shadow-2xl flex flex-col justify-between overflow-hidden relative p-4 gap-3`.
+
+2. High-Visibility Move & Clear Header Buttons (`CartDrawer.tsx`):
+   - Top Header Bar: `flex items-center justify-between pb-3 border-b border-white/10`.
+   - Table Title & Status:
+     * Table Name: `text-xl font-black text-white tracking-tight`.
+     * Status Pill (e.g. SENT): `px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider`.
+   - Action Buttons (Make Distinct & High Contrast):
+     * Move Button: `px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all`.
+     * Clear Button: `px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all`.
+
+3. Redesign Attached Customer & Due Chip (`CartDrawer.tsx`):
+   - Container: `w-full px-3.5 py-2.5 rounded-2xl bg-[#181B26] border border-white/15 flex items-center justify-between gap-2 shadow-inner`.
+   - Left Side (Customer Name):
+     * `<span className="text-sm font-black text-white flex items-center gap-1.5 truncate">👤 {customer.name}</span>`
+   - Right Side (Due Badge & Remove):
+     * Due Pill: `{customer.due > 0 && (<span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-black font-mono">Due: Rs. {customer.due}</span>)}`
+     * Remove Button: `<button type="button" onClick={handleRemoveCustomer} className="p-1 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 transition-colors">✕</button>`
+
+4. Fix Menu Item Card Counter Badge (`MenuItemCard.tsx` / `OrderScreen.tsx`):
+   - REMOVE the awkward orange floating circle that sits directly on top of the `+` button.
+   - Place a clean, isolated quantity tag at the top-right of the card:
+     `<div className="relative p-4 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all flex flex-col justify-between min-h-[100px] group cursor-pointer">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-base font-black text-white group-hover:text-amber-200 transition-colors tracking-wide leading-snug">
+            {item.name}
+          </span>
+          {itemQty > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-sm flex-shrink-0">
+              {itemQty} in Cart
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
+          <span className="text-base font-black text-amber-400 font-mono tracking-tight">
+            Rs. {item.price}
+          </span>
+          <button type="button" onClick={handleAddItem} className="w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 active:scale-90 transition-all">
+            +
+          </button>
+        </div>
+      </div>`
+
+STRICT CONSTRAINTS:
+- Do NOT alter any item pricing logic, discount calculations, KOT dispatching, or table status sync.
+- Run `npm run build` to confirm zero TypeScript or build errors.

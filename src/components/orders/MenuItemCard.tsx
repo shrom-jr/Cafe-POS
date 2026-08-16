@@ -36,19 +36,20 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
               {item.name.charAt(0).toUpperCase()}
             </div>
           )}
-          {/* Quantity badge — top-left of thumbnail */}
-          {quantityInOrder > 0 && (
-             <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-[#10121A] animate-in zoom-in-75 duration-150 z-10">
-              {quantityInOrder}
-            </span>
-          )}
         </div>
 
         {/* Name + price */}
         <div className="flex-1 min-w-0 px-3 py-1.5">
-          <span className="block text-sm font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
-            {item.name}
-          </span>
+          <div className="flex items-start justify-between gap-2">
+            <span className="block text-sm font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
+              {item.name}
+            </span>
+            {quantityInOrder > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-sm flex-shrink-0">
+                {quantityInOrder} in Cart
+              </span>
+            )}
+          </div>
           <span className="text-sm font-black text-amber-400 font-mono mt-1 block">
             Rs. {fmt(item.price)}
           </span>
@@ -68,7 +69,7 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
       onClick={() => !disabled && onAdd()}
       data-testid={`menu-item-${item.id}`}
       disabled={disabled}
-      className="group relative flex flex-col p-4 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all w-full text-left active:scale-[0.97]"
+      className="group relative flex flex-col justify-between min-h-[100px] p-4 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all w-full text-left active:scale-[0.97]"
       style={{
         opacity: disabled ? 0.4 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -83,24 +84,24 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
       )}
 
       {/* ── Text + controls ── */}
-      <div className="flex-1 px-3 py-3 flex flex-col gap-1 relative">
-        <span className="text-base font-black leading-snug pr-9 line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
-          {item.name}
-        </span>
-        <span className="text-base font-black text-amber-400 font-mono mt-1 block">
-          Rs. {fmt(item.price)}
-        </span>
-
-        {/* Quantity badge — top-right corner of the card */}
-        {quantityInOrder > 0 && (
-          <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-[#10121A] animate-in zoom-in-75 duration-150 z-10">
-            {quantityInOrder}
+      <div className="flex-1 px-0 pt-3 flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-base font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
+            {item.name}
           </span>
-        )}
-
-        {/* Add button */}
-        <div className="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
-          <Plus size={17} strokeWidth={3} />
+          {quantityInOrder > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-sm flex-shrink-0">
+              {quantityInOrder} in Cart
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
+          <span className="text-base font-black text-amber-400 font-mono tracking-tight">
+            Rs. {fmt(item.price)}
+          </span>
+          <div className="w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
+            <Plus size={17} strokeWidth={3} />
+          </div>
         </div>
       </div>
     </button>

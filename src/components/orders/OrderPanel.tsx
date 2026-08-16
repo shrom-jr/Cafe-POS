@@ -240,8 +240,8 @@ const OrderPanel = ({
 
   return (
     <div
-      className="w-full lg:w-[380px] h-full min-h-0 bg-[#10121A] border-l border-white/15 flex flex-col justify-between overflow-hidden shadow-2xl relative"
-      style={{ background: '#10121A' }}
+      className="w-full h-full min-h-0 rounded-3xl bg-[#13151F] border border-white/15 shadow-2xl flex flex-col justify-between overflow-hidden relative p-4 gap-3"
+      style={{ background: '#13151F' }}
     >
       <style>{`
         @keyframes op-fade-in-scale {
@@ -267,14 +267,14 @@ const OrderPanel = ({
       <div
         className="relative flex-shrink-0 bg-[#10121A] border-b border-white/10"
       >
-        <div className="px-4 pt-3 pb-1.5 flex items-center gap-2">
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2">
           <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2 flex-1 truncate">
             {order ? tableDisplayName(order.tableNumber) : 'Order'}
           </h3>
           {order && (
             <span
               key={statusLabel}
-              className="px-2.5 py-0.5 rounded-md bg-white/10 text-zinc-200 text-[10px] font-black uppercase tracking-wider border border-white/15 flex-shrink-0"
+              className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider flex-shrink-0"
               style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
             >
               {statusLabel}
@@ -287,7 +287,7 @@ const OrderPanel = ({
                   onClick={onMoveTable}
                   disabled={moveDisabled}
                   data-testid="button-move-table"
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white text-xs font-bold transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   <ArrowRightLeft size={11} />
                   Move
@@ -297,7 +297,7 @@ const OrderPanel = ({
                 <button
                   onClick={() => setShowClearConfirm(true)}
                   data-testid="button-clear-order"
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white text-xs font-bold transition-all active:scale-95 flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all flex-shrink-0"
                 >
                   <Trash2 size={11} />
                   Clear
@@ -306,8 +306,8 @@ const OrderPanel = ({
             </>
           )}
         </div>
-        <div className="px-4 pb-2.5">
-          <span className="text-xs font-bold text-zinc-300 mt-1 block">
+        <div className="text-xs font-bold text-zinc-200 block px-0 py-1.5 bg-white/[0.03]">
+          <span>
             {serverName ? `Served by ${serverName}` : 'No server assigned'}
             {itemCount > 0 ? ` · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : ''}
           </span>
@@ -343,8 +343,7 @@ const OrderPanel = ({
 
       {/* Customer (Khatta) Row */}
       <div
-        className="px-4 py-2.5 flex items-center justify-between gap-2 flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.10)', background: '#13151F' }}
+        className="w-full px-3.5 py-2.5 rounded-2xl bg-[#181B26] border border-white/15 flex items-center justify-between gap-2 shadow-inner flex-shrink-0"
       >
         <div className="flex items-center gap-2">
           <UserCircle size={15} className="text-amber-400 flex-shrink-0" />
@@ -352,8 +351,8 @@ const OrderPanel = ({
         </div>
 
         {attachedCustomer ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-white shadow-sm max-w-[70%]">
-            <span className="text-xs font-bold text-amber-300 truncate">
+          <div className="flex items-center gap-2 max-w-[70%]">
+            <span className="text-sm font-black text-white flex items-center gap-1.5 truncate">
               👤 {attachedCustomer.name}
             </span>
             {attachedCustomer.currentDue > 0 && (
