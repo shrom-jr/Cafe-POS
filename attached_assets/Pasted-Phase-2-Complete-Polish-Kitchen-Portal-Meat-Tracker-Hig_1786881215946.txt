@@ -1,0 +1,58 @@
+Phase 2 Complete Polish: Kitchen Portal & Meat Tracker High-Contrast Luxury Redesign
+
+Refactor `src/screens/KitchenPortal.tsx` (and all sub-components for Daily Expenses, Meat Tracker, and Log History):
+
+1. Header & Primary Tab Switcher (`KitchenPortal.tsx`):
+   - Hero Header:
+     * Icon Badge: `w-12 h-12 rounded-2xl bg-[#1E2235] border border-white/15 flex items-center justify-center text-2xl shadow-inner`.
+     * Title: `text-2xl font-black text-white tracking-tight` ("Kitchen Portal").
+     * Subtitle / Date: `text-xs font-bold text-zinc-300 font-mono mt-0.5`.
+   - Sub-Navigation Tabs (`Daily Expenses` vs `Meat Tracker`):
+     * Active Tab: `px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2`.
+     * Inactive Tab: `px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2`.
+
+2. High-Contrast Daily Expenses View:
+   - Form Container: `bg-[#13151F] border border-white/15 p-6 rounded-2xl shadow-xl mt-6`.
+   - Form Title: `text-base font-black text-white flex items-center gap-2 mb-4`.
+   - Field Labels ("DATE", "ITEM NAME", "QUANTITY", "RATE / PRICE", "TOTAL"):
+     * Replace muddy text with: `text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block`.
+   - Inputs & Dropdowns:
+     * `bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none transition-all`.
+   - Submit Button ("+ Log Purchase"):
+     * `px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-2 self-end h-[48px]`.
+
+3. High-Contrast Meat Tracker View:
+   - Live Inventory Balance Header: `flex items-center justify-between mb-4`.
+     * Header Label: `text-xs font-black uppercase tracking-widest text-zinc-300`.
+     * Meat Selector: `bg-[#181B26] border border-white/20 text-white text-xs font-black rounded-xl px-4 py-2 outline-none focus:border-amber-400`.
+   - 4-Card Balance Grid (`grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6`):
+     * 1. Total Raw Purchased: `p-5 rounded-2xl bg-[#13151F] border border-amber-500/40 shadow-lg shadow-amber-500/5`:
+       - Label: `text-[11px] font-black uppercase tracking-wider text-amber-300`.
+       - Value: `text-3xl font-black text-amber-400 mt-1` + `text-xs font-black text-zinc-300 ml-1` ("kg").
+     * 2. Total Marinated: `p-5 rounded-2xl bg-[#13151F] border border-sky-500/40 shadow-lg shadow-sky-500/5`:
+       - Label: `text-[11px] font-black uppercase tracking-wider text-sky-300`.
+       - Value: `text-3xl font-black text-sky-400 mt-1` + `text-xs font-black text-zinc-300 ml-1` ("kg").
+     * 3. Ready for Grill: `p-5 rounded-2xl bg-[#13151F] border border-emerald-500/40 shadow-lg shadow-emerald-500/5`:
+       - Label: `text-[11px] font-black uppercase tracking-wider text-emerald-300`.
+       - Value: `text-3xl font-black text-emerald-400 mt-1` + `text-xs font-black text-zinc-300 ml-1` ("kg").
+     * 4. Total Keema Stock: `p-5 rounded-2xl bg-[#13151F] border border-purple-500/40 shadow-lg shadow-purple-500/5`:
+       - Label: `text-[11px] font-black uppercase tracking-wider text-purple-300`.
+       - Value: `text-3xl font-black text-purple-400 mt-1` + `text-xs font-black text-zinc-300 ml-1` ("kg").
+   - Record Meat Action Form:
+     * Action Type Buttons:
+       - Selected: `px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider border-2 border-amber-400 shadow-md shadow-amber-500/20`.
+       - Unselected: `px-4 py-2.5 rounded-xl bg-white/5 text-zinc-200 hover:text-white border border-white/15 hover:bg-white/10 text-xs font-black uppercase tracking-wider`.
+     * Submit Button ("+ Record Meat Action"):
+       * `px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all self-end h-[48px]`.
+
+4. Filter Bar & Empty History States:
+   - Date Filter Pills (`Today`, `Yesterday`, `Custom Date`):
+     * Active: `px-4 py-1.5 rounded-xl bg-white/15 border border-white/30 text-white text-xs font-black`.
+     * Inactive: `px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white text-xs font-bold`.
+   - Empty State Logs:
+     `mt-8 p-12 rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] flex flex-col items-center justify-center text-center`:
+     - Message: `<p className="text-sm font-bold text-zinc-200">No purchases or meat logs recorded for this date.</p>`
+
+STRICT CONSTRAINTS:
+- Do NOT alter any inventory math, meat tracking conversion formulas, Firebase listeners, or other screens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
