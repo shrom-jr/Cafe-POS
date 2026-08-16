@@ -42,55 +42,43 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4"
         onClick={onClose}
       />
 
-      {/* Centered Modal Container (Max Width: 440px) */}
+      {/* Centered Modal Container */}
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md z-50 flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-        style={{
-          maxHeight: '80dvh',
-          background: 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)',
-          border: '1px solid rgba(59,130,246,0.3)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)',
-        }}
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4 max-h-[85vh] z-50"
       >
         {/* Header */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          <User size={16} className="text-blue-400" />
-          <span className="font-bold text-white text-sm flex-1">Attach Customer</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <User size={17} className="text-amber-400" />
+          <span className="text-lg font-black text-white tracking-tight flex items-center gap-2 flex-1">Attach Customer</span>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-slate-800 text-slate-400 hover:text-white"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <X size={15} />
+            <X size={17} />
           </button>
         </div>
 
         {/* Search Input */}
-        <div className="px-4 py-3 flex-shrink-0 border-b border-slate-800/80">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Search by name or phone…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(30,41,59,0.9)' }}
-            />
-          </div>
+        <div className="relative w-full flex-shrink-0">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Search by name or phone…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 pl-10 text-sm placeholder:text-zinc-400 outline-none transition-all shadow-inner"
+          />
         </div>
 
         {/* Customer List */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 max-h-[360px] pr-1 overscroll-contain">
           {filtered.length === 0 && !showNewForm && (
-            <p className="text-center py-8 text-xs text-slate-500">
+            <p className="text-center py-8 text-xs text-zinc-400">
               No customers found matching "{query}"
             </p>
           )}
@@ -102,32 +90,23 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
                 onSelect(c);
                 onClose();
               }}
-              className="w-full flex items-center justify-between p-3 rounded-xl text-left transition-all hover:bg-slate-800/50 active:scale-[0.99] border border-slate-800/80"
-              style={{ background: 'rgba(15,23,42,0.6)' }}
+              className="w-full p-3.5 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/10 hover:border-amber-400/60 shadow-sm flex items-center justify-between cursor-pointer transition-all active:scale-[0.99] group text-left"
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-blue-300 border border-blue-500/30"
-                  style={{ background: 'rgba(59,130,246,0.15)' }}
-                >
-                  {c.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white leading-tight">{c.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {c.phone || 'No phone'} · {c.visits} visit{c.visits !== 1 ? 's' : ''}
-                  </p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-base font-black text-white group-hover:text-amber-200 transition-colors tracking-wide truncate">{c.name}</p>
+                <p className="text-xs font-bold text-zinc-200 font-mono mt-0.5">
+                  {c.phone || 'No phone'} · {c.visits} visit{c.visits !== 1 ? 's' : ''}
+                </p>
               </div>
 
               {/* Due / Clear Badge */}
               {c.currentDue > 0 ? (
-                <span className="flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                  Due Rs. {fmt(c.currentDue)}
+                <span className="flex-shrink-0 px-3 py-1 rounded-xl bg-rose-500/20 border-2 border-rose-500 text-rose-200 text-xs font-black font-mono shadow-[0_0_10px_rgba(244,63,94,0.35)] whitespace-nowrap">
+                  Due: Rs. {fmt(c.currentDue)}
                 </span>
               ) : (
-                <span className="flex-shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  Clear
+                <span className="flex-shrink-0 px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-black uppercase whitespace-nowrap">
+                  ✓ Clear
                 </span>
               )}
             </button>
@@ -135,46 +114,46 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
         </div>
 
         {/* Bottom Form Trigger / Add Form */}
-        <div className="flex-shrink-0 px-4 py-3 border-t border-slate-800/80 bg-slate-950/40">
+        <div className="flex-shrink-0 mt-1">
           {!showNewForm ? (
             <button
               onClick={() => setShowNewForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20"
+              className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 mt-1"
             >
               <UserPlus size={14} />
               + Register New Customer
             </button>
           ) : (
-            <div className="space-y-2.5 p-3 rounded-xl bg-slate-950 border border-slate-800">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="space-y-2.5 p-3 rounded-2xl bg-[#13151F] border border-white/10">
+              <p className="text-[11px] font-black text-zinc-300 uppercase tracking-wider">
                 New Customer Profile
               </p>
               <div className="relative">
-                <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
                   placeholder="Full name *"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 rounded-lg text-white text-xs placeholder:text-slate-500 bg-slate-900 border border-slate-700 focus:outline-none focus:border-blue-500"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl text-white text-xs placeholder:text-zinc-400 bg-[#181B26] border border-white/15 focus:outline-none focus:border-amber-400"
                   autoFocus
                 />
               </div>
               <div className="relative">
-                <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="tel"
                   placeholder="Phone number"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 rounded-lg text-white text-xs placeholder:text-slate-500 bg-slate-900 border border-slate-700 focus:outline-none focus:border-blue-500"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl text-white text-xs placeholder:text-zinc-400 bg-[#181B26] border border-white/15 focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => { setShowNewForm(false); setNewName(''); setNewPhone(''); }}
-                  className="flex-1 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 hover:text-white"
+                  className="flex-1 py-1.5 rounded-xl text-xs font-black text-zinc-300 border border-white/15 hover:text-white hover:bg-white/10"
                 >
                   Cancel
                 </button>
@@ -182,7 +161,7 @@ const CustomerPicker = ({ onSelect, onClose }: CustomerPickerProps) => {
                   type="button"
                   onClick={handleSaveNew}
                   disabled={!newName.trim() || saving}
-                  className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 transition-all"
+                  className="flex-1 py-1.5 rounded-xl text-xs font-black text-slate-950 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 transition-all"
                 >
                   Save & Attach
                 </button>

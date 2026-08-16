@@ -7,7 +7,6 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { useCustomerStore } from '@/store/useCustomerStore';
-import { ThemeToggle } from '@/components/ui/Navigation';
 import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
 import CustomerPicker from '@/components/orders/CustomerPicker';
@@ -323,7 +322,7 @@ const OrderScreen = () => {
       {/* Left Column — menu system */}
       <div className="flex-1 h-full flex flex-col min-w-0 overflow-y-auto pr-1 gap-3">
         {/* Top Bar */}
-        <div className="flex items-center justify-between pb-1 flex-shrink-0">
+        <div className="flex items-center pb-1 flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -343,7 +342,6 @@ const OrderScreen = () => {
               </span>
             </div>
           </div>
-          <ThemeToggle />
         </div>
 
       {/* Move success banner */}
