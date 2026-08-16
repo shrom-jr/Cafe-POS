@@ -531,6 +531,13 @@ const AdminPanel = () => {
                     Manage categories, items &amp; pricing
                   </p>
                 </div>
+              ) : activeTab === 'tables' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Tables &amp; Venue Zones</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Manage floor areas, dining tables &amp; capacity
+                  </p>
+                </div>
               ) : (
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
@@ -1456,8 +1463,8 @@ function buildAreaList(areaOrder: string[], tables: { section?: string }[]): str
 }
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  free:    { label: 'Free',     color: 'text-green-400', bg: 'bg-green-500/12 border-green-500/25' },
-  active:  { label: 'Occupied', color: 'text-blue-400',  bg: 'bg-blue-500/12  border-blue-500/25' },
+  free:    { label: 'Free',     color: 'text-emerald-300', bg: 'bg-emerald-500/15 border-emerald-500/40' },
+  active:  { label: 'Occupied', color: 'text-amber-300', bg: 'bg-amber-500/15 border-amber-500/40' },
   billing: { label: 'Billing',  color: 'text-amber-400', bg: 'bg-amber-500/12 border-amber-500/25' },
 };
 
@@ -1478,6 +1485,7 @@ const TablesSection = () => {
   const [renamingArea, setRenamingArea]   = useState<string | null>(null);
   const [renameAreaVal, setRenameAreaVal] = useState('');
   const [deletingArea,  setDeletingArea]  = useState<string | null>(null);
+  const [collapsedAreas, setCollapsedAreas] = useState<Record<string, boolean>>({});
 
   // ── Table modals ─────────────────────────────
   const [editingTableId,  setEditingTableId]  = useState<string | null>(null);
@@ -1611,15 +1619,14 @@ const TablesSection = () => {
     <div className="space-y-4">
       {/* ── Top bar ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-slate-300 mt-0.5">
-            {tables.length} table{tables.length !== 1 ? 's' : ''} across {areas.length} area{areas.length !== 1 ? 's' : ''}
-          </p>
+        <div className="inline-flex items-center gap-2 mt-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold text-zinc-200">
+          <Table2 size={13} className="text-amber-400" />
+          {tables.length} table{tables.length !== 1 ? 's' : ''} across {areas.length} area{areas.length !== 1 ? 's' : ''}
         </div>
         <button
           onClick={() => { setAddAreaName(''); setAddAreaOpen(true); }}
           data-testid="button-add-area"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:brightness-110 transition-all active:scale-95"
+          className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 hover:-translate-y-0.5"
         >
           <Plus size={14} /> Add Area
         </button>
@@ -1646,24 +1653,24 @@ const TablesSection = () => {
           <div
             key={area}
             data-testid={`area-container-${area}`}
-            className="rounded-2xl border border-border bg-card overflow-hidden"
+            className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4"
           >
             {/* Area header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-white/[0.02]">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="font-semibold text-foreground text-sm truncate">{area}</span>
-                <span className="shrink-0 text-[11px] text-slate-300 bg-secondary px-2 py-0.5 rounded-full border border-border">
+                <span className="text-lg font-black text-white tracking-wide truncate">{area}</span>
+                <span className="px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider ml-3">
                   {areaTablesSorted.length} table{areaTablesSorted.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 {/* Move up / down */}
                 <button
                   onClick={() => moveArea(area, 'up')}
                   disabled={isFirst}
                   aria-label={`Move ${area} up`}
                   title="Move area up"
-                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
                 >
                   <ChevronUp size={14} />
                 </button>
@@ -1672,16 +1679,15 @@ const TablesSection = () => {
                   disabled={isLast}
                   aria-label={`Move ${area} down`}
                   title="Move area down"
-                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
                 >
                   <ChevronDown size={14} />
                 </button>
-                <span className="w-px h-4 bg-border/60 mx-1" />
                 <button
                   onClick={() => { setRenamingArea(area); setRenameAreaVal(area); }}
                   aria-label={`Rename area ${area}`}
                   title="Rename area"
-                  className="p-2 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
+                  className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all cursor-pointer"
                 >
                   <Edit3 size={14} />
                 </button>
@@ -1689,45 +1695,53 @@ const TablesSection = () => {
                   onClick={() => requestDeleteArea(area)}
                   aria-label={`Delete area ${area}`}
                   title={isEmpty ? 'Delete area' : 'Remove all tables first'}
-                  className={`p-2 rounded-lg transition-colors ${isEmpty ? 'text-danger/50 hover:text-danger hover:bg-danger/10' : 'text-muted-foreground/25 cursor-not-allowed'}`}
+                  className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all cursor-pointer"
                 >
                   <Trash2 size={14} />
+                </button>
+                <button
+                  onClick={() => setCollapsedAreas((prev) => ({ ...prev, [area]: !prev[area] }))}
+                  aria-label={`${collapsedAreas[area] ? 'Expand' : 'Collapse'} area ${area}`}
+                  title={collapsedAreas[area] ? 'Expand area' : 'Collapse area'}
+                  className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all cursor-pointer"
+                >
+                  <ChevronDown size={14} className={`transition-transform ${collapsedAreas[area] ? '-rotate-90' : ''}`} />
                 </button>
               </div>
             </div>
 
             {/* Table cards */}
-            <div className="p-4">
+            {!collapsedAreas[area] && <div>
               {areaTablesSorted.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
                   {areaTablesSorted.map((t) => {
                     const cfg = STATUS_CFG[t.status] || STATUS_CFG.free;
                     return (
                       <div
                         key={t.id}
                         data-testid={`table-row-${t.id}`}
-                        className="bg-background/50 rounded-xl border border-border/60 p-3.5 flex flex-col gap-2.5 hover:border-white/20 hover:shadow-md transition-all group"
+                        className="relative p-4 rounded-2xl bg-[#181B28] hover:bg-[#1E2235] border border-white/15 hover:border-amber-400/60 shadow-md transition-all flex flex-col justify-between min-h-[90px] group cursor-pointer"
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col justify-between h-full gap-2">
                           <div className="min-w-0 flex-1">
                             <p
-                              className="truncate font-semibold text-foreground text-sm leading-snug"
+                              className="truncate text-base font-black text-white group-hover:text-amber-200 transition-colors tracking-wide"
                               title={tableDisplayName(t.number)}
                             >
                               {tableDisplayName(t.number)}
                             </p>
-                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border mt-1.5 ${cfg.bg} ${cfg.color}`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                            <span className={`mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider self-start ${cfg.bg} ${cfg.color}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
                               {cfg.label}
                             </span>
                           </div>
-                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-2 right-2 flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => openEdit(t)}
                               disabled={t.status !== 'free'}
                               title={t.status !== 'free' ? 'Table has an active order' : 'Edit table'}
                               aria-label={`Edit ${tableDisplayName(t.number)}`}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-accent/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
                             >
                               <Edit3 size={13} />
                             </button>
@@ -1736,14 +1750,14 @@ const TablesSection = () => {
                               disabled={t.status !== 'free'}
                               title={t.status !== 'free' ? 'Table has an active order' : 'Delete table'}
                               aria-label={`Delete ${tableDisplayName(t.number)}`}
-                              className="p-1.5 rounded-lg text-danger/40 hover:text-danger hover:bg-danger/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
                             >
                               <Trash2 size={13} />
                             </button>
                           </div>
                         </div>
                         {t.pax && t.pax > 0 && t.status !== 'free' && (
-                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-1 text-[11px] text-zinc-300">
                             <Users size={11} />
                             {t.pax} guest{t.pax !== 1 ? 's' : ''}
                           </div>
@@ -1753,11 +1767,11 @@ const TablesSection = () => {
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground/50 italic mb-3">No tables in this area yet.</p>
+                <p className="text-xs font-bold text-zinc-300 mb-3">No tables in this area yet.</p>
               )}
 
               {/* Inline add table */}
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
                 <input
                   value={inlineNames[area] ?? ''}
                   onChange={(e) => setInlineNames((prev) => ({ ...prev, [area]: e.target.value }))}
@@ -1765,28 +1779,29 @@ const TablesSection = () => {
                   type="text"
                   placeholder="Table name (e.g. 5, Cabin 2, VIP 2)"
                   data-testid={`input-table-name-${area}`}
-                  className="flex-1 px-3 py-2 rounded-xl bg-secondary/60 border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-accent h-10"
+                  className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-400 outline-none transition-all shadow-inner"
                 />
                 <button
                   onClick={() => submitInlineTable(area)}
                   data-testid={`button-add-table-${area}`}
-                  className="px-3.5 py-2 rounded-xl bg-accent/15 border border-accent/25 text-accent text-sm font-semibold flex items-center gap-1 hover:bg-accent/25 transition-all active:scale-95 h-10"
+                  className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5"
                 >
                   <Plus size={13} /> Add
                 </button>
               </div>
-            </div>
+            </div>}
           </div>
         );
       })}
 
       {/* ── Add Area modal ───────────────────────────────────────────── */}
       <Dialog open={addAreaOpen} onOpenChange={(open) => !open && setAddAreaOpen(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>New Seating Area</DialogTitle>
-            <DialogDescription>Enter a name for the new area (e.g. "Rooftop", "Garden Patio").</DialogDescription>
+            <DialogTitle className="text-lg font-black text-white tracking-tight">New Seating Area</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-zinc-300">Enter a name for the new area (e.g. "Rooftop", "Garden Patio").</DialogDescription>
           </DialogHeader>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Area Name</label>
           <input
             autoFocus
             value={addAreaName}
@@ -1794,33 +1809,34 @@ const TablesSection = () => {
             onKeyDown={(e) => e.key === 'Enter' && submitAddArea()}
             placeholder="Area name"
             data-testid="input-new-area-name"
-            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-400 outline-none"
           />
-          <DialogFooter>
-            <button onClick={() => setAddAreaOpen(false)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
-            <button onClick={submitAddArea} data-testid="button-confirm-add-area" className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Create</button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+            <button onClick={() => setAddAreaOpen(false)} className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all">Cancel</button>
+            <button onClick={submitAddArea} data-testid="button-confirm-add-area" className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all">Create Area</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Rename Area modal ────────────────────────────────────────── */}
       <Dialog open={Boolean(renamingArea)} onOpenChange={(open) => !open && setRenamingArea(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Rename Area</DialogTitle>
-            <DialogDescription>All tables in "{renamingArea}" will be updated to the new name.</DialogDescription>
+            <DialogTitle className="text-lg font-black text-white tracking-tight">Rename Area</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-zinc-300">All tables in "{renamingArea}" will be updated to the new name.</DialogDescription>
           </DialogHeader>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Area Name</label>
           <input
             autoFocus
             value={renameAreaVal}
             onChange={(e) => setRenameAreaVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submitRenameArea()}
             placeholder="New area name"
-            className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-400 outline-none"
           />
-          <DialogFooter>
-            <button onClick={() => setRenamingArea(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
-            <button onClick={submitRenameArea} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+            <button onClick={() => setRenamingArea(null)} className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all">Cancel</button>
+            <button onClick={submitRenameArea} className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all">Save Changes</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1843,14 +1859,14 @@ const TablesSection = () => {
 
       {/* ── Edit Table modal ─────────────────────────────────────────── */}
       <Dialog open={Boolean(editingTable)} onOpenChange={(open) => !open && setEditingTableId(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Edit Table</DialogTitle>
-            <DialogDescription>Rename the table or move it to a different area.</DialogDescription>
+            <DialogTitle className="text-lg font-black text-white tracking-tight">Edit Table</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-zinc-300">Rename the table or move it to a different area.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Table name</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Table Name</label>
               <input
                 autoFocus
                 value={editTableName}
@@ -1858,15 +1874,15 @@ const TablesSection = () => {
                 onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
                 placeholder="Table name / number"
                 data-testid="input-edit-table-name"
-                className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-400 outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Area</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Area</label>
               <Select value={editTableSection} onValueChange={setEditTableSection}>
                 <SelectTrigger
                   data-testid="select-edit-table-section"
-                  className="h-10 w-full rounded-xl border-border bg-secondary text-sm text-foreground"
+                  className="h-auto w-full rounded-xl border-2 border-white/20 bg-[#181B26] px-4 py-3.5 text-sm font-bold text-white focus:border-amber-400"
                 >
                   <SelectValue placeholder="Select area" />
                 </SelectTrigger>
@@ -1876,9 +1892,9 @@ const TablesSection = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => setEditingTableId(null)} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
-            <button onClick={saveEdit} className="px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-semibold">Save</button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+            <button onClick={() => setEditingTableId(null)} className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all">Cancel</button>
+            <button onClick={saveEdit} className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all">Save Changes</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
