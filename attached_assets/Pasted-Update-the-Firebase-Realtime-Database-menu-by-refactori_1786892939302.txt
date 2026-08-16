@@ -1,0 +1,171 @@
+Update the Firebase Realtime Database menu by refactoring with the complete Bamboo Cottage menu and execute the seed script.
+
+1. Replace the dataset with the full menu categorized with exact KOT and BOT printer routing:
+
+--- CATEGORIES & ITEMS CONFIGURATION ---
+
+• HOT BEVERAGES (Print Route: KOT):
+  - Tea (Black) - Rs. 30
+  - Tea (Milk) - Rs. 60
+  - Tea (Lemon) - Rs. 40
+  - Tea (Masala) - Rs. 70
+  - Coffee (Black) - Rs. 80
+  - Coffee (Milk) - Rs. 120
+  - Hot Lemon - Rs. 80
+  - Hot Lemon with Ginger & Honey - Rs. 170
+  - Hot Chocolate - Rs. 250
+
+• CRAFTED COLD BEVERAGES (Print Route: KOT):
+  - Sweet Lassi - Rs. 150
+  - Banana Lassi - Rs. 180
+  - Watermelon Juice - Rs. 150
+  - Iced Tea - Rs. 130
+  - Chocolate Milkshake - Rs. 250
+  - Cold Coffee (Black) - Rs. 130
+  - Cold Coffee (Milk) - Rs. 150
+
+• SOFT DRINKS & ENERGY (Print Route: BOT):
+  - Coke / Fanta / Sprite - Rs. 100
+  - Pepsi / Dew / Slice - Rs. 100
+  - Mineral Water - Rs. 50
+  - Red Bull - Rs. 200
+  - Xtreme Energy Drink - Rs. 250
+
+• SOUPS (Print Route: KOT):
+  - Nepali Soup (Veg) - Rs. 200 | Nepali Soup (Non-Veg) - Rs. 250
+  - Hot & Sour Soup (Veg) - Rs. 280 | Hot & Sour Soup (Non-Veg) - Rs. 300
+  - Creamy Veg Soup - Rs. 200
+  - Creamy Chicken Mushroom Soup - Rs. 280
+  - Mutton Khutta Soup - Rs. 450
+
+• BURGERS & SANDWICHES (Print Route: KOT):
+  - Veg Burger - Rs. 150
+  - Chicken Burger - Rs. 180
+  - Crunchy Chicken Burger - Rs. 200
+  - Cheese Sandwich - Rs. 225
+  - Chicken Sandwich - Rs. 250
+  - Special Club Sandwich - Rs. 300
+
+• SIZZLERS & CHHOILA (Print Route: KOT):
+  - Veg Sizzler - Rs. 350 | Fish Sizzler - Rs. 400 | Chicken Sizzler - Rs. 450
+  - Chhoila Chicken - Rs. 300 | Chhoila Mutton - Rs. 450
+  - Chhoila Buff - Rs. 280 | Chhoila Pork - Rs. 280
+  - Mushroom Chhoila - Rs. 230
+
+• CHEF'S SPECIAL & FISH (Print Route: KOT):
+  - Piro Aalu Paneer - Rs. 280
+  - Mustang Aalu - Rs. 270
+  - Jhaneko Sekuwa (Chicken) - Rs. 400 | Jhaneko Sekuwa (Buff/Pork) - Rs. 400 | Jhaneko Sekuwa (Mutton) - Rs. 650
+  - Pork Dameko - Rs. 300 | Timmur Chicken - Rs. 350
+  - Special Biryani (Non-Veg) - Rs. 500
+  - Whole Grill Fish - Rs. 600 | Steamed Whole Fish - Rs. 550
+  - Hyakula Dameko - Rs. 600
+  - Fish Fingers - Rs. 325 | Fish Fry - Rs. 300 | Fish & Chips - Rs. 450
+
+• VEGETARIAN SNACKS & SALADS (Print Route: KOT):
+  - Masala Papad - Rs. 150
+  - Veg Pakoda - Rs. 180 | Paneer Pakoda - Rs. 280 | Onion Pakoda - Rs. 200
+  - Aalu Jeera / French Fries / Aalu Sadheko - Rs. 180
+  - Chips Chilli / Crispy Aalu / Boiled Corn - Rs. 200
+  - Chiura Bhatmas Sadheko - Rs. 230 | Mixed Veg (Boiled) - Rs. 225 | Green Corn Sadheko - Rs. 250
+  - Cheese Balls - Rs. 280 | Mushroom Chilli - Rs. 280 | Paneer Chilli - Rs. 290
+  - Tofu Fry - Rs. 200 | Tofu Chilli - Rs. 250
+  - Nepali Green Salad - Rs. 200 | Fruit Salad (Seasonal) - Rs. 350
+
+• NON-VEGETARIAN SNACKS (Print Route: KOT):
+  - Mutton Head (Fry) - Rs. 450 | Mutton Head (Sadheko) - Rs. 460
+  - Mutton Rajkhani - Rs. 550 | Mutton Hyakula - Rs. 600
+  - Mutton (Tash) - Rs. 550 | Mutton (Bhuttan) - Rs. 380
+  - Chicken Sadheko - Rs. 270 | Chicken Chilli / Lollipop / Drumstick - Rs. 300
+  - Dragon Chicken - Rs. 400 | Polpal Chicken - Rs. 360 | Nepali Chicken - Rs. 350
+  - Hot & Spicy Chicken Wings - Rs. 300 | Chicken Pangra - Rs. 350
+  - Buff Sukuti Sadheko - Rs. 300 | Timmur Pork - Rs. 350
+
+• PLATTERS, MOMO & NOODLES (Print Route: KOT):
+  - MoMo Platter (Small / Large) - Rs. 350 / 550
+  - Newari Platter (Small / Large) - Rs. 400 / 700
+  - Special Bamboo Platter (Small / Large) - Rs. 450 / 700
+  - Veg Momo (Steam: 150, Jhol: 170, Sadheko: 200, Fry: 150, Kothey: 160, Chilli: 220)
+  - Buff Momo (Steam: 160, Jhol: 190, Sadheko: 240, Fry: 190, Kothey: 170, Chilli: 270)
+  - Chicken Momo (Steam: 180, Jhol: 200, Sadheko: 250, Fry: 200, Kothey: 190, Chilli: 280)
+  - Thukpa (Veg / Egg) - Rs. 160 / 180
+  - Thukpa (Buff / Chicken / Pork) - Rs. 180 / 200 / 200 | Thukpa Mixed - Rs. 250
+  - Chowmein (Veg: 150, Chicken/Pork: 180, Buff: 170, Mixed: 250)
+  - Keema Noodles (Chicken / Buff) - Rs. 235 / 225
+  - Current Noodles (Veg / Egg) - Rs. 150 / 250
+
+• RICE, CURRIES & SETS (Print Route: KOT):
+  - Biryani (Veg: 300, Chicken: 400, Mutton: 500)
+  - Rice (Plain: 80, Butter: 100, Jeera: 110)
+  - Curries: Mixed Veg (200), Egg (200), Chicken (250), Mutton (400), Chicken Butter Masala (300), Paneer Butter Masala (280), Matar Paneer (240)
+  - Khana Sets: Veg (325), Chicken (400), Mutton (550), Fish (450)
+  - Khaja Sets: Veg (280), Buff/Pork (330), Chicken (350), Pangra/Bhutan (400)
+  - Pizzas: Margherita (350), Smokey Chicken (450), Sausage Salami (500), Veg/Mixed (380/550)
+  - Rolls: Katti Roll Veg/Non-Veg (200/280), Spring Roll Veg/Non-Veg (200/280)
+  - Chopsuey: Chinese (240), American (250)
+
+• SPECIAL SEKUWA (Print Route: KOT):
+  - Chicken Sekuwa (200g: 300, 500g: 650, 1kg: 1300)
+  - Pork Sekuwa (200g: 300, 500g: 650, 1kg: 1300)
+  - Buff Sekuwa (200g: 300, 500g: 650, 1kg: 1300)
+  - Chicken Wings Sekuwa (200g: 350, 500g: 680, 1kg: 1350)
+  - Mutton Sekuwa (200g: 600, 500g: 1350, 1kg: 2700)
+  - Paneer Sekuwa (300) | Mutton Kalejo (550) | Whole Fish Poleko (600)
+  - Sekuwa Sets: Chicken (300), Mutton (450), Buff/Pork (300), Chicken Wing (400)
+
+• BEERS & WINES (Print Route: BOT):
+  - Mini Gorkha (270), Mini Tuborg (290), Gorkha Strong (480), Gorkha Pilsner (550), Gorkha Craft (575), Tuborg (600), Carlsberg (650)
+  - Wines: Big Master (1250), Divine (1250), Robertson (2300), J.P. Chenet (2800)
+
+• DOMESTIC SPIRITS (Print Route: BOT):
+  - Mustang (60ml: 150, 90ml: 220, Qtr: 390, Half: 780, Full: 1500)
+  - Golden Oak (60ml: 160, 90ml: 240, Qtr: 450, Half: 800, Full: 1550)
+  - Black Oak (60ml: 180, 90ml: 260, Qtr: 480, Half: 950, Full: 1800)
+  - Highlander (60ml: 160, 90ml: 240, Qtr: 450, Half: 800, Full: 1550)
+  - 8848 Vodka (60ml: 300, 90ml: 450, Qtr: 850, Half: 1600, Full: 3050)
+  - Ruslan Vodka (60ml: 300, 90ml: 425, Qtr: 800, Half: 1550, Full: 2950)
+  - NUDE Vodka (60ml: 300, 90ml: 450, Qtr: 850, Half: 1600, Full: 3050)
+  - Signature Green (60ml: 325, 90ml: 480, Qtr: 900, Half: 1650, Full: 3200)
+  - Signature Red (60ml: 350, 90ml: 500, Qtr: 960, Half: 1800, Full: 3400)
+  - Old Durbar Red (60ml: 380, 90ml: 550, Qtr: 1050, Half: 2000, Full: 3850)
+  - Old Durbar Black (60ml: 480, 90ml: 700, Qtr: 1350, Half: 2500, Full: 4750)
+  - Gurkhas & Guns (60ml: 400, 90ml: 600, Qtr: 1050, Half: 2050, Full: 3950)
+  - Yarchagumba (60ml: 1350, 90ml: 2200, Qtr: 4400, Half: 8000, Full: 14500)
+
+• IMPORTED SPIRITS (Print Route: BOT):
+  - Red Label (30ml: 500, 60ml: 900, 90ml: 1300, Qtr: 2350, Half: 4300, Full: 8500)
+  - Black Label (30ml: 550, 60ml: 980, 90ml: 1450, Qtr: 2750, Half: 5000, Full: 9800)
+  - Double Black (30ml: 700, 60ml: 1150, 90ml: 2200, Qtr: 4400, Half: 8000, Full: 14500)
+  - Jack Daniel’s (30ml: 525, 60ml: 950, 90ml: 1350, Qtr: 2250, Half: 4600, Full: 9000)
+  - Chivas Regal (30ml: 550, 60ml: 980, 90ml: 1450, Qtr: 2750, Half: 5000, Full: 9800)
+  - Jameson (30ml: 600, 60ml: 1050, 90ml: 1600, Qtr: 2850, Half: 5250, Full: 10500)
+  - Absolut Vodka (30ml: 525, 60ml: 975, 90ml: 1375, Qtr: 2625, Half: 4750, Full: 9500)
+
+• HOOKAH & CIGARETTES (Print Route: BOT):
+  - Hookah Regular (Mint / Double Apple / Lady Killer) - Rs. 350 / 380 / 400
+  - Hookah Cloud (Mint / Double Apple / Lady Killer) - Rs. 500 / 550 / 600
+  - Hookah Coils (Normal: 50, Coconut: 120)
+  - Surya Red / Light / Arctic - Rs. 30 per stick
+  - Shikhar Ice - Rs. 25 per stick
+
+STRICT EXECUTION GUARDRAILS (DO NOT VIOLATE):
+
+1. SCOPE ISOLATION:
+   - ONLY modify `scripts/seedMenu.mjs` (and `src/data/defaultSeeds.ts` if referenced by local fallbacks) and execute the script.
+   - Target STRICTLY the `menu/categories` and `menu/items` paths in Firebase Realtime Database.
+
+2. ZERO DATABASE OVERWRITES OUTSIDE MENU:
+   - DO NOT alter, wipe, or modify any other Firebase nodes (`orders`, `tables`, `customers`, `inventory`, `expenses`, `users`, `settings`).
+   - Retain existing active orders and Khata credit records intact.
+
+3. ZERO UI & COMPONENT TOUCH:
+   - DO NOT touch, reformat, or edit ANY `.tsx` / `.jsx` frontend components, screens, layout files, or Tailwind styling (`OrderScreen`, `CartDrawer`, `ReviewOrder`, `TopNav`, modals, etc.).
+   - All completed UI styling, high-contrast themes, colors, and layout structures must remain 100% untouched.
+
+4. ZERO LOGIC & ENGINE MODIFICATIONS:
+   - DO NOT alter order submission flows, bill calculation math, tax/discount algorithms, printer dispatch triggers, or KOT/BOT routing hooks.
+   - The menu item objects must strictly follow the existing schema (`name`, `price`, `categoryId`, `printRoute`).
+
+5. INTEGRITY VERIFICATION:
+   - Verify that `node scripts/seedMenu.mjs` executes with exit code 0.
+   - Run `npm run build` to confirm zero TypeScript, linting, or runtime errors.

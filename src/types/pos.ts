@@ -23,13 +23,19 @@ export interface Category {
   parentCategory?: CategoryPillar;
   /** Only for Beverages — groups the category under Non-Alcoholic or Alcoholic */
   subGroup?: BeverageSubGroup;
+  /** Explicit printer route; takes precedence over sendToKitchen when present */
+  printRoute?: PrintRoute;
 }
+
+export type PrintRoute = 'KOT' | 'BOT';
 
 export interface MenuItem {
   id: string;
   categoryId: string;
   name: string;
   price: number;
+  /** Printer routing: KOT → kitchen printer, BOT → bar/bottle printer */
+  printRoute?: PrintRoute;
   image?: string;
   /** Optional descriptive fields used by menu search and imported menu data. */
   category?: string;
