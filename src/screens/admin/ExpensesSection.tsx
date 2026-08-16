@@ -39,15 +39,9 @@ const PERIOD_LABELS: Record<Period, string> = {
   today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 Days', month: 'This Month', custom: 'Custom',
 };
 
-const ACTIVE_STYLE = {
-  background: 'rgba(59,130,246,0.16)',
-  border: '1px solid rgba(59,130,246,0.28)',
-  boxShadow: '0 0 18px -4px rgba(59,130,246,0.3)',
-};
+const dateInputCls = 'px-4 py-2 rounded-xl bg-[#13151F] border border-white/15 text-white font-bold text-xs focus:outline-none focus:border-amber-400 [color-scheme:dark]';
 
-const dateInputCls = 'px-2.5 py-1.5 text-sm rounded-lg bg-white/[0.05] border border-white/[0.1] text-foreground focus:outline-none focus:border-blue-500/40 [color-scheme:dark]';
-
-const inputCls = 'w-full px-3 py-2 rounded-lg text-sm bg-white/[0.05] border border-white/[0.1] text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:border-blue-500/40';
+const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none';
 
 // ── Empty form helper ─────────────────────────────────────────────────────────
 
@@ -196,18 +190,17 @@ export const ExpensesSection = () => {
     <div className="space-y-5">
 
       {/* ── Period filter toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2.5 mt-6">
           {(Object.entries(PERIOD_LABELS) as [Period, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => changePeriod(key)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all ${
                 period === key
-                  ? 'text-white'
-                  : 'bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white/80'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                  : 'bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 font-bold'
               }`}
-              style={period === key ? ACTIVE_STYLE : {}}
             >
               {label}
             </button>
@@ -217,13 +210,13 @@ export const ExpensesSection = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-white/[0.05] border border-white/[0.08] text-white/65 hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
           >
             <Download size={14} /> CSV
           </button>
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 hover:-translate-y-0.5"
           >
             <Plus size={14} /> Log Maintenance Expense
           </button>
@@ -232,50 +225,47 @@ export const ExpensesSection = () => {
 
       {/* ── Custom date range ── */}
       {period === 'custom' && (
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-blue-500/20 bg-blue-500/[0.06]">
-          <span className="text-xs font-semibold text-blue-400 flex-shrink-0">Date Range</span>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06]">
+          <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex-shrink-0">Date Range</span>
           <div className="flex items-center gap-2 flex-wrap">
             <input type="date" value={customStart} max={customEnd}
               onChange={(e) => setCustomStart(e.target.value)} className={dateInputCls} />
-            <span className="text-xs text-muted-foreground">to</span>
+            <span className="text-xs font-bold text-zinc-300">to</span>
             <input type="date" value={customEnd} min={customStart}
               max={format(new Date(), 'yyyy-MM-dd')}
               onChange={(e) => setCustomEnd(e.target.value)} className={dateInputCls} />
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs font-bold text-zinc-300">
             {filtered.length} expense{filtered.length !== 1 ? 's' : ''} in range
           </span>
         </div>
       )}
 
       {/* ── Summary card ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-red-500/25 bg-slate-900/60 backdrop-blur-md p-4">
-          <div className="w-8 h-8 rounded-lg bg-red-500/[0.08] border border-red-500/25 flex items-center justify-center mb-3">
-            <Wrench size={14} className="text-red-400" />
+      <div className="mt-6 flex flex-col">
+        <div className="p-6 rounded-2xl bg-[#181116] border-2 border-rose-500/40 shadow-xl shadow-rose-500/5 max-w-sm flex flex-col justify-between min-h-[130px]">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-400">
+            <Wrench size={15} />
+            <span>Total Maintenance Spent</span>
           </div>
-          <p className="text-xl font-bold text-red-300 leading-tight">Rs. {fmt(totalSpent)}</p>
-          <p className="text-xs font-bold text-slate-100 mt-0.5">Total Maintenance Spent</p>
-          <p className="text-[10px] text-slate-300 mt-0.5">{filtered.length} expense{filtered.length !== 1 ? 's' : ''} this period</p>
+          <p className="text-3xl font-black text-rose-400 tracking-tight mt-1.5 drop-shadow-[0_0_12px_rgba(244,63,94,0.3)]">Rs. {fmt(totalSpent)}</p>
         </div>
       </div>
 
       {/* ── Expenses table ── */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-5">
-        <h3 className="font-semibold text-foreground mb-4">Maintenance Log</h3>
+      <div className="bg-[#13151F] border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 mt-8">
+        <h3 className="bg-white/[0.04] border-b border-white/10 text-base font-black text-white tracking-wide py-4 px-6">Maintenance Log</h3>
 
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-300">
-            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-              <Wrench size={20} className="text-slate-300 opacity-70" />
-            </div>
-            <p className="text-sm font-semibold text-slate-300">No expenses this period</p>
-            <p className="text-xs text-slate-400 mt-0.5">Log a maintenance expense to see it here</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] m-6">
+            <Wrench size={36} className="text-amber-400 mb-2" />
+            <p className="text-sm font-black text-white">No expenses this period</p>
+            <p className="text-xs font-bold text-zinc-300 mt-1">Log a maintenance expense to see it here</p>
           </div>
         ) : (
           <>
             {/* Desktop header */}
-            <div className="hidden sm:grid grid-cols-[90px_1fr_140px_100px_130px_100px_80px] gap-2 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-white/[0.06] mb-1">
+            <div className="hidden sm:grid grid-cols-[90px_1fr_140px_100px_130px_100px_80px] gap-2 px-6 py-4 bg-white/[0.04] border-b border-white/10 text-xs font-black uppercase tracking-widest text-zinc-200 mb-1">
               <span>Date</span><span>Title</span><span>Category</span>
               <span className="text-right">Amount</span><span>Payment</span>
               <span>Logged By</span><span className="text-right">Actions</span>
@@ -284,50 +274,50 @@ export const ExpensesSection = () => {
               {filtered.map((exp) => (
                 <div key={exp.id}>
                   {/* Desktop row */}
-                  <div className="hidden sm:grid grid-cols-[90px_1fr_140px_100px_130px_100px_80px] gap-2 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors items-center">
-                    <span className="text-xs text-muted-foreground tabular-nums">{exp.date}</span>
-                    <span className="text-sm font-medium text-foreground truncate">{exp.title}</span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-medium w-fit">
+                  <div className="hidden sm:grid grid-cols-[90px_1fr_140px_100px_130px_100px_80px] gap-2 px-6 py-4 border-b border-white/10 hover:bg-white/[0.03] transition-colors items-center">
+                    <span className="text-sm font-bold font-mono text-zinc-200 tracking-wider">{exp.date}</span>
+                    <span className="text-base font-black text-white tracking-wide truncate">{exp.title}</span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-zinc-200 text-xs font-black uppercase tracking-wider w-fit">
                       {CATEGORY_LABELS[exp.category]}
                     </span>
-                    <span className="text-sm font-bold text-red-300 text-right">Rs. {fmt(exp.amount)}</span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-medium w-fit">
+                    <span className="text-base font-black text-rose-400 font-mono tracking-tight text-right">Rs. {fmt(exp.amount)}</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold w-fit">
                       {PAYMENT_LABELS[exp.paymentMethod]}
                     </span>
-                    <span className="text-xs text-muted-foreground truncate">{exp.loggedBy}</span>
-                    <div className="flex items-center gap-1 justify-end">
+                    <span className="text-sm font-bold text-zinc-200 tracking-wide truncate">{exp.loggedBy}</span>
+                    <div className="flex items-center gap-1.5 justify-end">
                       <button onClick={() => openEdit(exp)}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground hover:text-blue-400 transition-colors">
+                        className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all">
                         <Edit3 size={13} />
                       </button>
                       <button onClick={() => setDeleteId(exp.id)}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground hover:text-red-400 transition-colors">
+                        className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all">
                         <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
                   {/* Mobile row */}
-                  <div className="sm:hidden flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors">
+                  <div className="sm:hidden flex items-center gap-3 px-6 py-4 border-b border-white/10 hover:bg-white/[0.03] transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground truncate">{exp.title}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-medium flex-shrink-0">
+                        <span className="text-base font-black text-white tracking-wide truncate">{exp.title}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-zinc-200 font-black uppercase tracking-wider flex-shrink-0">
                           {CATEGORY_LABELS[exp.category]}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground">{exp.date}</span>
-                        <span className="text-[10px] text-muted-foreground">{exp.loggedBy}</span>
+                        <span className="text-xs font-bold font-mono text-zinc-200">{exp.date}</span>
+                        <span className="text-xs font-bold text-zinc-200">{exp.loggedBy}</span>
                       </div>
                     </div>
-                    <span className="text-sm font-bold text-red-300 flex-shrink-0">Rs. {fmt(exp.amount)}</span>
+                    <span className="text-base font-black text-rose-400 font-mono flex-shrink-0">Rs. {fmt(exp.amount)}</span>
                     <div className="flex items-center gap-0.5">
                       <button onClick={() => openEdit(exp)}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground hover:text-blue-400 transition-colors">
+                        className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all">
                         <Edit3 size={13} />
                       </button>
                       <button onClick={() => setDeleteId(exp.id)}
-                        className="p-1.5 rounded-lg hover:bg-white/[0.07] text-muted-foreground hover:text-red-400 transition-colors">
+                        className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -341,13 +331,13 @@ export const ExpensesSection = () => {
 
       {/* ── Log / Edit modal ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Expense' : 'Log Maintenance Expense'}</DialogTitle>
+            <DialogTitle className="text-lg font-black text-white tracking-tight">{editingId ? 'Edit Expense' : 'Log Maintenance Expense'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Title / Description</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Expense Title</label>
               <input
                 type="text"
                 placeholder="e.g. Plumbing leak repair"
@@ -357,9 +347,9 @@ export const ExpensesSection = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Category</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Category</label>
               <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v as MaintenanceCategory }))}>
-                <SelectTrigger className="bg-white/[0.05] border-white/[0.1]">
+                <SelectTrigger className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +360,7 @@ export const ExpensesSection = () => {
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Amount (Rs.)</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Amount (Rs.)</label>
               <input
                 type="number"
                 min="0"
@@ -382,9 +372,9 @@ export const ExpensesSection = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Payment Method</label>
               <Select value={form.paymentMethod} onValueChange={(v) => setForm((f) => ({ ...f, paymentMethod: v as MaintenancePaymentMethod }))}>
-                <SelectTrigger className="bg-white/[0.05] border-white/[0.1]">
+                <SelectTrigger className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -395,7 +385,7 @@ export const ExpensesSection = () => {
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Date</label>
+              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Date</label>
               <input
                 type="date"
                 value={form.date}
@@ -405,13 +395,13 @@ export const ExpensesSection = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
             <button onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold bg-white/[0.05] border border-white/[0.1] text-foreground hover:bg-white/[0.1] transition-colors">
+              className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all">
               Cancel
             </button>
             <button onClick={handleSave}
-              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+              className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all">
               {editingId ? 'Save Changes' : 'Log Expense'}
             </button>
           </DialogFooter>

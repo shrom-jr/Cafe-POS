@@ -556,6 +556,13 @@ const AdminPanel = () => {
                     Stock management for alcohol, beverages, cigarettes &amp; groceries
                   </p>
                 </div>
+              ) : activeTab === 'expenses' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Expenses &amp; Maintenance</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Log and track operational &amp; facility maintenance costs
+                  </p>
+                </div>
               ) : (
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
