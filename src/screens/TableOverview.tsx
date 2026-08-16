@@ -59,7 +59,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
 
       </div>
 
-      {/* Table grid — cards float on the page background */}
+      {/* Table grid — solid state tiles keep occupancy instantly legible */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {tables.map((table) => {
           const data = tableOrderData[table.id] || { itemCount: 0 };
