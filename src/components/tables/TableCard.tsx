@@ -60,27 +60,27 @@ const TableCard = ({
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative rounded-2xl text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
+      className={`group relative min-h-[105px] w-full rounded-2xl text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
     >
       {/* ── FREE state ── */}
       {!isActive ? (
-        <div className="h-full w-full flex items-center justify-center p-2">
-          <span className="text-center text-xl font-black tracking-wide text-slate-950 dark:text-white leading-tight">
+        <div className="flex h-full w-full items-center justify-center rounded-2xl p-3">
+          <span className="text-center text-2xl font-black tracking-wide text-slate-950 dark:text-white leading-tight">
             {displayName}
           </span>
         </div>
       ) : (
         /* ── OCCUPIED / BILLING state ── */
-        <div className="h-full w-full flex flex-col justify-between p-3 box-border overflow-hidden">
+        <div className="box-border flex h-full w-full flex-col justify-between overflow-hidden p-3.5">
           {/* Row 1: table name + status badge */}
-          <div className="flex min-w-0 items-center justify-between gap-1.5">
+          <div className="flex min-w-0 items-center justify-between gap-2.5">
             <span
               title={displayName}
-              className="min-w-0 truncate text-lg font-black leading-tight tracking-tight text-white dark:text-white"
+              className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-slate-950 dark:text-white"
             >
               {displayName}
             </span>
-            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide ${statusBadge}`}>
+            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-black uppercase leading-none tracking-wider ${statusBadge}`}>
               <span className={`h-1 w-1 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
@@ -93,19 +93,19 @@ const TableCard = ({
           )}
 
           {/* Row 2: guest count + optional customer pill */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 dark:text-slate-300">
-            <span>👤 {table.pax ?? 1} Guests</span>
+          <div className="flex items-center gap-2.5 py-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+            <span className="flex items-center gap-1">👤 {table.pax ?? 1} Guest{(table.pax ?? 1) === 1 ? '' : 's'}</span>
             {customerName && (
-              <span className="max-w-[120px] min-w-0 truncate rounded border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+              <span className="max-w-[130px] min-w-0 truncate rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-200">
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Row 3: timer + item count */}
-          <div className="flex items-center justify-between border-t border-white/10 pt-1.5 text-xs font-bold text-slate-300 dark:text-slate-300">
-            <span className="tabular-nums text-amber-400">⏱️ {timer || '—'}</span>
-            <span>{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-xs font-bold text-slate-700 dark:border-white/10 dark:text-slate-300">
+            <span className="tabular-nums font-bold text-amber-600 dark:text-amber-400">⏱️ {timer || '—'}</span>
+            <span className="text-slate-700 dark:text-slate-200">{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
           </div>
         </div>
       )}

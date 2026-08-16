@@ -48,8 +48,8 @@ type OrderData = Record<string, { itemCount: number; customerName?: string }>;
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 /** Non-interactive landmark badge (TV area, parking, gate, etc.) */
-const LandmarkTile = ({ label }: { label: string }) => (
-  <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 py-1.5 text-center text-[10px] font-bold text-slate-400 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-600">
+const LandmarkTile = ({ label, className = '' }: { label: string; className?: string }) => (
+  <div className={`flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs font-bold text-slate-400 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-600 ${className}`}>
     {label}
   </div>
 );
@@ -104,13 +104,13 @@ const OverflowGrid = ({
 /**
  * First Floor (Huts) — proportional 12-column deck blueprint
  *
- *  Col 1 │ H3-B 75px │
- *         │ H3-A 75px │
- *         │ T-1  75px │
- *  Col 2 │ H2-B 75px │
- *         │ H2-A 75px │
- *         │ T-2  75px │
- *  Col 3 │ H1 standard hut │
+ *  Col 1 │ H3-B 100px │
+ *         │ H3-A 100px │
+ *         │ T-1  100px │
+ *  Col 2 │ H2-B 100px │
+ *         │ H2-A 100px │
+ *         │ T-2  100px │
+ *  Col 3 │ H1 full-height hut │
  */
 const FirstFloorBlueprint = ({
   tables, orderData, onTableClick,
@@ -126,22 +126,22 @@ const FirstFloorBlueprint = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-12 items-start gap-4">
+      <div className="grid grid-cols-12 items-stretch gap-5">
         {/* Hut 3 */}
-        <div className="col-span-4 flex flex-col gap-2">
-          <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
-          <Slot table={h3a} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
-          <Slot table={t1} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
+        <div className="col-span-4 flex h-full flex-col gap-3">
+          <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={h3a} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={t1} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
         {/* Hut 2 */}
-        <div className="col-span-4 flex flex-col gap-2">
-          <Slot table={h2b} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
-          <Slot table={h2a} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
-          <Slot table={t2} orderData={orderData} onTableClick={onTableClick} className="h-[92px] flex-none" />
+        <div className="col-span-4 flex h-full flex-col gap-3">
+          <Slot table={h2b} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={h2a} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={t2} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
         {/* Hut 1 */}
-        <div className="col-span-4 flex flex-col">
-          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="h-[140px] min-h-[140px]" />
+        <div className="col-span-4 flex h-full flex-col">
+          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="h-full min-h-[320px]" />
         </div>
       </div>
       <OverflowGrid tables={overflow} orderData={orderData} onTableClick={onTableClick} />
@@ -188,50 +188,50 @@ const GroundFloorBlueprint = ({
   const overflowCabins = overflowTables(cabinTs, KNOWN_CABINS);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-12 items-start gap-5">
       {/* ── LEFT: Sofa & Lounge ── */}
-      <div className="flex flex-col gap-2">
+      <div className="col-span-4 flex flex-col gap-3">
         <AreaHeader label="Sofa & Lounge" areaIndex={1} />
         {/* Sofa — wide single card */}
-        <Slot table={sofa} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
+        <Slot table={sofa} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         {/* 2×2 grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <Slot table={l4} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={l3} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={l2} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={l1} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={l4} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={l3} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={l2} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={l1} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
-        <LandmarkTile label="📺  TV Area" />
+        <LandmarkTile label="📺  TV Area" className="py-2" />
         <OverflowGrid tables={overflowLounge} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
       {/* ── MIDDLE: Bar Counter + Landmarks ── */}
-      <div className="flex flex-col gap-2">
+      <div className="col-span-4 flex flex-col gap-3">
         <AreaHeader label="Bar Counter" areaIndex={2} />
-        <div className="grid grid-cols-2 gap-2">
-          <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
-          <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
-        <LandmarkTile label="🅿️  Parking Area" />
-        <LandmarkTile label="⛩️  Main Gate" />
+        <LandmarkTile label="🅿️  Parking Area" className="py-4" />
+        <LandmarkTile label="⛩️  Main Gate" className="py-4" />
         <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
       {/* ── RIGHT: Private Cabins ── */}
-      <div className="flex flex-col gap-2">
+      <div className="col-span-4 flex flex-col gap-3">
         <AreaHeader label="Private Cabins" areaIndex={3} />
         {/* Back Quad: R3/R1 top row, R4/R2 bottom row */}
-        <div className="grid grid-cols-2 gap-2">
-          <Slot table={r3} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={r1} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={r4} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
-          <Slot table={r2} orderData={orderData} onTableClick={onTableClick} className="h-[92px]" />
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={r3} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={r1} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={r4} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
+          <Slot table={r2} orderData={orderData} onTableClick={onTableClick} className="min-h-[100px]" />
         </div>
-        {/* Front Strip: all three cabins in one row */}
-        <div className="grid grid-cols-3 gap-2">
-          <Slot table={r5} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
-          <Slot table={r6} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
-          <Slot table={r7} orderData={orderData} onTableClick={onTableClick} className="h-[80px]" />
+        {/* Front Strip: all three cabins stacked vertically */}
+        <div className="flex flex-col gap-3">
+          <Slot table={r5} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
+          <Slot table={r6} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
+          <Slot table={r7} orderData={orderData} onTableClick={onTableClick} className="min-h-[90px]" />
         </div>
         <OverflowGrid tables={overflowCabins} orderData={orderData} onTableClick={onTableClick} />
       </div>
