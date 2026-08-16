@@ -15,22 +15,28 @@ const formatDate = (ts: number | string) =>
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
 
-// ── sub-components ─────────────────────────────────────────────────────────────
+// ── Modal shell ────────────────────────────────────────────────────────────────
 
 interface ModalProps { onClose: () => void; children: React.ReactNode; title: string }
 const Modal = ({ onClose, children, title }: ModalProps) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-    <div className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl" style={{ background: 'rgba(15,23,42,0.98)' }}>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
-        <p className="font-black text-white text-sm">{title}</p>
-        <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="w-full max-w-md p-6 rounded-3xl bg-[#12141D] border border-white/15 shadow-2xl shadow-black text-white relative">
+      <div className="flex items-center justify-between mb-5">
+        <p className="font-black text-white text-base">{title}</p>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+        >
           <X size={15} />
         </button>
       </div>
-      <div className="px-5 py-4">{children}</div>
+      {children}
     </div>
   </div>
 );
+
+// ── shared input class ─────────────────────────────────────────────────────────
+const inputClass = "w-full bg-[#1A1D2A] border border-white/10 focus:border-amber-400 rounded-xl px-4 py-3 text-sm font-bold text-white placeholder-zinc-500 outline-none transition-all";
 
 // ── main component ─────────────────────────────────────────────────────────────
 
@@ -155,9 +161,6 @@ const CustomersPortal = () => {
     return [...custOrders, ...custRepayments].sort((a, b) => b.at - a.at);
   }, [ledgerTarget, orders, repayments]);
 
-  // ── input style helper ──────────────────────────────────────────────────────
-  const inputClass = "w-full px-3.5 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 placeholder:text-white/25 focus:outline-none focus:border-blue-500/50 transition-colors";
-
   return (
     <AppLayout title="Customers">
       <main className="flex-1 min-h-0 overflow-y-auto">
@@ -166,13 +169,12 @@ const CustomersPortal = () => {
           {/* ── Page header ── */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-black text-white">Customers</h1>
-              <p className="text-xs text-slate-400 mt-0.5">Credit balances · repayments · ledger history</p>
+              <h1 className="text-2xl font-black text-white dark:text-white tracking-tight">Customers & Ledger</h1>
+              <p className="text-xs font-semibold text-slate-400 dark:text-zinc-400 mt-1">Credit balances · repayments · ledger history</p>
             </div>
             <button
               onClick={() => setShowRegister(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all active:scale-95 hover:brightness-110"
-              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)', boxShadow: '0 4px 16px -4px rgba(59,130,246,0.45)' }}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 hover:-translate-y-0.5"
             >
               <Plus size={15} />
               Register New Customer
@@ -181,29 +183,29 @@ const CustomersPortal = () => {
 
           {/* ── Stat cards ── */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Total Customers</p>
-              <p className="mt-1 text-2xl font-black text-white">{totalActive}</p>
+            <div className="bg-[#13151F] border border-white/10 p-5 rounded-2xl shadow-lg">
+              <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Total Customers</p>
+              <p className="text-2xl sm:text-3xl font-black text-white mt-1">{totalActive}</p>
             </div>
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-red-400">Total Dues Outstanding</p>
-              <p className="mt-1 text-2xl font-black text-red-400">Rs. {fmt(totalDues)}</p>
+            <div className="bg-[#13151F] border border-rose-500/30 p-5 rounded-2xl shadow-lg shadow-rose-500/5">
+              <p className="text-[11px] font-black uppercase tracking-wider text-rose-400">Total Dues Outstanding</p>
+              <p className="text-2xl sm:text-3xl font-black text-rose-400 mt-1">Rs. {fmt(totalDues)}</p>
             </div>
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.18)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">Total Collected</p>
-              <p className="mt-1 text-2xl font-black text-emerald-400">Rs. {fmt(totalCollected)}</p>
+            <div className="bg-[#13151F] border border-emerald-500/30 p-5 rounded-2xl shadow-lg shadow-emerald-500/5">
+              <p className="text-[11px] font-black uppercase tracking-wider text-emerald-400">Total Collected</p>
+              <p className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">Rs. {fmt(totalCollected)}</p>
             </div>
           </div>
 
           {/* ── Customer table ── */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="bg-[#13151F] border border-white/10 rounded-2xl overflow-hidden shadow-xl mt-6">
             {customers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <UserCircle size={40} className="text-slate-600" />
                 <p className="text-sm text-slate-500">No customers registered yet.</p>
                 <button
                   onClick={() => setShowRegister(true)}
-                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                 >
                   + Register the first customer
                 </button>
@@ -212,39 +214,40 @@ const CustomersPortal = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 border-b border-white/[0.06]">
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3">Current Due</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                    <tr className="bg-white/[0.02] border-b border-white/10">
+                      <th className="text-[11px] font-black uppercase tracking-wider text-slate-400 py-3.5 px-6 text-left">Customer</th>
+                      <th className="text-[11px] font-black uppercase tracking-wider text-slate-400 py-3.5 px-6 text-left">Phone</th>
+                      <th className="text-[11px] font-black uppercase tracking-wider text-slate-400 py-3.5 px-6 text-left">Current Due</th>
+                      <th className="text-[11px] font-black uppercase tracking-wider text-slate-400 py-3.5 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {customers.map((c) => (
-                      <tr key={c.id} className="border-b border-white/[0.04] last:border-0">
-                        <td className="px-4 py-3">
+                      <tr key={c.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td className="py-4 px-6">
                           <div className="flex items-center gap-2.5">
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0"
-                              style={{ background: 'rgba(59,130,246,0.18)', color: 'rgba(147,197,253,0.9)' }}
-                            >
+                            <div className="w-9 h-9 rounded-xl bg-[#1E2235] border border-white/10 flex items-center justify-center text-xs font-black text-white shadow-inner flex-shrink-0">
                               {c.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-semibold text-white">{c.name}</span>
+                            <div>
+                              <p className="text-sm font-black text-white tracking-wide">{c.name}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-300">{c.phone || '—'}</td>
-                        <td className="px-4 py-3">
-                          {c.currentDue > 0
-                            ? <span className="font-black text-red-400">Rs. {fmt(c.currentDue)}</span>
-                            : <span className="font-semibold text-emerald-400">✓ Clear</span>}
+                        <td className="py-4 px-6">
+                          <span className="text-xs font-bold text-slate-400">{c.phone || '—'}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="py-4 px-6">
+                          {c.currentDue > 0
+                            ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-black">Rs. {fmt(c.currentDue)}</span>
+                            : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-black">✓ Clear</span>}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => openCollect(c)}
                               title="Collect Payment"
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all active:scale-95"
+                              className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 border border-amber-500/40 text-amber-300 text-xs font-black transition-all flex items-center gap-1.5"
                             >
                               <DollarSign size={12} />
                               Collect
@@ -252,7 +255,7 @@ const CustomersPortal = () => {
                             <button
                               onClick={() => setLedgerTarget(c)}
                               title="View Ledger"
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all active:scale-95"
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
                             >
                               <BookOpen size={12} />
                               Ledger
@@ -260,14 +263,14 @@ const CustomersPortal = () => {
                             <button
                               onClick={() => openEdit(c)}
                               title="Edit Customer"
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
                             >
                               <Edit2 size={13} />
                             </button>
                             <button
                               onClick={() => setDeleteTarget(c)}
                               title="Delete Customer"
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 bg-white/5 border border-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-95"
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -314,8 +317,7 @@ const CustomersPortal = () => {
             )}
             <button
               onClick={handleRegister}
-              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
-              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)' }}
+              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm transition-all shadow-lg shadow-amber-500/20"
             >
               Register Customer
             </button>
@@ -347,8 +349,7 @@ const CustomersPortal = () => {
             </div>
             <button
               onClick={handleEdit}
-              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110"
-              style={{ background: 'linear-gradient(135deg,#1e50d0,#4186f5)' }}
+              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm transition-all shadow-lg shadow-amber-500/20"
             >
               Save Changes
             </button>
@@ -361,9 +362,9 @@ const CustomersPortal = () => {
         <Modal title={`Collect from ${collectTarget.name}`} onClose={() => setCollectTarget(null)}>
           <div className="space-y-3">
             {/* Balance display */}
-            <div className="rounded-xl px-4 py-3 text-center" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+            <div className="rounded-xl px-4 py-3 text-center bg-rose-500/8 border border-rose-500/20">
               <p className="text-xs text-slate-400">Current Outstanding</p>
-              <p className="text-2xl font-black text-red-400 mt-0.5">Rs. {fmt(collectTarget.currentDue)}</p>
+              <p className="text-2xl font-black text-rose-400 mt-0.5">Rs. {fmt(collectTarget.currentDue)}</p>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Amount Received (Rs.)</label>
@@ -381,8 +382,7 @@ const CustomersPortal = () => {
               <button
                 type="button"
                 onClick={() => { setCollectAmount(String(collectTarget.currentDue)); setCollectError(''); }}
-                className="w-full mt-2 px-3 py-3 rounded-lg text-xs font-semibold text-amber-300 transition-all active:scale-[0.98] hover:bg-amber-500/25"
-                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)' }}
+                className="w-full mt-2 px-3 py-3 rounded-lg text-xs font-semibold text-amber-300 transition-all active:scale-[0.98] hover:bg-amber-500/25 bg-amber-500/15 border border-amber-500/40"
               >
                 ⚡ Pay Full Due: Rs. {fmt(collectTarget.currentDue)}
               </button>
@@ -401,13 +401,13 @@ const CustomersPortal = () => {
                 {(['cash', 'fonepay'] as const).map((m) => (
                   <button
                     key={m}
+                    type="button"
                     onClick={() => setCollectMethod(m)}
-                    className="py-2 rounded-xl text-xs font-bold capitalize transition-all active:scale-95"
-                    style={
+                    className={`py-2.5 rounded-xl text-xs capitalize transition-all active:scale-95 border ${
                       collectMethod === m
-                        ? { background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.5)', color: 'rgba(147,197,253,0.95)' }
-                        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }
-                    }
+                        ? 'bg-amber-500/20 border-2 border-amber-400 text-amber-300 font-black'
+                        : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white font-bold'
+                    }`}
                   >
                     {m === 'cash' ? '💵 Cash' : '📱 QR / Fonepay'}
                   </button>
@@ -420,8 +420,7 @@ const CustomersPortal = () => {
             <button
               onClick={handleCollect}
               disabled={!collectAmountValid}
-              className="w-full py-2.5 rounded-xl font-black text-sm text-white transition-all active:scale-95 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'linear-gradient(135deg,#059669,#10b981)', boxShadow: '0 4px 14px -4px rgba(16,185,129,0.4)' }}
+              className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirm Collection
             </button>
@@ -437,7 +436,7 @@ const CustomersPortal = () => {
               This will permanently remove <span className="font-bold text-white">{deleteTarget.name}</span> and all their repayment history. This cannot be undone.
             </p>
             {deleteTarget.currentDue > 0 && (
-              <div className="rounded-xl px-3 py-2 flex items-center gap-2" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+              <div className="rounded-xl px-3 py-2 flex items-center gap-2 bg-rose-500/8 border border-rose-500/20">
                 <AlertTriangle size={14} className="text-red-400 flex-shrink-0" />
                 <p className="text-xs text-red-300">This customer has an outstanding balance of Rs. {fmt(deleteTarget.currentDue)}.</p>
               </div>
@@ -462,16 +461,16 @@ const CustomersPortal = () => {
 
       {/* ── Ledger drawer ── */}
       {ledgerTarget && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md">
           <div
-            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col"
-            style={{ background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '80dvh' }}
+            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl flex flex-col bg-[#12141D] border border-white/15 shadow-2xl shadow-black"
+            style={{ maxHeight: '80dvh' }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between px-5 py-4 flex-shrink-0 border-b border-white/[0.07]">
+            <div className="flex items-start justify-between px-6 py-5 flex-shrink-0 border-b border-white/10">
               <div>
                 <p className="font-black text-white text-sm flex items-center gap-2">
-                  <BookOpen size={14} className="text-blue-400" />
+                  <BookOpen size={14} className="text-amber-400" />
                   {ledgerTarget.name}'s Ledger
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">{ledgerTarget.phone || 'No phone'}</p>
@@ -479,11 +478,14 @@ const CustomersPortal = () => {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-[10px] text-slate-500">Balance</p>
-                  <p className={`text-sm font-black ${ledgerTarget.currentDue > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                  <p className={`text-sm font-black ${ledgerTarget.currentDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {ledgerTarget.currentDue > 0 ? `Rs. ${fmt(ledgerTarget.currentDue)}` : '✓ Clear'}
                   </p>
                 </div>
-                <button onClick={() => setLedgerTarget(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+                <button
+                  onClick={() => setLedgerTarget(null)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                >
                   <X size={15} />
                 </button>
               </div>
@@ -494,9 +496,9 @@ const CustomersPortal = () => {
                 <p className="py-8 text-center text-sm text-slate-500">No history recorded yet.</p>
               ) : (
                 ledgerEntries.map((e, i) => (
-                  <div key={i} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div key={i} className="rounded-xl px-3 py-2.5 bg-white/[0.03] border border-white/[0.06]">
                     <div className="flex items-center justify-between">
-                      <span className={`text-xs font-semibold ${e.kind === 'repayment' ? 'text-emerald-300' : 'text-blue-300'}`}>
+                      <span className={`text-xs font-semibold ${e.kind === 'repayment' ? 'text-emerald-300' : 'text-amber-300'}`}>
                         {e.kind === 'repayment' ? '💰' : '🧾'} {e.label}
                       </span>
                       <span className={`text-xs font-black ${e.kind === 'repayment' ? 'text-emerald-400' : 'text-white'}`}>

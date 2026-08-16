@@ -85,7 +85,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       <span
         className="hidden truncate text-lg font-black tracking-wide text-slate-900 leading-tight dark:text-white lg:block"
       >
-        {title}
+        {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
       </span>
     </div>
   );
@@ -180,7 +180,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
               )}
             </div>
             <span className="truncate text-sm font-black tracking-tight text-slate-900 dark:text-white sm:text-base">
-              {title}
+              {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
