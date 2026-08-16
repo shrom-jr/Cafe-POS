@@ -297,7 +297,7 @@ const ReviewScreen = () => {
     ? {
         modal: 'border-2 border-purple-500/60 shadow-2xl shadow-purple-500/10',
         frame: 'p-3 rounded-2xl bg-white border-4 border-purple-500 shadow-lg',
-        title: '🟣 Khalti Payment',
+        title: 'Khalti Payment',
         titleColor: 'text-purple-400',
         button: 'w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-purple-500/30 transition-all active:scale-[0.98]',
       }
@@ -305,14 +305,14 @@ const ReviewScreen = () => {
       ? {
           modal: 'border-2 border-rose-500/60 shadow-2xl shadow-rose-500/10',
           frame: 'p-3 rounded-2xl bg-white border-4 border-rose-500 shadow-lg',
-          title: '🔴 Fonepay Payment',
+          title: 'Fonepay Payment',
           titleColor: 'text-rose-400',
           button: 'w-full py-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-rose-500/30 transition-all active:scale-[0.98]',
         }
       : {
           modal: 'border-2 border-emerald-500/60 shadow-2xl shadow-emerald-500/10',
           frame: 'p-3 rounded-2xl bg-white border-4 border-emerald-500 shadow-lg',
-          title: '📱 eSewa Payment',
+          title: 'eSewa Payment',
           titleColor: 'text-emerald-400',
           button: 'w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98]',
         };
@@ -1844,15 +1844,15 @@ const ReviewScreen = () => {
                            <div className="flex items-center gap-2 bg-[#181B26] p-1.5 rounded-2xl border border-white/15 mt-2">
                              <button
                                onClick={() => handleModeToggle('fixed')}
-                               className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'fixed' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
+                                className={`flex-1 py-1.5 rounded-xl text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'fixed' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-zinc-300 hover:text-white font-bold'}`}
                              >
-                              💵 CASH DISCOUNT (RS.)
+                               CASH DISCOUNT (RS.)
                              </button>
                              <button
                                onClick={() => handleModeToggle('percent')}
-                               className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'percent' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
+                                className={`flex-1 py-1.5 rounded-xl text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'percent' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-zinc-300 hover:text-white font-bold'}`}
                              >
-                              ％ PERCENTAGE (%)
+                               % PERCENTAGE (%)
                              </button>
                            </div>
                             <div className="flex items-stretch mt-2 rounded-xl bg-[#181B26] border-2 border-white/20 focus-within:border-amber-400 overflow-hidden">
@@ -1949,7 +1949,7 @@ const ReviewScreen = () => {
                         </div>
                         {/* Scrollable buttons area */}
                           <div className="flex-1 min-h-0 overflow-hidden">
-                          <div className="grid grid-cols-2 gap-2.5">
+                           <div className="grid grid-cols-2 gap-2.5 mt-2">
 
                         {/* Unified 2-column grid — Cash + all digital wallets */}
                           {/* Cash */}
@@ -1967,18 +1967,6 @@ const ReviewScreen = () => {
                               ['--card-hover-shadow' as string]: '0 14px 32px rgba(16,185,129,0.4), 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
                             }}
                           >
-                            <div
-                              style={{
-                                 width: 30, height: 30,
-                                borderRadius: 10,
-                                background: 'rgba(52,211,153,0.2)',
-                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <Banknote size={20} style={{ color: '#34d399' }} />
-                            </div>
                             <div className="text-left min-w-0">
                                 <p className="text-xs font-black text-white group-hover:text-emerald-200">Cash</p>
                                 <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Tap to pay</p>
@@ -2041,7 +2029,7 @@ const ReviewScreen = () => {
                                      : id === 'khalti'
                                        ? 'bg-[#161224] border-purple-500/40 hover:border-purple-400 shadow-purple-500/5'
                                        : id === 'fonepay'
-                                         ? 'bg-[#1A1116] border-rose-500/40 hover:border-rose-400 shadow-rose-500/5 col-span-2 justify-center'
+                                          ? 'p-3.5 rounded-2xl bg-[#1A1116] border-2 border-rose-500/40 hover:border-rose-400 flex flex-col justify-center gap-0.5 transition-all cursor-pointer shadow-md'
                                          : 'bg-[#13151F] border-white/15 hover:border-white/30'
                                  }`}
                                 style={{
@@ -2053,25 +2041,23 @@ const ReviewScreen = () => {
                                   ['--card-hover-shadow' as string]: b.hoverShadow,
                                 }}
                               >
-                                <div
-                                  style={{
-                                    width: 30, height: 30,
-                                    borderRadius: 10,
-                                    background: b.iconBg,
-                                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    flexShrink: 0,
-                                    overflow: 'hidden',
-                                  }}
-                                >
-                                  {logoImage ? (
-                                    <img src={logoImage} alt={label} className="w-full h-full object-contain p-0.5" />
-                                  ) : (
-                                    <Smartphone size={20} style={{ color: b.color }} />
-                                  )}
-                                </div>
+                                 {logoImage && (
+                                   <div
+                                     style={{
+                                       width: 30, height: 30,
+                                       borderRadius: 10,
+                                       background: b.iconBg,
+                                       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                       flexShrink: 0,
+                                       overflow: 'hidden',
+                                     }}
+                                   >
+                                     <img src={logoImage} alt={label} className="w-full h-full object-contain p-0.5" />
+                                   </div>
+                                 )}
                                 <div className="text-left min-w-0">
-                                   <p className="text-xs font-black text-white group-hover:text-emerald-200 uppercase tracking-wider" style={{ color: id === 'khalti' ? '#e9d5ff' : id === 'fonepay' ? '#fecdd3' : '#ffffff' }}>{id === 'fonepay' ? '🔴 Fonepay QR Payment' : label}</p>
+                                    <p className="text-xs font-black text-white group-hover:text-emerald-200 uppercase tracking-wider" style={{ color: id === 'khalti' ? '#e9d5ff' : id === 'fonepay' ? '#fecdd3' : '#ffffff' }}>{label}</p>
                                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: id === 'khalti' ? '#d8b4fe' : id === 'fonepay' ? '#fda4af' : '#a7f3d0' }}>Scan QR</p>
                                 </div>
                               </button>
