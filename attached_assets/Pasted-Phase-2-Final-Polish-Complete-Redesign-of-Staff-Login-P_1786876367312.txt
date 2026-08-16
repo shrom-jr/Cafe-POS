@@ -1,0 +1,37 @@
+Phase 2 Final Polish: Complete Redesign of Staff Login Portal & Tactile PIN Terminal
+
+Refactor `src/screens/PinLoginScreen.tsx` (and related staff login/PIN components) to replace the sparse square cards and missing brand typography with a high-end, balanced POS terminal layout:
+
+1. Hero Branding & Header (`PinLoginScreen.tsx`):
+   - Top Right: Floating theme toggle button (`☀️ / 🌙`).
+   - Center Brand Hub:
+     * Logo: `h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-2 border-amber-500/40 bg-[#12141D] p-2 shadow-xl shadow-amber-500/10 mb-3 mx-auto object-contain`.
+     * Restaurant Name: Prominent and bold `text-2xl sm:text-3xl font-black tracking-tight text-white dark:text-white text-center` -> "S Bamboo Cottage & Sekuwa Corner".
+     * Subtitle: `text-xs font-bold tracking-widest text-amber-400 dark:text-amber-400 uppercase mt-1 text-center` -> "STAFF ACCESS • POS TERMINAL".
+     * Instruction Pill: `inline-flex items-center justify-center mt-3 px-4 py-1 rounded-full bg-[#12141D] border border-white/10 text-xs font-bold text-slate-300 shadow-sm mx-auto` -> "Tap Your Profile to Sign In".
+
+2. Balanced Horizontal Staff Badges (NO Orphan Cards):
+   - Container: `flex flex-wrap justify-center gap-4 max-w-3xl mx-auto mt-8 px-4` (renders 3 cards on top, 2 cards centered directly below).
+   - Staff Badge Card (`w-[230px] sm:w-[240px] p-3.5 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-200`):
+     * Dark Mode: `bg-[#12141C] border border-white/10 hover:border-amber-500/60 hover:bg-[#181B26] shadow-lg shadow-black/40 hover:shadow-amber-500/10 hover:-translate-y-1`.
+     * Light Mode: `bg-white border-2 border-slate-900 hover:bg-slate-50 shadow-sm hover:shadow-md hover:-translate-y-1`.
+     * Left Avatar: `w-12 h-12 rounded-xl flex-shrink-0 bg-[#1A1D2A] border border-white/10 flex items-center justify-center text-sm font-black text-white shadow-inner`.
+     * Right Text Stack: `flex flex-col min-w-0 flex-1`:
+       - Staff Name: `text-sm font-black text-white dark:text-white truncate`.
+       - Role Badge: `mt-1 self-start px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border`:
+         * Admin: `bg-purple-500/15 text-purple-300 border-purple-500/30`
+         * Cashier: `bg-sky-500/15 text-sky-300 border-sky-500/30`
+         * Waiter: `bg-emerald-500/15 text-emerald-300 border-emerald-500/30`
+         * Kitchen: `bg-orange-500/15 text-orange-300 border-orange-500/30`
+
+3. Sleek Circular PIN Terminal Modal:
+   - Backdrop: `fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4`.
+   - Modal Container: `max-w-xs w-full p-6 rounded-3xl bg-[#11131A] border border-white/15 shadow-2xl flex flex-col items-center`.
+   - Modal Header: Show staff avatar, name, and role pill on the left with a clean `✕` close button on the right.
+   - PIN Dots: 4 animated indicator circles (`h-3.5 w-3.5 rounded-full border-2 border-white/20 transition-all`) that fill with glowing solid amber (`bg-amber-500 border-amber-500 shadow-md shadow-amber-500/50`) when digits are typed.
+   - Keypad Grid: 3x4 grid of circular buttons (`h-14 w-14 rounded-full text-xl font-bold bg-white/5 hover:bg-white/15 active:scale-90 border border-white/10 active:border-amber-500/50 transition-all text-white flex items-center justify-center`).
+   - Bottom row: Backspace (`⌫`) on left, `0` in center, Cancel (`✕`) on right.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, role permission routing, or Firebase Auth tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
