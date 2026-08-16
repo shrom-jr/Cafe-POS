@@ -208,7 +208,8 @@ export async function pushLogoToFirebase(logo: string | null) {
   }
 }
 
-// Push Menu Items
+// Canonical menu writes only. Legacy root paths (/menuItems, /categories,
+// /pillars, and /menu) intentionally have no write functions.
 export async function pushMenuItemsToFirebase(menuItems: MenuItem[]) {
   try {
     await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(menuItems || [])));
