@@ -1,0 +1,46 @@
+Phase 2 Master Polish: Add T-1/T-2 Deck Tables, Fix Card Proportions & Natural 2D Blueprint Fit
+
+Refactor `src/screens/TableOverview.tsx`, `src/utils/venueSeed.ts`, and `src/components/tables/TableCard.tsx` to fix all table proportions and integrate T-1 and T-2 deck tables:
+
+1. Update Firebase Table Registry & Seed (`venueSeed.ts`):
+   - Ensure the canonical 21 tables are seeded into Firebase Realtime Database:
+     * First Floor (7 tables): "H3-B", "H3-A", "T-1", "H2-B", "H2-A", "T-2", "H1"
+     * Sofa & Lounge (5 tables): "Sofa", "L4", "L3", "L2", "L1"
+     * Bar Counter (2 tables): "Bar 1", "Bar 2"
+     * Private Cabins (7 tables): "R1", "R2", "R3", "R4", "R5", "R6", "R7"
+   - Seed checks must add T-1 and T-2 to "First Floor (Huts & Hall)" if not present.
+
+2. Enforce Proportional Max-Width & Grid Heights (`TableOverview.tsx`):
+   - Wrap the entire floor blueprint inside `max-w-7xl mx-auto px-4 py-4 w-full` to prevent cards from stretching into flat pancake banners on wide screens.
+   
+   A. FIRST FLOOR (HUTS & HALL):
+      - 3-column layout (`grid grid-cols-12 gap-4 items-stretch`):
+        * Column 1 (cols 1-4, Hut 3): 3 vertically stacked cards: H3-B, H3-A, T-1 (each `h-[75px]` with flex-1 spacing).
+        * Column 2 (cols 5-8, Hut 2): 3 vertically stacked cards: H2-B, H2-A, T-2 (each `h-[75px]` with flex-1 spacing).
+        * Column 3 (cols 9-12, Hall H1): Single tall card spanning the entire column height (`h-full min-h-[235px]`).
+
+   B. GROUND FLOOR & COURTYARD (3 Columns Side-by-Side):
+      - Column 1 (Sofa & Lounge, cols 1-4):
+        * Top: Wide "Sofa" group card (`h-[70px]`).
+        * Middle: 2x2 grid for L4, L3 (top) and L2, L1 (bottom) (each `h-[75px]`).
+        * Bottom: Clean landmark badge `[ 📺 TV Area ]` (`py-2 rounded-xl text-xs`).
+      - Column 2 (Bar & Courtyard, cols 5-8):
+        * Top: 2-column grid for Bar 1 and Bar 2 (`h-[70px]` each, side-by-side).
+        * Middle: Landmark badge `[ 🅿️ Parking Area ]` (`py-3.5 rounded-xl text-xs`).
+        * Bottom: Landmark badge `[ ⛩️ Main Gate ]` (`py-3.5 rounded-xl text-xs`).
+      - Column 3 (Private Cabins, cols 9-12):
+        * Back Quad: 2x2 grid for R3, R1 (top) and R4, R2 (bottom) (each `h-[75px]`).
+        * Front Strip: 3-column row for R5, R6, R7 (`h-[70px]` each, side-by-side).
+
+3. Card Proportions & Styling (`TableCard.tsx`):
+   - Free Table Cards:
+     * Light Mode: `bg-slate-100 hover:bg-slate-200 border-[1.5px] border-slate-900 rounded-2xl shadow-sm text-slate-950 font-black text-xl flex items-center justify-center transition-all duration-150`
+     * Dark Mode: `bg-[#13151F] border border-white/10 hover:border-emerald-500/60 rounded-2xl text-white font-black text-xl flex items-center justify-center transition-all duration-150`
+   - Occupied Table Cards:
+     * Light Mode: `bg-amber-50/90 border-2 border-amber-500 shadow-md rounded-2xl p-2.5 flex flex-col justify-between`
+     * Dark Mode: `bg-gradient-to-b from-[#221813] to-[#14100E] border border-amber-500/80 shadow-md rounded-2xl p-2.5 flex flex-col justify-between`
+     * Content: Table name + status pill in top row, guest count + customer name in middle, timer + items in bottom row.
+
+STRICT CONSTRAINTS:
+- Do NOT break table click ordering drawer, active order timers, or Firebase listeners.
+- Run `npm run build` to confirm zero TypeScript or build errors.

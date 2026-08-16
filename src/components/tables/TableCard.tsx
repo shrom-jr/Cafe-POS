@@ -59,12 +59,12 @@ const TableCard = ({
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative flex w-full flex-col rounded-xl p-2 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
+      className={`group relative flex w-full flex-col rounded-2xl p-2.5 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
     >
       {/* ── FREE state ── */}
       {!isActive ? (
         <div className="flex h-full w-full min-h-[44px] items-center justify-center">
-          <span className="text-center text-lg font-black tracking-wide text-slate-950 dark:text-white leading-tight">
+          <span className="text-center text-xl font-black tracking-wide text-slate-950 dark:text-white leading-tight">
             {tableDisplayName(table.number)}
           </span>
         </div>

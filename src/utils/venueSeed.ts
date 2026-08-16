@@ -1,5 +1,5 @@
 /**
- * Venue Seed: ensures the 19 canonical S Bamboo Cottage tables are present in
+ * Venue Seed: ensures the 21 canonical S Bamboo Cottage tables are present in
  * Firebase RTDB. Runs once per session on the first tables snapshot; safe to
  * re-run (idempotent — only adds missing tables, never wipes active orders).
  *
@@ -19,11 +19,13 @@ export const VENUE_AREA_ORDER = [
 ];
 
 export const VENUE_TABLES: Array<{ number: string; section: string }> = [
-  // Area 1 – First Floor
+  // Area 1 – First Floor (huts, deck tables, and hall)
   { number: 'H3-B', section: 'First Floor (Huts & Hall)' },
   { number: 'H3-A', section: 'First Floor (Huts & Hall)' },
+  { number: 'T-1',  section: 'First Floor (Huts & Hall)' },
   { number: 'H2-B', section: 'First Floor (Huts & Hall)' },
   { number: 'H2-A', section: 'First Floor (Huts & Hall)' },
+  { number: 'T-2',  section: 'First Floor (Huts & Hall)' },
   { number: 'H1',   section: 'First Floor (Huts & Hall)' },
   // Area 2 – Sofa & Lounge
   { number: 'Sofa', section: 'Sofa & Lounge' },
@@ -76,7 +78,7 @@ function canonicalSection(tableNumber: string): string | undefined {
 }
 
 /**
- * Checks whether all 19 venue tables are already present. If not, seeds the
+ * Checks whether all 21 venue tables are already present. If not, seeds the
  * missing ones. Active (occupied / billing) tables are always preserved.
  *
  * Also runs a one-shot migration: any table whose `section` is a legacy phantom
@@ -117,7 +119,7 @@ export async function ensureVenueSeed(currentTables: CafeTable[]): Promise<void>
     return t;
   });
 
-  // ── Step 2: Check whether all 19 venue tables are present ─────────────────
+  // ── Step 2: Check whether all 21 venue tables are present ─────────────────
   const currentKeys = new Set(tables.map(t => key(t.number)));
   const venueKeys   = VENUE_TABLES.map(v => key(v.number));
   const allPresent  = venueKeys.every(k => currentKeys.has(k));
