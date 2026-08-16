@@ -32,9 +32,14 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
 interface AppLayoutProps {
   title: string;
   children: ReactNode;
+  telemetry?: {
+    freeCount: number;
+    activeCount: number;
+    clock: string;
+  };
 }
 
-const AppLayout = ({ title, children }: AppLayoutProps) => {
+const AppLayout = ({ title, children, telemetry }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useStaffStore((s) => s.currentUser);
@@ -91,9 +96,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
-    <div className="flex flex-shrink-0 items-center gap-5">
+    <div className="flex flex-shrink-0 items-center gap-2.5">
       <div className="hidden flex-col items-center justify-center gap-0.5 text-center sm:flex">
-        <span className="text-sm font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
+        <span className="text-xs font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
         <span
           className={`rounded border px-2 py-0.5 text-[11px] font-bold ${
             currentUser.role === 'ADMIN'
@@ -113,7 +118,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-         className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-emerald-600/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-500/20 hover:text-emerald-800 active:scale-95 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:text-emerald-200"
+          className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/10"
       >
         <LogOut size={13} />
         <span className="hidden sm:inline">Switch User</span>
@@ -172,19 +177,27 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
        className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-white text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-        <header className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
+        <header className="flex h-16 flex-shrink-0 items-center border-b border-slate-200 bg-white px-6 py-2.5 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
          {/* ── TABLET / DESKTOP: single row (sm+) ── */}
-        <div className="hidden h-10 items-center sm:grid" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+        <div className="hidden h-full w-full items-center justify-between gap-4 sm:flex">
           {/* Left: brand */}
-          <div className="flex items-center">
-            {brandBlock}
-          </div>
+          {brandBlock}
           {/* Center: nav */}
-          <div className="flex items-center justify-center">
-            {desktopNav}
-          </div>
-           {/* Right: theme + user */}
-           <div className="flex items-center justify-end gap-5">
+          {desktopNav}
+          {/* Right: telemetry, clock, theme + user */}
+          <div className="flex min-w-0 items-center justify-end gap-3">
+            {telemetry && (
+              <span className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:border-white/10 dark:bg-zinc-900 dark:text-slate-300 lg:flex">
+                <span>🟢 {telemetry.freeCount} Free</span>
+                <span className="text-slate-400 dark:text-zinc-600">•</span>
+                <span>🟠 {telemetry.activeCount} Active</span>
+              </span>
+            )}
+            {telemetry && (
+              <span className="hidden whitespace-nowrap rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-slate-600 dark:border-white/10 dark:bg-zinc-900 dark:text-slate-300 md:inline">
+                {telemetry.clock}
+              </span>
+            )}
             <ThemeToggle />
             {userBadge}
           </div>
@@ -193,9 +206,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         {/* ── MOBILE: two rows (<sm) ── */}
         <div className="sm:hidden">
            {/* Row 1: brand + theme/user */}
-           <div className="flex items-center justify-between gap-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
             {brandBlock}
-             <div className="flex flex-shrink-0 items-center gap-5">
+              <div className="flex flex-shrink-0 items-center gap-3">
               <ThemeToggle />
               {userBadge}
             </div>

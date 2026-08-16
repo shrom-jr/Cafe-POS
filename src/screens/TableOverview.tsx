@@ -323,53 +323,6 @@ const VenueBlueprintRenderer = ({
   );
 };
 
-/**
- * Single-section renderer used when a filter pill is active.
- */
-const SectionRenderer = ({
-  section, tables, tableOrderData, onTableClick, tablesByArea,
-}: {
-  section:        string;
-  tables:         CafeTable[];
-  tableOrderData: OrderData;
-  onTableClick:   (t: CafeTable) => void;
-  tablesByArea:   Record<string, CafeTable[]>;
-}) => {
-  if (section === AREA_FIRST_FLOOR) {
-    return (
-      <div>
-        <AreaHeader label={AREA_FIRST_FLOOR} areaIndex={0} />
-        <FirstFloorBlueprint tables={tables} orderData={tableOrderData} onTableClick={onTableClick} />
-      </div>
-    );
-  }
-
-  if (section === AREA_LOUNGE || section === AREA_BAR || section === AREA_HUTS || section === AREA_CABINS) {
-    return (
-      <GroundFloorBlueprint
-        loungeTs={section === AREA_LOUNGE ? tables : (tablesByArea[AREA_LOUNGE] ?? [])}
-        barTs={section === AREA_BAR ? tables : (tablesByArea[AREA_BAR] ?? [])}
-        hutTs={section === AREA_HUTS ? tables : (tablesByArea[AREA_HUTS] ?? [])}
-        cabinTs={section === AREA_CABINS ? tables : (tablesByArea[AREA_CABINS] ?? [])}
-        orderData={tableOrderData}
-        onTableClick={onTableClick}
-      />
-    );
-  }
-
-  // Generic grid for custom areas
-  return (
-    <div>
-      <AreaHeader label={section} areaIndex={4} />
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {tables.map(t => (
-          <Slot key={t.id} table={t} orderData={tableOrderData} onTableClick={onTableClick} className="h-14" />
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // ── Main screen ───────────────────────────────────────────────────────────────
 const TableOverview = () => {
   const { tables }  = useTables();
@@ -378,7 +331,6 @@ const TableOverview = () => {
   const areaOrder   = usePOSStore(s => s.areaOrder);
   const navigate    = useNavigate();
   const clock       = useClock();
-  const [selectedSection, setSelectedSection] = useState('All');
 
   // Build per-table order data (itemCount + attached customer name)
   const tableOrderData = useMemo<OrderData>(() => {
@@ -427,88 +379,24 @@ const TableOverview = () => {
 
   const handleTableClick = (table: CafeTable) => navigate(`/order/${table.id}`);
 
-  // Reset section filter if it no longer exists
-  useEffect(() => {
-    if (selectedSection !== 'All' && !sections.includes(selectedSection)) {
-      setSelectedSection('All');
-    }
-  }, [sections, selectedSection]);
-
-  // ── Status bar + clock ───────────────────────────────────────────────────
-  const statusBar = (
-    <div className="flex flex-shrink-0 items-center gap-2">
-      <span className="flex items-center gap-2.5 rounded-xl border border-slate-300/80 bg-white px-3 py-1.5 text-[11px] font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 dark:bg-emerald-400" />
-          {counts.available} Free
-        </span>
-        <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
-          {counts.active} Active
-        </span>
-      </span>
-      <span className="rounded-xl border border-slate-300/80 bg-white px-2.5 py-1.5 font-mono text-[11px] font-bold tabular-nums text-slate-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-slate-200">
-        {clock}
-      </span>
-    </div>
-  );
-
   return (
-    <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 pb-16 sm:px-4">
+    <AppLayout
+      title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}
+      telemetry={{ freeCount: counts.available, activeCount: counts.active, clock }}
+    >
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-0 pb-16 sm:px-4">
         {tables.length === 0 ? (
           <div className="py-20 text-center text-foreground">
             <p className="text-lg">No tables configured.</p>
             <p className="mt-1 text-sm text-foreground/70">Go to Admin → Tables to add tables.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {/* ── Section filter pills + status bar ── */}
-            <div className="flex w-full items-center justify-between gap-2" role="tablist" aria-label="Table sections">
-              <div className="inline-flex min-w-0 shrink items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
-                {['All', ...sections].map(section => {
-                  const count = section === 'All'
-                    ? tables.length
-                    : tables.filter(t => (t.section?.trim() || 'Ground Floor') === section).length;
-                  const active = selectedSection === section;
-                  return (
-                    <button
-                      key={section}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setSelectedSection(section)}
-                      className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-colors duration-150 active:scale-[0.98] ${
-                        active
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-transparent text-slate-700 hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
-                      }`}
-                    >
-                      {section} ({count})
-                    </button>
-                  );
-                })}
-              </div>
-              {statusBar}
-            </div>
-
-            {/* ── Blueprint / area renderer ── */}
-            {selectedSection === 'All' ? (
-              <VenueBlueprintRenderer
-                sections={sections}
-                tablesByArea={tablesByArea}
-                tableOrderData={tableOrderData}
-                onTableClick={handleTableClick}
-              />
-            ) : (
-              <SectionRenderer
-                section={selectedSection}
-                tables={tablesByArea[selectedSection] ?? []}
-                tableOrderData={tableOrderData}
-                onTableClick={handleTableClick}
-                tablesByArea={tablesByArea}
-              />
-            )}
-          </div>
+          <VenueBlueprintRenderer
+            sections={sections}
+            tablesByArea={tablesByArea}
+            tableOrderData={tableOrderData}
+            onTableClick={handleTableClick}
+          />
         )}
       </div>
     </AppLayout>

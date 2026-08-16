@@ -1,0 +1,28 @@
+Phase 2 Polish: Remove Redundant Filter Bar & Consolidate Live Telemetry into Top Navigation Bar
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/components/ui/TopNav.tsx` (or header component), and `src/screens/TableOverview.tsx`:
+
+1. Remove Secondary Floor Filter Bar (`TableOverview.tsx`):
+   - Completely remove the secondary filter pill bar (`[ All (21) ] [ First Floor ] ...`) and the sub-row containing the time/active pill.
+   - The 2D spatial floor blueprint now starts directly below the main top navigation bar.
+
+2. Consolidate Right-Side Header Cluster (`AppLayout.tsx` / `TopNav.tsx`):
+   - In the top navigation header bar, align items into a clean 3-part flex layout (`flex items-center justify-between px-6 py-2.5 h-16`):
+     * Left: Brand logo and "S Bamboo Cottage & Sekuwa Corner" in bold typography.
+     * Center: Navigation portal tabs (`Tables`, `Customers`, `Kitchen Portal`, `Bar Portal`, `Admin`).
+     * Right Cluster (`flex items-center gap-3`):
+       - Live Table Telemetry Pill: Compact pill displaying `🟢 {freeCount} Free  •  🟠 {activeCount} Active` (`bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-white/10 px-3 py-1 rounded-full text-xs font-bold`).
+       - Live Clock: Digital clock (e.g., `03:10 PM`) in `text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-white/10`.
+       - Theme Toggle Button (`☀️ / 🌙`).
+       - Staff User Pill: Compact staff badge with name ("Sanjib Basnet"), role badge ("Admin"), and an integrated compact "Switch User" button (`text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-300 dark:border-white/15 hover:bg-slate-200 dark:hover:bg-white/10`).
+
+3. Re-expand Floor Blueprint Canvas (`TableOverview.tsx`):
+   - With the filter bar removed, allow the 2D blueprint to use the reclaimed vertical space:
+     * First Floor Hut Cards: `min-h-[98px]` with generous interior padding (`p-3.5`).
+     * H1 Hall: `h-full min-h-[320px]`.
+     * Sofa & Lounge / Bar / Cabins / Huts: `min-h-[98px]` per card.
+     * Maintain high-contrast 2-row occupied cards (`text-xl font-black` table names, prominent guest/customer pills, glowing live timer and item metrics).
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
