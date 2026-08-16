@@ -563,6 +563,13 @@ const AdminPanel = () => {
                     Log and track operational &amp; facility maintenance costs
                   </p>
                 </div>
+              ) : activeTab === 'settings' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Settings</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Company profile, billing, payments, printers &amp; staff management
+                  </p>
+                </div>
               ) : (
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
@@ -573,7 +580,7 @@ const AdminPanel = () => {
             {activeTab === 'reports'   && (
               <div className="space-y-5">
                 {/* Report type toggle */}
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap items-center gap-2.5">
                   {([
                     { id: 'sales',   label: '📊 Sales Reports' },
                     { id: 'kitchen', label: '🍳 Kitchen & Meat Analytics' },
@@ -610,10 +617,10 @@ const AdminPanel = () => {
                     <button
                       key={sub.id}
                       onClick={() => setSettingsSubTab(sub.id)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                      className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
                         settingsSubTab === sub.id
-                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
-                          : 'border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.05]'
+                          ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/25'
+                          : 'bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 font-black'
                       }`}
                     >
                       {sub.label}
@@ -2015,25 +2022,25 @@ const PaymentsSection = () => {
 
   return (
     <div className="space-y-5">
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4">
         <div>
-          <h3 className="font-semibold text-foreground">Digital Wallets</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Enable and configure payment wallets</p>
+          <h3 className="text-base font-black text-white tracking-wide">Digital Wallets</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Enable and configure payment wallets</p>
         </div>
 
         <div className="space-y-3">
           {(['esewa', 'khalti', 'fonepay'] as const).map((key) => (
-            <div key={key} className="p-4 bg-secondary/40 rounded-xl border border-white/[0.06] space-y-3">
+            <div key={key} className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">{walletLabels[key]}</span>
-                <button onClick={() => toggleWallet(key)} className="text-accent" data-testid={`toggle-wallet-${key}`}>
-                  {settings.wallets[key].enabled ? <ToggleRight size={28} /> : <ToggleLeft size={28} className="text-muted-foreground" />}
+                <span className="text-lg font-black text-white">{walletLabels[key]}</span>
+                <button onClick={() => toggleWallet(key)} className="text-amber-400" data-testid={`toggle-wallet-${key}`}>
+                  {settings.wallets[key].enabled ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="text-zinc-500" />}
                 </button>
               </div>
               {settings.wallets[key].enabled && (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">Logo</p>
+                     <p className="text-xs font-black uppercase tracking-wider text-amber-400">Logo</p>
                     <div className="flex items-center gap-3">
                       {settings.wallets[key].logoImage ? (
                         <div className="relative w-12 h-12 flex-shrink-0">
@@ -2041,26 +2048,27 @@ const PaymentsSection = () => {
                           <button onClick={() => clearWalletImage(key, 'logoImage')} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center"><X size={10} /></button>
                         </div>
                       ) : (
-                        <div className="w-12 h-12 rounded-lg border-2 border-dashed border-border flex items-center justify-center flex-shrink-0">
-                          <ImagePlus size={16} className="text-muted-foreground" />
+                         <div className="w-12 h-12 rounded-xl border-2 border-dashed border-white/20 bg-[#181B26] flex items-center justify-center flex-shrink-0">
+                           <ImagePlus size={16} className="text-amber-400" />
                         </div>
                       )}
-                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-medium cursor-pointer hover:bg-accent/20 transition-colors">
+                       <label className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer">
                         <Upload size={12} /> {settings.wallets[key].logoImage ? 'Replace' : 'Upload'} Logo
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) updateWalletImage(key, 'logoImage', f); }} />
                       </label>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">QR Image</p>
+                     <p className="text-xs font-black uppercase tracking-wider text-amber-400">QR Image</p>
                     {settings.wallets[key].qrImage && (
                       <div className="relative w-32 h-32 mx-auto">
                         <img src={settings.wallets[key].qrImage} alt={`${key} QR`} className="w-full h-full object-contain rounded-lg border border-border bg-foreground p-1" />
                         <button onClick={() => clearWalletImage(key, 'qrImage')} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger text-white flex items-center justify-center"><X size={12} /></button>
                       </div>
                     )}
-                    <label className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-secondary text-foreground text-sm font-medium cursor-pointer hover:bg-accent/20 transition-colors">
-                      <Upload size={14} /> {settings.wallets[key].qrImage ? 'Replace' : 'Upload'} QR Image
+                     <label className="p-6 rounded-2xl border-2 border-dashed border-white/20 hover:border-amber-400/60 bg-[#181B26] flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-center group">
+                       <Upload size={22} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                       <span className="text-xs font-black uppercase tracking-wider text-zinc-100 group-hover:text-white">{settings.wallets[key].qrImage ? 'Replace QR Code Image' : 'Upload QR Code Image'}</span>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) updateWalletImage(key, 'qrImage', f); }} />
                     </label>
                   </div>
@@ -2070,15 +2078,15 @@ const PaymentsSection = () => {
           ))}
         </div>
 
-        <div className="border-t border-border pt-4 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Custom Wallets</p>
+         <div className="border-t border-white/15 pt-5 space-y-3">
+           <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Custom Wallets</p>
           {(settings.customWallets || []).map((wallet) => (
-            <div key={wallet.id} className="p-4 bg-secondary/40 rounded-xl border border-white/[0.06] space-y-3">
+             <div key={wallet.id} className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">{wallet.name}</span>
+                 <span className="text-lg font-black text-white">{wallet.name}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => toggleCustomWallet(wallet.id)} className="text-accent">
-                    {wallet.enabled ? <ToggleRight size={28} /> : <ToggleLeft size={28} className="text-muted-foreground" />}
+                   <button onClick={() => toggleCustomWallet(wallet.id)} className="text-amber-400">
+                     {wallet.enabled ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="text-zinc-500" />}
                   </button>
                   <button onClick={() => removeCustomWallet(wallet.id)} className="w-7 h-7 rounded-full bg-danger/15 text-danger flex items-center justify-center hover:bg-danger/30 transition-colors">
                     <Trash2 size={13} />
@@ -2088,7 +2096,7 @@ const PaymentsSection = () => {
               {wallet.enabled && (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">Logo</p>
+                     <p className="text-xs font-black uppercase tracking-wider text-amber-400">Logo</p>
                     <div className="flex items-center gap-3">
                       {wallet.logoImage ? (
                         <div className="relative w-12 h-12 flex-shrink-0">
@@ -2096,26 +2104,27 @@ const PaymentsSection = () => {
                           <button onClick={() => clearCustomWalletImage(wallet.id, 'logoImage')} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center"><X size={10} /></button>
                         </div>
                       ) : (
-                        <div className="w-12 h-12 rounded-lg border-2 border-dashed border-border flex items-center justify-center flex-shrink-0">
-                          <ImagePlus size={16} className="text-muted-foreground" />
+                         <div className="w-12 h-12 rounded-xl border-2 border-dashed border-white/20 bg-[#181B26] flex items-center justify-center flex-shrink-0">
+                           <ImagePlus size={16} className="text-amber-400" />
                         </div>
                       )}
-                      <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-medium cursor-pointer hover:bg-accent/20 transition-colors">
+                       <label className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer">
                         <Upload size={12} /> {wallet.logoImage ? 'Replace' : 'Upload'} Logo
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) updateCustomWalletImage(wallet.id, 'logoImage', f); }} />
                       </label>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">QR Image</p>
+                     <p className="text-xs font-black uppercase tracking-wider text-amber-400">QR Image</p>
                     {wallet.qrImage && (
                       <div className="relative w-32 h-32 mx-auto">
                         <img src={wallet.qrImage} alt={`${wallet.name} QR`} className="w-full h-full object-contain rounded-lg border border-border bg-foreground p-1" />
                         <button onClick={() => clearCustomWalletImage(wallet.id, 'qrImage')} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger text-white flex items-center justify-center"><X size={12} /></button>
                       </div>
                     )}
-                    <label className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-secondary text-foreground text-sm font-medium cursor-pointer hover:bg-accent/20 transition-colors">
-                      <Upload size={14} /> {wallet.qrImage ? 'Replace' : 'Upload'} QR Image
+                     <label className="p-6 rounded-2xl border-2 border-dashed border-white/20 hover:border-amber-400/60 bg-[#181B26] flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-center group">
+                       <Upload size={22} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                       <span className="text-xs font-black uppercase tracking-wider text-zinc-100 group-hover:text-white">{wallet.qrImage ? 'Replace QR Code Image' : 'Upload QR Code Image'}</span>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) updateCustomWalletImage(wallet.id, 'qrImage', f); }} />
                     </label>
                   </div>
@@ -2131,15 +2140,15 @@ const PaymentsSection = () => {
                 onChange={(e) => setNewWalletName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') addCustomWallet(); if (e.key === 'Escape') { setShowAddWallet(false); setNewWalletName(''); } }}
                 placeholder="Wallet name (e.g. Connect IPS)"
-                className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                 className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none"
               />
-              <button onClick={addCustomWallet} className="px-3 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:brightness-110 transition-all">Add</button>
-              <button onClick={() => { setShowAddWallet(false); setNewWalletName(''); }} className="px-3 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm hover:text-foreground transition-colors">Cancel</button>
+               <button onClick={addCustomWallet} className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider transition-all">Add</button>
+               <button onClick={() => { setShowAddWallet(false); setNewWalletName(''); }} className="px-4 py-3 rounded-xl bg-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-white/15 transition-all">Cancel</button>
             </div>
           ) : (
             <button
               onClick={() => setShowAddWallet(true)}
-              className="flex items-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-border text-muted-foreground text-sm hover:border-accent/50 hover:text-accent transition-colors justify-center"
+               className="flex items-center gap-2 w-full py-3.5 rounded-2xl border-2 border-dashed border-white/20 text-zinc-300 text-xs font-black uppercase tracking-wider hover:border-amber-400/60 hover:text-amber-400 transition-all justify-center"
             >
               <Plus size={15} /> Add Custom Wallet
             </button>
@@ -2193,36 +2202,36 @@ const CompanyProfileSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+  const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
 
   return (
     <div className="space-y-5">
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div>
-          <h3 className="font-semibold text-foreground">Business Information</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Appears on printed receipts</p>
+          <h3 className="text-base font-black text-white tracking-wide">Business Information</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Appears on printed receipts</p>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-medium text-slate-200 block mb-1.5">Café Name</label>
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Café Name</label>
             <input value={cafeName} onChange={(e) => setCafeName(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-200 block mb-1.5">Phone Number</label>
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Phone Number</label>
             <input value={cafePhone} onChange={(e) => setCafePhone(e.target.value)} placeholder="e.g. 01-XXXXXXX" className={inputCls} />
           </div>
           <div className="sm:col-span-2">
-            <label className="text-xs font-medium text-slate-200 block mb-1.5">Address</label>
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Street Address</label>
             <input value={cafeAddress} onChange={(e) => setCafeAddress(e.target.value)} placeholder="e.g. Kathmandu, Nepal" className={inputCls} />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-200 block mb-1.5">Logo</label>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Logo</label>
           <div className="flex items-center gap-4">
             {settings.cafeLogo ? (
-              <div className="relative w-20 h-20">
-                <img src={settings.cafeLogo} alt="Logo" className="w-full h-full object-contain rounded-xl border border-border bg-white p-1" />
+                <div className="relative w-24 h-24 rounded-2xl bg-[#181B26] border-2 border-white/20 p-2 flex items-center justify-center overflow-hidden">
+                <img src={settings.cafeLogo} alt="Logo" className="w-full h-full object-contain rounded-xl bg-white p-1" />
                 <button
                   onClick={() => {
                     updateSettings({ cafeLogo: undefined, logo: undefined, logoUrl: undefined });
@@ -2234,39 +2243,39 @@ const CompanyProfileSection = () => {
                 </button>
               </div>
             ) : (
-              <div className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
+              <div className="w-24 h-24 rounded-2xl bg-[#181B26] border-2 border-white/20 flex items-center justify-center text-zinc-400">
                 <ImagePlus size={22} />
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium cursor-pointer hover:bg-accent/15 hover:text-accent transition-colors">
+              <label className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer">
                 <Upload size={14} /> {settings.cafeLogo ? 'Replace' : 'Upload'} Logo
                 <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
               </label>
-              <p className="text-[11px] text-muted-foreground/60 leading-tight">PNG or JPG · Max 2MB · High contrast works best</p>
+              <p className="text-xs font-bold text-zinc-300 ml-4 leading-tight">PNG or JPG · Max 2MB · High contrast works best</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div>
-          <h3 className="font-semibold text-foreground">Tax Settings</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">VAT and PAN configuration</p>
+          <h3 className="text-base font-black text-white tracking-wide">Tax Settings</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">VAT and PAN configuration</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-200 block mb-1.5">PAN / VAT Number</label>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">PAN / VAT Number</label>
           <input value={cafePan} onChange={(e) => setCafePan(e.target.value)} placeholder="e.g. 123456789" className={inputCls} />
         </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
           <div>
-            <p className="text-sm font-medium text-foreground">Enable VAT (13%)</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Applies 13% VAT to all orders</p>
+            <p className="text-sm font-black text-white">Enable VAT (13%)</p>
+            <p className="text-xs font-bold text-zinc-300 mt-0.5">Applies 13% VAT to all orders</p>
           </div>
           <button onClick={() => setVatEnabled((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
             {vatEnabled
-              ? <ToggleRight size={36} className="text-accent" />
-              : <ToggleLeft size={36} className="text-muted-foreground" />}
+              ? <ToggleRight size={36} className="text-amber-400" />
+              : <ToggleLeft size={36} className="text-zinc-500" />}
           </button>
         </div>
       </div>
@@ -2274,7 +2283,7 @@ const CompanyProfileSection = () => {
       <button
         onClick={saveAll}
         data-testid="button-save-bill-design"
-        className="w-full py-3.5 rounded-2xl bg-accent text-accent-foreground font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)]"
+        className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
       >
         <Save size={16} /> Save Changes
       </button>
@@ -2304,7 +2313,9 @@ const BillingReceiptsSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+  const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
+  const nextBill = parseInt(billCounter || '1000', 10) + 1;
+  const nextKot = parseInt(kotCounter || '100', 10) + 1;
 
   const sampleSubtotal = 680;
   const sampleVatAmount = settings.vatEnabled ? Math.round(sampleSubtotal * settings.vatRate) : 0;
@@ -2318,67 +2329,67 @@ const BillingReceiptsSection = () => {
     <div className="space-y-5">
 
       {/* Logo Display */}
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div>
-          <h3 className="font-semibold text-foreground">Logo Display</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Control logo visibility on printed bills</p>
+          <h3 className="text-base font-black text-white tracking-wide">Logo Display</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Control logo visibility on printed bills</p>
         </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
           <div>
-            <p className="text-sm font-medium text-foreground">Show Logo on Printed Bills &amp; Receipts</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Requires a logo to be uploaded in Company Profile</p>
+            <p className="text-sm font-black text-white">Show Logo on Printed Bills &amp; Receipts</p>
+            <p className="text-xs font-bold text-zinc-300 mt-0.5">Requires a logo to be uploaded in Company Profile</p>
           </div>
           <button onClick={() => setShowLogoOnBill((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
             {showLogoOnBill
-              ? <ToggleRight size={36} className="text-accent" />
-              : <ToggleLeft size={36} className="text-muted-foreground" />}
+              ? <ToggleRight size={36} className="text-amber-400" />
+              : <ToggleLeft size={36} className="text-zinc-500" />}
           </button>
         </div>
       </div>
 
       {/* Receipt Settings */}
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div>
-          <h3 className="font-semibold text-foreground">Receipt Settings</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Customize receipt appearance</p>
+          <h3 className="text-base font-black text-white tracking-wide">Receipt Settings</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Customize receipt appearance</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-200 block mb-1.5">Footer Message</label>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Footer Message</label>
           <input value={billFooter} onChange={(e) => setBillFooter(e.target.value)} placeholder="Thank you for visiting!" className={inputCls} />
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-200 block mb-1.5">Current Bill Number</label>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Current Bill Number</label>
           <input value={billCounter} onChange={(e) => setBillCounter(e.target.value)} type="number" className={inputCls} />
-          <p className="text-xs text-muted-foreground mt-1.5">Next bill will be <span className="text-foreground font-medium">#{Number(billCounter) + 1}</span></p>
+          <p className="text-xs font-bold text-amber-400 mt-1">Next bill will be #{isNaN(nextBill) ? 1001 : nextBill}</p>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-200 block mb-1.5">Current KOT Number</label>
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Current KOT Number</label>
           <input value={kotCounter} onChange={(e) => setKotCounter(e.target.value)} type="number" className={inputCls} />
-          <p className="text-xs text-muted-foreground mt-1.5">Next KOT will be <span className="text-foreground font-medium">#{Number(kotCounter) + 1}</span></p>
+          <p className="text-xs font-bold text-amber-400 mt-1">Next KOT will be #{isNaN(nextKot) ? 101 : nextKot}</p>
         </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
           <div>
-            <p className="text-sm font-medium text-foreground">Reset KOT Numbers Daily</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Automatically resets the KOT sequence back to 1 at the start of each day</p>
+            <p className="text-sm font-black text-white">Reset KOT Numbers Daily</p>
+            <p className="text-xs font-bold text-zinc-300 mt-0.5">Automatically resets the KOT sequence back to 1 at the start of each day</p>
           </div>
           <button onClick={() => setResetKotDaily((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
             {resetKotDaily
-              ? <ToggleRight size={36} className="text-accent" />
-              : <ToggleLeft size={36} className="text-muted-foreground" />}
+              ? <ToggleRight size={36} className="text-amber-400" />
+              : <ToggleLeft size={36} className="text-zinc-500" />}
           </button>
         </div>
       </div>
 
       <button
         onClick={saveAll}
-        className="w-full py-3.5 rounded-2xl bg-accent text-accent-foreground font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)]"
+        className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
       >
         <Save size={16} /> Save Changes
       </button>
 
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-3">
-        <h3 className="font-semibold text-foreground">Bill Preview</h3>
-        <p className="text-xs text-muted-foreground">Preview of how your receipt will look</p>
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-3">
+        <h3 className="text-base font-black text-white tracking-wide">Bill Preview</h3>
+        <p className="text-xs font-bold text-zinc-300">Preview of how your receipt will look</p>
         <ReceiptPreview
           cafeName={settings.cafeName}
           cafeLogo={settings.cafeLogo}
@@ -2396,7 +2407,7 @@ const BillingReceiptsSection = () => {
           vatAmount={sampleVatAmount}
           total={sampleTotal}
           method="Cash"
-          billNumber={Number(billCounter) + 1}
+          billNumber={isNaN(nextBill) ? 1001 : nextBill}
           date={Date.now()}
           showLogoOnBill={showLogoOnBill}
         />

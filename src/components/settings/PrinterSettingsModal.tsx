@@ -48,7 +48,7 @@ import { Settings, Ticket } from '@/types/pos';
 // ── Shared style ──────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 h-11 transition-colors';
+  'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -156,16 +156,16 @@ function ModeToggle<T extends string>({
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-slate-200 block mb-1.5">Connection Mode</label>
+       <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Connection Mode</label>
       <div className="flex flex-wrap gap-2">
         {modes.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => onChange(id)}
-            className={`flex-1 min-w-[8rem] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
+             className={`flex-1 min-w-[8rem] flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all ${
               active === id
-                ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
-                : 'border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.05]'
+                 ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                 : 'bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 font-bold'
             }`}
           >
             <Icon size={13} />
@@ -187,21 +187,21 @@ function USBPanel({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between p-3.5 rounded-xl bg-secondary/50 border border-white/[0.06]">
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
         <div className="flex items-center gap-2">
           <span
             className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
               usbConnected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]' : 'bg-slate-500'
             }`}
           />
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-sm font-black text-white">
             {usbConnected ? `${usbName ?? 'USB Printer'} Connected` : 'Not Paired'}
           </p>
         </div>
         <button
           onClick={onPair}
           disabled={pairing || !isWebUSBSupported()}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600/20 border border-blue-500/35 text-blue-300 text-xs font-bold transition-all active:scale-95 hover:bg-blue-600/30 disabled:opacity-40"
+          className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-40"
         >
           <Usb size={13} />
           {pairing ? 'Pairing…' : 'Pair USB Printer'}
@@ -226,7 +226,7 @@ function NetworkPanel({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="text-xs font-medium text-slate-200 block mb-1.5">Wi-Fi IP Address</label>
+        <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Wi-Fi IP Address</label>
         <input
           value={ip}
           onChange={(e) => onIpChange(e.target.value)}
@@ -235,7 +235,7 @@ function NetworkPanel({
         />
       </div>
       <div>
-        <label className="text-xs font-medium text-slate-200 block mb-1.5">Port</label>
+        <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Port</label>
         <input
           value={port}
           onChange={(e) => onPortChange(e.target.value)}
@@ -450,12 +450,12 @@ const PrinterSettingsSection = () => {
     <div className="space-y-5">
 
       {/* ── Kitchen Printer ──────────────────────────────────────────────── */}
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div className="flex items-center gap-2">
-          <Printer size={16} className="text-accent" />
+          <Printer size={18} className="text-amber-400" />
           <div>
-            <h3 className="font-semibold text-foreground">Kitchen Printer (KOT)</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="text-base font-black text-white tracking-wide">Kitchen Printer (KOT)</h3>
+            <p className="text-xs font-bold text-zinc-300 mt-1">
               Pantum PD-80BW or any 80mm ESC/POS printer — USB cable or Wi-Fi
             </p>
           </div>
@@ -469,26 +469,26 @@ const PrinterSettingsSection = () => {
           onPair={handlePair}  pairing={pairing}
         />
 
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
           <div>
-            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <p className="text-sm font-black text-white flex items-center gap-1.5">
               <Zap size={14} className="text-amber-400" /> Kitchen Buzzer Alarm
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs font-bold text-zinc-300 mt-0.5">
               Sound the printer bell when a new KOT arrives
             </p>
           </div>
           <button onClick={() => setKitchenBuzzer((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
             {kitchenBuzzer
-              ? <ToggleRight size={36} className="text-accent" />
-              : <ToggleLeft  size={36} className="text-muted-foreground" />}
+              ? <ToggleRight size={36} className="text-amber-400" />
+              : <ToggleLeft  size={36} className="text-zinc-500" />}
           </button>
         </div>
 
         <button
           onClick={handleTestKOT}
           disabled={testing !== null}
-          className="w-full py-2.5 rounded-xl bg-secondary border border-border text-sm font-semibold text-foreground transition-all active:scale-[0.98] hover:bg-secondary/70 disabled:opacity-50"
+          className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2 disabled:opacity-50"
         >
           {testing === 'kot'
             ? 'Sending test…'
@@ -499,14 +499,14 @@ const PrinterSettingsSection = () => {
       </div>
 
       {/* ── Reception / Bar Printer ───────────────────────────────────────── */}
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div className="flex items-center gap-2">
-          <Printer size={16} className="text-accent" />
+          <Printer size={18} className="text-amber-400" />
           <div>
-            <h3 className="font-semibold text-foreground">
+            <h3 className="text-base font-black text-white tracking-wide">
               Reception / Bar Printer (BOT &amp; Receipts)
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs font-bold text-zinc-300 mt-1">
               Prints BOT tickets, pre-bills and tax invoices
             </p>
           </div>
@@ -523,7 +523,7 @@ const PrinterSettingsSection = () => {
         <button
           onClick={handleTestReception}
           disabled={testing !== null}
-          className="w-full py-2.5 rounded-xl bg-secondary border border-border text-sm font-semibold text-foreground transition-all active:scale-[0.98] hover:bg-secondary/70 disabled:opacity-50"
+          className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2 disabled:opacity-50"
         >
           {testing === 'bot'
             ? 'Sending test…'
@@ -534,34 +534,34 @@ const PrinterSettingsSection = () => {
       </div>
 
       {/* ── Auto-Print Hub ────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
         <div>
-          <h3 className="font-semibold text-foreground">Auto-Print Hub</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <h3 className="text-base font-black text-white tracking-wide">Auto-Print Hub</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">
             Turn this ON only at the cashier desktop. That device will watch for new KOT/BOT
             tickets from every terminal and dispatch them to the printers automatically.
           </p>
         </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
           <div>
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-sm font-black text-white">
               Enable Auto-Print Listener on this device
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs font-bold text-zinc-300 mt-0.5">
               Pending tickets are printed once, then marked as printed for all devices
             </p>
           </div>
           <button onClick={() => setAutoPrint((v) => !v)} className="flex-shrink-0 transition-all active:scale-95">
             {autoPrint
-              ? <ToggleRight size={36} className="text-accent" />
-              : <ToggleLeft  size={36} className="text-muted-foreground" />}
+              ? <ToggleRight size={36} className="text-amber-400" />
+              : <ToggleLeft  size={36} className="text-zinc-500" />}
           </button>
         </div>
       </div>
 
       <button
         onClick={saveAll}
-        className="w-full py-3.5 rounded-2xl bg-accent text-accent-foreground font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-110 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)]"
+        className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all"
       >
         <Save size={16} /> Save Printer Settings
       </button>

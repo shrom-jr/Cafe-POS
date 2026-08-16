@@ -1,0 +1,68 @@
+Phase 2 Complete Polish: Admin Settings Hub High-Contrast Redesign & NaN Fix Across All 5 Tabs
+
+Refactor `src/screens/AdminSettings.tsx` (and all settings sub-components: `CompanyProfile.tsx`, `BillingSettings.tsx`, `PaymentSettings.tsx`, `PrinterSettings.tsx`, `StaffSettings.tsx`, and user modals):
+
+1. Header & Primary Navigation Tabs (`AdminSettings.tsx`):
+   - Title: `text-2xl sm:text-3xl font-black text-white tracking-tight` ("Settings").
+   - Subtitle: `text-xs font-black uppercase tracking-widest text-amber-400 mt-1` ("COMPANY PROFILE, BILLING, PAYMENTS, PRINTERS & STAFF MANAGEMENT").
+   - 5-Tab Strip (`Company Profile`, `Billing & Receipts`, `Payments`, `Printers`, `Staff & Users`):
+     * Active Tab: `px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2`.
+     * Inactive Tabs: `px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2`.
+
+2. Tab 1: Company Profile & Tax Settings:
+   - Container Blocks: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5`.
+   - Section Titles: `text-base font-black text-white tracking-wide`.
+   - Field Labels ("CAFÉ NAME", "PHONE NUMBER", "STREET ADDRESS", "PAN / VAT NUMBER"):
+     * `text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block`.
+   - Input Fields:
+     * `w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner`.
+   - Logo Upload Area:
+     * Logo Box: `w-24 h-24 rounded-2xl bg-[#181B26] border-2 border-white/20 p-2 flex items-center justify-center relative overflow-hidden`.
+     * Replace Button: `px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition-all flex items-center gap-2`.
+     * Helper Text: `text-xs font-bold text-zinc-300 ml-4`.
+
+3. Tab 2: Billing & Receipts (Fix NaN Bug):
+   - Container Blocks: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5`.
+   - Fix NaN Bug on Bill Number:
+     * Always parse integer safely: `const nextBill = parseInt(settings?.currentBillNumber || 1000, 10) + 1;`
+     * Subtext: `<p className="text-xs font-bold text-amber-400 mt-1">Next bill will be #{isNaN(nextBill) ? 1001 : nextBill}</p>`.
+   - Toggle Switches (Logo on Bills):
+     * Active: `bg-amber-500 border-2 border-amber-400 shadow-md shadow-amber-500/30`.
+     * Inactive: `bg-white/10 border-2 border-white/20`.
+   - Input Labels: `text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block`.
+
+4. Tab 3: Payments & Digital Wallets (eSewa, Khalti):
+   - Wallet Cards: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4`.
+   - Wallet Titles: `text-lg font-black text-white flex items-center justify-between`.
+   - QR Upload Dropzones:
+     * `p-6 rounded-2xl border-2 border-dashed border-white/20 hover:border-amber-400/60 bg-[#181B26] flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-center group`.
+     * Icon: `text-2xl text-amber-400 group-hover:scale-110 transition-transform`.
+     * Text: `<span className="text-xs font-black uppercase tracking-wider text-zinc-100 group-hover:text-white">Upload QR Code Image</span>`.
+
+5. Tab 4: Hardware Printers (KOT & BOT):
+   - Printer Cards: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5`.
+   - Connection Mode Tabs:
+     * Selected Mode: `px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20`.
+     * Unselected Mode: `px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 font-bold text-xs uppercase tracking-wider`.
+   - "Test Print KOT / BOT" Button:
+     * Replace dark/invisible button with vibrant Amber:
+       `w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all mt-2`.
+
+6. Tab 5: Staff & User Management:
+   - 4-Card Role Telemetry Grid:
+     * Waiter: `p-5 rounded-2xl bg-[#13151F] border-2 border-emerald-500/40 text-emerald-400`.
+     * Cashier: `p-5 rounded-2xl bg-[#13151F] border-2 border-sky-500/40 text-sky-400`.
+     * Admin: `p-5 rounded-2xl bg-[#13151F] border-2 border-purple-500/40 text-purple-400`.
+     * Kitchen: `p-5 rounded-2xl bg-[#13151F] border-2 border-amber-500/40 text-amber-400`.
+   - Top Header "+ Add Staff" Button: Replace royal blue with vibrant Amber:
+     `px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 hover:-translate-y-0.5`.
+   - Staff Row Cards (`bg-[#13151F] border border-white/15 p-5 rounded-2xl flex items-center justify-between mb-3 shadow-md`):
+     * Name: `text-base font-black text-white tracking-wide`.
+     * Email: `text-xs font-bold text-zinc-300 font-mono ml-2`.
+     * Role Pill: `px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border`.
+     * Access Permission Badges: `inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-black uppercase text-zinc-200`.
+     * Action Buttons (PIN Key, Edit, Delete): `p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any Firebase Auth user records, PIN security hashing, printer ESC/POS command drivers, or live order routing.
+- Run `npm run build` to confirm zero TypeScript or build errors.
