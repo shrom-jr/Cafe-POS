@@ -293,6 +293,30 @@ const ReviewScreen = () => {
     return custom?.qrImage || null;
   };
 
+  const qrProviderTheme = selectedMethod === 'khalti'
+    ? {
+        modal: 'border-2 border-purple-500/60 shadow-2xl shadow-purple-500/10',
+        frame: 'p-3 rounded-2xl bg-white border-4 border-purple-500 shadow-lg',
+        title: '🟣 Khalti Payment',
+        titleColor: 'text-purple-400',
+        button: 'w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-purple-500/30 transition-all active:scale-[0.98]',
+      }
+    : selectedMethod === 'fonepay'
+      ? {
+          modal: 'border-2 border-rose-500/60 shadow-2xl shadow-rose-500/10',
+          frame: 'p-3 rounded-2xl bg-white border-4 border-rose-500 shadow-lg',
+          title: '🔴 Fonepay Payment',
+          titleColor: 'text-rose-400',
+          button: 'w-full py-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-rose-500/30 transition-all active:scale-[0.98]',
+        }
+      : {
+          modal: 'border-2 border-emerald-500/60 shadow-2xl shadow-emerald-500/10',
+          frame: 'p-3 rounded-2xl bg-white border-4 border-emerald-500 shadow-lg',
+          title: '📱 eSewa Payment',
+          titleColor: 'text-emerald-400',
+          button: 'w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98]',
+        };
+
   const handleConfirmPayment = async (method: string) => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
@@ -1822,27 +1846,27 @@ const ReviewScreen = () => {
                                onClick={() => handleModeToggle('fixed')}
                                className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'fixed' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
                              >
-                               💵 Rupee Discount (Rs.)
+                              💵 CASH DISCOUNT (RS.)
                              </button>
                              <button
                                onClick={() => handleModeToggle('percent')}
                                className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'percent' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
                              >
-                               ％ Percentage (%)
+                              ％ PERCENTAGE (%)
                              </button>
                            </div>
-                           <div className="relative mt-2">
-                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-amber-400">
-                               {discountMode === 'fixed' ? 'Rs.' : '%'}
-                             </span>
+                            <div className="flex items-stretch mt-2 rounded-xl bg-[#181B26] border-2 border-white/20 focus-within:border-amber-400 overflow-hidden">
+                              <span className="px-3 flex items-center text-sm font-black text-amber-400 font-mono">
+                                {discountMode === 'fixed' ? 'Rs.' : '%'}
+                              </span>
                              <input
                                type="number"
                                min="0"
                                inputMode="decimal"
-                               placeholder={discountMode === 'fixed' ? 'Enter exact Rs. amount...' : 'Enter percentage (e.g. 10%)...'}
+                                placeholder="0"
                                value={discountInput}
                                onChange={(e) => handleInputChange(e.target.value)}
-                               className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-black rounded-xl pl-10 pr-3 py-2 text-sm font-mono outline-none"
+                                className="w-full bg-[#181B26] text-white font-black text-base font-mono py-2.5 px-3 outline-none"
                              />
                            </div>
                            <div className="flex flex-wrap gap-2 mt-2">
@@ -1852,7 +1876,7 @@ const ReviewScreen = () => {
                                  <button
                                    key={value}
                                    onClick={() => discountMode === 'fixed' ? handleFixedPreset(value) : handlePreset(value)}
-                                   className={`px-3 py-1 rounded-xl border border-white/15 text-xs font-bold text-zinc-100 transition-all ${isActive ? 'bg-amber-500 text-black hover:bg-amber-400' : 'bg-white/10 hover:bg-amber-500 hover:text-black'}`}
+                                    className={`px-3.5 py-1.5 rounded-xl border border-white/15 text-xs font-bold text-zinc-100 transition-all cursor-pointer ${isActive ? 'bg-amber-500 text-slate-950 hover:bg-amber-400' : 'bg-white/10 hover:bg-amber-500 hover:text-slate-950'}`}
                                  >
                                    {discountMode === 'fixed' ? `Rs. ${value}` : `${value}%`}
                                  </button>
@@ -1860,9 +1884,9 @@ const ReviewScreen = () => {
                              })}
                              <button
                                onClick={clearDiscount}
-                               className="px-3 py-1 rounded-xl bg-white/10 hover:bg-amber-500 hover:text-black border border-white/15 text-xs font-bold text-zinc-100 transition-all"
+                                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-amber-500 hover:text-slate-950 border border-white/15 text-xs font-bold text-zinc-100 transition-all cursor-pointer"
                              >
-                               Clear
+                                ✕ Clear
                              </button>
                            </div>
                          </div>
@@ -1906,28 +1930,13 @@ const ReviewScreen = () => {
 
                       {/* Trigger B: Print Pre-Bill (tablet) */}
                       <button
+                        type="button"
                         onClick={handlePrintPreBill}
                         data-testid="button-print-pre-bill"
-                        style={{
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          padding: '8px 16px',
-                          borderRadius: 12,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: 'rgba(255,255,255,0.04)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.42)',
-                          cursor: 'pointer',
-                          transition: 'all 0.1s ease',
-                          letterSpacing: '0.02em',
-                        }}
+                        className="w-full py-3.5 rounded-2xl bg-[#181B26] hover:bg-amber-500 hover:text-slate-950 border-2 border-white/20 hover:border-amber-400 text-white font-black text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2.5 active:scale-[0.98] cursor-pointer group"
                       >
-                        <Printer size={13} />
-                        Print Pre-Bill
+                        <Printer className="w-4 h-4 text-amber-400 group-hover:text-slate-950 transition-colors" />
+                        <span>Print Guest Pre-Bill</span>
                       </button>
 
                       {/* ── Payment card ── */}
@@ -2178,7 +2187,7 @@ const ReviewScreen = () => {
           {isLandscapeMobile ? (
             /* ── LANDSCAPE: 2-column layout ── */
             <div
-              className="max-w-xl w-full p-4 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-row"
+              className={`max-w-xl w-full p-4 rounded-[28px] bg-[#0E1017] ${qrProviderTheme.modal} text-white relative flex flex-row`}
               style={{ borderRadius: 20, maxWidth: 640, maxHeight: 'calc(100dvh - 24px)' }}
             >
               {/* Left — QR code, centered, fills column */}
@@ -2187,7 +2196,7 @@ const ReviewScreen = () => {
                 style={{ width: '55%', borderRight: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}
               >
                 <div
-                  className="p-3.5 rounded-2xl bg-white border-2 border-emerald-400 shadow-xl my-1"
+                  className={`${qrProviderTheme.frame} my-1`}
                 >
                   {getQRImage(selectedMethod) ? (
                     <img
@@ -2208,8 +2217,8 @@ const ReviewScreen = () => {
                 {/* Top: close + wallet name + amount */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-black text-white tracking-wide">
-                      {resolvePaymentLabel(selectedMethod, settings)} Payment
+                    <h3 className={`font-black text-lg ${qrProviderTheme.titleColor}`}>
+                      {qrProviderTheme.title}
                     </h3>
                     <button
                       onClick={closeQRModal}
@@ -2230,8 +2239,8 @@ const ReviewScreen = () => {
                       <p className="text-xs text-success font-semibold mt-0.5">Saved Rs. {fmt(activeBill.discountAmount)}</p>
                     )}
                   </div>
-                   <p className="text-xs font-bold text-zinc-200 text-center">
-                     Scan QR and tap confirm once payment is received.
+                   <p className="text-xs font-bold text-zinc-200 text-center mt-1">
+                     Scan QR code with provider app and confirm payment.
                   </p>
                   {staleAmountNotice}
                 </div>
@@ -2245,7 +2254,7 @@ const ReviewScreen = () => {
                   }}
                   disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
-                   className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] mt-1 disabled:opacity-70 flex items-center justify-center gap-2"
+                    className={`${qrProviderTheme.button} disabled:opacity-70 flex items-center justify-center gap-2`}
                 >
                   {confirming ? (
                     <><Loader2 size={16} className="animate-spin" /> Processing...</>
@@ -2258,10 +2267,10 @@ const ReviewScreen = () => {
 
           ) : (
             /* ── PORTRAIT: original stacked layout ── */
-             <div className="max-w-xs w-full p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col items-center gap-3">
+              <div className={`max-w-xs w-full p-6 rounded-[28px] bg-[#0E1017] ${qrProviderTheme.modal} text-white relative flex flex-col items-center gap-3`}>
                <div className="w-full flex items-center justify-between">
-                 <h3 className="text-lg font-black text-white tracking-wide">
-                  {resolvePaymentLabel(selectedMethod, settings)} Payment
+                  <h3 className={`font-black text-lg ${qrProviderTheme.titleColor}`}>
+                   {qrProviderTheme.title}
                 </h3>
                 <button
                   onClick={closeQRModal}
@@ -2284,7 +2293,7 @@ const ReviewScreen = () => {
                   )}
                 </div>
                 <div
-                   className="p-3.5 rounded-2xl bg-white border-2 border-emerald-400 shadow-xl my-1"
+                    className={`${qrProviderTheme.frame} my-1`}
                 >
                   {getQRImage(selectedMethod) ? (
                     <img src={getQRImage(selectedMethod)!} alt={`${selectedMethod} QR`} className="w-56 h-56 object-contain" />
@@ -2294,8 +2303,8 @@ const ReviewScreen = () => {
                     </span>
                   )}
                 </div>
-                 <p className="text-xs font-bold text-zinc-200 text-center">
-                   Scan QR and tap confirm once payment is received.
+                 <p className="text-xs font-bold text-zinc-200 text-center mt-1">
+                   Scan QR code with provider app and confirm payment.
                 </p>
                 {staleAmountNotice}
                 <button
@@ -2306,7 +2315,7 @@ const ReviewScreen = () => {
                   }}
                   disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
-                   className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] mt-1 disabled:opacity-70 flex items-center justify-center gap-2"
+                    className={`${qrProviderTheme.button} disabled:opacity-70 flex items-center justify-center gap-2`}
                 >
                   {confirming ? (
                     <><Loader2 size={18} className="animate-spin" /> Processing...</>
