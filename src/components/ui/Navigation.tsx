@@ -32,7 +32,7 @@ export const ThemeToggle = () => {
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       data-testid="button-theme-toggle"
-      className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2.5 text-amber-600 transition-colors hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-amber-400 dark:hover:bg-zinc-700"
+       className="flex items-center justify-center rounded-xl bg-[#13151F] p-2.5 text-amber-400 border border-white/15 transition-all hover:bg-white/10 shadow-md active:scale-95"
     >
       {isDark ? <Sun size={15} /> : <Moon size={15} />}
     </button>

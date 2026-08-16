@@ -67,23 +67,22 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   // ── Brand block (logo + name) ───────────────────────────────────────────────
   const brandBlock = (
-    <div className="flex items-center gap-2.5 flex-shrink-0 select-none min-w-0">
-      <div className="flex h-10 min-w-10 max-w-[132px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-1.5 py-0.5 backdrop-blur-md dark:border-white/20 dark:bg-white/10">
+    <div className="flex items-center flex-shrink-0 select-none min-w-0">
+      <div className="w-12 h-12 rounded-2xl bg-white/10 border-2 border-white/20 p-1.5 shadow-xl shadow-black/60 flex items-center justify-center overflow-hidden flex-shrink-0">
         {logoSrc ? (
           <img
             src={logoSrc}
             alt="logo"
-            className="h-9 w-auto max-w-[120px] rounded-lg object-contain"
-            style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
+            className="w-full h-full object-contain rounded-xl drop-shadow-md"
           />
         ) : (
-          <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-emerald-700 dark:text-accent" stroke="currentColor" strokeWidth={1.8}>
+          <svg viewBox="0 0 24 24" fill="none" className="w-full h-full rounded-xl text-amber-400 drop-shadow-md" stroke="currentColor" strokeWidth={1.8}>
             <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </div>
       <span
-        className="hidden truncate text-lg font-black tracking-wide text-slate-900 leading-tight dark:text-white lg:block"
+        className="hidden text-lg sm:text-xl font-black tracking-tight text-white select-none whitespace-nowrap ml-3 drop-shadow-sm lg:block"
       >
         {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
       </span>
@@ -93,28 +92,18 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
     <div className="flex flex-shrink-0 items-center gap-2.5">
-      <div className="hidden flex-col items-center justify-center gap-0.5 text-center lg:flex">
-        <span className="text-xs font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
+      <div className="hidden px-3.5 py-2 rounded-xl bg-[#13151F] border border-white/15 lg:flex items-center gap-2.5 shadow-md">
+        <span className="text-sm font-black text-white tracking-wide">{currentUser.name}</span>
         <span
-          className={`rounded border px-2 py-0.5 text-[11px] font-bold ${
-            currentUser.role === 'ADMIN'
-               ? 'border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-400/30 dark:bg-purple-500/25 dark:text-purple-200'
-              : 'border-purple-400/30 bg-purple-500/25 text-purple-200'
-          }`}
-          style={currentUser.role === 'ADMIN' ? undefined : {
-            background: ROLE_COLORS[currentUser.role].bg,
-            border: `1px solid ${ROLE_COLORS[currentUser.role].border}`,
-            color: ROLE_COLORS[currentUser.role].text,
-          }}
+          className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40"
         >
           {ROLE_LABEL[currentUser.role]}
         </span>
       </div>
-      <span className="h-6 w-px bg-slate-200 dark:bg-zinc-800" aria-hidden="true" />
       <button
         onClick={handleSwitchUser}
         title="Switch User"
-          className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/10"
+          className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 active:bg-amber-600 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center gap-1.5"
       >
         <LogOut size={13} />
         <span className="hidden lg:inline">Switch User</span>
@@ -125,7 +114,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── Nav tab renderer (desktop inline) ──────────────────────────────────────
   const desktopNav = (
     <nav
-      className="flex items-center gap-1 rounded-2xl border border-slate-300 bg-slate-300/60 p-1 dark:border-zinc-800 dark:bg-zinc-900/90"
+      className="bg-[#13151F] border border-white/15 p-1.5 rounded-2xl shadow-2xl shadow-black/60 flex items-center gap-1.5"
     >
       {navItems.map(({ path, label, icon }) => {
         const active = location.pathname === path;
@@ -134,13 +123,13 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
             key={path}
             onClick={() => navigate(path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-             className={`relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
+             className={`group relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap select-none ${
                active
-                 ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
-                 : 'border-0 bg-transparent px-4 py-2 font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
+                 ? 'px-5 py-2.5 bg-emerald-500 text-slate-950 font-black tracking-wide shadow-lg shadow-emerald-500/35 border border-emerald-400 active:scale-95 transition-all flex items-center gap-2'
+                 : 'px-4 py-2.5 text-zinc-200 hover:text-white hover:bg-white/10 font-bold tracking-wide border border-transparent hover:border-white/10 active:scale-95 transition-all flex items-center gap-2'
              }`}
           >
-             <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
+             <span className={`w-4 h-4 ${active ? 'text-slate-950' : 'text-zinc-300 group-hover:text-white'} transition-colors`}>{icon}</span>
             {label}
           </button>
         );
@@ -153,33 +142,33 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
        className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-white text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-        <header className="flex-shrink-0 border-b border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10121A] lg:flex lg:h-16 lg:items-center lg:px-6 lg:py-2.5">
+        <header className="flex-shrink-0 w-full h-[72px] bg-[#0A0B0E]/95 backdrop-blur-xl border-b border-white/15 px-6 sticky top-0 z-40 lg:flex lg:items-center">
          {/* ── TABLET / DESKTOP: single row (lg+) ── */}
-        <div className="hidden h-full w-full items-center justify-between gap-4 lg:flex">
+         <div className="hidden h-full w-full items-center justify-between gap-6 lg:flex">
           {/* Left: brand */}
           {brandBlock}
           {/* Center: nav */}
           {desktopNav}
            {/* Right: theme + user */}
-          <div className="flex min-w-0 items-center justify-end gap-3">
+           <div className="flex min-w-0 items-center justify-end gap-3">
             <ThemeToggle />
             {userBadge}
           </div>
         </div>
 
         {/* ── MOBILE: compact bar + slide-over drawer (<lg) ── */}
-        <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-[#0A0B0E] lg:hidden">
+        <div className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-white/15 bg-[#0A0B0E]/95 px-4 backdrop-blur-xl lg:hidden">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-white/20 dark:bg-white/10">
+             <div className="w-10 h-10 rounded-xl bg-white/10 border-2 border-white/20 p-1 shadow-xl shadow-black/60 flex items-center justify-center overflow-hidden shrink-0">
               {logoSrc ? (
-                <img src={logoSrc} alt="logo" className="h-8 w-8 rounded-lg object-contain" />
+                 <img src={logoSrc} alt="logo" className="w-full h-full rounded-lg object-contain drop-shadow-md" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-emerald-700 dark:text-accent" stroke="currentColor" strokeWidth={1.8}>
+                 <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-amber-400" stroke="currentColor" strokeWidth={1.8}>
                   <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               )}
             </div>
-            <span className="truncate text-sm font-black tracking-tight text-slate-900 dark:text-white sm:text-base">
+             <span className="truncate text-sm font-black tracking-tight text-white sm:text-base">
               {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
             </span>
           </div>

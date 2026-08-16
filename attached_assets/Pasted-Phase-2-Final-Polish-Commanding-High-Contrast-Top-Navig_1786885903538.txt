@@ -1,0 +1,40 @@
+Phase 2 Final Polish: Commanding High-Contrast Top Navigation Bar & Enlarged Crisp Logo
+
+Refactor the top navigation bar in `src/components/ui/TopNav.tsx` (or `src/components/layout/AppLayout.tsx`, `Navbar.tsx`):
+
+1. High-Impact Brand Identity (Left Section):
+   - Logo Emblem Container:
+     * Significantly enlarge and enhance the logo frame:
+       `w-12 h-12 rounded-2xl bg-white/10 border-2 border-white/20 p-1.5 shadow-xl shadow-black/60 flex items-center justify-center overflow-hidden flex-shrink-0`.
+     * Logo Image: `w-full h-full object-contain rounded-xl drop-shadow-md`.
+   - Restaurant Name:
+     * `text-lg sm:text-xl font-black tracking-tight text-white select-none whitespace-nowrap ml-3 drop-shadow-sm`.
+
+2. Commanding Navigation Capsule Strip (Center Section):
+   - Outer Pill Container:
+     `bg-[#13151F] border border-white/15 p-1.5 rounded-2xl shadow-2xl shadow-black/60 flex items-center gap-1.5`.
+   
+   - Active Navigation Tab (e.g. Tables):
+     * Replace washed-up pale green with solid, commanding, vibrant Emerald:
+       `px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-sm tracking-wide shadow-lg shadow-emerald-500/35 border border-emerald-400 active:scale-95 transition-all flex items-center gap-2`.
+   
+   - Inactive Navigation Tabs (Customers, Kitchen Portal, Bar Portal, Admin):
+     * `px-4 py-2.5 rounded-xl text-zinc-200 hover:text-white hover:bg-white/10 font-bold text-sm tracking-wide border border-transparent hover:border-white/10 active:scale-95 transition-all flex items-center gap-2`.
+     * Tab Icons: Crisp Lucide icons in `w-4 h-4 text-zinc-300 group-hover:text-white transition-colors`.
+
+3. Staff Profile & Switch User Controls (Right Section):
+   - Theme Toggle: `p-2.5 rounded-xl bg-[#13151F] hover:bg-white/10 border border-white/15 text-amber-400 transition-all shadow-md active:scale-95`.
+   - Staff User Chip:
+     `px-3.5 py-2 rounded-xl bg-[#13151F] border border-white/15 flex items-center gap-2.5 shadow-md`:
+     * Staff Name: `text-sm font-black text-white tracking-wide`.
+     * Role Badge: `text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40`.
+   - "Switch User" Button:
+     * Replace dull button with high-contrast styled action pill:
+       `px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 active:bg-amber-600 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center gap-1.5`.
+
+4. TopNav Bar Surface:
+   - `w-full h-18 bg-[#0A0B0E]/95 backdrop-blur-xl border-b border-white/15 px-6 flex items-center justify-between sticky top-0 z-40`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any routing navigation paths, user logout/session handlers, role access permissions, or active floor plan state.
+- Run `npm run build` to confirm zero TypeScript or build errors.
