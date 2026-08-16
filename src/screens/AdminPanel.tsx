@@ -14,7 +14,7 @@ import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { toast } from 'sonner';
 import {
-  BarChart3, Coffee, CreditCard, Table2, TrendingUp,
+  BarChart3, CreditCard, Table2, TrendingUp,
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
@@ -37,7 +37,7 @@ import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 import { pushLogoToFirebase } from '@/utils/firebaseSync';
 
-type AdminTab = 'dashboard' | 'menu' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
+type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -441,7 +441,6 @@ const AdminPanel = () => {
 
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode; subtitle: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} />,  subtitle: 'Overview of your café performance' },
-    { id: 'menu',      label: 'Menu',      icon: <Coffee size={15} />,     subtitle: 'Manage items and categories' },
     { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
     { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
     { id: 'customers', label: 'Customers', icon: <Users size={15} />,      subtitle: 'Customer Khatta balances and repayments' },
@@ -450,7 +449,9 @@ const AdminPanel = () => {
     { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
   ];
 
-  const active = tabs.find((t) => t.id === activeTab)!;
+  // Fall back to Dashboard if hot reload or a stale session retains a removed tab.
+  const resolvedActiveTab: AdminTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : 'dashboard';
+  const active = tabs.find((t) => t.id === resolvedActiveTab)!;
 
   return (
     <AppLayout title="Admin Panel">
@@ -475,7 +476,7 @@ const AdminPanel = () => {
         >
           <nav className="flex-1 space-y-1 overflow-y-auto">
             {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
+              const isActive = resolvedActiveTab === tab.id;
               return (
                 <button
                   key={tab.id}
@@ -514,56 +515,49 @@ const AdminPanel = () => {
 
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
             <div className="hidden sm:block">
-              {activeTab === 'dashboard' ? (
+              {resolvedActiveTab === 'dashboard' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Executive Dashboard</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Overview of your business &amp; revenue performance
                   </p>
                 </div>
-              ) : activeTab === 'menu' ? (
-                <div className="mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Menu Catalog</h1>
-                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
-                    Manage categories, items &amp; pricing
-                  </p>
-                </div>
-              ) : activeTab === 'tables' ? (
+              ) : resolvedActiveTab === 'tables' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Tables &amp; Venue Zones</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Manage floor areas, dining tables &amp; capacity
                   </p>
                 </div>
-              ) : activeTab === 'reports' ? (
+              ) : resolvedActiveTab === 'reports' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Financial Reports &amp; Analytics</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Audited revenue, net margins &amp; expense ledgers
                   </p>
                 </div>
-              ) : activeTab === 'customers' ? (
+              ) : resolvedActiveTab === 'customers' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Customers</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Customer khata balances, repayments &amp; lifetime revenue analytics
                   </p>
                 </div>
-              ) : activeTab === 'inventory' ? (
+              ) : resolvedActiveTab === 'inventory' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Inventory Control</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Stock management for alcohol, beverages, cigarettes &amp; groceries
                   </p>
                 </div>
-              ) : activeTab === 'expenses' ? (
+              ) : resolvedActiveTab === 'expenses' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Expenses &amp; Maintenance</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
                     Log and track operational &amp; facility maintenance costs
                   </p>
                 </div>
-              ) : activeTab === 'settings' ? (
+              ) : resolvedActiveTab === 'settings' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Settings</h1>
                   <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
@@ -574,10 +568,9 @@ const AdminPanel = () => {
                 <PageHeader title={active.label} subtitle={active.subtitle} />
               )}
             </div>
-            {activeTab === 'dashboard' && <DashboardSection />}
-            {activeTab === 'menu'      && <MenuSection />}
-            {activeTab === 'tables'    && <TablesSection />}
-            {activeTab === 'reports'   && (
+            {resolvedActiveTab === 'dashboard' && <DashboardSection />}
+            {resolvedActiveTab === 'tables'    && <TablesSection />}
+            {resolvedActiveTab === 'reports'   && (
               <div className="space-y-5">
                 {/* Report type toggle */}
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -600,10 +593,10 @@ const AdminPanel = () => {
                 {reportView === 'kitchen' && <KitchenReportTab />}
               </div>
             )}
-            {activeTab === 'customers' && <AdminCustomerAnalytics />}
-            {activeTab === 'inventory' && <InventorySection />}
-            {activeTab === 'expenses'  && <ExpensesSection />}
-            {activeTab === 'settings'  && (
+            {resolvedActiveTab === 'customers' && <AdminCustomerAnalytics />}
+            {resolvedActiveTab === 'inventory' && <InventorySection />}
+            {resolvedActiveTab === 'expenses'  && <ExpensesSection />}
+            {resolvedActiveTab === 'settings'  && (
               <div className="space-y-6">
                 {/* Sub-tab pills */}
                 <div className="flex gap-2 flex-wrap">
@@ -826,656 +819,6 @@ const DashboardSection = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-// ── HELPERS ──────────────────────────────────────────────────────────────
-const compressImage = (file: File, maxPx = 400): Promise<string> =>
-  new Promise((resolve) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = maxPx;
-      canvas.height = maxPx;
-      const ctx = canvas.getContext('2d')!;
-      const srcSize = Math.min(img.width, img.height);
-      const sx = (img.width - srcSize) / 2;
-      const sy = (img.height - srcSize) / 2;
-      ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, maxPx, maxPx);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.82));
-    };
-    img.src = url;
-  });
-
-const ItemImageField = ({
-  image,
-  onChange,
-  onRemove,
-}: {
-  image?: string;
-  onChange: (dataUrl: string) => void;
-  onRemove: () => void;
-}) => {
-  const [dragging, setDragging] = useState(false);
-
-  const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const compressed = await compressImage(file);
-    onChange(compressed);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  };
-
-  return (
-    <div className="flex items-center gap-3">
-      <label
-        className={`relative w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden transition-colors flex-shrink-0
-          ${dragging ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-secondary/50'}`}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-      >
-        {image ? (
-          <img src={image} alt="Item" className="w-full h-full object-cover" />
-        ) : (
-          <Image size={20} className="text-muted-foreground" />
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-        />
-      </label>
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer hover:bg-accent/15 hover:text-accent transition-colors">
-          <Upload size={12} /> {image ? 'Replace' : 'Upload'}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-          />
-        </label>
-        {image && (
-          <button
-            onClick={onRemove}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-danger/70 hover:text-danger hover:bg-danger/10 transition-colors"
-          >
-            <X size={12} /> Remove
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ── CONFIRM MODAL ────────────────────────────────────────────────────────
-
-type ConfirmModalState = {
-  open: boolean;
-  title: string;
-  description: string;
-  warning?: string;
-  onConfirm: () => void;
-};
-
-const MODAL_CLOSED: ConfirmModalState = { open: false, title: '', description: '', onConfirm: () => {} };
-
-const ConfirmModal = ({ state, onCancel }: { state: ConfirmModalState; onCancel: () => void }) => {
-  if (!state.open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-sm mx-4 rounded-xl p-6 space-y-4 shadow-2xl"
-        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
-          >
-            <Trash2 size={15} style={{ color: 'rgba(239,68,68,0.85)' }} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-white text-sm">{state.title}</h3>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              {state.description}
-            </p>
-          </div>
-        </div>
-        {state.warning && (
-          <div
-            className="px-3 py-2.5 rounded-lg text-xs leading-relaxed"
-            style={{
-              background: 'rgba(251,146,60,0.08)',
-              border: '1px solid rgba(251,146,60,0.22)',
-              color: 'rgba(251,191,36,0.85)',
-            }}
-          >
-            ⚠ {state.warning}
-          </div>
-        )}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all hover:brightness-110"
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              color: 'rgba(255,255,255,0.6)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={state.onConfirm}
-            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all hover:brightness-110 active:scale-95"
-            style={{
-              background: 'rgba(239,68,68,0.15)',
-              color: 'rgba(239,68,68,0.95)',
-              border: '1px solid rgba(239,68,68,0.3)',
-            }}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── MENU MANAGEMENT ──────────────────────────────────────────────────────
-
-const MenuSection = () => {
-  const pillars = usePOSStore((s) => s.pillars);
-  const addPillar = usePOSStore((s) => s.addPillar);
-  const renamePillar = usePOSStore((s) => s.renamePillar);
-  const deletePillar = usePOSStore((s) => s.deletePillar);
-  const categories = usePOSStore((s) => s.categories);
-  const menuItems = usePOSStore((s) => s.menuItems);
-  const addCategory = usePOSStore((s) => s.addCategory);
-  const updateCategory = usePOSStore((s) => s.updateCategory);
-  const deleteCategory = usePOSStore((s) => s.deleteCategory);
-  const addMenuItem = usePOSStore((s) => s.addMenuItem);
-  const updateMenuItem = usePOSStore((s) => s.updateMenuItem);
-  const deleteMenuItem = usePOSStore((s) => s.deleteMenuItem);
-
-  const [pillarFilter, setPillarFilter] = useState<string>('All');
-  const [showAddCat, setShowAddCat] = useState(false);
-  const [addMode, setAddMode] = useState<'sub' | 'pillar'>('sub');
-  const [newCat, setNewCat] = useState('');
-  const [newCatParent, setNewCatParent] = useState<string>(pillars[0] || 'Foods');
-  const [editCat, setEditCat] = useState<string | null>(null);
-  const [editCatName, setEditCatName] = useState('');
-  const [editCatParent, setEditCatParent] = useState<string>('');
-  const [selectedCat, setSelectedCat] = useState(categories[0]?.id || '');
-
-  // Pillar rename state
-  const [editPillar, setEditPillar] = useState(false);
-  const [editPillarName, setEditPillarName] = useState('');
-
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>(MODAL_CLOSED);
-  const closeModal = () => setConfirmModal(MODAL_CLOSED);
-
-  const filteredCats = pillarFilter === 'All'
-    ? categories
-    : categories.filter((c) => c.parentCategory === pillarFilter);
-
-  const isDeletablePillar = pillarFilter !== 'All';
-
-  const handleSetPillarFilter = (f: string) => {
-    setPillarFilter(f);
-    setEditPillar(false);
-    if (f !== 'All') setNewCatParent(f);
-    // Keep selection valid — if selected cat is no longer in view, pick first visible
-    const inView = f === 'All' ? categories : categories.filter((c) => c.parentCategory === f);
-    if (!inView.find((c) => c.id === selectedCat)) {
-      setSelectedCat(inView[0]?.id || '');
-    }
-  };
-
-  const handleDeletePillar = () => {
-    if (!isDeletablePillar) return;
-    const hasCats = filteredCats.length > 0;
-    const hasItems = hasCats && menuItems.some((i) => filteredCats.some((c) => c.id === i.categoryId));
-    setConfirmModal({
-      open: true,
-      title: `Delete "${pillarFilter}" Category?`,
-      description: `Are you sure you want to remove "${pillarFilter}" from your menu?`,
-      warning: hasCats
-        ? `This section contains active sub-categories${hasItems ? ' or items' : ''}. Deleting it will unassign them.`
-        : undefined,
-      onConfirm: () => {
-        deletePillar(pillarFilter);
-        setPillarFilter('All');
-        closeModal();
-        toast.success(`"${pillarFilter}" removed`);
-      },
-    });
-  };
-
-  const handleRenamePillar = () => {
-    const name = editPillarName.trim();
-    if (!name || name === pillarFilter) { setEditPillar(false); return; }
-    renamePillar(pillarFilter, name);
-    setPillarFilter(name);
-    setEditPillar(false);
-    toast.success(`Pillar renamed to "${name}"`);
-  };
-
-  const handleAddPillar = () => {
-    if (!newCat.trim()) return;
-    const name = newCat.trim();
-    addPillar(name);
-    setPillarFilter(name);
-    setNewCatParent(name);
-    setNewCat('');
-    setShowAddCat(false);
-    toast.success(`Pillar "${name}" added`);
-  };
-
-  const handleAddSubCategory = () => {
-    if (!newCat.trim()) return;
-    addCategory(newCat.trim(), newCatParent);
-    setNewCat('');
-    setShowAddCat(false);
-    toast.success('Category added');
-  };
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState('');
-  const [itemImage, setItemImage] = useState<string | undefined>(undefined);
-  const [editItem, setEditItem] = useState<string | null>(null);
-  const [editItemName, setEditItemName] = useState('');
-  const [editItemPrice, setEditItemPrice] = useState('');
-  const [editItemImage, setEditItemImage] = useState<string | undefined>(undefined);
-
-  const catItems = menuItems.filter((i) => i.categoryId === selectedCat);
-  const selectedCatName = categories.find((c) => c.id === selectedCat)?.name || '';
-
-  const handleAddItem = () => {
-    if (itemName.trim() && Number(itemPrice) > 0 && selectedCat) {
-      addMenuItem({ categoryId: selectedCat, name: itemName.trim(), price: Number(itemPrice), image: itemImage });
-      setItemName(''); setItemPrice(''); setItemImage(undefined); setShowAddItem(false);
-      toast.success('Item added');
-    }
-  };
-
-  const handleSaveEdit = () => {
-    if (!editItem) return;
-    updateMenuItem(editItem, { name: editItemName, price: Number(editItemPrice), image: editItemImage });
-    setEditItem(null);
-    toast.success('Item updated');
-  };
-
-  const startEdit = (item: typeof catItems[0]) => {
-    setEditItem(item.id);
-    setEditItemName(item.name);
-    setEditItemPrice(String(item.price));
-    setEditItemImage(item.image);
-  };
-
-  return (
-    <>
-    <div className="grid grid-cols-12 gap-5 w-full items-stretch">
-      {/* ── Left: Categories ── */}
-      <div className="col-span-12 lg:col-span-4">
-        <div className="bg-[#13151F] border border-white/15 p-5 rounded-3xl shadow-xl flex flex-col gap-4">
-          {/* ── Header row ── */}
-          <div>
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-white tracking-wide">Categories</h3>
-              {/* + Add Category always visible */}
-              <button
-                onClick={() => { setShowAddCat((v) => !v); setNewCat(''); }}
-                data-testid="button-toggle-add-category"
-                className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-black border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1"
-              >
-                <Plus size={11} strokeWidth={2.5} />
-                Add Category
-              </button>
-            </div>
-
-            {/* Pillar action row — only when a specific pillar tab is active */}
-            {isDeletablePillar && !editPillar && (
-              <div className="flex items-center gap-2 mt-2.5">
-                <button
-                  onClick={() => { setEditPillar(true); setEditPillarName(pillarFilter); }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 hover:brightness-110"
-                  style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}
-                >
-                  <Edit3 size={11} strokeWidth={2} />
-                  Rename
-                </button>
-                <button
-                  onClick={handleDeletePillar}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 hover:brightness-110"
-                  style={{ background: 'rgba(239,68,68,0.07)', color: 'rgba(239,68,68,0.7)', border: '1px solid rgba(239,68,68,0.2)' }}
-                >
-                  <Trash2 size={11} strokeWidth={2} />
-                  Delete
-                </button>
-              </div>
-            )}
-
-            {/* Inline pillar rename form */}
-            {isDeletablePillar && editPillar && (
-              <div className="flex items-center gap-2 mt-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)' }}>
-                <input
-                  value={editPillarName}
-                  onChange={(e) => setEditPillarName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRenamePillar();
-                    if (e.key === 'Escape') setEditPillar(false);
-                  }}
-                  autoFocus
-                  placeholder="New name"
-                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-secondary border border-accent/40 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-                />
-                <button
-                  onClick={handleRenamePillar}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 hover:brightness-110"
-                  style={{ background: 'rgba(34,197,94,0.15)', color: 'rgba(74,222,128,0.9)', border: '1px solid rgba(34,197,94,0.25)' }}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditPillar(false)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:brightness-110"
-                  style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* ── Inline add form (toggleable) ── */}
-          {showAddCat && (
-            <div className="p-4 rounded-2xl bg-[#0E1017] border border-white/20 shadow-xl space-y-3">
-              {/* Mode toggle */}
-              <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
-                {(['sub', 'pillar'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => { setAddMode(mode); setNewCat(''); }}
-                    className={addMode === mode
-                      ? 'flex-1 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-black uppercase tracking-wider transition-all'
-                      : 'flex-1 py-1.5 rounded-lg text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all'}
-                  >
-                    {mode === 'sub' ? 'Sub-Category' : 'Main Category'}
-                  </button>
-                ))}
-              </div>
-
-              <input
-                key={addMode}
-                value={newCat}
-                onChange={(e) => setNewCat(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newCat.trim()) {
-                    if (addMode === 'pillar') handleAddPillar();
-                    else handleAddSubCategory();
-                  }
-                  if (e.key === 'Escape') { setShowAddCat(false); setNewCat(''); }
-                }}
-                placeholder={addMode === 'pillar' ? 'New pillar name (e.g. Desserts)' : 'Sub-category name'}
-                autoFocus
-                data-testid="input-new-category"
-                className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
-              />
-
-              <div className="flex gap-1.5">
-                {addMode === 'sub' && (
-                  <select
-                    value={newCatParent}
-                    onChange={(e) => setNewCatParent(e.target.value)}
-                    className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none"
-                  >
-                    {pillars.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                )}
-                <button
-                  onClick={addMode === 'pillar' ? handleAddPillar : handleAddSubCategory}
-                  data-testid="button-add-category"
-                  className="flex-1 py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all"
-                >Add</button>
-                <button
-                  onClick={() => { setShowAddCat(false); setNewCat(''); }}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all"
-                ><X size={13} /></button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Pillar filter tabs — single row, no wrap ── */}
-          <div className="flex flex-wrap gap-2">
-            {(['All', ...pillars]).map((f) => (
-              <button
-                key={f}
-                onClick={() => handleSetPillarFilter(f)}
-                className={pillarFilter === f
-                  ? 'px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20'
-                  : 'px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-200 text-xs font-bold uppercase tracking-wider transition-colors'}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Category list ── */}
-          <div className="space-y-1 mb-4">
-            {filteredCats.map((c) => (
-              <div key={c.id}>
-                {editCat === c.id ? (
-                  <div className="space-y-1.5 px-2 py-2 rounded-lg bg-secondary border border-accent/30">
-                    <input
-                      value={editCatName}
-                      onChange={(e) => setEditCatName(e.target.value)}
-                      className="bg-transparent text-sm w-full focus:outline-none text-foreground"
-                      autoFocus
-                    />
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        value={editCatParent}
-                        onChange={(e) => setEditCatParent(e.target.value)}
-                        className="flex-1 px-2 py-1 rounded bg-background border border-border text-foreground text-xs focus:outline-none"
-                      >
-                        <option value="">— no pillar —</option>
-                        {pillars.map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      <button onClick={() => { updateCategory(c.id, { name: editCatName, parentCategory: editCatParent || undefined }); setEditCat(null); toast.success('Category updated'); }} className="text-success hover:opacity-80"><Save size={12} /></button>
-                      <button onClick={() => setEditCat(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={selectedCat === c.id
-                      ? 'p-4 rounded-2xl bg-[#181B28] border-2 border-amber-500/50 border-l-4 border-l-amber-400 shadow-lg shadow-amber-500/10 flex items-center justify-between cursor-pointer transition-all group'
-                      : 'p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 flex items-center justify-between cursor-pointer transition-all group'}
-                    onClick={() => setSelectedCat(c.id)}
-                  >
-                    <div className="flex-1 min-w-0 mr-1">
-                      <span className="text-sm font-black text-white tracking-wide break-words leading-snug">{c.name}</span>
-                      {c.parentCategory && (
-                        <span className="block text-[11px] font-bold uppercase tracking-wider text-amber-400/90 mt-0.5">
-                          {c.subGroup ? `${c.parentCategory} • ${c.subGroup}` : c.parentCategory}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-                      {/* KOT toggle */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateCategory(c.id, { sendToKitchen: !c.sendToKitchen });
-                        }}
-                        title={c.sendToKitchen ? 'KOT: ON — sends to kitchen' : 'KOT: OFF — counter/bar item'}
-                        className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-zinc-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"
-                      >
-                        {c.sendToKitchen ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
-                        <span>KOT</span>
-                      </button>
-                      {/* Edit / Delete — reveal on hover */}
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEditCat(c.id); setEditCatName(c.name); setEditCatParent(c.parentCategory || ''); }}
-                          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                        ><Edit3 size={11} /></button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmModal({
-                              open: true,
-                              title: `Delete "${c.name}"`,
-                              description: `This will permanently remove the "${c.name}" sub-category.`,
-                              onConfirm: () => { deleteCategory(c.id); closeModal(); toast.success('Category deleted'); },
-                            });
-                          }}
-                          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                        ><Trash2 size={11} /></button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            {filteredCats.length === 0 && (
-              <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground">
-                  {pillarFilter === 'All' ? 'No categories yet.' : `No categories in ${pillarFilter} yet.`}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Right: Menu Items ── */}
-      <div className="col-span-12 lg:col-span-8">
-        <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col min-h-[500px]">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                {selectedCatName ? `${selectedCatName} Items` : 'Menu Items'}
-                <span className="text-xs font-bold text-zinc-300">({catItems.length})</span>
-              </h3>
-            </div>
-            <button
-              onClick={() => { setShowAddItem(!showAddItem); setItemName(''); setItemPrice(''); setItemImage(undefined); }}
-              data-testid="button-toggle-add-item"
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-1.5 hover:-translate-y-0.5"
-            >
-              <Plus size={14} /> Add Item
-            </button>
-          </div>
-
-          {showAddItem && (
-            <div className="my-4 p-5 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
-              <p className="text-lg font-black text-white tracking-tight">Add New Item</p>
-              <ItemImageField image={itemImage} onChange={setItemImage} onRemove={() => setItemImage(undefined)} />
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3 items-end">
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Item Name</label>
-                <input
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-                  placeholder="Item name"
-                  data-testid="input-item-name"
-                    className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
-                />
-                </div>
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Price</label>
-                <input
-                  value={itemPrice}
-                  onChange={(e) => setItemPrice(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-                  placeholder="Price"
-                  type="number"
-                  data-testid="input-item-price"
-                    className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none"
-                />
-                </div>
-                <button
-                  onClick={handleAddItem}
-                  data-testid="button-add-item-confirm"
-                  className="w-full sm:w-auto py-4 px-5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all"
-                >Add Item</button>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-4">
-            {catItems.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-2xl bg-[#161824] hover:bg-[#1C2030] border border-white/10 hover:border-white/25 flex items-center justify-between transition-all group shadow-sm mb-3"
-                data-testid={`menu-item-row-${item.id}`}
-              >
-                {editItem === item.id ? (
-                  <div className="w-full p-3 space-y-3 bg-[#181B28] rounded-xl">
-                    <ItemImageField image={editItemImage} onChange={setEditItemImage} onRemove={() => setEditItemImage(undefined)} />
-                    <div className="flex gap-2 items-center">
-                      <input value={editItemName} onChange={(e) => setEditItemName(e.target.value)} className="flex-1 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none" />
-                      <input value={editItemPrice} onChange={(e) => setEditItemPrice(e.target.value)} type="number" className="w-28 bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none" />
-                      <button onClick={handleSaveEdit} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><Save size={15} /></button>
-                      <button onClick={() => setEditItem(null)} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><X size={15} /></button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3.5 w-full">
-                    {item.image && (
-                      <img src={item.image} alt={item.name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-black text-white tracking-wide group-hover:text-amber-200 transition-colors truncate">{item.name}</p>
-                    </div>
-                    <span className="text-base font-black text-amber-400 tracking-tight font-mono whitespace-nowrap">Rs. {fmt(item.price)}</span>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => startEdit(item)} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"><Edit3 size={14} /></button>
-                      <button
-                        onClick={() => setConfirmModal({
-                          open: true,
-                          title: `Delete "${item.name}"`,
-                          description: `This will permanently remove "${item.name}" from the menu.`,
-                          onConfirm: () => { deleteMenuItem(item.id); closeModal(); toast.success('Item deleted'); },
-                        })}
-                        className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                      ><Trash2 size={14} /></button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            {catItems.length === 0 && (
-              <div className="text-center py-10 text-muted-foreground">
-                <Coffee size={32} className="mx-auto mb-2 opacity-20" />
-                <p className="text-sm font-medium">No items in this category</p>
-                <p className="text-xs mt-1 opacity-60">Click "Add Item" to get started</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-    <ConfirmModal state={confirmModal} onCancel={closeModal} />
-    </>
   );
 };
 
