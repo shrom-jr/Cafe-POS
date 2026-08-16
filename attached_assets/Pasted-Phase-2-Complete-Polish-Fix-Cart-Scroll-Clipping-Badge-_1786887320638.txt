@@ -1,0 +1,58 @@
+Phase 2 Complete Polish: Fix Cart Scroll Clipping, Badge Alignment & High-Contrast Typography in Order Terminal
+
+Refactor `src/screens/OrderScreen.tsx` and `src/components/order/CartDrawer.tsx` (or related cart subcomponents):
+
+1. Fix Cart Drawer Vertical Clipping & Overflow (`CartDrawer.tsx`):
+   - Make the cart container a strict full-height flex column:
+     `w-full lg:w-[380px] bg-[#10121A] border-l border-white/15 h-[calc(100vh-68px)] flex flex-col justify-between overflow-hidden shadow-2xl relative`.
+   
+   A. FIXED TOP HEADER SECTION:
+      - Table Header: `p-4 pb-2 flex items-center justify-between border-b border-white/10`.
+      - Table Name: `text-xl font-black text-white tracking-tight flex items-center gap-2`.
+      - Status Badge:
+        * DRAFT: `px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider`.
+        * SENT: `px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider`.
+      - Action Controls: `flex items-center gap-1.5`.
+        * Move / Clear Buttons: `px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white text-xs font-bold transition-all`.
+      - Server line: `text-xs font-bold text-zinc-300 block px-4 py-1.5 bg-white/[0.02]`.
+
+   B. GUEST PAX & ATTACH CUSTOMER ROW:
+      - Container: `px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2 bg-[#13151F]`.
+      - Pax Stepper: `flex items-center gap-2 bg-[#181B26] border border-white/15 px-3 py-1.5 rounded-xl text-xs font-black text-white`.
+      - Attach Customer Button: `px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5`.
+
+   C. SCROLLABLE CART ITEMS AREA (ZERO CLIPPING):
+      - Container: `flex-1 min-h-0 overflow-y-auto p-4 space-y-3 overscroll-contain`.
+      - Cart Item Card: `p-3.5 rounded-2xl bg-[#161824] border border-white/15 shadow-md flex flex-col gap-2`.
+      - Top Line: Item Name in `text-sm font-black text-white tracking-wide` and Line Total in `text-sm font-black text-amber-400 font-mono`.
+      - Bottom Line:
+        * Left Side: `text-xs font-bold text-zinc-300 font-mono` ("Rs. {price} each") + status badge pill.
+        * Right Side (Quantity Stepper): `flex items-center gap-2`.
+          - Minus/Plus buttons: `w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all`.
+          - Qty number: `text-sm font-black text-white font-mono w-4 text-center`.
+          - Trash button: `p-1 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors`.
+
+   D. STICKY BOTTOM CHECKOUT DOCK:
+      - Container: `p-4 bg-[#13151F] border-t border-white/15 flex flex-col gap-2.5 shadow-2xl z-10`.
+      - Total Row: `flex items-center justify-between`:
+        * Label: `text-xs font-black uppercase tracking-widest text-zinc-300` ("TOTAL").
+        * Value: `text-3xl font-black text-white font-mono tracking-tight` ("Rs. {total}").
+      - Helper Alert Subtext:
+        * DRAFT state: `<p className="text-[11px] font-black uppercase tracking-wider text-amber-400 text-center">⚠️ Send to kitchen before payment</p>`.
+        * SENT state: `<p className="text-[11px] font-black uppercase tracking-wider text-emerald-400 text-center">✓ Order active & sent to kitchen</p>`.
+      - Primary Action CTA Button:
+        * Send to Kitchen: `w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2`.
+        * Proceed to Payment: `w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2`.
+
+2. Fix Menu Item Card Quantity Badge (`OrderScreen.tsx` / `MenuItemCard.tsx`):
+   - Menu Item Card Container: `relative p-4 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all flex items-center justify-between group cursor-pointer`.
+   - Quantity Badge:
+     * Anchor the active counter badge cleanly to the top-right corner of the card:
+       `{itemQty > 0 && (<span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shadow-lg shadow-amber-500/40 border-2 border-[#13151F] animate-in zoom-in-75 duration-150">{itemQty}</span>)}`
+   - Price & Add Button:
+     * Price: `text-base font-black text-amber-400 font-mono mt-1`.
+     * Add Button (`+`): `w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 active:scale-90 transition-all`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any item pricing logic, tax calculations, KOT dispatching, or table status sync.
+- Run `npm run build` to confirm zero TypeScript or build errors.

@@ -689,7 +689,7 @@ const OrderScreen = () => {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+                       className="p-3.5 rounded-2xl bg-[#161824] border border-white/15 shadow-md mb-2.5 flex flex-col gap-2"
                       style={{
                         background: isPaid
                           ? 'rgba(255,255,255,0.02)'
@@ -706,15 +706,20 @@ const OrderScreen = () => {
                         animation: isFlashing ? 'dr-item-flash 0.65s ease' : undefined,
                       }}
                     >
-                      <div className="flex-1 min-w-0">
+                       <div className="w-full flex items-start justify-between gap-3">
                         <p
-                          className={`text-sm font-bold leading-snug ${isPaid ? 'line-through text-white/55' : 'text-white/90'}`}
+                           className={`text-sm font-black text-white tracking-wide leading-snug min-w-0 ${isPaid ? 'line-through opacity-60' : ''}`}
                           style={{ wordBreak: 'break-word' }}
                         >
                           {item.name}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span className="text-xs text-white/40">Rs. {fmt(item.price)} each</span>
+                         <p className={`text-sm font-black text-amber-400 font-mono whitespace-nowrap ${isPaid ? 'opacity-50' : ''}`}>
+                           Rs. {fmt(item.price * item.quantity)}
+                         </p>
+                       </div>
+                       <div className="w-full flex items-center justify-between gap-3">
+                         <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                           <span className="text-xs font-bold text-zinc-300 font-mono">Rs. {fmt(item.price)} each</span>
                           {isPaid && (
                             <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.7)' }}>
                               Paid
@@ -731,15 +736,14 @@ const OrderScreen = () => {
                               Draft
                             </span>
                           )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
+                         </div>
+                         <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Decrease / void */}
                         <button
                           onClick={handleMinus}
                           disabled={isPaid}
                           aria-label={isSent ? `Void ${item.name}` : `Decrease ${item.name}`}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-transform disabled:pointer-events-none disabled:opacity-30"
+                           className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
                           style={
                             isSent && !isPaid
                               ? { background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: 'rgba(252,165,165,0.8)' }
@@ -748,37 +752,28 @@ const OrderScreen = () => {
                         >
                           <Minus size={13} />
                         </button>
-                        <span className="w-7 text-center font-black text-sm text-white/90 select-none">{item.quantity}</span>
+                         <span className="text-sm font-black text-white font-mono w-4 text-center select-none">{item.quantity}</span>
                         {/* Increase — draft only */}
                         <button
                           onClick={() => isDraft && order && updateItemQuantity(order.id, item.id, 1)}
                           disabled={isPaid || isSent}
                           aria-label={`Increase ${item.name}`}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-transform disabled:pointer-events-none disabled:opacity-30"
-                          style={{ background: 'rgba(59,130,246,0.20)', border: '1px solid rgba(59,130,246,0.30)', color: 'rgba(147,197,253,0.9)' }}
+                           className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
                         >
                           <Plus size={13} />
                         </button>
-                      </div>
-                      <p className="w-16 text-right text-sm font-bold" style={{ color: isPaid ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.8)' }}>
-                        Rs. {fmt(item.price * item.quantity)}
-                      </p>
-                      {/* Trash / void */}
-                      {!isPaid && (
-                        <button
-                          onClick={handleTrash}
-                          aria-label={isSent ? `Void ${item.name}` : `Remove ${item.name}`}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-all"
-                          style={
-                            isSent
-                              ? { color: 'rgba(252,165,165,0.6)', background: 'rgba(239,68,68,0.08)' }
-                              : { color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.04)' }
-                          }
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                      {isPaid && <div className="w-8 h-8 flex-shrink-0" />}
+                           {!isPaid && (
+                             <button
+                               onClick={handleTrash}
+                               aria-label={isSent ? `Void ${item.name}` : `Remove ${item.name}`}
+                               className="p-1 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors flex-shrink-0"
+                               style={isSent ? { color: 'rgba(252,165,165,0.6)', background: 'rgba(239,68,68,0.08)' } : undefined}
+                             >
+                               <Trash2 size={13} />
+                             </button>
+                           )}
+                         </div>
+                       </div>
                     </div>
                   );
                 };
