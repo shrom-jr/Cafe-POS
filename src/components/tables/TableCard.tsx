@@ -24,7 +24,6 @@ interface TableCardProps {
   itemCount?: number;
   customerName?: string;
   onClick: () => void;
-  showSection?: boolean;
   /** Extra classes forwarded to the root <button>; use for height overrides (e.g. h-full). */
   className?: string;
 }
@@ -34,7 +33,6 @@ const TableCard = ({
   itemCount = 0,
   customerName,
   onClick,
-  showSection = false,
   className = '',
 }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
@@ -60,52 +58,46 @@ const TableCard = ({
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative min-h-[105px] w-full rounded-2xl text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
+      className={`group relative w-full rounded-xl text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
     >
       {/* ── FREE state ── */}
       {!isActive ? (
-        <div className="flex h-full w-full items-center justify-center rounded-2xl p-3">
-          <span className="text-center text-2xl font-black tracking-wide text-slate-950 dark:text-white leading-tight">
+        <div className="flex h-full w-full items-center justify-center p-2">
+          <span className="text-center text-lg font-black tracking-wide text-slate-950 dark:text-white leading-tight">
             {displayName}
           </span>
         </div>
       ) : (
         /* ── OCCUPIED / BILLING state ── */
-        <div className="box-border flex h-full w-full flex-col justify-between overflow-hidden p-3.5">
+        <div className="box-border flex h-full w-full flex-col justify-between overflow-hidden rounded-xl p-2.5">
           {/* Row 1: table name + status badge */}
-          <div className="flex min-w-0 items-center justify-between gap-2.5">
+          <div className="flex min-w-0 items-center justify-between gap-2">
             <span
               title={displayName}
-              className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-slate-950 dark:text-white"
+              className="min-w-0 truncate text-base font-black leading-none tracking-tight text-slate-950 dark:text-white"
             >
               {displayName}
             </span>
-            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-black uppercase leading-none tracking-wider ${statusBadge}`}>
+            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-black uppercase leading-none tracking-wide ${statusBadge}`}>
               <span className={`h-1 w-1 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
           </div>
 
-          {showSection && (
-            <span className="max-w-full truncate text-[10px] font-medium text-slate-600 dark:text-slate-400" title={table.section || 'Ground Floor'}>
-              {table.section || 'Ground Floor'}
-            </span>
-          )}
-
-          {/* Row 2: guest count + optional customer pill */}
-          <div className="flex items-center gap-2.5 py-1 text-sm font-bold text-slate-700 dark:text-slate-200">
-            <span className="flex items-center gap-1">👤 {table.pax ?? 1} Guest{(table.pax ?? 1) === 1 ? '' : 's'}</span>
-            {customerName && (
-              <span className="max-w-[130px] min-w-0 truncate rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-200">
-                {customerName}
-              </span>
-            )}
-          </div>
-
-          {/* Row 3: timer + item count */}
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-xs font-bold text-slate-700 dark:border-white/10 dark:text-slate-300">
-            <span className="tabular-nums font-bold text-amber-600 dark:text-amber-400">⏱️ {timer || '—'}</span>
-            <span className="text-slate-700 dark:text-slate-200">{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+          {/* Row 2: guests/customer + timer/items */}
+          <div className="flex items-center justify-between gap-1 border-t border-white/10 pt-1 text-xs dark:border-white/10">
+            <div className="flex min-w-0 items-center gap-1.5 text-slate-700 dark:text-slate-300">
+              <span className="shrink-0">👤 {table.pax ?? 1}</span>
+              {customerName && (
+                <span className="max-w-[85px] min-w-0 truncate rounded border border-amber-500/30 bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-200">
+                  {customerName}
+                </span>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1 text-slate-700 dark:text-slate-300">
+              <span className="font-bold text-amber-600 dark:text-amber-400">⏱️ {timer || '—'}</span>
+              <span>{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+            </div>
           </div>
         </div>
       )}

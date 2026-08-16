@@ -1,0 +1,52 @@
+Phase 2 Final Polish: Zero-Scroll Single-Screen Physical Floor Layout & 2-Row Occupied Cards
+
+Refactor `src/screens/TableOverview.tsx`, `src/utils/venueSeed.ts`, and `src/components/tables/TableCard.tsx` to fit all 21 tables into a single zero-scroll viewport while locking in the exact physical restaurant geometry:
+
+1. Canonical Database Areas & Seed (`venueSeed.ts`):
+   - First Floor (Huts & Hall) [7 tables]: H3-B, H3-A, T-1, H2-B, H2-A, T-2, H1
+   - Sofa & Lounge [5 tables]: Sofa, L4, L3, L2, L1
+   - Bar Counter [2 tables]: Bar 1, Bar 2
+   - Private Huts [4 tables]: R3, R1, R4, R2
+   - Private Cabins [3 tables]: R5, R6, R7
+   - Filter bar pills: [ All (21) ] [ First Floor (7) ] [ Sofa & Lounge (5) ] [ Bar Counter (2) ] [ Private Huts (4) ] [ Private Cabins (3) ]
+
+2. Ultra-Legible 2-Row Occupied Card Design (`TableCard.tsx`):
+   - Occupied Card Container: `h-full w-full flex flex-col justify-between p-2.5 box-border rounded-xl overflow-hidden`:
+     * Row 1 (Top): Table Name on left (`text-base font-black text-white dark:text-white` or `text-slate-950` in light mode); Status pill on right (`text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40`).
+     * Row 2 (Bottom): `flex items-center justify-between gap-1 text-xs pt-1 border-t border-white/10 dark:border-white/10`:
+       - Left side: `flex items-center gap-1.5 min-w-0`: Guest count (`👤 {guests}`) + Customer pill (`bg-amber-500/20 text-amber-200 border border-amber-500/30 px-1.5 py-0.5 rounded text-[11px] font-bold truncate max-w-[85px]`).
+       - Right side: Live timer (`⏱️ {timer}` in `text-amber-400 font-bold`) + item count (`{items}i` or `{items} Items` in `text-slate-300`).
+   - Free Table Cards: `h-full w-full flex items-center justify-center p-2 rounded-xl text-lg font-black`.
+
+3. Zero-Scroll Physical Geometry Canvas (`TableOverview.tsx`):
+   - Wrap the layout inside `max-w-7xl mx-auto px-4 py-2 w-full flex flex-col justify-between`:
+   
+   A. FIRST FLOOR (Top Container, max-h-[190px], gap-2.5):
+      - 3 Columns (`grid grid-cols-12 gap-3 items-stretch`):
+        * Col 1 (cols 1-4, Hut 3): Stack of 3 cards (`H3-B`, `H3-A`, `T-1`), each `h-[56px]`.
+        * Col 2 (cols 5-8, Hut 2): Stack of 3 cards (`H2-B`, `H2-A`, `T-2`), each `h-[56px]`.
+        * Col 3 (cols 9-12, Hut 1): Single `H1` card spanning `h-[180px]` with centered content when free or balanced 2-row layout when occupied.
+
+   B. GROUND FLOOR & COURTYARD (Bottom Container, max-h-[350px], gap-2.5):
+      - 3 Columns (`grid grid-cols-12 gap-3 items-start`):
+        * Column 1 (Sofa & Lounge, cols 1-4):
+          - Top: Wide `Sofa` card (`h-[56px]`).
+          - Middle: 2x2 grid for `L4`, `L3` (top row) and `L2`, `L1` (bottom row) (each `h-[56px]`).
+          - Bottom: Landmark badge `[ 📺 TV AREA ]` (`py-1 text-[11px] font-bold text-center`).
+        * Column 2 (Bar & Courtyard, cols 5-8):
+          - Top: 2-column grid for `Bar 1` and `Bar 2` (`h-[56px]` each).
+          - Middle: Landmark badge `[ 🅿️ PARKING AREA ]` (`py-2.5 text-[11px] font-bold text-center`).
+          - Bottom: Landmark badge `[ ⛩️ MAIN GATE ]` (`py-2.5 text-[11px] font-bold text-center`).
+        * Column 3 (Private Huts & Cabins, cols 9-12):
+          - Top Sub-header: `| PRIVATE HUTS`
+          - 2x2 Quad: `R3`, `R1` (top row) and `R4`, `R2` (bottom row) (each `h-[56px]`).
+          - Middle Sub-header: `| PRIVATE CABINS`
+          - Vertical Strip: Stack `R5`, `R6`, `R7` vertically (each `h-[54px]`, one below the other).
+
+4. Dual Theme Contrast:
+   - Light Mode: Slate cards `bg-slate-100 border-[1.5px] border-slate-900 text-slate-950` on pure white background.
+   - Dark Mode: Graphite cards `bg-[#13151F] border border-white/10 text-white` on carbon background.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
