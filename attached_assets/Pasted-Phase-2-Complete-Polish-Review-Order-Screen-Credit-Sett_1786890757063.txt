@@ -1,0 +1,94 @@
+Phase 2 Complete Polish: Review Order Screen, Credit Settlement Modal & Wallet QR Modals High-Contrast Redesign
+
+Refactor `src/screens/ReviewOrder.tsx` (and related payment modals: `CreditSettlementModal.tsx`, `QrPaymentModal.tsx`):
+
+1. High-Contrast Review Order Screen (`ReviewOrder.tsx`):
+   - Page Container: `w-full max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start`.
+   
+   A. LEFT COLUMN: ORDER ITEMS LIST (`col-span-12 lg:col-span-6`):
+      - Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4`.
+      - Header:
+        * Title: `text-lg font-black text-white tracking-wide flex items-center justify-between`.
+        * Count Badge: `px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-black text-zinc-200`.
+      - Item Cards:
+        * Container: `p-4 rounded-2xl bg-[#181B26] border border-white/10 hover:border-white/20 transition-all flex items-center justify-between mb-2.5 shadow-sm`.
+        * Checkbox: `w-5 h-5 rounded-lg border-2 border-white/20 bg-white/5 checked:bg-amber-500 checked:border-amber-400`.
+        * Item Name: `text-base font-black text-white tracking-wide`.
+        * Unit Details: `text-xs font-bold font-mono text-zinc-200 mt-0.5` ("{qty} × Rs. {price}").
+        * Line Total: `text-base font-black text-amber-400 font-mono tracking-tight`.
+
+   B. RIGHT COLUMN: SUMMARY & PAYMENT SELECTION (`col-span-12 lg:col-span-6`):
+      - Summary Card Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 mb-6`.
+      - Subtotal & Discount Rows:
+        * Labels: `text-xs font-black uppercase tracking-wider text-zinc-300`.
+        * Values: `text-base font-black text-white font-mono`.
+      - Discount Selector Strip:
+        * Active Pill: `px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase shadow-md shadow-amber-500/20`.
+        * Inactive Pills: `px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-200 font-bold text-xs transition-colors`.
+      - Grand Total Dock:
+        * Label: `text-xs font-black uppercase tracking-widest text-amber-400`.
+        * Value: `text-4xl font-black text-white font-mono tracking-tight`.
+      - Print Pre-Bill Button:
+        * `w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-[0.98]`.
+      
+      - Payment Methods Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-3`.
+      - Section Title: `text-xs font-black uppercase tracking-widest text-amber-400 mb-1`.
+      - Payment Option Cards Grid: `grid grid-cols-1 sm:grid-cols-2 gap-3.5`:
+        * Cash Card: `p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-emerald-500/5`.
+          - Title: `text-sm font-black text-white group-hover:text-emerald-200`.
+          - Subtext: `text-xs font-bold text-emerald-300`.
+        * Credit Card: `p-4 rounded-2xl bg-[#181510] border-2 border-amber-500/40 hover:border-amber-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-amber-500/5`.
+          - Title: `text-sm font-black text-white group-hover:text-amber-200`.
+          - Subtext: `text-xs font-bold text-amber-300`.
+        * eSewa Card: `p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-emerald-500/5`.
+          - Title: `text-sm font-black text-white group-hover:text-emerald-200`.
+          - Subtext: `text-xs font-bold text-emerald-300`.
+        * Khalti Card: `p-4 rounded-2xl bg-[#161224] border-2 border-purple-500/40 hover:border-purple-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-purple-500/5`.
+          - Title: `text-sm font-black text-white group-hover:text-purple-200`.
+          - Subtext: `text-xs font-bold text-purple-300`.
+        * Fonepay Card: `p-4 rounded-2xl bg-[#1A1116] border-2 border-rose-500/40 hover:border-rose-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-rose-500/5`.
+          - Title: `text-sm font-black text-white group-hover:text-rose-200`.
+          - Subtext: `text-xs font-bold text-rose-300`.
+
+2. High-Contrast "Confirm Credit Settlement" Modal (`CreditSettlementModal.tsx`):
+   - Backdrop: `fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4`.
+   - Modal Card: `max-w-md w-full p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4`.
+   - Header:
+     * Icon & Title: `text-lg font-black text-white flex items-center gap-2`.
+     * Subtitle: `text-xs font-bold text-zinc-300 mt-0.5`.
+   - Customer Identity Box:
+     * `p-4 rounded-2xl bg-[#181B26] border border-white/15 flex items-center justify-between shadow-inner`.
+     * Name: `text-base font-black text-amber-300`.
+     * Phone: `text-xs font-mono font-bold text-zinc-200`.
+   - Financial Ledger Telemetry Breakdown:
+     * Today's Order Total: `flex items-center justify-between text-xs font-black uppercase text-zinc-300` and `text-sm font-black text-white font-mono` ("Rs. {orderTotal}").
+     * Customer Existing Due: `flex items-center justify-between text-xs font-black uppercase text-zinc-300` and `text-sm font-black text-rose-400 font-mono` ("Rs. {existingDue}").
+     * New Total Due Balance: `flex items-center justify-between text-xs font-black uppercase text-rose-300 pt-2 border-t border-white/10` and `text-base font-black text-rose-400 font-mono drop-shadow-[0_0_8px_rgba(244,63,94,0.3)]` ("Rs. {newTotalDue}").
+   - Cash Collected Field:
+     * Label: `text-xs font-black uppercase tracking-wider text-amber-400 block mb-1`.
+     * Input: `w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-base font-mono outline-none`.
+   - Net Added Highlight Container:
+     * `p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-between text-amber-300 font-black text-sm`.
+   - Action Buttons:
+     * Cancel: `flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all`.
+     * Confirm Credit & Settle: `flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all`.
+
+3. Digital Wallet QR Modal (`QrPaymentModal.tsx` - eSewa, Khalti, Fonepay):
+   - Backdrop: `fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4`.
+   - Modal Card: `max-w-xs w-full p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col items-center gap-3`.
+   - Title: `text-lg font-black text-white tracking-wide`.
+   - Amount Display:
+     * Label: `text-[10px] font-black uppercase tracking-widest text-amber-400`.
+     * Value: `text-3xl font-black text-white font-mono mt-0.5`.
+   - QR Frame:
+     * `p-3.5 rounded-2xl bg-white border-2 border-emerald-400 shadow-xl my-1`.
+   - Helper Subtext:
+     * Replace dark gray with high-contrast text:
+       `<p className="text-xs font-bold text-zinc-200 text-center">Scan QR and tap confirm once payment is received.</p>`.
+   - Primary "Confirm Payment" Button:
+     * Replace royal blue button with commanding Emerald:
+       `w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] mt-1`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any billing mathematics, discount application logic, Khata balance updates, or receipt print handlers.
+- Run `npm run build` to confirm zero TypeScript or build errors.

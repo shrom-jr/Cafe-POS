@@ -863,14 +863,11 @@ const ReviewScreen = () => {
         return (
           <div
             key={item.id ?? `${item.menuItemId}-${idx}`}
-            className={`flex items-center gap-3 px-5 select-none ${!isPaid ? 'cursor-pointer' : ''}`}
+            className={`p-4 rounded-2xl bg-[#181B26] border border-white/10 hover:border-white/20 transition-all flex items-center justify-between mb-2.5 shadow-sm gap-3 select-none ${!isPaid ? 'cursor-pointer' : ''}`}
             style={{
-              paddingTop: 12,
-              paddingBottom: 12,
-              borderBottom: '1px solid rgba(255,255,255,0.05)',
               opacity: isPaid ? 0.4 : 1,
-              background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
-              borderLeft: isSelected ? '3px solid rgba(59,130,246,0.8)' : '3px solid transparent',
+              background: isSelected ? 'rgba(245,158,11,0.16)' : isPaid ? 'rgba(255,255,255,0.03)' : '#181B26',
+              borderColor: isSelected ? 'rgba(251,191,36,0.65)' : 'rgba(255,255,255,0.1)',
               transition: 'background 0.1s ease, border-color 0.1s ease',
             }}
             onClick={() => !isPaid && item.id && toggleItemSelection(item.id, item.quantity)}
@@ -879,8 +876,8 @@ const ReviewScreen = () => {
               <div
                 className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center"
                 style={{
-                  background: isSelected ? 'rgba(59,130,246,0.9)' : 'rgba(255,255,255,0.06)',
-                  border: isSelected ? '1.5px solid rgba(96,165,250,1)' : '1.5px solid rgba(255,255,255,0.14)',
+                  background: isSelected ? 'rgba(245,158,11,0.95)' : 'rgba(255,255,255,0.05)',
+                  border: isSelected ? '1.5px solid rgba(251,191,36,1)' : '1.5px solid rgba(255,255,255,0.2)',
                 }}
               >
                 {isSelected && <Check size={10} className="text-white" strokeWidth={3} />}
@@ -889,13 +886,13 @@ const ReviewScreen = () => {
             {isPaid && <div className="flex-shrink-0 w-4 h-4" />}
             <div className="flex-1 min-w-0">
               <p
-                className={`text-sm font-semibold truncate ${isPaid ? 'line-through' : ''}`}
-                style={{ color: isPaid ? 'rgba(255,255,255,0.4)' : isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)' }}
+                className={`text-base font-black tracking-wide truncate ${isPaid ? 'line-through' : ''}`}
+                style={{ color: isPaid ? 'rgba(255,255,255,0.4)' : '#ffffff' }}
               >
                 {item.name}
                 {isPaid && <span className="ml-2 text-[10px] font-bold not-italic" style={{ color: '#34d399' }}>PAID</span>}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-xs font-bold font-mono text-zinc-200 mt-0.5">
                 {showStepper ? `${selQty}/${item.quantity}` : item.quantity} × Rs. {fmt(item.price)}
               </p>
             </div>
@@ -919,8 +916,8 @@ const ReviewScreen = () => {
               </div>
             )}
             <p
-              className="text-sm font-bold tabular-nums whitespace-nowrap ml-2"
-              style={{ color: isPaid ? 'rgba(255,255,255,0.3)' : isSelected ? '#ffffff' : 'rgba(255,255,255,0.8)' }}
+              className="text-base font-black text-amber-400 font-mono tracking-tight tabular-nums whitespace-nowrap ml-2"
+              style={{ opacity: isPaid ? 0.5 : 1 }}
             >
               Rs. {fmt(item.price * (isSelected ? selQty : item.quantity))}
             </p>
@@ -999,24 +996,7 @@ const ReviewScreen = () => {
     });
 
     if (tablet) {
-      return (
-        <div className="flex flex-col">
-          <div
-            className="flex items-center justify-between px-5 pb-3 mb-0"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.28)' }}>
-              {items.length} Item{items.length !== 1 ? 's' : ''}
-            </span>
-            {selectedQty.size > 0 && (
-              <span className="text-[10px] font-semibold" style={{ color: 'rgba(147,197,253,0.75)' }}>
-                {selectedQty.size} selected for split
-              </span>
-            )}
-          </div>
-          {itemRows}
-        </div>
-      );
+      return <div className="flex flex-col">{itemRows}</div>;
     }
 
     return (
@@ -1795,89 +1775,56 @@ const ReviewScreen = () => {
               </div>
 
               {/* Tablet/Desktop layout (≥ 768px): card-based grid */}
-              <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
-                <div className="w-full h-full overflow-hidden" style={{ padding: '24px 28px' }}>
-                  <div
-                    style={{
-                      maxWidth: 1360,
-                      margin: '0 auto',
-                      height: '100%',
-                      display: 'grid',
-                      gridTemplateColumns: '1.5fr 1fr',
-                      gap: 24,
-                      alignItems: 'stretch',
-                    }}
-                  >
+              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto">
+                <div className="w-full max-w-7xl mx-auto px-6 py-6 grid grid-cols-12 gap-6 items-start">
 
                     {/* ── LEFT: Items card ── */}
-                    <div
-                      style={{
-                        borderRadius: 16,
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        background: 'rgba(255,255,255,0.02)',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 0,
-                      }}
-                    >
+                    <div className="col-span-12 lg:col-span-6 bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 min-h-[480px]">
                       {/* Card header — fixed */}
                       <div
-                        className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
-                        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                        className="text-lg font-black text-white tracking-wide flex items-center justify-between flex-shrink-0 pb-3 border-b border-white/10"
                       >
-                        <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                         <p className="text-lg font-black text-white tracking-wide">
                           Order Items
                         </p>
                         <span
-                          className="text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-full"
-                          style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)' }}
+                           className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-black text-zinc-200"
                         >
                           {items.length}
                         </span>
                       </div>
                       {/* Scrollable item rows */}
-                      <div className="pos-scroll-wrap">
-                        <div className="pos-scroll" style={{ overflowY: 'auto', height: '100%', paddingRight: 6, paddingBottom: 8 }}>
+                      <div className="flex-1 min-h-0 overflow-y-auto">
+                        <div className="pr-1 pb-2">
                           {getItemsCard(true)}
                         </div>
                       </div>
                     </div>
 
                     {/* ── RIGHT: Summary + Payment cards stacked ── */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, height: '100%', overflow: 'hidden', minHeight: 0 }}>
+                    <div className="col-span-12 lg:col-span-6 flex flex-col gap-6 items-stretch">
 
                       {/* ── Summary card ── */}
-                      <div
-                        style={{
-                          flexShrink: 0,
-                          borderRadius: 16,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          background: 'rgba(255,255,255,0.02)',
-                          padding: '20px 20px 16px',
-                          boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-                        }}
-                      >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] mb-4" style={{ color: 'rgba(255,255,255,0.42)' }}>
+                      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 mb-6">
+                        <p className="text-xs font-black uppercase tracking-widest text-amber-400 mb-1">
                           Order Summary
                         </p>
 
                         {/* Subtotal */}
-                        <div className="flex justify-between items-center py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                          <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.55)' }}>Subtotal</span>
-                          <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                         <div className="flex justify-between items-center py-2.5 border-b border-white/10">
+                           <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Subtotal</span>
+                           <span className="text-base font-black text-white font-mono tabular-nums">
                             Rs. {fmt(bill.subtotal)}
                           </span>
                         </div>
 
                         {/* Discount */}
-                        <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                         <div className="py-2.5 border-b border-white/10">
                           <div className="flex justify-between items-center mb-3">
-                            <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.55)' }}>Discount</span>
+                             <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Discount</span>
                             <span
-                              className="text-[13px] font-semibold tabular-nums"
-                              style={{ color: bill.discountAmount > 0 ? '#34d399' : 'rgba(255,255,255,0.22)' }}
+                               className="text-base font-black text-white font-mono tabular-nums"
+                               style={{ color: bill.discountAmount > 0 ? '#34d399' : '#ffffff' }}
                             >
                               −Rs. {fmt(bill.discountAmount)}
                             </span>
@@ -1906,9 +1853,9 @@ const ReviewScreen = () => {
                                       borderRadius: 7,
                                       fontSize: 11,
                                       fontWeight: 700,
-                                      ...(isActive
-                                        ? { background: 'rgba(59,130,246,0.28)', color: 'rgba(147,197,253,1)', border: '1px solid rgba(59,130,246,0.5)' }
-                                        : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', border: '1px solid transparent' })
+                                       ...(isActive
+                                         ? { background: '#f59e0b', color: '#0f172a', border: '1px solid #fbbf24', boxShadow: '0 4px 12px rgba(245,158,11,0.2)' }
+                                         : { background: 'rgba(255,255,255,0.05)', color: '#e4e4e7', border: '1px solid rgba(255,255,255,0.15)' })
                                     }}
                                   >
                                     {pct}%
@@ -1963,19 +1910,14 @@ const ReviewScreen = () => {
                         )}
 
                         {/* TOTAL — dominant with top separator */}
-                        <div
-                          className="flex justify-between items-end"
-                          style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16, marginTop: 6 }}
-                        >
+                         <div className="flex justify-between items-end border-t border-white/10 pt-4 mt-2">
                           <span
-                            className="font-bold uppercase pb-1"
-                            style={{ fontSize: 11, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.4)' }}
+                             className="text-xs font-black uppercase tracking-widest text-amber-400 pb-1"
                           >
                             {selectedQty.size > 0 ? 'Split Total' : prevDueAmount > 0 ? 'To Collect' : 'Total'}
                           </span>
                           <span
-                            className="font-bold tabular-nums leading-none text-white"
-                            style={{ fontSize: 32, textShadow: '0 0 24px rgba(255,255,255,0.12)' }}
+                             className="text-4xl font-black text-white font-mono tracking-tight tabular-nums leading-none"
                           >
                             Rs. {fmt(chargeTotal)}
                           </span>
@@ -2019,44 +1961,30 @@ const ReviewScreen = () => {
                       </button>
 
                       {/* ── Payment card ── */}
-                      <div
-                        className="rounded-[20px]"
-                        style={{
-                          background: 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)',
-                          flex: 1,
-                          minHeight: 260,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          overflow: 'hidden',
-                        }}
-                      >
+                       <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-3">
                         {/* Fixed label */}
-                        <div style={{ flexShrink: 0, padding: '14px 16px 0' }}>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                         <div className="flex-shrink-0 mb-1">
+                           <p className="text-xs font-black uppercase tracking-widest text-amber-400">
                             Payment Method
                           </p>
                         </div>
                         {/* Scrollable buttons area */}
-                        <div className="pos-scroll-wrap">
-                        <div className="pos-scroll" style={{ overflowY: 'auto', height: '100%', padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                         <div className="flex-1 min-h-0">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
 
                         {/* Unified 2-column grid — Cash + all digital wallets */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-
                           {/* Cash */}
                           <button
                             onClick={() => handleConfirmPayment('cash')}
                             disabled={confirming || quotedDueStale}
                             data-testid="button-payment-method-cash"
-                            className="pos-pay-card flex items-center gap-[10px] px-3 rounded-[14px] disabled:opacity-40"
+                             className="p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-emerald-500/5 disabled:opacity-40"
                             style={{
                               minHeight: 66,
                               padding: '12px 14px',
-                              background: 'linear-gradient(135deg, rgba(4,120,87,0.5) 0%, rgba(16,185,129,0.18) 100%)',
-                              border: '1px solid rgba(52,211,153,0.35)',
-                              boxShadow: '0 2px 14px rgba(16,185,129,0.2), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07)',
+                               background: '#0F1916',
+                               border: '2px solid rgba(16,185,129,0.4)',
+                               boxShadow: '0 8px 20px rgba(16,185,129,0.05)',
                               ['--card-hover-shadow' as string]: '0 14px 32px rgba(16,185,129,0.4), 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
                             }}
                           >
@@ -2073,8 +2001,8 @@ const ReviewScreen = () => {
                               <Banknote size={20} style={{ color: '#34d399' }} />
                             </div>
                             <div className="text-left min-w-0">
-                              <p className="text-[14px] font-bold leading-tight text-white">Cash</p>
-                              <p className="text-[10px] font-medium mt-0.5" style={{ color: 'rgba(52,211,153,0.75)' }}>Tap to pay</p>
+                               <p className="text-sm font-black text-white group-hover:text-emerald-200">Cash</p>
+                               <p className="text-xs font-bold text-emerald-300">Tap to pay</p>
                             </div>
                           </button>
 
@@ -2086,21 +2014,21 @@ const ReviewScreen = () => {
                                   onClick={openCreditConfirmation}
                                   data-testid="button-payment-method-khatta"
                                   disabled={confirming || quotedDueStale}
-                                  className="pos-pay-card flex items-center gap-[10px] rounded-[14px] disabled:opacity-40"
+                                   className="p-4 rounded-2xl bg-[#181510] border-2 border-amber-500/40 hover:border-amber-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-amber-500/5 disabled:opacity-40"
                                   style={{
                                     minHeight: 66,
                                     padding: '12px 14px',
-                                    background: 'linear-gradient(145deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))',
-                                    border: '1px solid rgba(251,191,36,0.3)',
-                                    boxShadow: '0 2px 14px rgba(251,191,36,0.15), 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07)',
+                                     background: '#181510',
+                                     border: '2px solid rgba(245,158,11,0.4)',
+                                     boxShadow: '0 8px 20px rgba(245,158,11,0.05)',
                                   }}
                                 >
                                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(251,191,36,0.18)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <FileText size={20} style={{ color: creditColor }} />
                                   </div>
                                   <div className="text-left min-w-0">
-                                    <p className="text-[14px] font-bold leading-tight" style={{ color: creditColor }}>Credit</p>
-                                    <p className="text-[10px] font-medium mt-0.5 truncate" style={{ color: 'rgba(251,191,36,0.6)' }}>{attachedCustomer.name.split(' ')[0]}</p>
+                                     <p className="text-sm font-black text-white group-hover:text-amber-200">Credit</p>
+                                     <p className="text-xs font-bold text-amber-300 truncate">{attachedCustomer.name.split(' ')[0]}</p>
                                   </div>
                                 </button>
                             );
@@ -2128,13 +2056,21 @@ const ReviewScreen = () => {
                                 onClick={() => { if (!confirming) openQRModal(id); }}
                                 data-testid={`button-payment-method-${id}`}
                                 disabled={confirming || quotedDueStale}
-                                className="pos-pay-card flex items-center gap-[10px] rounded-[14px] disabled:opacity-40"
+                                 className={`p-4 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer group shadow-lg disabled:opacity-40 ${
+                                   id === 'esewa'
+                                     ? 'bg-[#0F1916] border-emerald-500/40 hover:border-emerald-400 shadow-emerald-500/5'
+                                     : id === 'khalti'
+                                       ? 'bg-[#161224] border-purple-500/40 hover:border-purple-400 shadow-purple-500/5'
+                                       : id === 'fonepay'
+                                         ? 'bg-[#1A1116] border-rose-500/40 hover:border-rose-400 shadow-rose-500/5'
+                                         : 'bg-[#13151F] border-white/15 hover:border-white/30'
+                                 }`}
                                 style={{
                                   minHeight: 66,
                                   padding: '12px 14px',
-                                  background: `linear-gradient(145deg, ${b.bg1}, ${b.bg2})`,
-                                  border: `1px solid ${b.border}`,
-                                  boxShadow: `${b.shadow}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07)`,
+                                   background: id === 'esewa' ? '#0F1916' : id === 'khalti' ? '#161224' : id === 'fonepay' ? '#1A1116' : '#13151F',
+                                   border: `2px solid ${b.border}`,
+                                   boxShadow: b.shadow,
                                   ['--card-hover-shadow' as string]: b.hoverShadow,
                                 }}
                               >
@@ -2156,81 +2092,78 @@ const ReviewScreen = () => {
                                   )}
                                 </div>
                                 <div className="text-left min-w-0">
-                                  <p className="text-[13px] font-semibold leading-tight" style={{ color: b.color }}>{label}</p>
-                                  <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Scan QR</p>
+                                   <p className="text-sm font-black text-white group-hover:text-emerald-200" style={{ color: id === 'khalti' ? '#e9d5ff' : id === 'fonepay' ? '#fecdd3' : '#ffffff' }}>{label}</p>
+                                   <p className="text-xs font-bold" style={{ color: id === 'khalti' ? '#d8b4fe' : id === 'fonepay' ? '#fda4af' : '#a7f3d0' }}>Scan QR</p>
                                 </div>
                               </button>
                             );
                           })}
-                        </div>
-                        </div>{/* end pos-scroll */}
-                        </div>{/* end pos-scroll-wrap */}
+                         </div>
+                         </div>
                       </div>{/* end payment card */}
 
                     </div>
                   </div>
-                </div>
-              </div>
-            </>
+                 </div>
+             </>
           )}
         </div>
       </div>
 
       {/* QR Modal */}
       {showCreditConfirmation && attachedCustomer && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div
-            className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
-            style={{ background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(251,191,36,0.25)' }}
+            className="max-w-md w-full p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4"
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.08]">
+            <div className="flex items-center gap-2">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: 'rgba(251,191,36,0.14)', color: 'hsl(32 90% 68%)' }}
               >
                 <FileText size={20} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-black text-white text-base">Confirm Credit Settlement</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">This order will be added to the customer ledger.</p>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">Confirm Credit Settlement</h3>
+                <p className="text-xs font-bold text-zinc-300 mt-0.5">This order will be added to the customer ledger.</p>
               </div>
               <button
                 onClick={() => setShowCreditConfirmation(false)}
                 disabled={confirming}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-40"
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40"
               >
                 <X size={17} />
               </button>
             </div>
 
-            <div className="px-5 py-5 space-y-3.5">
-              <div className="rounded-2xl p-3.5" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <div className="space-y-3.5">
+              <div className="p-4 rounded-2xl bg-[#181B26] border border-white/15 flex items-center justify-between shadow-inner">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-white truncate">{attachedCustomer.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{attachedCustomer.phone || 'No phone number'}</p>
+                    <p className="text-base font-black text-amber-300 truncate">{attachedCustomer.name}</p>
+                    <p className="text-xs font-mono font-bold text-zinc-200 mt-0.5">{attachedCustomer.phone || 'No phone number'}</p>
                   </div>
-                  <FileText size={18} className="text-blue-300 flex-shrink-0" />
+                  <FileText size={18} className="text-amber-300 flex-shrink-0" />
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-400">Today's Order Total</span>
-                  <span className="font-bold text-white tabular-nums">Rs. {fmt(bill.total)}</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-black uppercase text-zinc-300">
+                  <span>Today's Order Total</span>
+                  <span className="text-sm font-black text-white font-mono tabular-nums">Rs. {fmt(bill.total)}</span>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-slate-400">Customer Existing Due</span>
-                  <span className="font-bold text-red-400 tabular-nums">Rs. {fmt(outstandingDue)}</span>
+                <div className="flex items-center justify-between text-xs font-black uppercase text-zinc-300">
+                  <span>Customer Existing Due</span>
+                  <span className="text-sm font-black text-rose-400 font-mono tabular-nums">Rs. {fmt(outstandingDue)}</span>
                 </div>
-                <div className="flex justify-between gap-3 pt-2 border-t border-white/[0.08]">
-                  <span className="font-semibold text-slate-300">New Total Due Balance</span>
-                  <span className="font-black text-red-400 tabular-nums">Rs. {fmt(creditNewBalance)}</span>
+                <div className="flex items-center justify-between text-xs font-black uppercase text-rose-300 pt-2 border-t border-white/10">
+                  <span>New Total Due Balance</span>
+                  <span className="text-base font-black text-rose-400 font-mono drop-shadow-[0_0_8px_rgba(244,63,94,0.3)] tabular-nums">Rs. {fmt(creditNewBalance)}</span>
                 </div>
               </div>
 
               <label className="block">
-                <span className="block text-xs font-semibold text-slate-300 mb-1.5">Cash Collected Today (Rs.)</span>
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 block mb-1">Cash Collected Today (Rs.)</span>
                 <input
                   type="number"
                   min="0"
@@ -2239,29 +2172,28 @@ const ReviewScreen = () => {
                   inputMode="decimal"
                   value={creditAmountReceived}
                   onChange={(e) => setCreditAmountReceived(e.target.value)}
-                  className="w-full rounded-xl px-3.5 py-3 text-sm text-white bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-amber-400/60 transition-colors"
+                  className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-base font-mono outline-none"
                   autoFocus
                 />
               </label>
 
-              <div className="flex items-center justify-between rounded-xl px-3.5 py-3" style={{ background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                <span className="text-xs font-semibold text-amber-200">Net Amount Added to Credit</span>
-                <span className="text-base font-black text-amber-300 tabular-nums">Rs. {fmt(creditAmountAdded)}</span>
+              <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-between text-amber-300 font-black text-sm">
+                <span>Net Amount Added to Credit</span>
+                <span className="font-mono tabular-nums">Rs. {fmt(creditAmountAdded)}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <button
                   onClick={() => setShowCreditConfirmation(false)}
                   disabled={confirming}
-                  className="py-3 rounded-xl font-bold text-sm text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 disabled:opacity-40"
+                  className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleConfirmPayment('khatta')}
                   disabled={confirming || quotedDueStale}
-                  className="py-3 rounded-xl font-black text-sm text-slate-950 transition-all active:scale-95 hover:brightness-110 disabled:opacity-60 flex items-center justify-center gap-1.5"
-                  style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', boxShadow: '0 4px 16px -4px rgba(251,191,36,0.45)' }}
+                  className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   {confirming ? <><Loader2 size={15} className="animate-spin" /> Processing...</> : 'Confirm Credit & Settle'}
                 </button>
@@ -2272,12 +2204,12 @@ const ReviewScreen = () => {
       )}
 
       {showQRModal && selectedMethod && selectedMethod !== 'cash' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
 
           {isLandscapeMobile ? (
             /* ── LANDSCAPE: 2-column layout ── */
             <div
-              className="bg-card border border-border shadow-2xl overflow-hidden flex flex-row w-full"
+              className="max-w-xl w-full p-4 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-row"
               style={{ borderRadius: 20, maxWidth: 640, maxHeight: 'calc(100dvh - 24px)' }}
             >
               {/* Left — QR code, centered, fills column */}
@@ -2286,8 +2218,7 @@ const ReviewScreen = () => {
                 style={{ width: '55%', borderRight: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}
               >
                 <div
-                  className="p-3 bg-white rounded-2xl"
-                  style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.06), 0 4px 20px -4px rgba(0,0,0,0.3)' }}
+                  className="p-3.5 rounded-2xl bg-white border-2 border-emerald-400 shadow-xl my-1"
                 >
                   {getQRImage(selectedMethod) ? (
                     <img
@@ -2308,19 +2239,19 @@ const ReviewScreen = () => {
                 {/* Top: close + wallet name + amount */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-black text-foreground text-sm leading-tight">
+                    <h3 className="text-lg font-black text-white tracking-wide">
                       {resolvePaymentLabel(selectedMethod, settings)} Payment
                     </h3>
                     <button
                       onClick={closeQRModal}
-                      className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-90 flex-shrink-0"
+                       className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
                     >
                       <X size={15} />
                     </button>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Amount Due</p>
-                    <p className="text-3xl font-black text-foreground tabular-nums leading-tight">Rs. {fmt(chargeTotal)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Amount Due</p>
+                    <p className="text-3xl font-black text-white font-mono mt-0.5 leading-tight">Rs. {fmt(chargeTotal)}</p>
                     {prevDueAmount > 0 && (
                       <p className="text-xs font-semibold mt-0.5" style={{ color: 'rgba(251,191,36,0.9)' }}>
                         Rs. {fmt(activeBill.total)} bill + Rs. {fmt(prevDueAmount)} previous due
@@ -2330,8 +2261,8 @@ const ReviewScreen = () => {
                       <p className="text-xs text-success font-semibold mt-0.5">Saved Rs. {fmt(activeBill.discountAmount)}</p>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Scan the QR code and confirm after payment
+                   <p className="text-xs font-bold text-zinc-200 text-center">
+                     Scan QR and tap confirm once payment is received.
                   </p>
                   {staleAmountNotice}
                 </div>
@@ -2345,11 +2276,7 @@ const ReviewScreen = () => {
                   }}
                   disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
-                  className="w-full py-3 rounded-2xl text-white font-black text-sm transition-all active:scale-[0.97] disabled:opacity-80 flex items-center justify-center gap-2"
-                  style={{
-                    background: 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)',
-                    boxShadow: '0 4px 16px -4px rgba(59,130,246,0.5)',
-                  }}
+                   className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] mt-1 disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {confirming ? (
                     <><Loader2 size={16} className="animate-spin" /> Processing...</>
@@ -2362,22 +2289,22 @@ const ReviewScreen = () => {
 
           ) : (
             /* ── PORTRAIT: original stacked layout ── */
-            <div className="bg-card rounded-3xl border border-border w-full max-w-sm shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <h3 className="font-black text-foreground text-base">
+             <div className="max-w-xs w-full p-6 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col items-center gap-3">
+               <div className="w-full flex items-center justify-between">
+                 <h3 className="text-lg font-black text-white tracking-wide">
                   {resolvePaymentLabel(selectedMethod, settings)} Payment
                 </h3>
                 <button
                   onClick={closeQRModal}
-                  className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-90"
+                   className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <X size={17} />
                 </button>
               </div>
-              <div className="px-6 pt-5 pb-6 flex flex-col items-center gap-4">
+               <div className="w-full flex flex-col items-center gap-3">
                 <div className="text-center">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">Amount Due</p>
-                  <p className="text-5xl font-black text-foreground mt-1 tabular-nums">Rs. {fmt(chargeTotal)}</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Amount Due</p>
+                   <p className="text-3xl font-black text-white font-mono mt-0.5">Rs. {fmt(chargeTotal)}</p>
                   {prevDueAmount > 0 && (
                     <p className="text-xs font-semibold mt-1" style={{ color: 'rgba(251,191,36,0.9)' }}>
                       Rs. {fmt(activeBill.total)} bill + Rs. {fmt(prevDueAmount)} previous due
@@ -2388,8 +2315,7 @@ const ReviewScreen = () => {
                   )}
                 </div>
                 <div
-                  className="p-4 bg-white rounded-2xl"
-                  style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.06), 0 4px 20px -4px rgba(0,0,0,0.3)' }}
+                   className="p-3.5 rounded-2xl bg-white border-2 border-emerald-400 shadow-xl my-1"
                 >
                   {getQRImage(selectedMethod) ? (
                     <img src={getQRImage(selectedMethod)!} alt={`${selectedMethod} QR`} className="w-56 h-56 object-contain" />
@@ -2399,8 +2325,8 @@ const ReviewScreen = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-sm font-semibold text-foreground text-center">
-                  Scan QR and confirm after payment
+                 <p className="text-xs font-bold text-zinc-200 text-center">
+                   Scan QR and tap confirm once payment is received.
                 </p>
                 {staleAmountNotice}
                 <button
@@ -2411,11 +2337,7 @@ const ReviewScreen = () => {
                   }}
                   disabled={confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
-                  className="w-full py-4 rounded-2xl text-white font-black text-base transition-all active:scale-[0.97] disabled:opacity-80 flex items-center justify-center gap-2"
-                  style={{
-                    background: 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)',
-                    boxShadow: '0 4px 16px -4px rgba(59,130,246,0.5)',
-                  }}
+                   className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98] mt-1 disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {confirming ? (
                     <><Loader2 size={18} className="animate-spin" /> Processing...</>

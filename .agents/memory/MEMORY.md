@@ -8,3 +8,4 @@
 - [Inventory Category Model](inventory-category-model.md) — wine stays in the ml-tracked alcohol collection for shared bottle/glass deductions; beer and soft drinks use direct packaged units
 - [Maintenance Expenses Architecture](maintenance-expenses.md) — Firebase-backed expense store; Admin "Expenses" tab between Inventory and Settings; Net Profit card in Reports = Revenue − Maintenance Expenses
 - [Khatta Customer Ledger](khatta-system.md) — Customer type in pos.ts; useCustomerStore (localStorage); attachCustomerToOrder in usePOSStore; CustomerPicker component; Khatta button + due checkbox in ReviewScreen
+- [Review screen responsive branches](review-screen-responsive-branches.md) — desktop, tablet-landscape, and portrait payment layouts are separate render branches and must be edited with wrapper balance intact
