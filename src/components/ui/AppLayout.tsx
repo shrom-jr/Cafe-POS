@@ -32,13 +32,9 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
 interface AppLayoutProps {
   title: string;
   children: ReactNode;
-  telemetry?: {
-    freeCount: number;
-    activeCount: number;
-  };
 }
 
-const AppLayout = ({ title, children, telemetry }: AppLayoutProps) => {
+const AppLayout = ({ title, children }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useStaffStore((s) => s.currentUser);
@@ -183,18 +179,8 @@ const AppLayout = ({ title, children, telemetry }: AppLayoutProps) => {
           {brandBlock}
           {/* Center: nav */}
           {desktopNav}
-           {/* Right: stacked telemetry, theme + user */}
+           {/* Right: theme + user */}
           <div className="flex min-w-0 items-center justify-end gap-3">
-            {telemetry && (
-              <span className="hidden flex-col justify-center rounded-xl border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-black leading-tight shadow-sm dark:border-white/10 dark:bg-zinc-900 lg:flex">
-                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  🟢 {telemetry.freeCount} Free
-                </span>
-                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                  🟠 {telemetry.activeCount} Active
-                </span>
-              </span>
-            )}
             <ThemeToggle />
             {userBadge}
           </div>

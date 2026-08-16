@@ -39,13 +39,6 @@ type OrderData = Record<string, { itemCount: number; customerName?: string }>;
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-/** Non-interactive landmark badge (TV area, parking, gate, etc.) */
-const LandmarkTile = ({ label, className = '' }: { label: string; className?: string }) => (
-  <div className={`flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs font-bold text-slate-400 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-600 ${className}`}>
-    {label}
-  </div>
-);
-
 /** Section heading with colored accent bar */
 const AreaHeader = ({ label, areaIndex }: { label: string; areaIndex: number }) => {
   const theme = AREA_COLORS[areaIndex % AREA_COLORS.length];
@@ -195,7 +188,10 @@ const GroundFloorBlueprint = ({
           <Slot table={l2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={l1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <LandmarkTile label="📺  TV Area" className="py-2" />
+        <div className="flex items-center justify-center gap-2 py-2 text-xs font-black tracking-wider text-slate-500 dark:text-zinc-400">
+          <span className="text-lg" aria-hidden="true">📺</span>
+          <span>TV AREA</span>
+        </div>
         <OverflowGrid tables={overflowLounge} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
@@ -206,11 +202,13 @@ const GroundFloorBlueprint = ({
           <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <div className="flex min-h-[140px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-4 text-center text-xs font-bold tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-900/30 dark:text-zinc-500">
-          🅿️  Parking Area
+        <div className="flex min-h-[140px] flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-4 transition-all dark:border-zinc-800 dark:bg-zinc-900/30">
+          <span className="text-3xl leading-none" aria-hidden="true">🅿️</span>
+          <span className="text-sm font-black tracking-widest text-slate-700 dark:text-zinc-300">PARKING AREA</span>
         </div>
-        <div className="flex min-h-[50px] items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 py-3 text-center text-xs font-black tracking-wide text-slate-600 dark:border-zinc-800 dark:bg-zinc-900/30 dark:text-zinc-400">
-          ⛩️  Main Gate
+        <div className="flex min-h-[60px] items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-3.5 transition-all dark:border-zinc-800 dark:bg-zinc-900/30">
+          <span className="text-2xl leading-none" aria-hidden="true">⛩️</span>
+          <span className="text-sm font-black tracking-widest text-slate-700 dark:text-zinc-300">MAIN GATE</span>
         </div>
         <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
       </div>
@@ -339,11 +337,6 @@ const TableOverview = () => {
     return map;
   }, [orders]);
 
-  const counts = useMemo(() => ({
-    available: tables.filter(t => t.status === 'free').length,
-    active:    tables.filter(t => t.status !== 'free').length,
-  }), [tables]);
-
   // Section order: preferred venue areas first, then areaOrder, then orphans
   const sections = useMemo(() => {
     const tableSections = tables.map(t => t.section?.trim() || 'Ground Floor');
@@ -373,10 +366,7 @@ const TableOverview = () => {
   const handleTableClick = (table: CafeTable) => navigate(`/order/${table.id}`);
 
   return (
-    <AppLayout
-      title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}
-      telemetry={{ freeCount: counts.available, activeCount: counts.active }}
-    >
+    <AppLayout title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}>
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-0 pb-16 sm:px-4">
         {tables.length === 0 ? (
           <div className="py-20 text-center text-foreground">
