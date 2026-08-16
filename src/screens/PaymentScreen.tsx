@@ -212,18 +212,18 @@ const PaymentScreen = () => {
     return (
       <>
         {receiptPortal}
-        <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
+        <div className="h-[100dvh] bg-[#0A0B0E] flex flex-col overflow-hidden">
           <div className="flex-1 flex flex-col items-center justify-center p-5 gap-4 overflow-hidden">
 
             {/* Success icon + amount */}
             <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 rounded-full bg-success/15 flex items-center justify-center shadow-[0_0_32px_-4px_hsl(var(--success)/0.4)]">
-                <CheckCircle2 size={36} className="text-success" />
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center text-3xl shadow-xl shadow-emerald-500/20 mb-3">
+                <CheckCircle2 size={36} />
               </div>
-              <h2 className="text-xl font-black text-foreground">Payment Successful</h2>
+              <h2 className="text-2xl font-black text-white">Payment Successful</h2>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-black text-foreground">Rs. {finalTotal}</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-success/15 text-success text-xs font-bold uppercase">
+                <span className="text-4xl font-black text-emerald-400 font-mono mt-1">Rs. {finalTotal}</span>
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-xs font-black uppercase tracking-wider border border-emerald-500/30">
                   {paidMethod}
                 </span>
               </div>
@@ -233,36 +233,36 @@ const PaymentScreen = () => {
               {/* Permanent print indicator */}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Printer size={12} />
-                <span>Printing receipt...</span>
+                  <span className="text-zinc-300 font-bold">Printing receipt...</span>
               </div>
             </div>
 
             {/* Compact receipt preview */}
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-4 space-y-2 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)]">
-              <div className="text-center pb-1 border-b border-dashed border-border/60">
-                <p className="font-black text-sm text-foreground">{settings.cafeName}</p>
-                <p className="text-xs text-muted-foreground font-mono">
+            <div className="p-5 rounded-2xl bg-[#13151F] border border-white/15 max-w-sm w-full my-4 text-left shadow-lg text-white space-y-2">
+              <div className="text-center pb-1 border-b border-dashed border-white/15">
+                <p className="font-black text-sm text-white">{settings.cafeName}</p>
+                <p className="text-xs text-zinc-300 font-mono">
                   #{billNum} · {tableDisplayName(snap.tableNumber)}
                 </p>
               </div>
               <div className="space-y-1">
                 {displayItems.map((item) => (
                   <div key={item.menuItemId} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground truncate pr-2">
-                      {item.name} <span className="text-foreground font-semibold">×{item.quantity}</span>
+                    <span className="text-zinc-300 truncate pr-2">
+                      {item.name} <span className="text-white font-semibold">×{item.quantity}</span>
                     </span>
-                    <span className="font-semibold text-foreground whitespace-nowrap">
+                    <span className="font-semibold text-white whitespace-nowrap">
                       Rs. {item.price * item.quantity}
                     </span>
                   </div>
                 ))}
                 {extraCount > 0 && (
-                  <p className="text-xs text-muted-foreground">+{extraCount} more item{extraCount > 1 ? 's' : ''}</p>
+                  <p className="text-xs text-zinc-300">+{extraCount} more item{extraCount > 1 ? 's' : ''}</p>
                 )}
               </div>
-              <div className="flex justify-between items-center border-t border-dashed border-border/60 pt-2">
-                <span className="text-sm font-semibold text-muted-foreground">Total</span>
-                <span className="text-lg font-black text-foreground">Rs. {finalTotal}</span>
+              <div className="flex justify-between items-center border-t border-dashed border-white/15 pt-2">
+                <span className="text-sm font-semibold text-zinc-300">Total</span>
+                <span className="text-lg font-black text-white font-mono">Rs. {finalTotal}</span>
               </div>
             </div>
 
@@ -272,7 +272,7 @@ const PaymentScreen = () => {
                 onClick={handleReprint}
                 disabled={reprinting}
                 data-testid="button-reprint"
-                className="w-full py-3.5 rounded-2xl border border-border bg-secondary text-foreground font-bold text-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] hover:bg-secondary/80 disabled:opacity-60"
+                className="w-full max-w-sm py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all mb-2.5 flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
                 <Printer size={15} />
                 {reprinting ? 'Reprinting...' : 'Reprint Receipt'}
@@ -281,7 +281,7 @@ const PaymentScreen = () => {
               <button
                 onClick={() => navigate('/', { replace: true })}
                 data-testid="button-back-home"
-                className="w-full py-4 rounded-2xl bg-success text-white font-black text-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] hover:brightness-110 shadow-[0_4px_16px_-4px_hsl(var(--success)/0.4)]"
+                className="w-full max-w-sm py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-1.5"
               >
                 <Home size={18} /> Back to Tables
               </button>
@@ -297,18 +297,18 @@ const PaymentScreen = () => {
   const qrMethods = methods.filter((m) => m.isQR);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0A0B0E]">
       <TopBar title={`Payment — ${tableDisplayName(snap.tableNumber)}`} showBack onBack={() => navigate(`/review/${tableId}`)} />
 
       <div className="max-w-lg mx-auto p-4 space-y-4 pb-8">
 
         {/* Total amount card */}
-        <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-card/70 p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)]">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest text-center">Amount Due</p>
-          <p className="text-6xl font-black text-foreground mt-1 tracking-tight text-center tabular-nums">
+        <div className="p-6 rounded-3xl bg-[#13151F] border border-white/15 shadow-xl flex flex-col gap-4">
+          <p className="text-xs font-black text-amber-400 uppercase tracking-widest text-center">Amount Due</p>
+          <p className="text-5xl font-black text-white font-mono mt-1 tracking-tight text-center tabular-nums">
             Rs. {finalTotal}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1 font-mono text-center">{tableDisplayName(snap.tableNumber)}</p>
+          <p className="text-xs text-zinc-300 mt-1 font-mono text-center">{tableDisplayName(snap.tableNumber)}</p>
 
           <div className="mt-4 pt-3 border-t border-border/40 space-y-1.5">
             <div className="flex justify-between text-sm">
@@ -366,21 +366,21 @@ const PaymentScreen = () => {
 
         {/* Payment methods */}
         <div className="space-y-2.5">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Payment Method</p>
+           <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Payment Method</p>
 
           <button
             onClick={() => handleConfirmPayment('cash')}
             data-testid="button-payment-method-cash"
-            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-success/60 bg-success/8 transition-all active:scale-[0.97] hover:bg-success/12 hover:border-success shadow-[0_2px_16px_-6px_hsl(var(--success)/0.35)]"
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-black transition-all cursor-pointer shadow-lg active:scale-[0.97]"
           >
-            <div className="w-11 h-11 rounded-xl bg-success/15 flex items-center justify-center flex-shrink-0">
-              <Banknote size={22} className="text-success" />
+             <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+               <Banknote size={22} className="text-emerald-400" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-black text-base text-foreground">Cash</p>
-              <p className="text-[11px] text-muted-foreground">Tap to complete payment</p>
+               <p className="font-black text-base text-emerald-300">Cash</p>
+               <p className="text-[11px] text-zinc-300">Tap to complete payment</p>
             </div>
-            <span className="text-sm font-black text-success">Rs. {finalTotal}</span>
+             <span className="text-sm font-black text-emerald-300 font-mono">Rs. {finalTotal}</span>
           </button>
 
           {qrMethods.length > 0 && (
@@ -390,14 +390,20 @@ const PaymentScreen = () => {
                   key={id}
                   onClick={() => { setSelectedMethod(id); setShowQRModal(true); }}
                   data-testid={`button-payment-method-${id}`}
-                  className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card transition-all active:scale-[0.97] hover:scale-[1.015] hover:bg-secondary/50 hover:border-foreground/20 hover:shadow-sm"
+                   className={`flex items-center gap-3 p-4 rounded-2xl font-black transition-all cursor-pointer shadow-lg active:scale-[0.97] ${
+                     id === 'khalti'
+                       ? 'bg-[#161224] border-2 border-purple-500/40 hover:border-purple-400 text-purple-300'
+                       : id === 'fonepay'
+                       ? 'bg-[#1A1116] border-2 border-rose-500/40 hover:border-rose-400 text-rose-300'
+                       : 'bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 text-emerald-300'
+                   }`}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                    <Smartphone size={18} className="text-muted-foreground" />
+                   <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                     <Smartphone size={18} />
                   </div>
                   <div className="text-left min-w-0">
-                    <p className="font-semibold text-sm text-foreground">{label}</p>
-                    <p className="text-[10px] text-muted-foreground">Scan QR</p>
+                     <p className="font-black text-sm">{label}</p>
+                     <p className="text-[10px] text-zinc-300">Scan QR</p>
                   </div>
                 </button>
               ))}
@@ -409,32 +415,31 @@ const PaymentScreen = () => {
       {/* QR Modal */}
       {showQRModal && selectedMethod && selectedMethod !== 'cash' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-card rounded-3xl border border-border w-full max-w-sm shadow-2xl overflow-hidden">
+          <div className="max-w-xs w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col items-center gap-3">
 
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h3 className="font-black text-foreground text-base">
+            <div className="w-full flex items-center justify-between">
+              <h3 className="font-black text-white text-base">
                 {resolvePaymentLabel(selectedMethod, settings)} Payment
               </h3>
               <button
                 onClick={() => { setShowQRModal(false); setSelectedMethod(null); setConfirming(false); }}
-                className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
+                className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/20 transition-all active:scale-90"
               >
                 <X size={17} />
               </button>
             </div>
 
-            <div className="px-6 pt-5 pb-6 flex flex-col items-center gap-4">
+            <div className="w-full flex flex-col items-center gap-3">
               <div className="text-center">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">Amount Due</p>
-                <p className="text-5xl font-black text-foreground mt-1 tabular-nums">Rs. {finalTotal}</p>
+                <p className="text-[11px] text-amber-400 uppercase tracking-widest font-black">Amount Due</p>
+                <p className="text-3xl font-black text-white font-mono mt-1">Rs. {finalTotal}</p>
                 {discountAmount > 0 && (
                   <p className="text-xs text-success font-semibold mt-1">Saved Rs. {discountAmount}</p>
                 )}
               </div>
 
               <div
-                className="p-4 bg-white rounded-2xl"
-                style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.06), 0 4px 20px -4px rgba(0,0,0,0.3)' }}
+                className="p-3 rounded-2xl bg-white border-2 border-amber-400 shadow-xl my-2"
               >
                 {getQRImage(selectedMethod) ? (
                   <img
@@ -453,7 +458,7 @@ const PaymentScreen = () => {
                 )}
               </div>
 
-              <p className="text-sm font-semibold text-foreground text-center">
+                <p className="text-sm font-bold text-zinc-200 text-center">
                 Scan QR and confirm after payment
               </p>
 
@@ -465,10 +470,9 @@ const PaymentScreen = () => {
                 }}
                 disabled={confirming}
                 data-testid="button-confirm-payment"
-                className="w-full py-4 rounded-2xl text-white font-black text-base transition-all active:scale-[0.97] disabled:opacity-80 flex items-center justify-center gap-2"
+                 className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-80 flex items-center justify-center gap-2"
                 style={{
-                  background: confirming ? 'hsl(var(--success) / 0.7)' : 'hsl(var(--success))',
-                  boxShadow: '0 4px 16px -4px hsl(var(--success) / 0.5)',
+                   opacity: confirming ? 0.7 : 1,
                 }}
               >
                 {confirming ? (

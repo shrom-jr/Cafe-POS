@@ -2,10 +2,6 @@ import { MenuItem } from '@/types/pos';
 import { Plus } from 'lucide-react';
 import { fmt } from '@/utils/format';
 
-const CARD_BG = 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)';
-const CARD_BORDER = '1px solid rgba(30,41,59,0.85)';
-const CARD_SHADOW = '0 2px 10px -2px rgba(0,0,0,0.55)';
-
 interface MenuItemCardProps {
   item: MenuItem;
   quantityInOrder?: number;
@@ -22,17 +18,14 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
         onClick={() => !disabled && onAdd()}
         data-testid={`menu-item-${item.id}`}
         disabled={disabled}
-        className="relative flex flex-row items-center rounded-xl overflow-hidden w-full text-left transition-transform duration-100 active:scale-[0.97]"
+        className="group relative flex flex-row items-center p-3.5 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all w-full text-left active:scale-[0.97]"
         style={{
-          background: CARD_BG,
-          border: CARD_BORDER,
-          boxShadow: CARD_SHADOW,
           opacity: disabled ? 0.4 : 1,
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >
         {/* Thumbnail */}
-        <div className="relative flex-shrink-0 overflow-hidden" style={{ width: 52, height: 52 }}>
+        <div className="relative flex-shrink-0 overflow-hidden rounded-xl" style={{ width: 52, height: 52 }}>
           {item.image ? (
             <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
           ) : (
@@ -45,25 +38,25 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
           )}
           {/* Quantity badge — top-left of thumbnail */}
           {quantityInOrder > 0 && (
-            <span className="absolute top-0.5 left-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
+             <span className="absolute top-0.5 left-0.5 min-w-[18px] h-[18px] px-1 rounded-md bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center leading-none shadow-sm">
               {quantityInOrder}
             </span>
           )}
         </div>
 
         {/* Name + price */}
-        <div className="flex-1 min-w-0 px-2.5 py-1.5">
-          <span className="block text-xs font-bold leading-snug line-clamp-2" style={{ color: '#ffffff' }}>
+        <div className="flex-1 min-w-0 px-3 py-1.5">
+          <span className="block text-sm font-black leading-snug line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
             {item.name}
           </span>
-          <span className="text-[11px] font-bold" style={{ color: 'rgba(52,211,153,0.9)' }}>
+          <span className="text-sm font-black text-amber-400 font-mono mt-1 block">
             Rs. {fmt(item.price)}
           </span>
         </div>
 
         {/* Add button */}
-        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent text-accent-foreground flex items-center justify-center mr-2 shadow-sm">
-          <Plus size={13} strokeWidth={2.5} />
+        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
+          <Plus size={17} strokeWidth={3} />
         </div>
       </button>
     );
@@ -75,11 +68,8 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
       onClick={() => !disabled && onAdd()}
       data-testid={`menu-item-${item.id}`}
       disabled={disabled}
-      className="relative flex flex-col rounded-xl overflow-hidden w-full text-left transition-transform duration-100 active:scale-[0.97]"
+      className="group relative flex flex-col p-4 rounded-2xl bg-[#13151F] hover:bg-[#181B26] border border-white/15 hover:border-amber-400/60 shadow-lg transition-all w-full text-left active:scale-[0.97]"
       style={{
-        background: CARD_BG,
-        border: CARD_BORDER,
-        boxShadow: CARD_SHADOW,
         opacity: disabled ? 0.4 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
@@ -94,23 +84,23 @@ const MenuItemCard = ({ item, quantityInOrder = 0, onAdd, disabled = false, comp
 
       {/* ── Text + controls ── */}
       <div className="flex-1 px-3 py-3 flex flex-col gap-1 relative">
-        <span className="text-sm font-bold leading-snug pr-9 line-clamp-2" style={{ color: '#ffffff' }}>
+        <span className="text-base font-black leading-snug pr-9 line-clamp-2 text-white group-hover:text-amber-200 transition-colors tracking-wide">
           {item.name}
         </span>
-        <span className="text-xs font-bold" style={{ color: 'rgba(52,211,153,0.9)' }}>
+        <span className="text-base font-black text-amber-400 font-mono mt-1 block">
           Rs. {fmt(item.price)}
         </span>
 
         {/* Quantity badge — top-right corner of the card */}
         {quantityInOrder > 0 && (
-          <span className="absolute top-2 right-2 min-w-[20px] h-[20px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
+          <span className="absolute top-2 right-2 min-w-[20px] h-[20px] px-1 rounded-md bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center leading-none shadow-sm">
             {quantityInOrder}
           </span>
         )}
 
         {/* Add button */}
-        <div className="absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-sm">
-          <Plus size={14} strokeWidth={2.5} />
+        <div className="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md shadow-amber-500/20 transition-all active:scale-90">
+          <Plus size={17} strokeWidth={3} />
         </div>
       </div>
     </button>

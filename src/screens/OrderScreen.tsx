@@ -319,7 +319,7 @@ const OrderScreen = () => {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: 'linear-gradient(180deg, #0d1525 0%, #060e1a 100%)' }}>
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#0A0B0E]">
       <TopBar title={tableDisplayName(table.number)} showBack onBack={() => navigate('/')} />
 
       {/* Move success banner */}
@@ -374,22 +374,21 @@ const OrderScreen = () => {
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
 
           {/* Search */}
-          <div className="p-3 border-b border-border bg-card/60 flex-shrink-0">
+          <div className="p-3 bg-[#0A0B0E] border-b border-white/10 flex-shrink-0">
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search menu..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search-menu"
-                className="w-full pl-9 pr-3 py-2 rounded-lg text-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-accent"
-                style={{ background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(30,41,59,0.9)' }}
+                className="w-full bg-[#13151F] border-2 border-white/15 focus:border-amber-400 text-white font-bold rounded-2xl px-5 py-3.5 pl-11 text-sm placeholder:text-zinc-400 outline-none shadow-inner mb-0"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -400,23 +399,17 @@ const OrderScreen = () => {
           {/* 4-pillar super-category tabs */}
           {!search && (
             <>
-              <div className="flex gap-1.5 px-3 pt-2.5 pb-2 border-b border-border flex-shrink-0" style={{ background: 'rgba(13,21,37,0.7)' }}>
+              <div className="flex gap-2 px-3 pt-3 pb-2.5 border-b border-white/10 flex-shrink-0 bg-[#0A0B0E] overflow-x-auto no-scrollbar">
                 {pillars.map((pillar) => (
                   <button
                     key={pillar}
                     onClick={() => setActivePillar(pillar)}
                     data-testid={`button-pillar-${pillar.toLowerCase()}`}
-                    className="flex-1 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all active:scale-95"
-                    style={activePillar === pillar ? {
-                      background: 'rgba(59,130,246,0.85)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(59,130,246,0.5)',
-                      boxShadow: '0 1px 8px -2px rgba(59,130,246,0.5)',
-                    } : {
-                      background: 'rgba(15,23,42,0.55)',
-                      color: 'rgb(226,232,240)',
-                      border: '1px solid rgba(100,116,139,0.40)',
-                    }}
+                    className={`flex-1 px-6 py-3 rounded-xl whitespace-nowrap transition-all active:scale-95 ${
+                      activePillar === pillar
+                        ? 'bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25'
+                        : 'bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white font-bold text-xs uppercase tracking-wider'
+                    }`}
                   >
                     {pillar}
                   </button>
@@ -424,23 +417,17 @@ const OrderScreen = () => {
               </div>
 
               {/* Sub-category row — flex-nowrap, hidden scrollbar */}
-              <div className="flex flex-nowrap gap-2 px-3 py-2 border-b border-border no-scrollbar flex-shrink-0 overflow-x-auto" style={{ background: 'rgba(10,17,30,0.5)' }}>
+              <div className="flex flex-nowrap gap-2 px-3 py-2.5 border-b border-white/10 no-scrollbar flex-shrink-0 overflow-x-auto bg-[#0A0B0E]">
                 {subCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveSubCat(cat.id)}
                     data-testid={`button-category-${cat.id}`}
-                    className="px-4 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all active:scale-95"
-                    style={activeSubCat === cat.id ? {
-                      background: 'rgba(16,185,129,0.18)',
-                      color: 'rgba(52,211,153,0.95)',
-                      border: '1px solid rgba(16,185,129,0.32)',
-                      boxShadow: '0 2px 8px -2px rgba(16,185,129,0.22)',
-                    } : {
-                      background: 'rgba(15,23,42,0.55)',
-                      color: 'rgb(226,232,240)',
-                      border: '1px solid rgba(100,116,139,0.35)',
-                    }}
+                    className={`px-4 py-2 rounded-xl whitespace-nowrap transition-all active:scale-95 ${
+                      activeSubCat === cat.id
+                        ? 'bg-amber-500/20 text-amber-300 border-2 border-amber-500/50 font-black text-xs uppercase tracking-wider shadow-sm'
+                        : 'bg-[#13151F] border border-white/10 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider'
+                    }`}
                   >
                     {cat.name}
                   </button>
@@ -450,8 +437,8 @@ const OrderScreen = () => {
           )}
 
           {/* Items grid — only this section scrolls */}
-          <div className={`flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 bg-background ${!isLandscape ? 'pb-24' : ''}`}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className={`flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 bg-[#0A0B0E] ${!isLandscape ? 'pb-24' : ''}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
               {filteredItems.map((item) => (
                 <MenuItemCard
                   key={item.id}
@@ -474,11 +461,7 @@ const OrderScreen = () => {
         {/* ── Cart panel — JS-conditional, shown in landscape on any device ── */}
         {isLandscape && (
           <div
-            className="w-80 lg:w-[360px] flex-shrink-0 flex flex-col min-h-0 overflow-hidden"
-            style={{
-              borderLeft: '1px solid rgba(255,255,255,0.10)',
-              boxShadow: '-10px 0 30px rgba(0,0,0,0.4)',
-            }}
+            className="w-80 lg:w-[360px] flex-shrink-0 flex flex-col min-h-0 overflow-hidden bg-[#10121A] border-l border-white/15 shadow-2xl"
           >
             <OrderPanel
               order={order}
@@ -508,22 +491,15 @@ const OrderScreen = () => {
       {!isLandscape && hasItems && (
         <div
           onClick={() => setShowCart(true)}
-          className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-5 cursor-pointer active:brightness-110 transition-all select-none"
-          style={{
-            background: 'linear-gradient(90deg, #2563EB 0%, #3B82F6 100%)',
-            borderRadius: '18px 18px 0 0',
-            paddingTop: 14,
-            paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-            boxShadow: '0 -4px 24px rgba(37,99,235,0.45)',
-          }}
+          className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-5 pt-3.5 pb-[max(16px,env(safe-area-inset-bottom,16px))] rounded-t-2xl bg-amber-500 shadow-[0_-4px_24px_rgba(245,158,11,0.35)] cursor-pointer active:bg-amber-400 transition-all select-none"
         >
-          <span className="text-white font-bold text-sm">
+          <span className="text-slate-950 font-black text-sm">
             {itemCount} item{itemCount !== 1 ? 's' : ''}
           </span>
-          <span className="text-white font-black text-base tracking-tight">
+          <span className="text-slate-950 font-black text-base tracking-tight font-mono">
             Rs. {fmt(runningTotal)}
           </span>
-          <span className="flex items-center gap-1 text-white/90 font-semibold text-sm">
+          <span className="flex items-center gap-1 text-slate-950 font-black uppercase tracking-wider text-xs">
             Review <ChevronUp size={15} strokeWidth={2.5} />
           </span>
         </div>
@@ -541,18 +517,13 @@ const OrderScreen = () => {
 
           {/* Drawer panel */}
           <div
-            className="sm:hidden fixed bottom-0 left-0 right-0 z-50 flex flex-col"
-            style={{
-              maxHeight: '75dvh',
-              minHeight: '40dvh',
-              borderRadius: '18px 18px 0 0',
-              background: '#0d1525',
-              border: '1px solid rgba(255,255,255,0.09)',
-              borderBottom: 'none',
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.7)',
-              transform: showCart ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)',
-            }}
+             className="sm:hidden fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-[#10121A] border-l border-white/15 p-5 rounded-t-3xl shadow-2xl"
+             style={{
+               maxHeight: '75dvh',
+               minHeight: '40dvh',
+               transform: showCart ? 'translateY(0)' : 'translateY(100%)',
+               transition: 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)',
+             }}
           >
             <style>{`
               @keyframes dr-item-flash {
@@ -588,7 +559,7 @@ const OrderScreen = () => {
               className="flex items-center justify-between px-4 pb-3 flex-shrink-0"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
             >
-              <h3 className="font-bold text-white/90 text-sm">
+              <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                 Your Order{itemCount > 0 ? ` · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : ''}
               </h3>
               <div className="flex items-center gap-2">
@@ -598,11 +569,7 @@ const OrderScreen = () => {
                     disabled={freeTables.length === 0}
                     data-testid="button-move-table-drawer"
                     title={freeTables.length === 0 ? 'No available tables' : undefined}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={freeTables.length > 0
-                      ? { color: 'rgba(147,197,253,0.8)', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }
-                      : { color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }
-                    }
+                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ArrowRightLeft size={12} />
                     {freeTables.length === 0 ? 'No tables' : 'Move'}
@@ -621,11 +588,10 @@ const OrderScreen = () => {
 
             {/* Customer (Khatta) row — portrait drawer */}
             <div
-              className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+              className="flex items-center gap-3 px-0 py-3 flex-shrink-0 border-b border-white/10"
             >
               <UserCircle size={14} style={{ color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
-              <span className="text-sm font-semibold flex-1" style={{ color: 'rgba(255,255,255,0.38)' }}>Customer</span>
+              <span className="text-sm font-black text-white flex-1">Customer</span>
               {attachedCustomer ? (
                 <div className="flex items-center gap-1.5 max-w-[55%]">
                   <span className="text-xs font-semibold truncate" style={{ color: 'rgba(147,197,253,0.88)' }}>
@@ -645,8 +611,7 @@ const OrderScreen = () => {
               ) : (
                 <button
                   onClick={() => setShowCustomerPicker(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)', color: 'rgba(147,197,253,0.75)' }}
+                   className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
                 >
                   <UserCircle size={11} />
                   Add
@@ -664,16 +629,14 @@ const OrderScreen = () => {
 
             {/* Guests (Pax) selector */}
             <div
-              className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+              className="flex items-center justify-between px-0 py-3 flex-shrink-0 border-b border-white/10"
             >
-              <span className="text-sm font-semibold text-white/60">Guests</span>
+              <span className="text-sm font-black text-white">Guests</span>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handlePaxChange(Math.max(1, (table.pax ?? 1) - 1))}
                   disabled={(table.pax ?? 1) <= 1}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/50 active:scale-90 transition-transform disabled:opacity-30"
-                  style={{ background: 'rgba(255,255,255,0.07)' }}
+                   className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:opacity-30"
                 >
                   <span className="text-base leading-none select-none">−</span>
                 </button>
@@ -682,10 +645,9 @@ const OrderScreen = () => {
                 </span>
                 <button
                   onClick={() => handlePaxChange((table.pax ?? 1) + 1)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-transform"
-                  style={{ background: 'rgba(59,130,246,0.20)', border: '1px solid rgba(59,130,246,0.30)' }}
+                   className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all"
                 >
-                  <span className="text-base leading-none text-blue-300 select-none">+</span>
+                   <span className="text-base leading-none text-white select-none">+</span>
                 </button>
               </div>
             </div>

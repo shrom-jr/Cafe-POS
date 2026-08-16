@@ -41,7 +41,7 @@ interface OrderPanelProps {
   onAttachCustomer?: (customer: Customer | null) => void;
 }
 
-const BLUE_BTN = { background: 'rgba(59,130,246,0.16)', border: '1px solid rgba(59,130,246,0.30)' };
+const BLUE_BTN = { background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.40)' };
 
 const formatTime = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -137,7 +137,7 @@ const OrderPanel = ({
   if (isEmpty) {
     buttonLabel = 'Add items to order';
     ariaLabel = 'Add items to place an order';
-    btnBackground = 'rgba(59,130,246,0.12)';
+    btnBackground = 'rgba(245,158,11,0.12)';
     btnShadow = 'none';
   } else if (hasDraft) {
     if (sendPhase === 'sending') {
@@ -150,18 +150,18 @@ const OrderPanel = ({
       buttonLabel = `Send ${draftUnitCount} item${draftUnitCount !== 1 ? 's' : ''} to Kitchen`;
       ariaLabel = buttonLabel;
     }
-    btnBackground = 'linear-gradient(135deg, #1e50d0 0%, #4186f5 100%)';
+    btnBackground = '#f59e0b';
     btnShadow =
       sendPhase === 'sent'
         ? '0 4px 20px -4px rgba(16,185,129,0.55), inset 0 1px 0 rgba(255,255,255,0.12)'
-        : '0 4px 20px -4px rgba(59,130,246,0.55), inset 0 1px 0 rgba(255,255,255,0.12)';
+        : '0 4px 20px -4px rgba(245,158,11,0.55), inset 0 1px 0 rgba(255,255,255,0.12)';
     if (sendPhase === 'sent') btnBackground = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
   } else {
     // allSent — show Proceed to Payment
     buttonLabel = 'Proceed to Payment →';
     ariaLabel = 'Proceed to payment';
-    btnBackground = 'linear-gradient(135deg, #1d4ed8 0%, #60a5fa 60%, #3b82f6 100%)';
-    btnShadow = '0 6px 28px -4px rgba(59,130,246,0.75), inset 0 1px 0 rgba(255,255,255,0.18)';
+    btnBackground = '#f59e0b';
+    btnShadow = '0 6px 28px -4px rgba(245,158,11,0.75), inset 0 1px 0 rgba(255,255,255,0.18)';
   }
 
   const isBtnDisabled = isEmpty || sendPhase === 'sending';
@@ -241,7 +241,7 @@ const OrderPanel = ({
   return (
     <div
       className="flex-1 flex flex-col min-h-0 overflow-hidden relative"
-      style={{ background: 'linear-gradient(180deg, #141e30 0%, #0c1522 100%)' }}
+      style={{ background: '#10121A' }}
     >
       <style>{`
         @keyframes op-fade-in-scale {
@@ -265,17 +265,16 @@ const OrderPanel = ({
 
       {/* Header */}
       <div
-        className="relative flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}
+        className="relative flex-shrink-0 bg-[#10121A] border-b border-white/10"
       >
         <div className="px-4 pt-3 pb-1.5 flex items-center gap-2">
-          <h3 className="font-extrabold text-base text-white flex-1 truncate">
+          <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2 flex-1 truncate">
             {order ? tableDisplayName(order.tableNumber) : 'Order'}
           </h3>
           {order && (
             <span
               key={statusLabel}
-              className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full flex-shrink-0"
+              className="px-2.5 py-0.5 rounded-md bg-white/10 text-zinc-200 text-[10px] font-black uppercase tracking-wider border border-white/15 flex-shrink-0"
               style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
             >
               {statusLabel}
@@ -310,7 +309,7 @@ const OrderPanel = ({
           )}
         </div>
         <div className="px-4 pb-2.5">
-          <span className="text-xs font-medium" style={{ color: 'rgba(148,163,184,0.72)' }}>
+          <span className="text-xs font-bold text-zinc-300 mt-1 block">
             {serverName ? `Served by ${serverName}` : 'No server assigned'}
             {itemCount > 0 ? ` · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : ''}
           </span>
@@ -323,12 +322,12 @@ const OrderPanel = ({
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
         <Users size={14} className="text-white/40 flex-shrink-0" />
-        <span className="text-xs font-semibold text-slate-300 flex-1">Guests (Pax)</span>
+        <span className="px-3 py-1.5 rounded-xl bg-[#181B26] border border-white/15 flex items-center gap-2 text-xs font-black text-white flex-1">Guests (Pax)</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPaxChange?.(Math.max(1, pax - 1))}
             disabled={pax <= 1}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 transition-all active:scale-90 disabled:opacity-25 disabled:cursor-not-allowed hover:text-white hover:brightness-110"
+            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
             style={BLUE_BTN}
           >
             <Minus size={12} />
@@ -336,7 +335,7 @@ const OrderPanel = ({
           <span className="w-6 text-center font-black text-sm tabular-nums text-white">{pax}</span>
           <button
             onClick={() => onPaxChange?.(pax + 1)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 transition-all active:scale-90 hover:text-white hover:brightness-110"
+            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all"
             style={BLUE_BTN}
           >
             <Plus size={12} />
@@ -350,8 +349,8 @@ const OrderPanel = ({
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
         <div className="flex items-center gap-2">
-          <UserCircle size={15} className="text-blue-400 flex-shrink-0" />
-          <span className="text-xs font-bold text-slate-300">Customer</span>
+          <UserCircle size={15} className="text-amber-400 flex-shrink-0" />
+          <span className="text-xs font-black text-white">Customer</span>
         </div>
 
         {attachedCustomer ? (
@@ -375,7 +374,7 @@ const OrderPanel = ({
         ) : (
           <button
             onClick={() => setShowCustomerPicker(true)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/35 text-blue-300"
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95"
           >
             <UserCircle size={13} />
             + Attach Customer
@@ -392,7 +391,7 @@ const OrderPanel = ({
       )}
 
       {/* Item list */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-2.5">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12" style={{ color: 'rgba(255,255,255,0.22)' }}>
             <ShoppingBag size={38} className="mb-3 opacity-25" />
@@ -457,16 +456,15 @@ const OrderPanel = ({
 
       {/* Footer */}
       <div
-        className="px-4 pt-3 pb-4 space-y-2.5 flex-shrink-0 relative"
-        style={{ background: 'linear-gradient(180deg, #0f1a2e 0%, #0c1522 100%)' }}
+        className="px-5 pt-4 pb-5 space-y-2.5 flex-shrink-0 relative bg-[#10121A] border-t border-white/10"
       >
         <div
           className="absolute inset-x-0 pointer-events-none"
-          style={{ top: '-48px', height: '48px', background: 'linear-gradient(to bottom, transparent, #0c1522)' }}
+          style={{ top: '-48px', height: '48px', background: 'linear-gradient(to bottom, transparent, #10121A)' }}
         />
         <div className="flex items-center justify-between py-1">
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(148,163,184,0.65)' }}>Total</span>
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-300">Total</span>
             {kitchenStatus === 'placed' && sentAt && (
               <span
                 key={Math.floor((now - sentAt) / 60000)}
@@ -478,8 +476,7 @@ const OrderPanel = ({
             )}
           </div>
           <span
-            className="text-3xl font-black"
-            style={{ color: items.length > 0 ? '#ffffff' : 'rgba(255,255,255,0.25)' }}
+            className="text-3xl font-black text-white font-mono tracking-tight"
           >
             Rs. {fmt(total)}
           </span>
@@ -497,12 +494,10 @@ const OrderPanel = ({
           aria-disabled={isBtnDisabled}
           aria-label={ariaLabel}
           data-testid="button-proceed-to-bill"
-          className="w-full rounded-xl font-black text-lg flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-20 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
           style={{
-            paddingTop: btnPy,
-            paddingBottom: btnPy,
             background: btnBackground,
-            color: items.length > 0 ? '#ffffff' : 'rgba(255,255,255,0.3)',
+            color: sendPhase === 'sent' ? '#ffffff' : '#0f172a',
             boxShadow: btnShadow,
             transition: 'background 0.35s ease, box-shadow 0.35s ease',
             animation: sendPhase === 'sending' ? 'op-btn-pulse 0.7s ease' : undefined,
@@ -569,17 +564,9 @@ const OrderItemRow = ({
 }: OrderItemRowProps) => {
   const isDraft = !isSent && !isPaid;
 
-  const rowBg = isPaid
-    ? 'rgba(255,255,255,0.02)'
-    : isSent
-    ? 'rgba(15,23,42,0.75)'
-    : 'rgba(251,191,36,0.06)';
+  const rowBg = '#181B26';
 
-  const rowBorder = isPaid
-    ? '1px solid rgba(255,255,255,0.04)'
-    : isSent
-    ? '1px solid rgba(30,41,59,0.85)'
-    : '1px solid rgba(251,191,36,0.22)';
+  const rowBorder = '1px solid rgba(255,255,255,0.15)';
 
   const handleMinus = () => {
     if (isPaid) return;
@@ -601,7 +588,7 @@ const OrderItemRow = ({
 
   return (
     <div
-      className="flex items-center gap-2 rounded-xl p-2.5"
+      className="p-3.5 rounded-2xl bg-[#181B26] border border-white/15 shadow-sm mb-2.5 flex items-center justify-between"
       data-testid={`order-item-${item.menuItemId}`}
       style={{
         background: rowBg,
@@ -651,7 +638,7 @@ const OrderItemRow = ({
           disabled={isPaid}
           aria-label={isSent ? `Void ${item.name}` : `Decrease ${item.name} quantity`}
           data-testid={`button-decrease-${item.menuItemId}`}
-          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base transition-colors active:scale-90 disabled:pointer-events-none disabled:opacity-30"
+          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
           style={
             isSent && !isPaid
               ? { background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: 'rgba(252,165,165,0.8)' }
@@ -672,8 +659,7 @@ const OrderItemRow = ({
           disabled={isPaid || isSent}
           aria-label={`Increase ${item.name} quantity`}
           data-testid={`button-increase-${item.menuItemId}`}
-          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base transition-colors active:scale-90 hover:text-blue-300 hover:brightness-110 disabled:pointer-events-none disabled:opacity-30"
-          style={{ background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.35)', color: 'rgba(147,197,253,0.9)' }}
+          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:pointer-events-none disabled:opacity-30"
         >
           <Plus size={13} />
         </button>
@@ -690,7 +676,7 @@ const OrderItemRow = ({
           onClick={handleTrash}
           aria-label={isSent ? `Void ${item.name}` : `Remove ${item.name}`}
           data-testid={`button-remove-${item.menuItemId}`}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors active:scale-90 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0"
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors flex-shrink-0"
           style={
             isSent
               ? { color: 'rgba(252,165,165,0.6)', background: 'rgba(239,68,68,0.08)' }
