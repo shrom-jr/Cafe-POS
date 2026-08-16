@@ -1,0 +1,26 @@
+Phase 1 Master Polish: High-Contrast Defined-Border Table Grid
+
+Refactor `src/components/tables/TableCard.tsx` and `src/screens/TableOverview.tsx` to implement crisp defined-border styling in Light Mode while preserving all working Dark Mode styles:
+
+1. Free Table Cards (Light Mode Defined Border):
+   - Surface: Pure white tile (`bg-white dark:bg-[#13151F]`).
+   - Border: Solid, defined dark border in light mode (`border-2 border-slate-900 dark:border-white/15 rounded-2xl shadow-sm`).
+   - Table Name: Centered in large, bold typography (`text-slate-950 dark:text-white text-2xl font-black tracking-wide text-center`).
+   - Clean tile: No lines, no footer, no placeholder text.
+   - Tactile hover: Smooth lift with subtle hover state (`hover:-translate-y-1 hover:shadow-md transition-all duration-150`).
+
+2. Occupied Table Cards (Light Mode High-Contrast Hub):
+   - Surface: Soft warm cream background (`bg-amber-50/80 dark:from-[#221813] dark:to-[#14100E]`).
+   - Border: Solid 2px bright orange/amber border (`border-2 border-orange-500 shadow-sm`).
+   - Header: Table Name (`text-slate-950 dark:text-white font-black text-xl`) on left, minimal outline badge (`border border-orange-500/80 bg-orange-500/15 text-orange-800 dark:text-orange-400 font-bold text-xs px-2.5 py-0.5 rounded-full`) on right.
+   - Body (Centered): Guest count ("1 Guest", "4 Guests") in `text-slate-900 dark:text-white font-bold`, with attached customer pill ("Amit Dai") centered underneath (`bg-slate-200/90 dark:bg-white/10 text-slate-900 dark:text-white border border-slate-300 dark:border-white/20 font-bold px-3 py-1 rounded-full text-xs`).
+   - Footer: Crisp divider line with Live Timer and Item Count in legible dark slate font in light mode (`text-slate-800 dark:text-slate-100 font-bold text-sm`).
+
+3. Billing State Cards:
+   - In Light Mode: Emerald tinted card with solid emerald border (`bg-emerald-50 border-2 border-emerald-600`).
+   - In Dark Mode: Preserved dark emerald tile (`dark:bg-emerald-950/60 dark:border-emerald-500`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter dark mode color tokens that are already working.
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

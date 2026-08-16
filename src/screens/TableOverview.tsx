@@ -59,7 +59,7 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
 
       </div>
 
-      {/* Table grid — solid state tiles keep occupancy instantly legible */}
+      {/* Table grid — defined borders keep each occupancy state instantly legible */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {tables.map((table) => {
           const data = tableOrderData[table.id] || { itemCount: 0 };
