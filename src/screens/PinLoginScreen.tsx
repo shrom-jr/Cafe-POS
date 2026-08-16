@@ -15,12 +15,28 @@ const EMAILJS_PUBLIC_KEY  = 'ct_T99fLZJzJzPB5zut';
 
 const FALLBACK_NAME = 'S Bamboo Cottage & Sekuwa Corner';
 
-// ── Role pill tokens ──────────────────────────────────────────────────────────
-const ROLE_PILL: Record<Role, string> = {
-  ADMIN:   'bg-purple-500/15 text-purple-300 border-purple-500/30',
-  CASHIER: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  WAITER:  'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  KITCHEN: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+// ── Role-themed staff card tokens ────────────────────────────────────────────
+const ROLE_CARD_STYLES: Record<Role, { card: string; name: string; badge: string }> = {
+  ADMIN: {
+    card: 'bg-gradient-to-b from-purple-950/40 via-purple-900/15 to-[#10121A] border-2 border-purple-500/40 hover:border-purple-400 hover:shadow-[0_0_20px_rgba(168,85,247,0.25)]',
+    name: 'group-hover:text-purple-200',
+    badge: 'bg-purple-500/20 text-purple-200 border-purple-500/50',
+  },
+  CASHIER: {
+    card: 'bg-gradient-to-b from-sky-950/40 via-sky-900/15 to-[#10121A] border-2 border-sky-500/40 hover:border-sky-400 hover:shadow-[0_0_20px_rgba(14,165,233,0.25)]',
+    name: 'group-hover:text-sky-200',
+    badge: 'bg-sky-500/20 text-sky-200 border-sky-500/50',
+  },
+  WAITER: {
+    card: 'bg-gradient-to-b from-emerald-950/40 via-emerald-900/15 to-[#10121A] border-2 border-emerald-500/40 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]',
+    name: 'group-hover:text-emerald-200',
+    badge: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/50',
+  },
+  KITCHEN: {
+    card: 'bg-gradient-to-b from-amber-950/40 via-amber-900/15 to-[#10121A] border-2 border-amber-500/40 hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]',
+    name: 'group-hover:text-amber-200',
+    badge: 'bg-amber-500/20 text-amber-200 border-amber-500/50',
+  },
 };
 
 // ── Role colours for modal ────────────────────────────────────────────────────
@@ -484,28 +500,28 @@ const PinLoginScreen = () => {
         {/* ── Brand hero ── */}
         <div className="flex flex-col items-center mb-2">
           {/* Logo — clean glass container, no amber border */}
-          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 p-2 shadow-xl mb-4 mx-auto flex items-center justify-center overflow-hidden">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white/[0.04] border border-white/15 p-2 shadow-2xl mb-4 mx-auto flex items-center justify-center overflow-hidden">
             {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain rounded-xl" />
+              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain rounded-2xl drop-shadow-md" />
             ) : (
               <span className="text-2xl font-black text-amber-400">
-                {(settings?.cafeName || settings?.restaurantName || 'Point of Sale').charAt(0).toUpperCase()}
+                {(settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner').charAt(0).toUpperCase()}
               </span>
             )}
           </div>
 
           {/* Restaurant name — dynamic with generic fallback */}
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white dark:text-white text-center">
-            {settings?.cafeName || settings?.restaurantName || 'Point of Sale'}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white text-center">
+            {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xs font-black tracking-[0.2em] text-amber-400 uppercase mt-1.5 text-center">
+          <p className="text-xs font-black tracking-[0.25em] text-amber-400 uppercase mt-2 text-center">
             STAFF ACCESS • POS TERMINAL
           </p>
 
           {/* Instruction badge */}
-          <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-zinc-400 dark:text-zinc-300">
+          <div className="mt-3.5 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-zinc-300 shadow-sm">
             Tap Your Profile to Sign In
           </div>
         </div>
@@ -516,35 +532,26 @@ const PinLoginScreen = () => {
             <p className="text-sm font-semibold">No active staff accounts found.</p>
           </div>
         ) : (
-          <div className="flex flex-wrap justify-center gap-4 w-full mt-8 max-w-3xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-4 w-full mt-8 max-w-4xl mx-auto">
             {activeUsers.map((user) => (
+              (() => {
+                const styles = ROLE_CARD_STYLES[user.role];
+                return (
               <button
                 key={user.id}
+                type="button"
                 onClick={() => setSelectedUser(user)}
-                className="group w-[230px] sm:w-[240px] p-4 rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all duration-200 active:scale-[0.97] select-none
-                  bg-slate-100 border border-slate-300 hover:bg-slate-200 hover:border-amber-500/60 shadow-sm hover:shadow-amber-500/10 hover:-translate-y-1
-                  dark:bg-[#13151F] dark:border-white/10 dark:hover:border-amber-500/60 dark:hover:bg-[#181B26] dark:shadow-lg dark:hover:shadow-amber-500/10"
+                className={`group w-[220px] sm:w-[230px] p-5 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 shadow-xl hover:-translate-y-1.5 active:scale-95 select-none ${styles.card}`}
               >
-                {/* Monogram avatar */}
-                <div
-                  className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black text-white shadow-inner transition-transform duration-200 group-hover:scale-105"
-                  style={{ background: '#202436', border: '1px solid rgba(255,255,255,0.15)' }}
-                >
-                  {initials(user.name)}
-                </div>
-
-                {/* Name + role */}
-                <div className="flex flex-col min-w-0 flex-1 text-left">
-                  <span className="text-sm font-black text-slate-900 dark:text-white truncate">
-                    {user.name}
-                  </span>
-                  <span
-                    className={`mt-1 self-start px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${ROLE_PILL[user.role]}`}
-                  >
-                    {ROLE_LABEL[user.role]}
-                  </span>
-                </div>
+                <span className={`text-base sm:text-lg font-black text-white transition-colors truncate w-full ${styles.name}`}>
+                  {user.name}
+                </span>
+                <span className={`mt-2.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border shadow-sm ${styles.badge}`}>
+                  {ROLE_LABEL[user.role]}
+                </span>
               </button>
+                );
+              })()
             ))}
           </div>
         )}

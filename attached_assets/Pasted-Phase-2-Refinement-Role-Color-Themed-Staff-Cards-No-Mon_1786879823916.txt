@@ -1,0 +1,45 @@
+Phase 2 Refinement: Role-Color-Themed Staff Cards (No Monograms) & Enlarged Brand Logo
+
+Refactor `src/screens/PinLoginScreen.tsx` to remove monogram initials, increase logo presence, and give each staff profile a dedicated role-based color theme:
+
+1. High-Impact Brand Header (`PinLoginScreen.tsx`):
+   - Logo Container:
+     * Significantly enlarge the logo for crystal-clear visibility: `w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white/[0.04] border border-white/15 p-2 shadow-2xl mb-4 mx-auto flex items-center justify-center overflow-hidden`.
+     * Logo Image: `w-full h-full object-contain rounded-2xl drop-shadow-md`.
+   - Title & Subtext:
+     * Dynamic Title: `<h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white text-center">{settings?.cafeName || settings?.restaurantName || "S Bamboo Cottage & Sekuwa Corner"}</h1>`
+     * Subtitle: `<p className="text-xs font-black tracking-[0.25em] text-amber-400 uppercase mt-2 text-center">STAFF ACCESS • POS TERMINAL</p>`
+     * Instruction Pill: `<div className="mt-3.5 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-zinc-300 shadow-sm">Tap Your Profile to Sign In</div>`
+
+2. Role-Color-Coded Staff Cards (NO "SB", "DI", "RA" Monogram Initials):
+   - Remove the initial avatar boxes completely (`w-12 h-12` monogram removed).
+   - Container: `flex flex-wrap justify-center gap-4 w-full mt-8 max-w-4xl mx-auto`.
+   - Card Base (`w-[220px] sm:w-[230px] p-5 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 shadow-xl hover:-translate-y-1.5 active:scale-95 group`):
+   
+   A. ADMIN (e.g. Sanjib Basnet):
+      - Card Surface: `bg-gradient-to-b from-purple-950/40 via-purple-900/15 to-[#10121A] border-2 border-purple-500/40 hover:border-purple-400 hover:shadow-[0_0_20px_rgba(168,85,247,0.25)]`.
+      - Name: `text-base sm:text-lg font-black text-white group-hover:text-purple-200 transition-colors truncate w-full`.
+      - Role Badge: `mt-2.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-200 border border-purple-500/50 shadow-sm`.
+
+   B. CASHIER (e.g. Dipesh, Rabin):
+      - Card Surface: `bg-gradient-to-b from-sky-950/40 via-sky-900/15 to-[#10121A] border-2 border-sky-500/40 hover:border-sky-400 hover:shadow-[0_0_20px_rgba(14,165,233,0.25)]`.
+      - Name: `text-base sm:text-lg font-black text-white group-hover:text-sky-200 transition-colors truncate w-full`.
+      - Role Badge: `mt-2.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-200 border border-sky-500/50 shadow-sm`.
+
+   C. WAITER (e.g. Ram):
+      - Card Surface: `bg-gradient-to-b from-emerald-950/40 via-emerald-900/15 to-[#10121A] border-2 border-emerald-500/40 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]`.
+      - Name: `text-base sm:text-lg font-black text-white group-hover:text-emerald-200 transition-colors truncate w-full`.
+      - Role Badge: `mt-2.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-200 border border-emerald-500/50 shadow-sm`.
+
+   D. KITCHEN (e.g. Govinda):
+      - Card Surface: `bg-gradient-to-b from-amber-950/40 via-amber-900/15 to-[#10121A] border-2 border-amber-500/40 hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.25)]`.
+      - Name: `text-base sm:text-lg font-black text-white group-hover:text-amber-200 transition-colors truncate w-full`.
+      - Role Badge: `mt-2.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-200 border border-amber-500/50 shadow-sm`.
+
+3. Keep PIN Modal Structure Intact:
+   - Maintain the vertical keypad with rectangular white keys (`1–9`, `0`, `⌫`).
+   - Retain high-contrast PIN indicator circles and styled `🔑 Forgot PIN?` button.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, Firebase auth/reset flows, or permission routing.
+- Run `npm run build` to confirm zero TypeScript or build errors.
