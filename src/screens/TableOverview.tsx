@@ -171,7 +171,7 @@ const TableOverview = () => {
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
             <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
-                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300 bg-slate-300/60 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
+                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300/80 bg-slate-200/70 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
                 {['All', ...sections].map((section) => {
                   const count = section === 'All'
                     ? tables.length
@@ -197,7 +197,7 @@ const TableOverview = () => {
               {tableStatusBar}
             </div>
 
-            {/* ── Area sections — table cards float on the page background ── */}
+            {/* ── Area sections — modern state tiles on the studio canvas ── */}
             <div className="flex flex-col gap-8">
               {visibleSections.map((section) => (
                 <AreaBox

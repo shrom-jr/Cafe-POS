@@ -46,15 +46,15 @@ const TableCard = ({
       : 'OCCUPIED';
   const statusTone = table.status === 'billing'
       ? 'border-emerald-600/60 bg-emerald-500/10 font-bold text-emerald-800 dark:border-red-500/35 dark:bg-red-500/10 dark:text-red-300'
-       : 'border-orange-500/80 bg-orange-500/15 font-bold text-orange-800 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
+       : 'border-amber-500 bg-amber-500 font-bold text-white dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
   const statusDot = table.status === 'billing'
       ? 'bg-emerald-500 dark:bg-red-400'
       : 'bg-orange-500 dark:bg-amber-400';
    const cardTone = table.status === 'free'
-     ? 'border-2 border-slate-900 bg-white text-slate-950 shadow-sm transition-all duration-150 hover:-translate-y-1 hover:shadow-md dark:border-white/15 dark:bg-[#13151F] dark:text-white'
+     ? 'border border-slate-200 bg-white text-slate-900 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-1 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/10 hover:shadow-md dark:border-white/10 dark:bg-[#13151F] dark:text-white'
     : table.status === 'billing'
        ? 'border-2 border-emerald-600 bg-emerald-50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/60'
-        : 'border-2 border-orange-500 bg-amber-50/80 shadow-sm dark:border-amber-500/80 dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E]';
+        : 'border-2 border-amber-500 bg-white shadow-md shadow-amber-500/10 dark:border-amber-500/80 dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E]';
 
   return (
     <button
@@ -66,7 +66,7 @@ const TableCard = ({
         <div className="relative flex min-h-full w-full items-center justify-center">
           <span
             title={tableDisplayName(table.number)}
-                className="text-center text-2xl font-black tracking-wide text-slate-950 dark:text-white"
+                 className="text-center text-2xl font-black tracking-wide text-slate-900 dark:text-white"
           >
             {tableDisplayName(table.number)}
           </span>
@@ -77,7 +77,7 @@ const TableCard = ({
           <div className="flex items-center justify-between gap-3">
             <span
               title={tableDisplayName(table.number)}
-                className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-left text-slate-950 dark:text-white"
+                className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-left text-slate-900 dark:text-white"
             >
               {tableDisplayName(table.number)}
             </span>
@@ -96,18 +96,18 @@ const TableCard = ({
 
           {/* Middle body zone */}
           <div className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-1.5 py-2 text-center">
-             <span className="text-sm font-bold leading-tight text-slate-900 dark:text-white">
+             <span className="text-sm font-black leading-tight text-slate-900 dark:text-white">
               {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (
-               <span className="w-fit max-w-full truncate rounded-full border border-slate-300 bg-slate-200/90 px-3 py-1 text-xs font-bold tracking-wide text-slate-900 dark:border-white/20 dark:bg-white/10 dark:text-white">
+                <span className="w-fit max-w-full truncate rounded-full bg-slate-900 px-3 py-1 text-xs font-bold tracking-wide text-white shadow-sm dark:bg-white/10 dark:text-white">
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Bottom footer zone */}
-          <div className="flex items-center justify-between border-t border-slate-300 pt-2 text-sm font-bold text-slate-800 dark:border-white/10 dark:text-slate-100">
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-bold text-slate-800 dark:border-white/10 dark:text-slate-100">
             <span className="tabular-nums">{timer || '—'}</span>
             <span>{itemCount} Item{itemCount !== 1 ? 's' : ''}</span>
           </div>

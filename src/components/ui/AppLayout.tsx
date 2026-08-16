@@ -169,10 +169,10 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   return (
     <div
-       className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-slate-200/70 text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
+       className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-[#F8F9FB] text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-       <header className="flex-shrink-0 border-b border-slate-300/80 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
+        <header className="flex-shrink-0 border-b border-slate-200 bg-white px-6 py-3 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
          {/* ── TABLET / DESKTOP: single row (sm+) ── */}
         <div className="hidden h-10 items-center sm:grid" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           {/* Left: brand */}

@@ -1,0 +1,28 @@
+Phase 1 Master Polish: Crisp Studio Light Mode Canvas & Modern High-End Table Tiles
+
+Refactor `src/components/ui/AppLayout.tsx`, `src/screens/TableOverview.tsx`, and `src/components/tables/TableCard.tsx` to establish a clean, modern Light Mode aesthetic while keeping Dark Mode completely untouched:
+
+1. Clean Studio Background Canvas (`AppLayout.tsx`, `TableOverview.tsx`):
+   - In Light Mode, set the background to a clean, neutral studio canvas (`bg-[#F8F9FB] dark:bg-[#0A0B0E]`). Remove any muddy grayish/cyan washes.
+   - Top Header Bar: Pure white surface (`bg-white dark:bg-[#10121A] border-b border-slate-200 dark:border-white/10 shadow-sm`).
+   - Floor Filter Segmented Track: `bg-slate-200/70 border border-slate-300/80 dark:bg-zinc-900/90 dark:border-zinc-800 p-1 rounded-2xl`.
+
+2. Free Table Cards (`TableCard.tsx`):
+   - Surface: Pure white tile (`bg-white dark:bg-[#13151F]`).
+   - Border & Shadow: Replace the harsh heavy black border with a refined modern edge (`border border-slate-200 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl`).
+   - Table Name: Centered in rich deep charcoal (`text-slate-900 dark:text-white text-2xl font-black tracking-wide text-center`).
+   - Hover Feedback: Smooth lift and emerald highlight (`hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/10 hover:-translate-y-1 transition-all duration-150`).
+
+3. Occupied Table Cards (`TableCard.tsx`):
+   - Surface: Crisp white tile with a subtle warm glow (`bg-white dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E]`).
+   - Border: Solid, vibrant 2px amber border (`border-2 border-amber-500 shadow-md shadow-amber-500/10`).
+   - Header: Table Name (`text-slate-900 dark:text-white font-black text-xl`) on left, solid vibrant amber badge (`bg-amber-500 text-white font-bold text-xs px-2.5 py-0.5 rounded-full shadow-sm`) on right.
+   - Body (Centered):
+     * Guest count in bold dark slate (`text-slate-900 dark:text-white font-black text-sm`).
+     * Customer name pill rendered in high-contrast dark slate (`bg-slate-900 text-white dark:bg-white/10 dark:text-white font-bold px-3 py-1 rounded-full text-xs shadow-sm`).
+   - Footer: Crisp hairline divider (`border-t border-slate-100 dark:border-white/10 pt-2 flex justify-between items-center text-slate-800 dark:text-slate-100 font-bold text-sm`).
+
+STRICT CONSTRAINTS:
+- DO NOT alter dark mode color tokens that are already working.
+- DO NOT alter table click navigation, table store hooks (`usePOSStore`), timer calculations, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.
