@@ -4,6 +4,7 @@
 - [Firebase Database Singleton](firebase-database-singleton.md) — connection telemetry must reuse the app's configured db instance to avoid duplicate database initialization
 - [Staff Firebase sync](staff-firebase-sync.md) — setUsers must persist to localStorage; subscribeToStaff must default active:true; never seed defaults back to Firebase
 - [Firebase Inventory Source of Truth](firebase-inventory-source-of-truth.md) — alcohol/beverage/cigarette products and invMovements must never be read from or written to localStorage; Firebase is the single master
+- [Firebase Settings Hydration](firebase-settings-hydration.md) — remote settings snapshots may be legacy/incomplete; merge nested wallet defaults instead of replacing local settings wholesale
 - [Inventory Category Model](inventory-category-model.md) — wine stays in the ml-tracked alcohol collection for shared bottle/glass deductions; beer and soft drinks use direct packaged units
 - [Maintenance Expenses Architecture](maintenance-expenses.md) — Firebase-backed expense store; Admin "Expenses" tab between Inventory and Settings; Net Profit card in Reports = Revenue − Maintenance Expenses
 - [Khatta Customer Ledger](khatta-system.md) — Customer type in pos.ts; useCustomerStore (localStorage); attachCustomerToOrder in usePOSStore; CustomerPicker component; Khatta button + due checkbox in ReviewScreen

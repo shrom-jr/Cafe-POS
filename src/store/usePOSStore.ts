@@ -132,7 +132,17 @@ export const usePOSStore = create<POSState>((set, get) => ({
   payments: db.getPayments(),
   setPayments: (payments) => set({ payments }),
   settings: db.getSettings(),
-  setSettings: (settings) => set({ settings }),
+  setSettings: (settings) => set((state) => ({
+    settings: {
+      ...state.settings,
+      ...settings,
+      wallets: {
+        ...state.settings.wallets,
+        ...settings.wallets,
+      },
+      customWallets: settings.customWallets ?? state.settings.customWallets ?? [],
+    },
+  })),
   ingredients: db.getIngredients(),
   setIngredients: (ingredients) => set({ ingredients }),
   recipes: db.getRecipes(),
