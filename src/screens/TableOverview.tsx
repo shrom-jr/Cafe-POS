@@ -141,7 +141,7 @@ const FirstFloorBlueprint = ({
         </div>
         {/* Hall – full column height */}
         <div className="col-span-4 flex min-h-[235px] flex-col">
-          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="h-full min-h-[235px] flex-1" />
+          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="table-card-tall h-full min-h-[235px] flex-1" />
         </div>
       </div>
       <OverflowGrid tables={overflow} orderData={orderData} onTableClick={onTableClick} />

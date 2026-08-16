@@ -39,14 +39,19 @@ const TableCard = ({
 }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
   const isActive = table.status !== 'free';
+  const isTall = className.split(/\s+/).includes('table-card-tall') || className.split(/\s+/).includes('h-full');
+  const isGroupHall = table.number.trim().toUpperCase() === 'H1';
+  const displayName = isTall && isGroupHall
+    ? 'H1 - GROUP HALL'
+    : tableDisplayName(table.number);
 
   const statusLabel = table.status === 'billing' ? 'BILLING' : 'OCCUPIED';
   const statusDot   = table.status === 'billing'
     ? 'bg-emerald-500 dark:bg-red-400'
     : 'bg-orange-500 dark:bg-amber-400';
   const statusBadge = table.status === 'billing'
-    ? 'border-emerald-600/60 bg-emerald-500/10 text-emerald-800 dark:border-red-500/35 dark:bg-red-500/10 dark:text-red-300'
-    : 'border-amber-500 bg-amber-500 text-white dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-400';
+    ? 'border-emerald-600/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300'
+    : 'border-amber-500/40 bg-amber-500/20 text-amber-700 dark:text-amber-400';
 
   // ── Card shell tone ───────────────────────────────────────────────────────
   const cardTone = table.status === 'free'
@@ -59,27 +64,27 @@ const TableCard = ({
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative flex w-full flex-col rounded-2xl p-2.5 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
+      className={`group relative flex w-full flex-col rounded-2xl ${isTall ? 'p-4' : 'p-2.5'} text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
     >
       {/* ── FREE state ── */}
       {!isActive ? (
         <div className="flex h-full w-full min-h-[44px] items-center justify-center">
           <span className="text-center text-xl font-black tracking-wide text-slate-950 dark:text-white leading-tight">
-            {tableDisplayName(table.number)}
+            {displayName}
           </span>
         </div>
       ) : (
         /* ── OCCUPIED / BILLING state ── */
-        <div className="flex w-full flex-1 flex-col gap-0.5">
+        <div className={`flex w-full flex-1 flex-col ${isTall ? 'justify-between' : 'gap-0.5'}`}>
           {/* Row 1: table name + status badge */}
-          <div className="flex items-center justify-between gap-1 min-w-0">
+          <div className="flex min-w-0 items-center justify-between gap-2">
             <span
-              title={tableDisplayName(table.number)}
-              className="min-w-0 truncate text-sm font-black leading-tight tracking-tight text-slate-900 dark:text-white"
+              title={displayName}
+              className="min-w-0 truncate text-xl font-black leading-tight tracking-tight text-slate-950 dark:text-white"
             >
-              {tableDisplayName(table.number)}
+              {displayName}
             </span>
-            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-bold leading-none tracking-wider ${statusBadge}`}>
+            <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-black uppercase leading-none tracking-wide ${statusBadge}`}>
               <span className={`h-1 w-1 rounded-full ${statusDot}`} />
               {statusLabel}
             </span>
@@ -92,21 +97,21 @@ const TableCard = ({
           )}
 
           {/* Row 2: guest count + optional customer pill */}
-          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            <span className="text-[11px] font-black text-slate-900 dark:text-white">
-              {table.pax ?? 1}g
+          <div className={`flex flex-wrap items-center gap-2 ${isTall ? 'justify-center py-2' : 'mt-1'}`}>
+            <span className={`${isTall ? 'text-base' : 'text-xs'} font-bold text-slate-700 dark:text-slate-200`}>
+              {table.pax ?? 1} Guest{(table.pax ?? 1) !== 1 ? 's' : ''}
             </span>
             {customerName && (
-              <span className="min-w-0 truncate rounded-full bg-slate-900 px-2 py-px text-[10px] font-bold tracking-wide text-white dark:bg-white/10 dark:text-white">
+              <span className={`${isTall ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs'} max-w-[120px] min-w-0 truncate rounded-md border border-amber-500/30 bg-amber-500/15 font-bold text-amber-700 dark:text-amber-200`}>
                 {customerName}
               </span>
             )}
           </div>
 
           {/* Row 3: timer + item count */}
-          <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-1 text-[10px] font-bold text-slate-700 dark:border-white/10 dark:text-slate-300">
-            <span className="tabular-nums">{timer || '—'}</span>
-            <span>{itemCount}i</span>
+          <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-xs font-bold dark:border-white/10">
+            <span className="tabular-nums text-amber-600 dark:text-amber-400">⏱️ {timer || '—'}</span>
+            <span className="text-slate-700 dark:text-slate-200">{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
           </div>
         </div>
       )}

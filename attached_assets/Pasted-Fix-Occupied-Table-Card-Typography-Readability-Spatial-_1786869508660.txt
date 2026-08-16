@@ -1,0 +1,31 @@
+Fix Occupied Table Card Typography, Readability & Spatial Scaling
+
+Refactor `src/components/tables/TableCard.tsx` and `src/screens/TableOverview.tsx` to fix the unreadable occupied table state:
+
+1. Restore Prominent Table Name on Occupied Cards:
+   - The table name MUST NOT shrink into micro-text. Set it to `text-xl font-black text-white dark:text-white` (or `text-slate-950` in light mode).
+   - Top Header row: Table Name on the left, compact status pill (`• OCCUPIED`) on the right with `text-[11px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/40`.
+
+2. Replace Cryptic Shorthand with Clear, Legible Badges:
+   - REMOVE cryptic abbreviations like `1g` and `3i`.
+   - Middle Row (Guest & Customer):
+     * Guest count: `text-xs font-bold text-slate-300 dark:text-slate-200` rendered as `1 Guest` (or `👤 {guests}`).
+     * Customer Pill: Rendered as a distinct, readable tag: `bg-amber-500/15 border border-amber-500/30 text-amber-300 dark:text-amber-200 px-2 py-0.5 rounded-md text-xs font-bold truncate max-w-[120px]`.
+   - Bottom Row (Live Metrics Footer):
+     * Left: Live timer rendered clearly with icon: `⏱️ {timer}` in `text-xs font-bold text-amber-400`.
+     * Right: Item count rendered clearly: `{count} {count === 1 ? 'Item' : 'Items'}` in `text-xs font-bold text-slate-300 dark:text-slate-200`.
+
+3. Fix H1 Tall Card Empty Void Layout:
+   - For the tall `H1` card (`className="h-full"`), distribute space evenly using `flex flex-col justify-between p-4`:
+     * Top: Bold `H1 - GROUP HALL` + `OCCUPIED` badge.
+     * Center: Vertically centered, prominent customer & guest block (`text-base font-bold text-white` with an expanded customer badge).
+     * Bottom: Full-width divider with bold timer and item counter.
+
+4. Free Table Cards (Maintain Clarity):
+   - Keep free table text centered, large, and bold: `text-xl font-black`.
+   - Light mode: `bg-slate-100 border-[1.5px] border-slate-900 text-slate-950`.
+   - Dark mode: `bg-[#13151F] border border-white/10 text-white`.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to ensure zero build errors.
