@@ -263,31 +263,32 @@ const OrderPanel = ({
       <div className="absolute inset-x-0 top-0 h-px pointer-events-none" style={{ background: 'rgba(255,255,255,0.07)' }} />
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)' }} />
 
-      {/* Header */}
-      <div
-        className="relative flex-shrink-0 bg-[#10121A] border-b border-white/10"
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2">
-          <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2 flex-1 truncate">
-            {order ? tableDisplayName(order.tableNumber) : 'Order'}
-          </h3>
-          {order && (
-            <span
-              key={statusLabel}
-              className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider flex-shrink-0"
-              style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
-            >
-              {statusLabel}
-            </span>
-          )}
+      {/* Consolidated metadata HUD */}
+      <div className="p-4 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl flex flex-col gap-2.5 flex-shrink-0">
+        {/* Table and actions */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-xl font-black text-white tracking-tight truncate">
+              {order ? tableDisplayName(order.tableNumber) : 'Order'}
+            </h3>
+            {order && (
+              <span
+                key={statusLabel}
+                className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider flex-shrink-0"
+                style={{ ...statusColor, animation: 'op-fade-in-scale 0.22s ease' }}
+              >
+                {statusLabel}
+              </span>
+            )}
+          </div>
           {itemCount > 0 && (
-            <>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               {onMoveTable && (
                 <button
                   onClick={onMoveTable}
                   disabled={moveDisabled}
                   data-testid="button-move-table"
-                  className="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 font-black text-xs uppercase tracking-wider flex items-center gap-1 shadow-sm active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ArrowRightLeft size={11} />
                   Move
@@ -297,86 +298,73 @@ const OrderPanel = ({
                 <button
                   onClick={() => setShowClearConfirm(true)}
                   data-testid="button-clear-order"
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all flex-shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-black text-xs uppercase tracking-wider flex items-center gap-1 shadow-sm active:scale-95 transition-all"
                 >
                   <Trash2 size={11} />
                   Clear
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
-        <div className="text-xs font-bold text-zinc-200 block px-0 py-1.5 bg-white/[0.03]">
-          <span>
-            {serverName ? `Served by ${serverName}` : 'No server assigned'}
-            {itemCount > 0 ? ` · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : ''}
-          </span>
-        </div>
-      </div>
 
-      {/* Pax selector */}
-      <div
-        className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.10)', background: '#13151F' }}
-      >
-        <Users size={14} className="text-white/40 flex-shrink-0" />
-        <span className="px-3 py-1.5 rounded-xl bg-[#181B26] border border-white/15 flex items-center gap-2 text-xs font-black text-white flex-1">Guests (Pax)</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onPaxChange?.(Math.max(1, pax - 1))}
-            disabled={pax <= 1}
-            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
-            style={BLUE_BTN}
-          >
-            <Minus size={12} />
-          </button>
-          <span className="w-6 text-center font-black text-sm tabular-nums text-white">{pax}</span>
-          <button
-            onClick={() => onPaxChange?.(pax + 1)}
-            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 text-white font-black flex items-center justify-center transition-all"
-            style={BLUE_BTN}
-          >
-            <Plus size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Customer (Khatta) Row */}
-      <div
-        className="w-full px-3.5 py-2.5 rounded-2xl bg-[#181B26] border border-white/15 flex items-center justify-between gap-2 shadow-inner flex-shrink-0"
-      >
-        <div className="flex items-center gap-2">
-          <UserCircle size={15} className="text-amber-400 flex-shrink-0" />
-          <span className="text-xs font-black text-white">Customer</span>
-        </div>
-
-        {attachedCustomer ? (
-          <div className="flex items-center gap-2 max-w-[70%]">
-            <span className="text-sm font-black text-white flex items-center gap-1.5 truncate">
-              👤 {attachedCustomer.name}
-            </span>
-            {attachedCustomer.currentDue > 0 && (
-              <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black font-mono whitespace-nowrap">
-                Due: Rs. {fmt(attachedCustomer.currentDue)}
+        {/* Customer and pax */}
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+          {attachedCustomer ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs font-black text-amber-300 truncate">
+                👤 {attachedCustomer.name}
               </span>
-            )}
+              {attachedCustomer.currentDue > 0 && (
+                <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/30 border-2 border-rose-500 text-rose-200 text-xs font-black font-mono shadow-[0_0_10px_rgba(244,63,94,0.4)] whitespace-nowrap">
+                  DUE: Rs. {fmt(attachedCustomer.currentDue)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => handleCustomerChange(null)}
+                className="text-zinc-400 hover:text-white transition-colors p-0.5 flex-shrink-0"
+                title="Detach customer"
+              >
+                <XIcon size={12} />
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={() => handleCustomerChange(null)}
-              className="text-zinc-400 hover:text-white transition-colors ml-1 p-0.5 flex-shrink-0"
-              title="Detach customer"
+              type="button"
+              onClick={() => setShowCustomerPicker(true)}
+              className="px-3 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1"
             >
-              <XIcon size={12} />
+              + Attach Customer
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 bg-[#181B26] border border-white/15 px-2.5 py-1 rounded-xl flex-shrink-0">
+            <span className="text-[10px] font-black uppercase text-zinc-300 mr-1">Pax</span>
+            <button
+              type="button"
+              onClick={() => onPaxChange?.(Math.max(1, pax - 1))}
+              disabled={pax <= 1}
+              className="w-5 h-5 rounded-md bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center disabled:opacity-25 disabled:cursor-not-allowed"
+            >
+              -
+            </button>
+            <span className="text-xs font-black text-white font-mono w-3 text-center">{pax || 1}</span>
+            <button
+              type="button"
+              onClick={() => onPaxChange?.(pax + 1)}
+              className="w-5 h-5 rounded-md bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center"
+            >
+              +
             </button>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowCustomerPicker(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95"
-          >
-            <UserCircle size={13} />
-            + Attach Customer
-          </button>
-        )}
+        </div>
+
+        {/* Server metadata */}
+        <div className="text-[11px] font-bold text-zinc-300 flex items-center justify-between">
+          <span>{serverName ? `Served by ${serverName}` : 'No server assigned'}</span>
+          <span className="font-mono">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
       {/* Customer picker overlay */}
@@ -388,7 +376,7 @@ const OrderPanel = ({
       )}
 
       {/* Item list */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-2.5">
+      <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-2.5 pr-1">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12" style={{ color: 'rgba(255,255,255,0.22)' }}>
             <ShoppingBag size={38} className="mb-3 opacity-25" />
@@ -453,12 +441,8 @@ const OrderPanel = ({
 
       {/* Footer */}
       <div
-        className="px-5 pt-4 pb-5 space-y-2.5 flex-shrink-0 relative bg-[#10121A] border-t border-white/10"
+        className="p-4 rounded-2xl bg-[#13151F] border border-white/15 flex flex-col gap-2.5 shadow-2xl flex-shrink-0 mt-auto"
       >
-        <div
-          className="absolute inset-x-0 pointer-events-none"
-          style={{ top: '-48px', height: '48px', background: 'linear-gradient(to bottom, transparent, #10121A)' }}
-        />
         <div className="flex items-center justify-between py-1">
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-black uppercase tracking-widest text-zinc-300">Total</span>
@@ -590,7 +574,7 @@ const OrderItemRow = ({
 
   return (
     <div
-      className="p-3.5 rounded-2xl bg-[#161824] border border-white/15 shadow-md mb-2.5 flex flex-col gap-2"
+      className="p-3.5 rounded-2xl bg-[#13151F] border border-white/15 shadow-md flex flex-col gap-2"
       data-testid={`order-item-${item.menuItemId}`}
       style={{
         background: rowBg,

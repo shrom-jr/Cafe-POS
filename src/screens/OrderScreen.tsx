@@ -368,10 +368,10 @@ const OrderScreen = () => {
           Tablet (sm, >=640px): side-by-side 2/3 menu + 1/3 cart
           Desktop (lg, >=1024px): same as tablet, larger cart panel
       */}
-      <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-row overflow-hidden min-h-0 p-3 gap-3">
 
         {/* ── Menu area ── */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        <div className="flex-1 h-full flex flex-col min-w-0 min-h-0 overflow-y-auto pr-1">
 
           {/* Search */}
           <div className="p-3 bg-[#0A0B0E] border-b border-white/10 flex-shrink-0">
@@ -461,7 +461,7 @@ const OrderScreen = () => {
         {/* ── Cart panel — JS-conditional, shown in landscape on any device ── */}
         {isLandscape && (
           <div
-            className="w-full lg:w-[400px] h-[calc(100vh-76px)] p-4 pr-5 pl-2 flex flex-col flex-shrink-0 min-h-0"
+            className="w-full lg:w-[410px] h-full flex-shrink-0 flex flex-col"
           >
             <OrderPanel
               order={order}
