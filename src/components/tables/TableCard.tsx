@@ -51,7 +51,7 @@ const TableCard = ({
       ? 'bg-emerald-500 dark:bg-red-400'
       : 'bg-orange-500 dark:bg-amber-400';
     const cardTone = table.status === 'free'
-     ? 'border border-slate-300/80 bg-slate-100 text-slate-900 shadow-sm transition-all duration-150 hover:bg-slate-200/90 hover:border-emerald-600 hover:shadow-md dark:border-white/10 dark:bg-[#13151F] dark:text-white'
+     ? 'border-[1.5px] border-slate-900 bg-slate-100 text-slate-950 shadow-sm transition-all duration-150 hover:bg-slate-200 hover:border-emerald-600 hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-[#13151F] dark:text-white'
     : table.status === 'billing'
        ? 'border-2 border-emerald-600 bg-emerald-50 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/60'
          : 'border-2 border-amber-500 bg-amber-50/90 shadow-md shadow-amber-500/10 dark:border-amber-500/80 dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E]';
