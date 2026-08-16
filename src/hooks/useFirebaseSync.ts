@@ -29,13 +29,7 @@ import {
   pushTablesToFirebase,
   pushPaymentsToFirebase,
   pushSettingsToFirebase,
-  pushMenuItemsToFirebase,
-  pushCategoriesToFirebase,
-  pushPillarsToFirebase,
   pushAreaOrderToFirebase,
-  pushAlcoholProductsToFirebase,
-  pushBeverageProductsToFirebase,
-  pushCigaretteProductsToFirebase,
   pushGroceryPurchasesToFirebase,
   pushInvMovementsToFirebase,
   pushInvMappingsToFirebase,
@@ -46,12 +40,6 @@ import {
 } from "@/utils/firebaseSync";
 import {
   DEFAULT_TABLES,
-  DEFAULT_PILLARS,
-  DEFAULT_CATEGORIES,
-  DEFAULT_MENU_ITEMS,
-  DEFAULT_ALCOHOL_PRODUCTS,
-  DEFAULT_BEVERAGE_PRODUCTS,
-  DEFAULT_CIGARETTE_PRODUCTS,
 } from "@/data/defaultSeeds";
 
 export function useFirebaseSync() {
@@ -96,14 +84,8 @@ export function useFirebaseSync() {
   const isRemoteTableUpdate = useRef(false);
   const isRemotePaymentUpdate = useRef(false);
   const isRemoteSettingsUpdate = useRef(false);
-  const isRemoteMenuItemsUpdate = useRef(false);
-  const isRemoteCategoriesUpdate = useRef(false);
-  const isRemotePillarsUpdate = useRef(false);
   const isRemoteAreaOrderUpdate = useRef(false);
   const isRemoteStaffUpdate = useRef(false);
-  const isRemoteAlcoholProductsUpdate = useRef(false);
-  const isRemoteBeverageProductsUpdate = useRef(false);
-  const isRemoteCigaretteProductsUpdate = useRef(false);
   const isRemoteGroceryPurchasesUpdate = useRef(false);
   const isRemoteInvMovementsUpdate = useRef(false);
   const isRemoteInvMappingsUpdate = useRef(false);
@@ -114,14 +96,8 @@ export function useFirebaseSync() {
   const hasLoadedTables = useRef(false);
   const hasLoadedPayments = useRef(false);
   const hasLoadedSettings = useRef(false);
-  const hasLoadedMenuItems = useRef(false);
-  const hasLoadedCategories = useRef(false);
-  const hasLoadedPillars = useRef(false);
   const hasLoadedAreaOrder = useRef(false);
   const hasLoadedStaff = useRef(false);
-  const hasLoadedAlcoholProducts = useRef(false);
-  const hasLoadedBeverageProducts = useRef(false);
-  const hasLoadedCigaretteProducts = useRef(false);
   const hasLoadedGroceryPurchases = useRef(false);
   const hasLoadedInvMovements = useRef(false);
   const hasLoadedInvMappings = useRef(false);
@@ -159,7 +135,7 @@ export function useFirebaseSync() {
       const currentTables = usePOSStore.getState().tables;
 
       // FIREWALL: never let an empty remote snapshot wipe non-empty local tables.
-      // AUTO-HEAL: seed from defaults when both remote and local are empty.
+      // Restore the required table layout only when both sides are empty.
       if (remoteTables.length === 0) {
         if (currentTables.length > 0) {
           pushTablesToFirebase(currentTables);
@@ -207,75 +183,22 @@ export function useFirebaseSync() {
       },
 
       setMenuItems: (remoteMenuItems: typeof menuItems) => {
-        hasLoadedMenuItems.current = true;
         const currentMenuItems = usePOSStore.getState().menuItems;
-
-        // FIREWALL: never wipe non-empty local menu with empty remote.
-        // AUTO-HEAL: seed from full default catalog when both are empty.
-        if (remoteMenuItems.length === 0) {
-          if (currentMenuItems.length > 0) {
-            pushMenuItemsToFirebase(currentMenuItems);
-            return;
-          }
-          // Both empty — auto-seed from the full menu catalog
-          isRemoteMenuItemsUpdate.current = true;
-          setMenuItems(DEFAULT_MENU_ITEMS);
-          if (DEFAULT_MENU_ITEMS.length > 0) {
-            pushMenuItemsToFirebase(DEFAULT_MENU_ITEMS);
-          }
-          return;
-        }
-
         if (JSON.stringify(currentMenuItems) !== JSON.stringify(remoteMenuItems)) {
-          isRemoteMenuItemsUpdate.current = true;
           setMenuItems(remoteMenuItems);
         }
       },
 
       setCategories: (remoteCategories: typeof categories) => {
-        hasLoadedCategories.current = true;
         const currentCategories = usePOSStore.getState().categories;
-
-        // FIREWALL + AUTO-HEAL
-        if (remoteCategories.length === 0) {
-          if (currentCategories.length > 0) {
-            pushCategoriesToFirebase(currentCategories);
-            return;
-          }
-          isRemoteCategoriesUpdate.current = true;
-          setCategories(DEFAULT_CATEGORIES);
-          if (DEFAULT_CATEGORIES.length > 0) {
-            pushCategoriesToFirebase(DEFAULT_CATEGORIES);
-          }
-          return;
-        }
-
         if (JSON.stringify(currentCategories) !== JSON.stringify(remoteCategories)) {
-          isRemoteCategoriesUpdate.current = true;
           setCategories(remoteCategories);
         }
       },
 
       setPillars: (remotePillars: typeof pillars) => {
-        hasLoadedPillars.current = true;
         const currentPillars = usePOSStore.getState().pillars;
-
-        // FIREWALL + AUTO-HEAL
-        if (remotePillars.length === 0) {
-          if (currentPillars.length > 0) {
-            pushPillarsToFirebase(currentPillars);
-            return;
-          }
-          isRemotePillarsUpdate.current = true;
-          setPillars(DEFAULT_PILLARS);
-          if (DEFAULT_PILLARS.length > 0) {
-            pushPillarsToFirebase(DEFAULT_PILLARS);
-          }
-          return;
-        }
-
         if (JSON.stringify(currentPillars) !== JSON.stringify(remotePillars)) {
-          isRemotePillarsUpdate.current = true;
           setPillars(remotePillars);
         }
       },
@@ -298,67 +221,22 @@ export function useFirebaseSync() {
       },
 
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
-        hasLoadedAlcoholProducts.current = true;
         const currentProducts = useInventoryStore.getState().alcoholProducts;
-
-        // FIREWALL + AUTO-HEAL for master inventory catalog
-        if (remoteProducts.length === 0) {
-          if (currentProducts.length > 0) {
-            pushAlcoholProductsToFirebase(currentProducts);
-            return;
-          }
-          isRemoteAlcoholProductsUpdate.current = true;
-          setAlcoholProducts(DEFAULT_ALCOHOL_PRODUCTS);
-          pushAlcoholProductsToFirebase(DEFAULT_ALCOHOL_PRODUCTS);
-          return;
-        }
-
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
-          isRemoteAlcoholProductsUpdate.current = true;
           setAlcoholProducts(remoteProducts);
         }
       },
 
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
-        hasLoadedBeverageProducts.current = true;
         const currentProducts = useInventoryStore.getState().beverageProducts;
-
-        // FIREWALL + AUTO-HEAL
-        if (remoteProducts.length === 0) {
-          if (currentProducts.length > 0) {
-            pushBeverageProductsToFirebase(currentProducts);
-            return;
-          }
-          isRemoteBeverageProductsUpdate.current = true;
-          setBeverageProducts(DEFAULT_BEVERAGE_PRODUCTS);
-          pushBeverageProductsToFirebase(DEFAULT_BEVERAGE_PRODUCTS);
-          return;
-        }
-
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
-          isRemoteBeverageProductsUpdate.current = true;
           setBeverageProducts(remoteProducts);
         }
       },
 
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
-        hasLoadedCigaretteProducts.current = true;
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
-
-        // FIREWALL + AUTO-HEAL
-        if (remoteProducts.length === 0) {
-          if (currentProducts.length > 0) {
-            pushCigaretteProductsToFirebase(currentProducts);
-            return;
-          }
-          isRemoteCigaretteProductsUpdate.current = true;
-          setCigaretteProducts(DEFAULT_CIGARETTE_PRODUCTS);
-          pushCigaretteProductsToFirebase(DEFAULT_CIGARETTE_PRODUCTS);
-          return;
-        }
-
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
-          isRemoteCigaretteProductsUpdate.current = true;
           setCigaretteProducts(remoteProducts);
         }
       },
@@ -579,41 +457,7 @@ export function useFirebaseSync() {
     pushSettingsToFirebase(settings);
   }, [settings]);
 
-  // 6. Push Local Menu Item Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedMenuItems.current) return;
-    if (isRemoteMenuItemsUpdate.current) {
-      isRemoteMenuItemsUpdate.current = false;
-      return;
-    }
-    // Never push empty menu — subscription firewall handles seeding
-    if (menuItems.length === 0) return;
-    pushMenuItemsToFirebase(menuItems);
-  }, [menuItems]);
-
-  // 7. Push Local Category Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedCategories.current) return;
-    if (isRemoteCategoriesUpdate.current) {
-      isRemoteCategoriesUpdate.current = false;
-      return;
-    }
-    if (categories.length === 0) return;
-    pushCategoriesToFirebase(categories);
-  }, [categories]);
-
-  // 8. Push Local Pillar Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedPillars.current) return;
-    if (isRemotePillarsUpdate.current) {
-      isRemotePillarsUpdate.current = false;
-      return;
-    }
-    if (pillars.length === 0) return;
-    pushPillarsToFirebase(pillars);
-  }, [pillars]);
-
-  // 9. Push Local Area Order Changes to Cloud
+  // 6. Push Local Area Order Changes to Cloud
   useEffect(() => {
     if (!hasLoadedAreaOrder.current) return;
     if (isRemoteAreaOrderUpdate.current) {
@@ -623,40 +467,7 @@ export function useFirebaseSync() {
     pushAreaOrderToFirebase(areaOrder);
   }, [areaOrder]);
 
-  // 10. Push Local Alcohol Product Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedAlcoholProducts.current) return;
-    if (isRemoteAlcoholProductsUpdate.current) {
-      isRemoteAlcoholProductsUpdate.current = false;
-      return;
-    }
-    if (alcoholProducts.length === 0) return;
-    pushAlcoholProductsToFirebase(alcoholProducts);
-  }, [alcoholProducts]);
-
-  // 11. Push Local Beverage Product Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedBeverageProducts.current) return;
-    if (isRemoteBeverageProductsUpdate.current) {
-      isRemoteBeverageProductsUpdate.current = false;
-      return;
-    }
-    if (beverageProducts.length === 0) return;
-    pushBeverageProductsToFirebase(beverageProducts);
-  }, [beverageProducts]);
-
-  // 12. Push Local Cigarette Product Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedCigaretteProducts.current) return;
-    if (isRemoteCigaretteProductsUpdate.current) {
-      isRemoteCigaretteProductsUpdate.current = false;
-      return;
-    }
-    if (cigaretteProducts.length === 0) return;
-    pushCigaretteProductsToFirebase(cigaretteProducts);
-  }, [cigaretteProducts]);
-
-  // 13. Push Local Grocery Purchase Changes to Cloud
+  // 7. Push Local Grocery Purchase Changes to Cloud
   useEffect(() => {
     if (!hasLoadedGroceryPurchases.current) return;
     if (isRemoteGroceryPurchasesUpdate.current) {

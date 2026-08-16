@@ -208,34 +208,6 @@ export async function pushLogoToFirebase(logo: string | null) {
   }
 }
 
-// Canonical menu writes only. Legacy root paths (/menuItems, /categories,
-// /pillars, and /menu) intentionally have no write functions.
-export async function pushMenuItemsToFirebase(menuItems: MenuItem[]) {
-  try {
-    await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(menuItems || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Menu Items Push FAILED]:", error);
-  }
-}
-
-// Push Categories
-export async function pushCategoriesToFirebase(categories: Category[]) {
-  try {
-    await set(ref(db, "menu/categories"), JSON.parse(JSON.stringify(categories || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Categories Push FAILED]:", error);
-  }
-}
-
-// Push Pillars
-export async function pushPillarsToFirebase(pillars: string[]) {
-  try {
-    await set(ref(db, "menu/pillars"), JSON.parse(JSON.stringify(pillars || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Pillars Push FAILED]:", error);
-  }
-}
-
 // Push Area Order
 export async function pushAreaOrderToFirebase(areaOrder: string[]) {
   try {
@@ -246,32 +218,6 @@ export async function pushAreaOrderToFirebase(areaOrder: string[]) {
 }
 
 // Push Alcohol Products
-export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
-  try {
-    await set(ref(db, "alcoholProducts"), JSON.parse(JSON.stringify(products || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Alcohol Products Push FAILED]:", error);
-  }
-}
-
-// Push Beverage Products
-export async function pushBeverageProductsToFirebase(products: BeverageProduct[]) {
-  try {
-    await set(ref(db, "beverageProducts"), JSON.parse(JSON.stringify(products || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Beverage Products Push FAILED]:", error);
-  }
-}
-
-// Push Cigarette Products
-export async function pushCigaretteProductsToFirebase(products: CigaretteProduct[]) {
-  try {
-    await set(ref(db, "cigaretteProducts"), JSON.parse(JSON.stringify(products || [])));
-  } catch (error) {
-    console.error("❌ [Firebase Cigarette Products Push FAILED]:", error);
-  }
-}
-
 // Push Grocery Purchases
 export async function pushGroceryPurchasesToFirebase(purchases: GroceryPurchase[]) {
   try {

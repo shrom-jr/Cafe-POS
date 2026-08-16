@@ -10,7 +10,15 @@
 const DB_URL =
   'https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app';
 
-const MENU_PATHS = ['menuItems', 'pillars', 'categories', 'menu'];
+const MENU_PATHS = [
+  'menuItems',
+  'categories',
+  'pillars',
+  'alcoholProducts',
+  'beverageProducts',
+  'cigaretteProducts',
+  'menu',
+];
 
 async function nullifyNode(path) {
   const res = await fetch(`${DB_URL}/${path}.json`, {
@@ -42,7 +50,7 @@ async function main() {
   for (const path of MENU_PATHS) {
     await nullifyNode(path);
   }
-  console.log('🎉 Legacy menu paths nullified. Protected non-menu nodes were not touched.');
+  console.log('🎉 Menu and legacy inventory catalog paths nullified. Protected nodes were not touched.');
 }
 
 main().catch((error) => {
