@@ -265,16 +265,16 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 
   // ── Glowing PIN dots ──────────────────────────────────────────────────────
   const PinDots = ({ filled, error }: { filled: number; error?: boolean }) => (
-    <div className="flex items-center justify-center gap-3 mb-6">
+    <div className="flex items-center justify-center gap-4 mb-6">
       {[0,1,2,3].map((i) => (
         <div
           key={i}
-          className={`h-3.5 w-3.5 rounded-full border-2 transition-all duration-150 ${
+          className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${
             filled > i
               ? error
                 ? 'bg-red-500 border-red-500 scale-110'
-                : 'bg-amber-400 border-amber-400 shadow-lg shadow-amber-400/50 scale-110'
-              : 'bg-transparent border-white/30'
+                : 'bg-amber-400 border-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.8)] scale-110'
+              : 'border-white/60 bg-white/10 shadow-sm'
           }`}
         />
       ))}
@@ -303,13 +303,16 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
         {view === 'pin' && (
           <>
             <div className="flex flex-col items-center text-center">
-              <LockKeyhole className="text-xl text-amber-400 mb-1.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]" size={20} aria-hidden="true" />
-              <p className="text-xs font-black tracking-widest text-slate-200 dark:text-zinc-200 uppercase">
+              <LockKeyhole className="text-xl text-amber-400 mb-1 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]" size={20} aria-hidden="true" />
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-400 mb-2.5">
                 ENTER YOUR PIN TO ACCESS
               </p>
-              <div className="flex items-center gap-2 mt-1 mb-5">
-                <span className="text-base font-black text-white tracking-wide">{user.name}</span>
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 tracking-wider">
+              <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-white/[0.07] border border-white/15 shadow-inner mb-6">
+                <span className="w-5 h-5 rounded-md bg-[#1E2235] text-[10px] font-black text-white flex items-center justify-center border border-white/10">
+                  {initials(user.name)}
+                </span>
+                <span className="text-sm font-black text-white tracking-wide">{user.name}</span>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
                   {ROLE_LABEL[user.role]}
                 </span>
               </div>

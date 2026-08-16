@@ -1,0 +1,36 @@
+Phase 2 Polish: Fix PIN Modal Header Text Merging & Boost Empty PIN Indicator Contrast
+
+Refactor the PIN login modal in `src/screens/PinLoginScreen.tsx` (or `src/components/auth/PinModal.tsx`):
+
+1. Header Separation & Profile Chip:
+   - Separate the instruction label and staff profile to prevent text blending:
+     * Lock Icon: `text-amber-400 text-xl mb-1 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]`.
+     * Instruction Subtext: `<p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-400 mb-2.5">ENTER YOUR PIN TO ACCESS</p>`.
+     * Staff Profile Chip: Wrap the staff details inside a dedicated, elevated chip:
+       `<div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-white/[0.07] border border-white/15 shadow-inner mb-6">
+          <span className="w-5 h-5 rounded-md bg-[#1E2235] text-[10px] font-black text-white flex items-center justify-center border border-white/10">
+            {staff.initials || staff.name.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="text-sm font-black text-white tracking-wide">{staff.name}</span>
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            {staff.role}
+          </span>
+        </div>`
+
+2. High-Contrast PIN Indicator Dots:
+   - Replace muted gray circles with crisp, clearly visible rings:
+     * Container: `flex items-center justify-center gap-4 mb-6`.
+     * Unfilled / Empty Dot:
+       `w-3.5 h-3.5 rounded-full border-2 border-white/60 bg-white/10 shadow-sm transition-all duration-150`
+     * Filled / Active Dot:
+       `w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.8)] scale-110 transition-all duration-150`
+     * Error State: Apply horizontal shake animation on incorrect PIN.
+
+3. Keep Keypad & Modal Styling Intact:
+   - Retain white tactile rectangular keycaps (`1–9`, `0`, `⌫`).
+   - Retain the pure black glass container background (`bg-[#0E1017]/95 border border-white/15`).
+   - Retain the styled `🔑 FORGOT PIN?` action button at the bottom.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, Firebase auth/reset flows, or permission routing.
+- Run `npm run build` to confirm zero TypeScript or build errors.
