@@ -7,7 +7,9 @@ import TableCard from '@/components/tables/TableCard';
 import AppLayout from '@/components/ui/AppLayout';
 import { CafeTable } from '@/types/pos';
 import { compareTableNames } from '@/utils/tableName';
+import { VENUE_AREA_ORDER } from '@/utils/venueSeed';
 
+// ── Clock ─────────────────────────────────────────────────────────────────────
 function useClock() {
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
@@ -17,63 +19,343 @@ function useClock() {
   return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Per-area color palette — non-status hues only ──────────────────────────
+// ── Per-area color palette ────────────────────────────────────────────────────
 export const AREA_COLORS = [
-  // Slot 0 - Ground Floor (Electric Sky Blue)
   { text: 'text-sky-400',    bg: 'bg-sky-500',    glow: 'shadow-sky-500/50',    border: 'border-sky-500/30'    },
-  // Slot 1 - Cabins (Vivid Purple)
   { text: 'text-purple-400', bg: 'bg-purple-500', glow: 'shadow-purple-500/50', border: 'border-purple-500/30' },
-  // Slot 2 - 1st Floor (Seafoam Teal)
   { text: 'text-teal-400',   bg: 'bg-teal-500',   glow: 'shadow-teal-500/50',   border: 'border-teal-500/30'   },
-  // Slot 3 - Soft Gold
   { text: 'text-amber-300',  bg: 'bg-amber-400',  glow: 'shadow-amber-400/50',  border: 'border-amber-400/30'  },
-  // Slot 4 - Royal Indigo
   { text: 'text-indigo-400', bg: 'bg-indigo-500', glow: 'shadow-indigo-500/50', border: 'border-indigo-500/30' },
-  // Slot 5 - Silver
-  { text: 'text-foreground', bg: 'bg-foreground', glow: 'shadow-foreground/40', border: 'border-border' },
+  { text: 'text-foreground', bg: 'bg-foreground', glow: 'shadow-foreground/40', border: 'border-border'         },
 ];
 
-// ── Area section box ──────────────────────────────────────────────────────────
-interface AreaBoxProps {
-  areaName: string;
-  areaIndex: number;
-  tables: CafeTable[];
-  tableOrderData: Record<string, { itemCount: number; customerName?: string }>;
-  onTableClick: (table: CafeTable) => void;
+// ── Known venue area names ────────────────────────────────────────────────────
+const AREA_FIRST_FLOOR = 'First Floor (Huts & Hall)';
+const AREA_LOUNGE      = 'Sofa & Lounge';
+const AREA_BAR         = 'Bar Counter';
+const AREA_CABINS      = 'Private Cabins';
+const KNOWN_VENUE_AREAS = new Set([AREA_FIRST_FLOOR, AREA_LOUNGE, AREA_BAR, AREA_CABINS]);
+
+// Canonical table names per area (lowercase for lookup)
+const KNOWN_FIRST_FLOOR = new Set(['h3-b','h3-a','h2-b','h2-a','h1']);
+const KNOWN_LOUNGE      = new Set(['sofa','l4','l3','l2','l1']);
+const KNOWN_BAR         = new Set(['bar 1','bar 2']);
+const KNOWN_CABINS      = new Set(['r1','r2','r3','r4','r5','r6','r7']);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function findTable(tables: CafeTable[], name: string): CafeTable | undefined {
+  const k = name.trim().toLowerCase();
+  return tables.find(t => t.number.trim().toLowerCase() === k);
 }
 
-const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: AreaBoxProps) => {
-  const theme         = AREA_COLORS[areaIndex % AREA_COLORS.length];
+function overflowTables(tables: CafeTable[], known: Set<string>): CafeTable[] {
+  return tables.filter(t => !known.has(t.number.trim().toLowerCase()));
+}
+
+type OrderData = Record<string, { itemCount: number; customerName?: string }>;
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+/** Non-interactive landmark badge (TV area, parking, gate, etc.) */
+const LandmarkTile = ({ label }: { label: string }) => (
+  <div className="flex min-h-[72px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 py-3 text-center text-xs font-bold text-slate-500 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-500">
+    {label}
+  </div>
+);
+
+/** Section heading with colored accent bar */
+const AreaHeader = ({ label, areaIndex }: { label: string; areaIndex: number }) => {
+  const theme = AREA_COLORS[areaIndex % AREA_COLORS.length];
+  return (
+    <div className="mb-3 flex items-center gap-3 px-1">
+      <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
+      <span className="text-sm font-black tracking-wider uppercase text-slate-800 dark:text-emerald-400">
+        {label}
+      </span>
+    </div>
+  );
+};
+
+/** Renders a single TableCard slot — renders nothing if table is undefined. */
+const Slot = ({
+  table, orderData, onTableClick, className,
+}: { table: CafeTable | undefined; orderData: OrderData; onTableClick: (t: CafeTable) => void; className?: string }) => {
+  if (!table) return null;
+  const d = orderData[table.id] || { itemCount: 0 };
+  return (
+    <TableCard
+      table={table}
+      itemCount={d.itemCount}
+      customerName={d.customerName}
+      showSection={false}
+      onClick={() => onTableClick(table)}
+      className={className}
+    />
+  );
+};
+
+/** Generic responsive grid fallback for custom/admin-added tables. */
+const OverflowGrid = ({
+  tables, orderData, onTableClick,
+}: { tables: CafeTable[]; orderData: OrderData; onTableClick: (t: CafeTable) => void }) => {
+  if (tables.length === 0) return null;
+  return (
+    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {tables.map(t => <Slot key={t.id} table={t} orderData={orderData} onTableClick={onTableClick} />)}
+    </div>
+  );
+};
+
+// ── Area-specific blueprint sections ─────────────────────────────────────────
+
+/**
+ * First Floor (Huts & Hall) blueprint:
+ *   Col 1 │ H3-B (top)  │
+ *          │ H3-A (bot)  │
+ *   Col 2 │ H2-B (top)  │
+ *          │ H2-A (bot)  │
+ *   Col 3 │ H1 (tall)   │
+ */
+const FirstFloorBlueprint = ({
+  tables, orderData, onTableClick,
+}: { tables: CafeTable[]; orderData: OrderData; onTableClick: (t: CafeTable) => void }) => {
+  const h3b = findTable(tables, 'H3-B');
+  const h3a = findTable(tables, 'H3-A');
+  const h2b = findTable(tables, 'H2-B');
+  const h2a = findTable(tables, 'H2-A');
+  const h1  = findTable(tables, 'H1');
+  const overflow = overflowTables(tables, KNOWN_FIRST_FLOOR);
 
   return (
-    <div>
-      {/* Section header — clean and intentionally free of occupancy chips */}
-      <div className="mb-3 flex items-center gap-3 px-1">
-        {/* Colored accent bar */}
-        <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
+    <div className="flex flex-col gap-3">
+      {/* Blueprint row: 3 flexbox columns */}
+      <div className="flex gap-3">
+        {/* Hut 3 */}
+        <div className="flex flex-1 flex-col gap-3">
+          <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={h3a} orderData={orderData} onTableClick={onTableClick} />
+        </div>
+        {/* Hut 2 */}
+        <div className="flex flex-1 flex-col gap-3">
+          <Slot table={h2b} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={h2a} orderData={orderData} onTableClick={onTableClick} />
+        </div>
+        {/* Hall – spans full column height */}
+        <div className="flex flex-1 flex-col">
+          <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="flex-1 h-full" />
+        </div>
+      </div>
+      <OverflowGrid tables={overflow} orderData={orderData} onTableClick={onTableClick} />
+    </div>
+  );
+};
 
-        {/* Area name */}
-        <span className="text-sm font-black tracking-wider uppercase text-slate-800 dark:text-emerald-400">
-          {areaName}
-        </span>
+/**
+ * Ground Floor 3-column composite blueprint:
+ *
+ *  LEFT (Sofa & Lounge) │ MIDDLE (Bar Counter) │ RIGHT (Private Cabins)
+ *  ─────────────────────┼──────────────────────┼──────────────────────
+ *  Sofa (wide)          │ Bar 1                │ R3 │ R1  (back quad)
+ *  L4  │ L3             │ Bar 2                │ R4 │ R2
+ *  L2  │ L1             │ 🅿️ Parking           │ R5         (front strip)
+ *  📺 TV Area           │ ⛩️ Main Gate          │ R6
+ *                       │                      │ R7
+ */
+const GroundFloorBlueprint = ({
+  loungeTs, barTs, cabinTs, orderData, onTableClick,
+}: {
+  loungeTs: CafeTable[];
+  barTs:    CafeTable[];
+  cabinTs:  CafeTable[];
+  orderData: OrderData;
+  onTableClick: (t: CafeTable) => void;
+}) => {
+  // Lounge tables
+  const sofa = findTable(loungeTs, 'Sofa');
+  const l4   = findTable(loungeTs, 'L4');
+  const l3   = findTable(loungeTs, 'L3');
+  const l2   = findTable(loungeTs, 'L2');
+  const l1   = findTable(loungeTs, 'L1');
+  const overflowLounge = overflowTables(loungeTs, KNOWN_LOUNGE);
 
+  // Bar tables
+  const bar1 = findTable(barTs, 'Bar 1');
+  const bar2 = findTable(barTs, 'Bar 2');
+  const overflowBar = overflowTables(barTs, KNOWN_BAR);
+
+  // Cabin tables
+  const r1 = findTable(cabinTs, 'R1');
+  const r2 = findTable(cabinTs, 'R2');
+  const r3 = findTable(cabinTs, 'R3');
+  const r4 = findTable(cabinTs, 'R4');
+  const r5 = findTable(cabinTs, 'R5');
+  const r6 = findTable(cabinTs, 'R6');
+  const r7 = findTable(cabinTs, 'R7');
+  const overflowCabins = overflowTables(cabinTs, KNOWN_CABINS);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* ── LEFT: Sofa & Lounge ── */}
+      <div className="flex flex-col gap-3">
+        <AreaHeader label="Sofa & Lounge" areaIndex={1} />
+        {/* Sofa — wide single card */}
+        <Slot table={sofa} orderData={orderData} onTableClick={onTableClick} />
+        {/* 2 × 2 lounge grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={l4} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={l3} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={l2} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={l1} orderData={orderData} onTableClick={onTableClick} />
+        </div>
+        <LandmarkTile label="📺  TV Area" />
+        <OverflowGrid tables={overflowLounge} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
-      {/* Table grid — defined borders keep each occupancy state instantly legible */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-        {tables.map((table) => {
-          const data = tableOrderData[table.id] || { itemCount: 0 };
-          return (
-            <TableCard
-              key={table.id}
-              table={table}
-              itemCount={data.itemCount}
-              customerName={data.customerName}
-              showSection={false}
-              onClick={() => onTableClick(table)}
-            />
-          );
-        })}
+      {/* ── MIDDLE: Bar Counter + Landmarks ── */}
+      <div className="flex flex-col gap-3">
+        <AreaHeader label="Bar Counter" areaIndex={2} />
+        <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} />
+        <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} />
+        <LandmarkTile label="🅿️  Parking Area" />
+        <LandmarkTile label="⛩️  Main Gate" />
+        <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
+      </div>
+
+      {/* ── RIGHT: Private Cabins ── */}
+      <div className="flex flex-col gap-3">
+        <AreaHeader label="Private Cabins" areaIndex={3} />
+        {/* Back Quad: R3/R1 top, R4/R2 bottom */}
+        <div className="grid grid-cols-2 gap-3">
+          <Slot table={r3} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={r1} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={r4} orderData={orderData} onTableClick={onTableClick} />
+          <Slot table={r2} orderData={orderData} onTableClick={onTableClick} />
+        </div>
+        {/* Front Strip */}
+        <Slot table={r5} orderData={orderData} onTableClick={onTableClick} />
+        <Slot table={r6} orderData={orderData} onTableClick={onTableClick} />
+        <Slot table={r7} orderData={orderData} onTableClick={onTableClick} />
+        <OverflowGrid tables={overflowCabins} orderData={orderData} onTableClick={onTableClick} />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Full venue 2-D blueprint — shown when "All" filter is active.
+ * Unknown areas (admin-added) fall back to the generic grid below the blueprint.
+ */
+const VenueBlueprintRenderer = ({
+  sections, tablesByArea, tableOrderData, onTableClick,
+}: {
+  sections:      string[];
+  tablesByArea:  Record<string, CafeTable[]>;
+  tableOrderData: OrderData;
+  onTableClick:  (t: CafeTable) => void;
+}) => {
+  const unknownSections = sections.filter(s => !KNOWN_VENUE_AREAS.has(s));
+  const firstFloorTs    = tablesByArea[AREA_FIRST_FLOOR] ?? [];
+  const loungeTs        = tablesByArea[AREA_LOUNGE]      ?? [];
+  const barTs           = tablesByArea[AREA_BAR]         ?? [];
+  const cabinTs         = tablesByArea[AREA_CABINS]      ?? [];
+  const groundFloorVisible = loungeTs.length > 0 || barTs.length > 0 || cabinTs.length > 0;
+
+  return (
+    <div className="flex flex-col gap-10">
+      {/* ── First Floor ── */}
+      {firstFloorTs.length > 0 && (
+        <section>
+          <AreaHeader label={AREA_FIRST_FLOOR} areaIndex={0} />
+          <FirstFloorBlueprint
+            tables={firstFloorTs}
+            orderData={tableOrderData}
+            onTableClick={onTableClick}
+          />
+        </section>
+      )}
+
+      {/* ── Ground Floor divider ── */}
+      {groundFloorVisible && (
+        <section>
+          <div className="mb-4 flex items-center gap-3 px-1">
+            <span className="flex-shrink-0 w-[3px] h-5 rounded-full bg-slate-400 dark:bg-zinc-600" />
+            <span className="text-xs font-black tracking-widest uppercase text-slate-500 dark:text-zinc-500">
+              Ground Floor & Courtyard
+            </span>
+          </div>
+          <GroundFloorBlueprint
+            loungeTs={loungeTs}
+            barTs={barTs}
+            cabinTs={cabinTs}
+            orderData={tableOrderData}
+            onTableClick={onTableClick}
+          />
+        </section>
+      )}
+
+      {/* ── Unknown / custom areas ── */}
+      {unknownSections.map((section, i) => {
+        const theme = AREA_COLORS[(4 + i) % AREA_COLORS.length];
+        return (
+          <section key={section}>
+            <div className="mb-3 flex items-center gap-3 px-1">
+              <span className={`flex-shrink-0 w-[3px] h-5 rounded-full ${theme.bg} shadow-sm ${theme.glow}`} />
+              <span className="text-sm font-black tracking-wider uppercase text-slate-800 dark:text-emerald-400">
+                {section}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {(tablesByArea[section] ?? []).map(t => (
+                <Slot key={t.id} table={t} orderData={tableOrderData} onTableClick={onTableClick} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+};
+
+/**
+ * Single-section renderer used when a filter pill is active.
+ * Uses the area-specific spatial blueprint for known areas; generic grid otherwise.
+ */
+const SectionRenderer = ({
+  section, tables, tableOrderData, onTableClick, tablesByArea,
+}: {
+  section:        string;
+  tables:         CafeTable[];
+  tableOrderData: OrderData;
+  onTableClick:   (t: CafeTable) => void;
+  tablesByArea:   Record<string, CafeTable[]>;
+}) => {
+  if (section === AREA_FIRST_FLOOR) {
+    return (
+      <div>
+        <AreaHeader label={AREA_FIRST_FLOOR} areaIndex={0} />
+        <FirstFloorBlueprint tables={tables} orderData={tableOrderData} onTableClick={onTableClick} />
+      </div>
+    );
+  }
+
+  if (section === AREA_LOUNGE || section === AREA_BAR || section === AREA_CABINS) {
+    return (
+      <GroundFloorBlueprint
+        loungeTs={section === AREA_LOUNGE ? tables : (tablesByArea[AREA_LOUNGE] ?? [])}
+        barTs={section === AREA_BAR ? tables : (tablesByArea[AREA_BAR] ?? [])}
+        cabinTs={section === AREA_CABINS ? tables : (tablesByArea[AREA_CABINS] ?? [])}
+        orderData={tableOrderData}
+        onTableClick={onTableClick}
+      />
+    );
+  }
+
+  // Generic grid for custom areas
+  return (
+    <div>
+      <AreaHeader label={section} areaIndex={4} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+        {tables.map(t => <Slot key={t.id} table={t} orderData={tableOrderData} onTableClick={onTableClick} />)}
       </div>
     </div>
   );
@@ -81,21 +363,21 @@ const AreaBox = ({ areaName, areaIndex, tables, tableOrderData, onTableClick }: 
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 const TableOverview = () => {
-  const { tables } = useTables();
-  const { orders } = useOrders();
-  const settings = usePOSStore((s) => s.settings);
-  const areaOrder = usePOSStore((s) => s.areaOrder);
-  const navigate = useNavigate();
-  const clock = useClock();
+  const { tables }  = useTables();
+  const { orders }  = useOrders();
+  const settings    = usePOSStore(s => s.settings);
+  const areaOrder   = usePOSStore(s => s.areaOrder);
+  const navigate    = useNavigate();
+  const clock       = useClock();
   const [selectedSection, setSelectedSection] = useState('All');
 
-  const tableOrderData = useMemo(() => {
-    const map: Record<string, { itemCount: number; customerName?: string }> = {};
-    orders.forEach((order) => {
+  // Build per-table order data (itemCount + attached customer name)
+  const tableOrderData = useMemo<OrderData>(() => {
+    const map: OrderData = {};
+    orders.forEach(order => {
       if (order.status === 'active' || order.status === 'billed') {
-        const itemCount = order.items.reduce((s, i) => s + i.quantity, 0);
         map[order.tableId] = {
-          itemCount,
+          itemCount:    order.items.reduce((s, i) => s + i.quantity, 0),
           customerName: order.attachedCustomer?.name,
         };
       }
@@ -104,16 +386,18 @@ const TableOverview = () => {
   }, [orders]);
 
   const counts = useMemo(() => ({
-    available: tables.filter((t) => t.status === 'free').length,
-    active:    tables.filter((t) => t.status !== 'free').length,
+    available: tables.filter(t => t.status === 'free').length,
+    active:    tables.filter(t => t.status !== 'free').length,
   }), [tables]);
 
-  // Ordered section list: areaOrder first, then any orphaned sections
+  // Section order: venue areas first (in VENUE_AREA_ORDER), then areaOrder, then orphans
   const sections = useMemo(() => {
-    const tableSections = tables.map((t) => t.section?.trim() || 'Ground Floor');
-    const seen = new Set<string>();
+    const tableSections = tables.map(t => t.section?.trim() || 'Ground Floor');
+    const seen   = new Set<string>();
     const result: string[] = [];
-    for (const name of [...areaOrder, ...tableSections]) {
+    // Use VENUE_AREA_ORDER as the preferred ordering base
+    const preferred = [...VENUE_AREA_ORDER, ...areaOrder];
+    for (const name of [...preferred, ...tableSections]) {
       if (name && !seen.has(name) && tableSections.includes(name)) {
         seen.add(name);
         result.push(name);
@@ -122,28 +406,30 @@ const TableOverview = () => {
     return result;
   }, [tables, areaOrder]);
 
-  // Tables per area, sorted by name within each area
+  // Tables grouped by area, sorted by name within each area
   const tablesByArea = useMemo(() => {
     const map: Record<string, CafeTable[]> = {};
     for (const section of sections) {
       map[section] = tables
-        .filter((t) => (t.section?.trim() || 'Ground Floor') === section)
+        .filter(t => (t.section?.trim() || 'Ground Floor') === section)
         .sort((a, b) => compareTableNames(a.number, b.number));
     }
     return map;
   }, [tables, sections]);
 
-  // Which areas to render based on selected tab
-  const visibleSections = selectedSection === 'All' ? sections : [selectedSection];
+  const handleTableClick = (table: CafeTable) => navigate(`/order/${table.id}`);
 
-  const handleTableClick = (table: CafeTable) => {
-    navigate(`/order/${table.id}`);
-  };
+  // Reset section filter if it no longer exists (e.g. after admin deletion)
+  useEffect(() => {
+    if (selectedSection !== 'All' && !sections.includes(selectedSection)) {
+      setSelectedSection('All');
+    }
+  }, [sections, selectedSection]);
 
-  // Compact status badge + live clock for the table filter row.
+  // ── Status bar + clock ───────────────────────────────────────────────────
   const tableStatusBar = (
     <div className="flex flex-shrink-0 items-center gap-3">
-        <span className="flex items-center gap-3 rounded-xl border border-slate-300/80 bg-white px-3.5 py-2 text-xs font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <span className="flex items-center gap-3 rounded-xl border border-slate-300/80 bg-white px-3.5 py-2 text-xs font-bold shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 dark:bg-emerald-400" />
           Available {counts.available}
@@ -171,11 +457,11 @@ const TableOverview = () => {
           <div className="flex flex-col gap-6">
             {/* ── Section filter pills ── */}
             <div className="flex w-full items-center justify-between gap-3" role="tablist" aria-label="Table sections">
-                <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
-                {['All', ...sections].map((section) => {
+              <div className="inline-flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
+                {['All', ...sections].map(section => {
                   const count = section === 'All'
                     ? tables.length
-                    : tables.filter((t) => (t.section?.trim() || 'Ground Floor') === section).length;
+                    : tables.filter(t => (t.section?.trim() || 'Ground Floor') === section).length;
                   const active = selectedSection === section;
                   return (
                     <button
@@ -183,10 +469,10 @@ const TableOverview = () => {
                       role="tab"
                       aria-selected={active}
                       onClick={() => setSelectedSection(section)}
-                       className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
+                      className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.98] ${
                         active
-                           ? 'bg-emerald-600 font-bold text-white shadow-sm'
-                           : 'border-0 bg-transparent font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
+                          ? 'bg-emerald-600 font-bold text-white shadow-sm'
+                          : 'border-0 bg-transparent font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
                       }`}
                     >
                       {section} <span className={active ? 'text-white' : 'text-slate-700 dark:text-zinc-300'}>({count})</span>
@@ -197,19 +483,23 @@ const TableOverview = () => {
               {tableStatusBar}
             </div>
 
-            {/* ── Area sections — modern state tiles on the studio canvas ── */}
-            <div className="flex flex-col gap-8">
-              {visibleSections.map((section) => (
-                <AreaBox
-                  key={section}
-                  areaName={section}
-                  areaIndex={Math.max(0, sections.indexOf(section))}
-                  tables={tablesByArea[section] ?? []}
-                  tableOrderData={tableOrderData}
-                  onTableClick={handleTableClick}
-                />
-              ))}
-            </div>
+            {/* ── Blueprint / area renderer ── */}
+            {selectedSection === 'All' ? (
+              <VenueBlueprintRenderer
+                sections={sections}
+                tablesByArea={tablesByArea}
+                tableOrderData={tableOrderData}
+                onTableClick={handleTableClick}
+              />
+            ) : (
+              <SectionRenderer
+                section={selectedSection}
+                tables={tablesByArea[selectedSection] ?? []}
+                tableOrderData={tableOrderData}
+                onTableClick={handleTableClick}
+                tablesByArea={tablesByArea}
+              />
+            )}
           </div>
         )}
       </div>

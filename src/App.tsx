@@ -18,7 +18,8 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { subscribeToStaff } from '@/utils/firebaseSync';
-import { subscribeToCustomers, writeCustomer, writeCustomersToFirebase, type FirebaseCustomerRecord } from '@/utils/firebaseSync';
+import { subscribeToCustomers, writeCustomer, writeCustomersToFirebase, type FirebaseCustomerRecord, subscribeToTables } from '@/utils/firebaseSync';
+import { ensureVenueSeed } from '@/utils/venueSeed';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import OfflineBanner from '@/components/OfflineBanner';
@@ -121,6 +122,18 @@ const App = () => {
     );
 
     return unsubscribe;
+  }, []);
+
+  // Seed the 19 venue tables into Firebase on the very first snapshot (idempotent).
+  useEffect(() => {
+    let done = false;
+    const unsub = subscribeToTables((tables) => {
+      if (done) return;
+      done = true;
+      unsub();
+      void ensureVenueSeed(tables);
+    });
+    return unsub;
   }, []);
 
   useEffect(() => {

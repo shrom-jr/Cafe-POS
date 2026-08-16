@@ -1,0 +1,49 @@
+Phase 2 Master Build: Dynamic Firebase Realtime DB 2D Spatial Floor Blueprint & Full Admin CRUD Integration
+
+Refactor `src/screens/TableOverview.tsx`, `src/screens/admin/AdminTables.tsx`, `src/components/tables/TableCard.tsx`, and table data services to implement the 19-table physical venue blueprint dynamically linked to Firebase Realtime Database:
+
+1. Firebase Realtime Database Schema & Seed Migration:
+   - Ensure the database schema under `/areas` and `/tables` dynamically structures your venue:
+     * Area 1 (`first-floor`): Name: "First Floor (Huts & Hall)", Order: 1, Tables: ["H3-B", "H3-A", "H2-B", "H2-A", "H1"]
+     * Area 2 (`lounge`): Name: "Sofa & Lounge", Order: 2, Tables: ["Sofa", "L4", "L3", "L2", "L1"]
+     * Area 3 (`bar`): Name: "Bar Counter", Order: 3, Tables: ["Bar 1", "Bar 2"]
+     * Area 4 (`cabins`): Name: "Private Cabins", Order: 4, Tables: ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]
+   - If Firebase RTDB has old demo tables (`R1-R5, Cabin 1-5, H1-H5`), execute a clean migration/seed check so it initializes the 19 venue tables while preserving active order schema structure.
+
+2. Admin Panel CRUD & Real-Time Sync (`AdminTables.tsx`):
+   - Ensure the Admin Panel allows full management of these tables and areas:
+     * Add new tables, rename existing tables (e.g., changing "R1" to "VIP 1"), reassign capacity, reorder, or delete tables.
+     * Add new areas or edit area titles.
+     * All changes immediately persist to Firebase RTDB (`/areas`, `/tables`) and reflect live across all connected client screens without reloading.
+
+3. 2D Spatial Floor Blueprint Layout (`TableOverview.tsx`):
+   - Render the floor dynamically based on the Firebase RTDB areas/tables according to the physical blueprint:
+     * TOP SECTION — FIRST FLOOR (HUTS & HALL):
+       - Hut 3 column: Stacked `H3-B` (top) and `H3-A` (bottom).
+       - Hut 2 column: Stacked `H2-B` (top) and `H2-A` (bottom).
+       - Hall column: Standalone large card for `H1` (Hall).
+     * BOTTOM SECTION — GROUND FLOOR & COURTYARD:
+       - Left Column (Sofa & Lounge): Wide `Sofa` group card at the top, 2x2 grid for `L4`, `L3`, `L2`, `L1`, and bottom non-clickable landmark `[ 📺 TV AREA ]`.
+       - Middle Column (Service & Access): `Bar Counter` housing `Bar 1` and `Bar 2`, followed by landmark tiles for `[ 🅿️ Parking Area ]` and `[ ⛩️ Main Gate ]`.
+       - Right Column (Roofed Cabins): Back Quad (`R3`, `R1` top row; `R4`, `R2` bottom row) and Front Strip (`R5`, `R6`, `R7` stacked vertically).
+     * If an admin adds additional tables to an area, render them dynamically inside that area’s flex/grid flow.
+
+4. Dual-Theme Styling System (`TableCard.tsx`, `TableOverview.tsx`):
+   - Light Mode:
+     * Background Canvas: Pure crisp white (`bg-white`).
+     * Free Table Cards: Solid slate tile (`bg-slate-100 hover:bg-slate-200`) with a balanced 1.5px solid black border (`border-[1.5px] border-slate-900 rounded-2xl shadow-sm`) and bold black table name (`text-slate-950 font-black text-2xl text-center`).
+     * Occupied Table Cards: Warm cream base (`bg-amber-50/90`) with solid 2px amber border (`border-2 border-amber-500 shadow-md rounded-2xl`), solid amber status pill, and dark text.
+     * Landmark Badges (TV, Parking, Gate): Clean dashed container (`border border-dashed border-slate-300 bg-slate-50 text-slate-500 rounded-xl text-xs font-bold text-center py-2`).
+   - Dark Mode:
+     * Background Canvas: Deep carbon black (`bg-[#0A0B0E]`).
+     * Free Table Cards: Elevated graphite tile (`bg-[#13151F] border border-white/10 rounded-2xl text-white font-black text-2xl text-center`).
+     * Occupied Table Cards: Warm dark gradient (`bg-gradient-to-b from-[#221813] to-[#14100E] border border-amber-500/80 shadow-md rounded-2xl`).
+     * Landmark Badges: Muted dark dashed container (`border border-dashed border-zinc-800 bg-zinc-900/40 text-zinc-500 rounded-xl text-xs font-bold text-center py-2`).
+
+5. Segmented Navigation & Floor Filters:
+   - Include filter pills: `[ All (19) ]`, `[ Cabins (7) ]`, `[ Lounge (5) ]`, `[ 1st Floor (5) ]`, `[ Bar (2) ]`.
+   - Clicking a filter highlights only that section on the blueprint or smooth-scrolls to it.
+
+STRICT CONSTRAINTS:
+- Retain all POS ordering flows, drawer openings on table click, `usePOSStore` actions, live timers, customer pill assignments, and billing states.
+- Run `npm run build` to confirm zero TypeScript or build errors.

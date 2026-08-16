@@ -1,3 +1,4 @@
+- [Venue Blueprint & Seed](venue-blueprint.md) — 19 canonical tables; idempotent seed in App.tsx; spatial 2D blueprint layout details and component names
 - [Print Engine Architecture](print-engine.md) — unified firePrintJob() replaces triggerPrint/portal polling; ThermalReceiptLayout kept only for AdminPanel ReceiptPreview
 - [Dynamic Pillars Architecture](dynamic-pillars.md) — pillars are a persisted string[] in store/db, not a hardcoded union; CategoryPillar = string
 - [Firebase Database Singleton](firebase-database-singleton.md) — connection telemetry must reuse the app's configured db instance to avoid duplicate database initialization

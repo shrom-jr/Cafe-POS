@@ -30,6 +30,8 @@ interface TableCardProps {
   customerName?: string;
   onClick: () => void;
   showSection?: boolean;
+  /** Extra classes forwarded to the root <button>; use for height overrides (e.g. h-full). */
+  className?: string;
 }
 
 const TableCard = ({
@@ -38,6 +40,7 @@ const TableCard = ({
   customerName,
   onClick,
   showSection = false,
+  className = '',
 }: TableCardProps) => {
   const timer = useTimer(table.orderStartTime);
   const isActive = table.status !== 'free';
@@ -60,7 +63,7 @@ const TableCard = ({
     <button
       onClick={onClick}
       data-testid={`table-card-${table.id}`}
-      className={`group relative flex min-h-[176px] w-full flex-col rounded-2xl p-4 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone}`}
+      className={`group relative flex min-h-[176px] w-full flex-col rounded-2xl p-4 text-card-foreground transition-all duration-150 active:translate-y-0 active:scale-[0.98] ${cardTone} ${className}`}
     >
       {table.status === 'free' ? (
         <div className="relative flex min-h-full w-full items-center justify-center">
