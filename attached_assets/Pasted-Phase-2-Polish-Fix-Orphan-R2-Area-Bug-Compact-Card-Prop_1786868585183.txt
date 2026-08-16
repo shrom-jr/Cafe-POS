@@ -1,0 +1,41 @@
+Phase 2 Polish: Fix Orphan R2 Area Bug, Compact Card Proportions & Single-Screen 2D Blueprint Fit
+
+Refactor `src/screens/TableOverview.tsx`, `src/utils/venueSeed.ts`, and `src/components/tables/TableCard.tsx` to fix the layout proportions, eliminate dead vertical space, and resolve the orphan R2 table:
+
+1. Fix Orphan R2 & Legacy Area Migration (`venueSeed.ts` / App startup):
+   - Check all tables in Firebase Realtime Database: If any table has name/id matching "R2" and is assigned to the old "ground-floor" area, immediately update its areaId to "cabins".
+   - If the old "ground-floor" area exists and has 0 remaining tables, delete the "ground-floor" area node from Firebase RTDB so the phantom "Ground Floor (1)" filter tab disappears completely.
+   - Ensure "Private Cabins" correctly contains all 7 tables: R1, R2, R3, R4, R5, R6, R7.
+
+2. Compact Proportions & Single-Screen Blueprint (`TableOverview.tsx`):
+   - Restructure the 2D layout to fit cleanly into a compact, single-screen dashboard with zero unnecessary scrolling:
+   
+   A. FIRST FLOOR SECTION (Top Row, max-h-[140px]):
+      - Grid of 3 columns:
+        * Hut 3: 2 stacked compact cards (H3-B on top, H3-A on bottom), each `h-14` (56px).
+        * Hut 2: 2 stacked compact cards (H2-B on top, H2-A on bottom), each `h-14` (56px).
+        * Hall H1: Single tall card spanning the full height of the stacked huts (`h-[120px]`).
+   
+   B. GROUND FLOOR & COURTYARD SECTION (Bottom Row, 3 balanced columns):
+      - Column 1 (Sofa & Lounge):
+        * Top: Wide "Sofa" group card (`h-12` / 48px).
+        * Middle: 2x2 grid for L4, L3 (top) and L2, L1 (bottom), each card `h-14` (56px).
+        * Bottom: Subtle landmark pill `[ 📺 TV Area ]` (`py-1.5 text-xs`).
+      - Column 2 (Bar Counter & Courtyard):
+        * Top: Compact 2-column grid for Bar 1 and Bar 2 (`h-12` / 48px each, not giant boxes).
+        * Bottom: Compact landmark badges `[ 🅿️ Parking Area ]` and `[ ⛩️ Main Gate ]` (`py-2 text-xs`).
+      - Column 3 (Private Cabins - 7 Roofs):
+        * Back Quad: 2x2 grid for R3, R1 (top) and R4, R2 (bottom), each card `h-14` (56px).
+        * Front Strip: Compact 3-column row (or vertical stack) for R5, R6, R7 (`h-12` each).
+
+3. Card Typography & Badge Scaling (`TableCard.tsx`):
+   - Scale table card typography to match compact dimensions:
+     * Free Table Cards: Center table title in bold `text-lg` or `text-xl font-black`. Remove all excessive padding (`p-2` to `p-3`).
+     * Occupied Table Cards: Compact layout with table name + `text-[10px]` status pill on row 1, guest count + customer pill in row 2, and mini timer/items footer in row 3.
+   - Dual-Theme Styling:
+     * Light Mode: `bg-slate-100 hover:bg-slate-200 border-[1.5px] border-slate-900 text-slate-950 rounded-xl shadow-sm`.
+     * Dark Mode: `bg-[#13151F] border border-white/10 text-white rounded-xl`.
+
+STRICT CONSTRAINTS:
+- DO NOT disrupt table click drawer opening, `usePOSStore` actions, live timers, or Firebase synchronization.
+- Run `npm run build` to confirm zero TypeScript or build errors.

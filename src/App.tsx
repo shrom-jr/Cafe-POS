@@ -127,13 +127,14 @@ const App = () => {
   // Seed the 19 venue tables into Firebase on the very first snapshot (idempotent).
   useEffect(() => {
     let done = false;
-    const unsub = subscribeToTables((tables) => {
+    let unsub: (() => void) | undefined;
+    unsub = subscribeToTables((tables) => {
       if (done) return;
       done = true;
-      unsub();
+      unsub?.();
       void ensureVenueSeed(tables);
     });
-    return unsub;
+    return () => unsub?.();
   }, []);
 
   useEffect(() => {
