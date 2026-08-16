@@ -223,6 +223,15 @@ const ReviewScreen = () => {
     setDiscountMode('percent');
     setDiscountInput(pct === 0 ? '' : String(pct));
   };
+  const handleFixedPreset = (amount: number) => {
+    setActivePreset(amount);
+    setDiscountMode('fixed');
+    setDiscountInput(amount === 0 ? '' : String(amount));
+  };
+  const clearDiscount = () => {
+    setActivePreset(null);
+    setDiscountInput('');
+  };
   const handleInputChange = (val: string) => {
     setDiscountInput(val);
     setActivePreset(null);
@@ -1439,36 +1448,19 @@ const ReviewScreen = () => {
   return (
     <>
       {receiptPortal}
-      <div
-        className="h-[100dvh] flex flex-col overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, #0d1525 0%, #060e1a 100%)' }}
-      >
+       <div className="h-screen w-full bg-[#0A0B0E] p-4 flex flex-col justify-between overflow-hidden text-white">
         {/* Header */}
-        <div
-          className="flex-shrink-0 flex items-center gap-3 px-4 py-2.5"
-          style={{
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            background: 'rgba(13,21,37,0.9)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-          }}
-        >
+         <div className="flex items-center gap-3 mb-3 flex-shrink-0">
           <button
             onClick={() => navigate(`/order/${tableId}`)}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-            style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.55)',
-            }}
+             className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-black text-xs uppercase tracking-wider transition-all active:scale-95"
           >
             <ChevronLeft size={17} />
           </button>
-          <div>
-            <p className="font-black text-white text-sm leading-tight">Review Order</p>
-            <p className="text-[11px] leading-tight" style={{ color: 'rgba(255,255,255,0.38)' }}>
-              {tableDisplayName(table.number)}
-            </p>
+           <div className="min-w-0">
+             <p className="text-xl font-black text-white tracking-tight truncate">
+               Review Order &amp; Settle • Table {tableDisplayName(table.number)}
+             </p>
           </div>
         </div>
 
@@ -1775,135 +1767,113 @@ const ReviewScreen = () => {
               </div>
 
               {/* Tablet/Desktop layout (≥ 768px): card-based grid */}
-              <div className="hidden md:block flex-1 min-h-0 overflow-y-auto">
-                <div className="w-full max-w-7xl mx-auto px-6 py-6 grid grid-cols-12 gap-6 items-start">
+              <div className="hidden md:grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0 w-full max-w-7xl mx-auto items-stretch overflow-hidden">
 
                     {/* ── LEFT: Items card ── */}
-                    <div className="col-span-12 lg:col-span-6 bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 min-h-[480px]">
+                    <div className="col-span-12 lg:col-span-6 bg-[#13151F] border border-white/15 p-5 rounded-3xl shadow-xl flex flex-col h-full min-h-0">
                       {/* Card header — fixed */}
                       <div
-                        className="text-lg font-black text-white tracking-wide flex items-center justify-between flex-shrink-0 pb-3 border-b border-white/10"
+                        className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center justify-between flex-shrink-0 pb-2 border-b border-white/10"
                       >
-                         <p className="text-lg font-black text-white tracking-wide">
+                         <p className="text-sm font-black uppercase tracking-wider text-amber-400">
                           Order Items
                         </p>
                         <span
-                           className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-black text-zinc-200"
+                           className="px-3 py-0.5 rounded-full bg-white/10 border border-white/15 text-xs font-black text-white font-mono"
                         >
                           {items.length}
                         </span>
                       </div>
                       {/* Scrollable item rows */}
-                      <div className="flex-1 min-h-0 overflow-y-auto">
-                        <div className="pr-1 pb-2">
+                      <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1 mt-3 overscroll-contain">
+                        <div className="pb-2">
                           {getItemsCard(true)}
                         </div>
                       </div>
                     </div>
 
                     {/* ── RIGHT: Summary + Payment cards stacked ── */}
-                    <div className="col-span-12 lg:col-span-6 flex flex-col gap-6 items-stretch">
+                    <div className="col-span-12 lg:col-span-6 bg-[#13151F] border border-white/15 p-5 rounded-3xl shadow-xl flex flex-col justify-between h-full min-h-0 gap-3 overflow-hidden">
 
                       {/* ── Summary card ── */}
-                      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 mb-6">
+                      <div className="flex flex-col gap-3 flex-shrink-0">
                         <p className="text-xs font-black uppercase tracking-widest text-amber-400 mb-1">
                           Order Summary
                         </p>
 
                         {/* Subtotal */}
-                         <div className="flex justify-between items-center py-2.5 border-b border-white/10">
-                           <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Subtotal</span>
+                         <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-200 py-2 border-b border-white/10">
+                           <span>Subtotal</span>
                            <span className="text-base font-black text-white font-mono tabular-nums">
                             Rs. {fmt(bill.subtotal)}
                           </span>
                         </div>
 
                         {/* Discount */}
-                         <div className="py-2.5 border-b border-white/10">
-                          <div className="flex justify-between items-center mb-3">
-                             <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Discount</span>
-                            <span
-                               className="text-base font-black text-white font-mono tabular-nums"
-                               style={{ color: bill.discountAmount > 0 ? '#34d399' : '#ffffff' }}
-                            >
-                              −Rs. {fmt(bill.discountAmount)}
-                            </span>
-                          </div>
-                          {/* Unified discount control container */}
-                          <div
-                            className="flex items-center gap-2"
-                            style={{
-                              background: 'rgba(255,255,255,0.04)',
-                              borderRadius: 12,
-                              border: '1px solid rgba(255,255,255,0.07)',
-                              padding: '8px 10px',
-                            }}
-                          >
-                            {/* Preset chips */}
-                            <div className="flex gap-1.5">
-                              {PRESETS.map((pct) => {
-                                const isActive = activePreset === pct && discountMode === 'percent';
-                                return (
-                                  <button
-                                    key={pct}
-                                    onClick={() => handlePreset(pct)}
-                                    className="transition-all active:scale-95"
-                                    style={{
-                                      padding: '4px 8px',
-                                      borderRadius: 7,
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                       ...(isActive
-                                         ? { background: '#f59e0b', color: '#0f172a', border: '1px solid #fbbf24', boxShadow: '0 4px 12px rgba(245,158,11,0.2)' }
-                                         : { background: 'rgba(255,255,255,0.05)', color: '#e4e4e7', border: '1px solid rgba(255,255,255,0.15)' })
-                                    }}
-                                  >
-                                    {pct}%
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {/* Vertical separator */}
-                            <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.09)', flexShrink: 0 }} />
-                            {/* Mode toggle */}
-                            <div
-                              className="flex flex-shrink-0 text-[11px] font-bold"
-                              style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}
-                            >
-                              <button
-                                onClick={() => handleModeToggle('percent')}
-                                className="px-2.5 py-1 transition-colors"
-                                style={discountMode === 'percent' ? { background: 'rgba(59,130,246,0.25)', color: 'rgba(147,197,253,1)' } : { color: 'rgba(255,255,255,0.38)' }}
-                              >%</button>
-                              <button
-                                onClick={() => handleModeToggle('fixed')}
-                                className="px-2.5 py-1 transition-colors"
-                                style={discountMode === 'fixed' ? { background: 'rgba(59,130,246,0.25)', color: 'rgba(147,197,253,1)' } : { color: 'rgba(255,255,255,0.38)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
-                              >Rs</button>
-                            </div>
-                            {/* Input — blends in */}
-                            <input
-                              type="number"
-                              min="0"
-                              inputMode="decimal"
-                              placeholder={discountMode === 'percent' ? '0' : '0.00'}
-                              value={discountInput}
-                              onChange={(e) => handleInputChange(e.target.value)}
-                              className="w-[88px] flex-shrink-0 text-[12px] text-white placeholder:text-white/20 focus:outline-none bg-transparent"
-                              style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: 2 }}
-                              onFocus={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(59,130,246,0.6)'; }}
-                              onBlur={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.12)'; }}
-                            />
-                          </div>
-                        </div>
+                         <div className="py-2 border-b border-white/10">
+                           <div className="flex items-center justify-between">
+                             <span className="text-xs font-black uppercase tracking-wider text-zinc-200">Discount</span>
+                             <span className="text-sm font-black text-rose-400 font-mono tabular-nums">
+                               - Rs. {fmt(bill.discountAmount)}
+                             </span>
+                           </div>
+                           <div className="flex items-center gap-2 bg-[#181B26] p-1.5 rounded-2xl border border-white/15 mt-2">
+                             <button
+                               onClick={() => handleModeToggle('fixed')}
+                               className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'fixed' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
+                             >
+                               💵 Rupee Discount (Rs.)
+                             </button>
+                             <button
+                               onClick={() => handleModeToggle('percent')}
+                               className={`flex-1 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all text-center ${discountMode === 'percent' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-zinc-300 hover:text-white'}`}
+                             >
+                               ％ Percentage (%)
+                             </button>
+                           </div>
+                           <div className="relative mt-2">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-amber-400">
+                               {discountMode === 'fixed' ? 'Rs.' : '%'}
+                             </span>
+                             <input
+                               type="number"
+                               min="0"
+                               inputMode="decimal"
+                               placeholder={discountMode === 'fixed' ? 'Enter exact Rs. amount...' : 'Enter percentage (e.g. 10%)...'}
+                               value={discountInput}
+                               onChange={(e) => handleInputChange(e.target.value)}
+                               className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-black rounded-xl pl-10 pr-3 py-2 text-sm font-mono outline-none"
+                             />
+                           </div>
+                           <div className="flex flex-wrap gap-2 mt-2">
+                             {(discountMode === 'fixed' ? [50, 100, 200] : [5, 10, 15]).map((value) => {
+                               const isActive = activePreset === value && discountMode === (discountMode === 'fixed' ? 'fixed' : 'percent');
+                               return (
+                                 <button
+                                   key={value}
+                                   onClick={() => discountMode === 'fixed' ? handleFixedPreset(value) : handlePreset(value)}
+                                   className={`px-3 py-1 rounded-xl border border-white/15 text-xs font-bold text-zinc-100 transition-all ${isActive ? 'bg-amber-500 text-black hover:bg-amber-400' : 'bg-white/10 hover:bg-amber-500 hover:text-black'}`}
+                                 >
+                                   {discountMode === 'fixed' ? `Rs. ${value}` : `${value}%`}
+                                 </button>
+                               );
+                             })}
+                             <button
+                               onClick={clearDiscount}
+                               className="px-3 py-1 rounded-xl bg-white/10 hover:bg-amber-500 hover:text-black border border-white/15 text-xs font-bold text-zinc-100 transition-all"
+                             >
+                               Clear
+                             </button>
+                           </div>
+                         </div>
 
                         {/* VAT */}
                         {bill.vatEnabled && (
-                          <div className="flex justify-between items-center py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                            <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                           <div className="flex justify-between items-center py-2 border-b border-white/10">
+                             <span className="text-xs font-black uppercase tracking-wider text-zinc-200">
                               VAT ({Math.round(bill.vatRate * 100)}%)
                             </span>
-                            <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                             <span className="text-base font-black text-white font-mono tabular-nums">
                               Rs. {fmt(bill.vatAmount)}
                             </span>
                           </div>
@@ -1961,7 +1931,7 @@ const ReviewScreen = () => {
                       </button>
 
                       {/* ── Payment card ── */}
-                       <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-3">
+                        <div className="flex flex-col gap-2 mt-1 min-h-0 overflow-hidden">
                         {/* Fixed label */}
                          <div className="flex-shrink-0 mb-1">
                            <p className="text-xs font-black uppercase tracking-widest text-amber-400">
@@ -1969,8 +1939,8 @@ const ReviewScreen = () => {
                           </p>
                         </div>
                         {/* Scrollable buttons area */}
-                         <div className="flex-1 min-h-0">
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div className="flex-1 min-h-0 overflow-hidden">
+                          <div className="grid grid-cols-2 gap-2.5">
 
                         {/* Unified 2-column grid — Cash + all digital wallets */}
                           {/* Cash */}
@@ -1978,10 +1948,10 @@ const ReviewScreen = () => {
                             onClick={() => handleConfirmPayment('cash')}
                             disabled={confirming || quotedDueStale}
                             data-testid="button-payment-method-cash"
-                             className="p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-emerald-500/5 disabled:opacity-40"
+                             className="p-3 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md shadow-emerald-500/5 disabled:opacity-40"
                             style={{
-                              minHeight: 66,
-                              padding: '12px 14px',
+                               minHeight: 54,
+                               padding: '10px 12px',
                                background: '#0F1916',
                                border: '2px solid rgba(16,185,129,0.4)',
                                boxShadow: '0 8px 20px rgba(16,185,129,0.05)',
@@ -1990,7 +1960,7 @@ const ReviewScreen = () => {
                           >
                             <div
                               style={{
-                                width: 36, height: 36,
+                                 width: 30, height: 30,
                                 borderRadius: 10,
                                 background: 'rgba(52,211,153,0.2)',
                                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
@@ -2001,8 +1971,8 @@ const ReviewScreen = () => {
                               <Banknote size={20} style={{ color: '#34d399' }} />
                             </div>
                             <div className="text-left min-w-0">
-                               <p className="text-sm font-black text-white group-hover:text-emerald-200">Cash</p>
-                               <p className="text-xs font-bold text-emerald-300">Tap to pay</p>
+                                <p className="text-xs font-black text-white group-hover:text-emerald-200">Cash</p>
+                                <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Tap to pay</p>
                             </div>
                           </button>
 
@@ -2014,21 +1984,21 @@ const ReviewScreen = () => {
                                   onClick={openCreditConfirmation}
                                   data-testid="button-payment-method-khatta"
                                   disabled={confirming || quotedDueStale}
-                                   className="p-4 rounded-2xl bg-[#181510] border-2 border-amber-500/40 hover:border-amber-400 flex items-center gap-3 transition-all cursor-pointer group shadow-lg shadow-amber-500/5 disabled:opacity-40"
+                                    className="p-3 rounded-2xl bg-[#181510] border-2 border-amber-500/40 hover:border-amber-400 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md shadow-amber-500/5 disabled:opacity-40"
                                   style={{
-                                    minHeight: 66,
-                                    padding: '12px 14px',
+                                    minHeight: 54,
+                                    padding: '10px 12px',
                                      background: '#181510',
                                      border: '2px solid rgba(245,158,11,0.4)',
                                      boxShadow: '0 8px 20px rgba(245,158,11,0.05)',
                                   }}
                                 >
-                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(251,191,36,0.18)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <div style={{ width: 30, height: 30, borderRadius: 10, background: 'rgba(251,191,36,0.18)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                     <FileText size={20} style={{ color: creditColor }} />
                                   </div>
                                   <div className="text-left min-w-0">
-                                     <p className="text-sm font-black text-white group-hover:text-amber-200">Credit</p>
-                                     <p className="text-xs font-bold text-amber-300 truncate">{attachedCustomer.name.split(' ')[0]}</p>
+                                      <p className="text-xs font-black text-white group-hover:text-amber-200">Credit</p>
+                                      <p className="text-[10px] font-bold text-amber-300 uppercase tracking-wider truncate">{attachedCustomer.name.split(' ')[0]}</p>
                                   </div>
                                 </button>
                             );
@@ -2056,18 +2026,18 @@ const ReviewScreen = () => {
                                 onClick={() => { if (!confirming) openQRModal(id); }}
                                 data-testid={`button-payment-method-${id}`}
                                 disabled={confirming || quotedDueStale}
-                                 className={`p-4 rounded-2xl border-2 flex items-center gap-3 transition-all cursor-pointer group shadow-lg disabled:opacity-40 ${
+                                  className={`p-3 rounded-2xl border-2 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md disabled:opacity-40 ${
                                    id === 'esewa'
-                                     ? 'bg-[#0F1916] border-emerald-500/40 hover:border-emerald-400 shadow-emerald-500/5'
+                                         ? 'bg-[#0F1916] border-emerald-500/40 hover:border-emerald-400 shadow-emerald-500/5'
                                      : id === 'khalti'
                                        ? 'bg-[#161224] border-purple-500/40 hover:border-purple-400 shadow-purple-500/5'
                                        : id === 'fonepay'
-                                         ? 'bg-[#1A1116] border-rose-500/40 hover:border-rose-400 shadow-rose-500/5'
+                                         ? 'bg-[#1A1116] border-rose-500/40 hover:border-rose-400 shadow-rose-500/5 col-span-2 justify-center'
                                          : 'bg-[#13151F] border-white/15 hover:border-white/30'
                                  }`}
                                 style={{
-                                  minHeight: 66,
-                                  padding: '12px 14px',
+                                  minHeight: 54,
+                                  padding: '10px 12px',
                                    background: id === 'esewa' ? '#0F1916' : id === 'khalti' ? '#161224' : id === 'fonepay' ? '#1A1116' : '#13151F',
                                    border: `2px solid ${b.border}`,
                                    boxShadow: b.shadow,
@@ -2076,7 +2046,7 @@ const ReviewScreen = () => {
                               >
                                 <div
                                   style={{
-                                    width: 36, height: 36,
+                                    width: 30, height: 30,
                                     borderRadius: 10,
                                     background: b.iconBg,
                                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
@@ -2092,8 +2062,8 @@ const ReviewScreen = () => {
                                   )}
                                 </div>
                                 <div className="text-left min-w-0">
-                                   <p className="text-sm font-black text-white group-hover:text-emerald-200" style={{ color: id === 'khalti' ? '#e9d5ff' : id === 'fonepay' ? '#fecdd3' : '#ffffff' }}>{label}</p>
-                                   <p className="text-xs font-bold" style={{ color: id === 'khalti' ? '#d8b4fe' : id === 'fonepay' ? '#fda4af' : '#a7f3d0' }}>Scan QR</p>
+                                   <p className="text-xs font-black text-white group-hover:text-emerald-200 uppercase tracking-wider" style={{ color: id === 'khalti' ? '#e9d5ff' : id === 'fonepay' ? '#fecdd3' : '#ffffff' }}>{id === 'fonepay' ? '🔴 Fonepay QR Payment' : label}</p>
+                                   <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: id === 'khalti' ? '#d8b4fe' : id === 'fonepay' ? '#fda4af' : '#a7f3d0' }}>Scan QR</p>
                                 </div>
                               </button>
                             );
@@ -2102,10 +2072,9 @@ const ReviewScreen = () => {
                          </div>
                       </div>{/* end payment card */}
 
-                    </div>
-                  </div>
-                 </div>
-             </>
+                     </div>
+                   </div>
+              </>
           )}
         </div>
       </div>
