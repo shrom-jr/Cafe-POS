@@ -1,0 +1,29 @@
+Phase 2 Polish: Stack Navbar Counters, Remove Clock, and Stretch Central Parking Above Main Gate
+
+Refactor `src/components/ui/AppLayout.tsx` (or TopNav) and `src/screens/TableOverview.tsx` to apply these precise visual adjustments without altering the existing floor blueprint structure:
+
+1. Top Navigation Right Cluster (`AppLayout.tsx` / `TopNav.tsx`):
+   - REMOVE the digital clock component entirely.
+   - Replace the horizontal free/active pill with a compact 2-row stacked counter badge:
+     * Container: `flex flex-col justify-center px-3 py-1 rounded-xl bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-white/10 text-xs font-black leading-tight shadow-sm`.
+     * Top Line: `flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400` -> `🟢 {freeCount} Free`.
+     * Bottom Line: `flex items-center gap-1.5 text-amber-600 dark:text-amber-400` -> `🟠 {activeCount} Active`.
+   - Maintain the theme switcher toggle and the staff profile / "Switch User" button aligned to the right.
+
+2. Middle Column (Bar, Parking & Main Gate) (`TableOverview.tsx`):
+   - Keep Column 2 structured in an aligned vertical flow:
+     * Top: `Bar 1` and `Bar 2` side-by-side (`min-h-[98px]`, `grid grid-cols-2 gap-3`).
+     * Middle: Stretched `🅿️ PARKING AREA` container that fills the vertical middle space:
+       `flex-1 min-h-[140px] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 p-4 text-slate-500 dark:text-zinc-500 font-bold text-xs tracking-wider`.
+     * Bottom: `⛩️ MAIN GATE` tile sitting at the base of the middle column (directly aligned to the left of the bottom R7 row):
+       `min-h-[50px] py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 flex items-center justify-center text-slate-600 dark:text-zinc-400 font-black text-xs tracking-wide`.
+
+3. Keep All Other Zones & Styling Untouched:
+   - First Floor (H3-B, H3-A, T-1, H2-B, H2-A, T-2, H1) remains 100% intact.
+   - Sofa & Lounge (Sofa, L1-L4, TV Area) remains 100% intact.
+   - Right Column (Private Huts R1-R4 & Private Cabins R5-R7) remains 100% intact.
+   - All table card heights, fonts, occupied indicators, and click handlers remain intact.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.

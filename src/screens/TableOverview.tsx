@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useTables } from '@/hooks/useTables';
@@ -9,16 +9,6 @@ import { CafeTable } from '@/types/pos';
 import { compareTableNames } from '@/utils/tableName';
 import { VENUE_AREA_ORDER } from '@/utils/venueSeed';
 import { AREA_COLORS } from '@/utils/venueColors';
-
-// ── Clock ─────────────────────────────────────────────────────────────────────
-function useClock() {
-  const [time, setTime] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 // ── Known venue area names ────────────────────────────────────────────────────
 const AREA_FIRST_FLOOR = 'First Floor (Huts & Hall)';
@@ -192,7 +182,7 @@ const GroundFloorBlueprint = ({
   const overflowCabins = overflowTables(cabinTs, KNOWN_CABINS);
 
   return (
-    <div className="grid grid-cols-12 items-start gap-5">
+    <div className="grid grid-cols-12 items-stretch gap-5">
       {/* ── LEFT: Sofa & Lounge ── */}
       <div className="col-span-4 flex flex-col gap-3">
         <AreaHeader label="Sofa & Lounge" areaIndex={1} />
@@ -210,14 +200,18 @@ const GroundFloorBlueprint = ({
       </div>
 
       {/* ── MIDDLE: Bar Counter + Landmarks ── */}
-      <div className="col-span-4 flex flex-col gap-3">
+      <div className="col-span-4 flex h-full flex-col gap-3">
         <AreaHeader label="Bar Counter" areaIndex={2} />
         <div className="grid grid-cols-2 gap-3">
           <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <LandmarkTile label="🅿️  Parking Area" className="py-3.5" />
-        <LandmarkTile label="⛩️  Main Gate" className="py-3.5" />
+        <div className="flex min-h-[140px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-4 text-center text-xs font-bold tracking-wider text-slate-500 dark:border-zinc-800 dark:bg-zinc-900/30 dark:text-zinc-500">
+          🅿️  Parking Area
+        </div>
+        <div className="flex min-h-[50px] items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 py-3 text-center text-xs font-black tracking-wide text-slate-600 dark:border-zinc-800 dark:bg-zinc-900/30 dark:text-zinc-400">
+          ⛩️  Main Gate
+        </div>
         <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
       </div>
 
@@ -330,7 +324,6 @@ const TableOverview = () => {
   const settings    = usePOSStore(s => s.settings);
   const areaOrder   = usePOSStore(s => s.areaOrder);
   const navigate    = useNavigate();
-  const clock       = useClock();
 
   // Build per-table order data (itemCount + attached customer name)
   const tableOrderData = useMemo<OrderData>(() => {
@@ -382,7 +375,7 @@ const TableOverview = () => {
   return (
     <AppLayout
       title={settings.cafeName || 'S Bamboo Cottage & Sekuwa Corner'}
-      telemetry={{ freeCount: counts.available, activeCount: counts.active, clock }}
+      telemetry={{ freeCount: counts.available, activeCount: counts.active }}
     >
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-0 pb-16 sm:px-4">
         {tables.length === 0 ? (
