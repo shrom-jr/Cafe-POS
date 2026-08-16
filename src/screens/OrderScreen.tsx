@@ -7,7 +7,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
 import { useCustomerStore } from '@/store/useCustomerStore';
-import { TopBar } from '@/components/ui/Navigation';
+import { ThemeToggle } from '@/components/ui/Navigation';
 import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
 import CustomerPicker from '@/components/orders/CustomerPicker';
@@ -319,8 +319,32 @@ const OrderScreen = () => {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#0A0B0E]">
-      <TopBar title={tableDisplayName(table.number)} showBack onBack={() => navigate('/')} />
+    <div className="h-screen w-full bg-[#0A0B0E] p-3 flex gap-3 overflow-hidden">
+      {/* Left Column — menu system */}
+      <div className="flex-1 h-full flex flex-col min-w-0 overflow-y-auto pr-1 gap-3">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between pb-1 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              data-testid="button-back"
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              ‹ Back
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider text-zinc-300">ORDER STATUS:</span>
+              <span
+                className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider"
+                style={drawerStatusStyle}
+              >
+                {drawerStatusLabel}
+              </span>
+            </div>
+          </div>
+          <ThemeToggle />
+        </div>
 
       {/* Move success banner */}
       {moveSuccessBanner && (
@@ -342,19 +366,6 @@ const OrderScreen = () => {
         </div>
       )}
 
-      {/* Kitchen status label */}
-      {order && (
-        <div className="flex items-center gap-2 px-4 py-1.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Order status:</span>
-          <span
-            className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider"
-            style={drawerStatusStyle}
-          >
-            {drawerStatusLabel}
-          </span>
-        </div>
-      )}
-
       {/* Payment-in-progress info banner */}
       {table.status === 'billing' && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-accent/10 border-b border-accent/20 text-accent/90 flex-shrink-0">
@@ -368,10 +379,10 @@ const OrderScreen = () => {
           Tablet (sm, >=640px): side-by-side 2/3 menu + 1/3 cart
           Desktop (lg, >=1024px): same as tablet, larger cart panel
       */}
-      <div className="flex-1 flex flex-row overflow-hidden min-h-0 p-3 gap-3">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
 
         {/* ── Menu area ── */}
-        <div className="flex-1 h-full flex flex-col min-w-0 min-h-0 overflow-y-auto pr-1">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
 
           {/* Search */}
           <div className="p-3 bg-[#0A0B0E] border-b border-white/10 flex-shrink-0">
@@ -457,6 +468,8 @@ const OrderScreen = () => {
             )}
           </div>
         </div>
+      </div>
+      </div>
 
         {/* ── Cart panel — JS-conditional, shown in landscape on any device ── */}
         {isLandscape && (
@@ -485,7 +498,6 @@ const OrderScreen = () => {
             />
           </div>
         )}
-      </div>
 
       {/* ── Portrait mobile only: COLLAPSED ORDER BAR ── */}
       {!isLandscape && hasItems && (

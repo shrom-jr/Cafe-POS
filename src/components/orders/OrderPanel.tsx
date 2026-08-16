@@ -240,7 +240,7 @@ const OrderPanel = ({
 
   return (
     <div
-      className="w-full h-full min-h-0 rounded-3xl bg-[#13151F] border border-white/15 shadow-2xl flex flex-col justify-between overflow-hidden relative p-4 gap-3"
+      className="w-full h-full rounded-3xl bg-[#13151F] border border-white/15 shadow-2xl flex flex-col justify-between overflow-hidden p-3.5 gap-2.5"
       style={{ background: '#13151F' }}
     >
       <style>{`
@@ -264,11 +264,11 @@ const OrderPanel = ({
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)' }} />
 
       {/* Consolidated metadata HUD */}
-      <div className="p-4 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl flex flex-col gap-2.5 flex-shrink-0">
+      <div className="p-3 rounded-2xl bg-[#181B26] border border-white/10 shadow-sm flex flex-col gap-2 flex-shrink-0">
         {/* Table and actions */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between pb-2 border-b border-white/10 gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <h3 className="text-xl font-black text-white tracking-tight truncate">
+            <h3 className="text-lg font-black text-white tracking-tight truncate">
               {order ? tableDisplayName(order.tableNumber) : 'Order'}
             </h3>
             {order && (
@@ -309,7 +309,7 @@ const OrderPanel = ({
         </div>
 
         {/* Customer name and outstanding due */}
-        <div className="pt-2 border-t border-white/10">
+        <div className="pt-1.5">
           {attachedCustomer ? (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#181B26] border border-white/10 shadow-inner">
               <span className="text-sm font-black text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
@@ -441,7 +441,7 @@ const OrderPanel = ({
 
       {/* Footer */}
       <div
-        className="p-4 rounded-2xl bg-[#13151F] border border-white/15 flex flex-col gap-2.5 shadow-2xl flex-shrink-0 mt-auto"
+        className="p-3 rounded-2xl bg-[#181B26] border border-white/15 flex flex-col gap-2 shadow-xl flex-shrink-0 mt-auto"
       >
         <div className="flex items-center justify-between py-1">
           <div className="flex flex-col gap-0.5">
@@ -457,19 +457,19 @@ const OrderPanel = ({
             )}
           </div>
           <span
-            className="text-3xl font-black text-white font-mono tracking-tight"
+            className="text-2xl font-black text-white font-mono tracking-tight"
           >
             Rs. {fmt(total)}
           </span>
         </div>
 
         {hasDraft && items.length > 0 && (
-          <p className="text-[11px] font-black uppercase tracking-wider text-amber-400 text-center">
+          <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 text-center">
             ⚠️ Send to kitchen before payment
           </p>
         )}
         {allSent && items.length > 0 && (
-          <p className="text-[11px] font-black uppercase tracking-wider text-emerald-400 text-center">
+          <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400 text-center">
             ✓ Order active &amp; sent to kitchen
           </p>
         )}
@@ -480,7 +480,7 @@ const OrderPanel = ({
           aria-disabled={isBtnDisabled}
           aria-label={ariaLabel}
           data-testid="button-proceed-to-bill"
-          className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed"
           style={{
             background: btnBackground,
             color: sendPhase === 'sent' ? '#ffffff' : '#0f172a',
