@@ -1,0 +1,60 @@
+Phase 2 Complete Polish: Customers Portal & Modals High-Contrast Luxury Redesign
+
+Refactor `src/screens/CustomersScreen.tsx` (or `Customers.tsx`) and all customer modal components (`CollectModal.tsx`, `LedgerModal.tsx`, `CustomerFormModal.tsx`):
+
+1. High-Contrast Metric Cards (`CustomersScreen.tsx`):
+   - Grid: `grid grid-cols-1 md:grid-cols-3 gap-5 mt-6`.
+   - Card 1 (Total Customers):
+     * Container: `p-6 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl shadow-black/40`.
+     * Title: `text-xs font-black uppercase tracking-widest text-zinc-400`.
+     * Value: `text-3xl font-black text-white mt-2 tracking-tight`.
+   - Card 2 (Total Dues Outstanding):
+     * Container: `p-6 rounded-2xl bg-[#181116] border border-rose-500/50 shadow-xl shadow-rose-500/10`.
+     * Title: `text-xs font-black uppercase tracking-widest text-rose-400`.
+     * Value: `text-3xl font-black text-rose-400 mt-2 tracking-tight drop-shadow-[0_0_12px_rgba(244,63,94,0.3)]`.
+   - Card 3 (Total Collected):
+     * Container: `p-6 rounded-2xl bg-[#0F1916] border border-emerald-500/50 shadow-xl shadow-emerald-500/10`.
+     * Title: `text-xs font-black uppercase tracking-widest text-emerald-400`.
+     * Value: `text-3xl font-black text-emerald-400 mt-2 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]`.
+
+2. Customer Directory Table Contrast & Actions (`CustomersScreen.tsx`):
+   - Table Container: `bg-[#13151F] border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 mt-8`.
+   - Table Header: `bg-white/[0.04] border-b border-white/10 text-xs font-black uppercase tracking-widest text-zinc-300 py-4 px-6`.
+   - Table Rows: `border-b border-white/10 hover:bg-white/[0.03] transition-colors py-4 px-6 items-center`:
+     * Avatar: `w-10 h-10 rounded-xl bg-[#1E2235] border border-white/20 flex items-center justify-center text-sm font-black text-white shadow-inner`.
+     * Customer Name: `text-base font-black text-white tracking-wide`.
+     * Phone: `text-xs font-bold text-zinc-300 font-mono`.
+     * Dues Pill:
+       - Clear: `inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-black shadow-sm` ("✓ Clear").
+       - Due: `inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/50 text-rose-300 text-xs font-black shadow-sm` ("Rs. {due}").
+     * Action Buttons Cluster (`flex items-center gap-2.5`):
+       - Collect Button: `px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-black text-amber-300 border border-amber-500/50 text-xs font-black tracking-wide transition-all shadow-sm active:scale-95 flex items-center gap-1.5`.
+       - Ledger Button: `px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-black tracking-wide transition-all shadow-sm active:scale-95 flex items-center gap-1.5`.
+       - Edit/Delete Icons: `p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all`.
+
+3. High-Contrast Modal System (`CollectModal`, `LedgerModal`, `CustomerFormModal`):
+   - Backdrop: `fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4`.
+   - Modal Container: `w-full max-w-md p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-5`.
+   - Modal Header:
+     * Title: `text-lg font-black text-white tracking-tight flex items-center gap-2`.
+     * Close Button: `text-zinc-400 hover:text-white transition-colors p-1`.
+   - Outstanding Due Banner (Collect Modal):
+     `p-4 rounded-2xl bg-rose-500/10 border border-rose-500/40 flex flex-col items-center justify-center text-center`:
+     - Label: `text-[11px] font-black uppercase tracking-widest text-rose-400`.
+     - Amount: `text-3xl font-black text-rose-400 mt-1`.
+   - Input Fields:
+     `w-full bg-[#161824] border-2 border-white/20 focus:border-amber-400 rounded-xl px-4 py-3.5 text-base font-bold text-white placeholder-zinc-500 outline-none transition-all shadow-inner`.
+   - Quick Pay Full Due Button:
+     `w-full py-2.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black tracking-wider uppercase transition-all flex items-center justify-center gap-2`.
+   - Payment Method Buttons:
+     * Selected: `flex-1 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all`.
+     * Unselected: `flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 font-bold text-sm flex items-center justify-center gap-2 transition-all`.
+   - Primary Action Buttons:
+     * Confirm Collection: `w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/30 transition-all active:scale-[0.98]`.
+     * Save / Register: `w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-base shadow-xl shadow-amber-500/30 transition-all active:scale-[0.98]`.
+   - Empty Ledger State:
+     `py-12 flex flex-col items-center justify-center text-center text-zinc-400 font-bold text-sm gap-2`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any customer data records, khata ledger balances, Firebase listeners, or the Login/POS screen.
+- Run `npm run build` to confirm zero TypeScript or build errors.
