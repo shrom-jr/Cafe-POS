@@ -1,0 +1,158 @@
+PHASE 1: SEED MASTER MENU WITH FULL CATALOG, VARIANTS & KOT/BOT PRINTER ROUTING
+
+Create and execute a comprehensive seeding script (`scripts/seedMenu.mjs`) and update `src/data/defaultSeeds.ts` with the complete official restaurant menu catalog, exact pricing, portion/peg variants, and printer routing.
+
+1. PILLARS & CANONICAL SCHEMA:
+   Populate Firebase RTDB paths `menu/pillars`, `menu/categories`, and `menu/items`.
+   Pillars:
+   - "Food"
+   - "Beverages"
+   - "Alcohol"
+   - "Others"
+
+2. CATEGORY DEFINITIONS (17 CATEGORIES):
+   - Food (printRoute: 'KOT', sendToKitchen: true):
+     * 'c_soups': 'Soups'
+     * 'c_burgers': 'Burgers & Sandwiches'
+     * 'c_sizzlers': 'Sizzlers & Chhoila'
+     * 'c_chefs': "Chef's Special & Fish"
+     * 'c_veg_snacks': 'Vegetarian Snacks & Salads'
+     * 'c_nonveg_snacks': 'Non-Vegetarian Snacks'
+     * 'c_momo_noodles': 'Platters, Momo & Noodles'
+     * 'c_rice_curries': 'Rice, Curries & Sets'
+     * 'c_pizza_rolls': 'Pizza, Rolls & Khaja Sets'
+     * 'c_sekuwa': 'Special Sekuwa & Sets'
+   - Beverages:
+     * 'c_hot_bev': 'Hot Beverages' (parentCategory: 'Beverages', printRoute: 'KOT', sendToKitchen: true)
+     * 'c_cold_crafted': 'Crafted Cold Beverages' (parentCategory: 'Beverages', printRoute: 'KOT', sendToKitchen: true)
+     * 'c_soft_drinks': 'Soft Drinks & Energy' (parentCategory: 'Beverages', printRoute: 'BOT', sendToKitchen: false)
+   - Alcohol (printRoute: 'BOT', sendToKitchen: false):
+     * 'c_beers_wines': 'Beers & Wines'
+     * 'c_domestic_spirits': 'Domestic Spirits'
+     * 'c_imported_spirits': 'Imported Spirits'
+   - Others (printRoute: 'BOT', sendToKitchen: false):
+     * 'c_hookah_cigs': 'Hookah & Cigarettes'
+
+3. COMPLETE MENU ITEMS & PRICING MATRIX:
+   Populate all items matching the official menu:
+
+   [SOUPS]
+   - Nepali Soup (Veg: 200, Non-Veg: 250) [KOT]
+   - Hot & Sour Soup (Veg: 280, Non-Veg: 300) [KOT]
+   - Creamy Veg Soup (200) [KOT]
+   - Creamy Chicken Mushroom Soup (280) [KOT]
+   - Mutton Khutta Soup (450) [KOT]
+
+   [BURGERS & SANDWICHES]
+   - Veg Burger (150), Chicken Burger (180), Crunchy Chicken Burger (200) [KOT]
+   - Cheese Sandwich (225), Chicken Sandwich (250), Special Club Sandwich (300) [KOT]
+
+   [SIZZLERS & CHHOILA]
+   - Veg Sizzler (350), Fish Sizzler (400), Chicken Sizzler (450) [KOT]
+   - Chhoila Chicken (300), Chhoila Mutton (450), Chhoila Buff (280), Chhoila Pork (280), Mushroom Chhoila (230) [KOT]
+
+   [CHEF'S SPECIAL & FISH]
+   - Piro Aalu Paneer (280), Mustang Aalu (270), Timmur Chicken (350), Pork Dameko (300) [KOT]
+   - Jhaneko Sekuwa (Chicken: 400, Buff: 400, Pork: 400, Mutton: 650) [KOT]
+   - Special Biryani Non-Veg (500), Hyakula Dameko (600), Newari Platter (700) [KOT]
+   - Special Bamboo Platter (Small: 450, Large: 700) [KOT]
+   - Fish Fingers (325), Fish Fry (300), Fish & Chips (450), Steamed Whole Fish (550), Grilled Whole Fish (600), Whole Grill Fish (600) [KOT]
+
+   [VEGETARIAN SNACKS & SALADS]
+   - Masala Papad (150), Veg Pakoda (180), Paneer Pakoda (280), Onion Pakoda (200) [KOT]
+   - Aalu Jeera (180), French Fries (180), Aalu Sadheko (180), Seasonal Green Bhatmas Sadheko (200) [KOT]
+   - Chips Chilli (200), Crispy Aalu (200), Boiled Corn (200), Chiura Bhatmas Sadheko (230) [KOT]
+   - Mixed Veg Boiled (225), Green Corn Sadheko (250), Cheese Balls (280), Mushroom Chilli (280) [KOT]
+   - Paneer Chilli (290), Tofu Fry (200), Tofu Chilli (250), Nepali Green Salad (200), Fruit Salad Seasonal (350) [KOT]
+
+   [NON-VEGETARIAN SNACKS]
+   - Mutton Head Fry (450), Mutton Head Sadheko (460), Mutton Rajkhani (550), Mutton Hyakula (600), Mutton Tash (550), Mutton Bhuttan (380) [KOT]
+   - Chicken Sadheko (270), Chicken Chilli (300), Boiled Chicken (280), Chicken Lollipop (300), Chicken Drumstick (300) [KOT]
+   - Dragon Chicken (400), Polpal Chicken (360), Nepali Chicken (350), Hot & Spicy Chicken Wings (300), Chicken Pangra (350) [KOT]
+   - Buff Sukuti Sadheko (300), Timmur Pork (350) [KOT]
+
+   [PLATTERS, MOMO & NOODLES]
+   - Momo Platter (Small: 350, Large: 550), Newari Platter (Small: 400, Large: 700), Special Bamboo Platter (Small: 450, Large: 700) [KOT]
+   - Veg Momo: Steam (150), Jhol (170), Sadheko (200), Fry (150), Kothey (160), Chilli (220) [KOT]
+   - Buff Momo: Steam (160), Jhol (190), Sadheko (240), Fry (190), Kothey (170), Chilli (270) [KOT]
+   - Chicken Momo: Steam (180), Jhol (200), Sadheko (250), Fry (200), Kothey (190), Chilli (280) [KOT]
+   - Thukpa: Veg (160), Egg (180), Buff (180), Chicken (200), Pork (200), Mixed (250) [KOT]
+   - Chowmein: Veg (150), Chicken (180), Buff (170), Pork (180), Mixed (250) [KOT]
+   - Keema Noodles (Chicken: 235, Buff: 225), Current Noodles (Veg: 150, Egg: 250) [KOT]
+
+   [RICE, CURRIES & SETS]
+   - Biryani: Veg (300), Chicken (400), Mutton (500) [KOT]
+   - Rice: Plain (80), Butter (100), Jeera (110) [KOT]
+   - Curries: Mixed Veg Curry (200), Egg Curry (200), Chicken Curry (250), Mutton Curry (400), Chicken Butter Masala (300), Paneer Butter Masala (280), Matar Paneer (240) [KOT]
+   - Nepali Khana Sets: Veg Set (325), Chicken Set (400), Mutton Set (550), Fish Set (450) [KOT]
+
+   [PIZZA, ROLLS & KHAJA SETS]
+   - Pizza: Margherita (350), Smokey Chicken (450), Sausage Salami (500), Veg Pizza (380), Mixed Pizza (550) [KOT]
+   - Rolls: Katti Roll (Veg: 200, Non-Veg: 280), Spring Roll (Veg: 200, Non-Veg: 280) [KOT]
+   - Chopsuey: Chinese (240), American (250) [KOT]
+   - Khaja Sets: Veg (280), Buff (330), Pork (330), Chicken (350), Pangra (400), Bhutan (400) [KOT]
+
+   [SPECIAL SEKUWA & SETS]
+   - Chicken Sekuwa (200g: 300, 500g: 650, 1kg: 1300) [KOT]
+   - Pork Sekuwa (200g: 300, 500g: 650, 1kg: 1300) [KOT]
+   - Buff Sekuwa (200g: 300, 500g: 650, 1kg: 1300) [KOT]
+   - Chicken Wings Sekuwa (200g: 350, 500g: 680, 1kg: 1350) [KOT]
+   - Mutton Sekuwa (200g: 600, 500g: 1350, 1kg: 2700) [KOT]
+   - Paneer Sekuwa 200g (300), Mutton Kalejo 200g (550), Whole Fish Poleko (600) [KOT]
+   - Sekuwa Sets: Chicken (300), Mutton (450), Buff (300), Pork (300), Chicken Wing (400) [KOT]
+
+   [HOT BEVERAGES - KOT]
+   - Tea (Black: 30, Milk: 60, Lemon: 40, Masala: 70) [KOT]
+   - Coffee (Black: 80, Milk: 120) [KOT]
+   - Hot Lemon (80), Hot Lemon with Ginger & Honey (170), Hot Chocolate (250) [KOT]
+
+   [CRAFTED COLD BEVERAGES - KOT]
+   - Sweet Lassi (150), Banana Lassi (180), Watermelon Juice (150), Iced Tea (130) [KOT]
+   - Chocolate Milkshake (250), Cold Coffee (Black: 130, Milk: 150) [KOT]
+
+   [SOFT DRINKS & ENERGY - BOT]
+   - Coke (100), Fanta (100), Sprite (100), Pepsi (100), Dew (100), Slice (100) [BOT]
+   - Red Bull (200), Xtreme Energy Drink (250) [BOT]
+
+   [BEERS & WINES - BOT]
+   - Beers: Mini Gorkha (270), Mini Tuborg (290), Gorkha Strong (480), Gorkha Pilsner (550), Gorkha Craft (575), Tuborg (600), Carlsberg (650) [BOT]
+   - Wines: Big Master (1250), Divine (1250), Robertson (2300), J.P. Chenet (2800) [BOT]
+
+   [DOMESTIC SPIRITS - BOT] (Multi-tier peg support: 60ml, 90ml, Quarter/180ml, Half/375ml, Full/750ml)
+   - Mustang (60ml: 150, 90ml: 220, Qtr: 390, Half: 780, Full: 1500)
+   - Golden Oak (60ml: 160, 90ml: 240, Qtr: 450, Half: 800, Full: 1550)
+   - Black Oak (60ml: 180, 90ml: 260, Qtr: 480, Half: 950, Full: 1800)
+   - Highlander (60ml: 160, 90ml: 240, Qtr: 450, Half: 800, Full: 1550)
+   - 8848 Vodka (60ml: 300, 90ml: 450, Qtr: 850, Half: 1600, Full: 3050)
+   - Ruslan Vodka (60ml: 300, 90ml: 425, Qtr: 800, Half: 1550, Full: 2950)
+   - NUDE Vodka (60ml: 300, 90ml: 450, Qtr: 850, Half: 1600, Full: 3050)
+   - Signature Green (60ml: 325, 90ml: 480, Qtr: 900, Half: 1650, Full: 3200)
+   - Signature Red (60ml: 350, 90ml: 500, Qtr: 960, Half: 1800, Full: 3400)
+   - Old Durbar Red (60ml: 380, 90ml: 550, Qtr: 1050, Half: 2000, Full: 3850)
+   - Old Durbar Black (60ml: 480, 90ml: 700, Qtr: 1350, Half: 2500, Full: 4750)
+   - Gurkhas & Guns (60ml: 400, 90ml: 600, Qtr: 1050, Half: 2050, Full: 3950)
+   - Yarchagumba (60ml: 1350, 90ml: 2200, Qtr: 4400, Half: 8000, Full: 14500)
+
+   [IMPORTED SPIRITS - BOT] (Multi-tier peg support: 30ml, 60ml, 90ml, Quarter/180ml, Half/375ml, Full/750ml)
+   - Red Label (30ml: 500, 60ml: 900, 90ml: 1300, Qtr: 2350, Half: 4300, Full: 8500)
+   - Black Label (30ml: 550, 60ml: 980, 90ml: 1450, Qtr: 2750, Half: 5000, Full: 9800)
+   - Double Black (30ml: 700, 60ml: 1150, 90ml: 2200, Qtr: 4400, Half: 8000, Full: 14500)
+   - Jack Daniel's (30ml: 525, 60ml: 950, 90ml: 1350, Qtr: 2250, Half: 4600, Full: 9000)
+   - Chivas Regal (30ml: 550, 60ml: 980, 90ml: 1450, Qtr: 2750, Half: 5000, Full: 9800)
+   - Jameson (30ml: 600, 60ml: 1050, 90ml: 1600, Qtr: 2850, Half: 5250, Full: 10500)
+   - Absolut Vodka (30ml: 525, 60ml: 975, 90ml: 1375, Qtr: 2625, Half: 4750, Full: 9500)
+
+   [HOOKAH & CIGARETTES - BOT]
+   - Regular Hookah (Mint: 350, Double Apple: 380, Lady Killer: 400) [BOT]
+   - Cloud Hookah (Mint: 500, Double Apple: 550, Lady Killer: 600) [BOT]
+   - Coils: Normal (50), Coconut (120) [BOT]
+   - Cigarettes: Surya Red (30), Surya Light (30), Surya Arctic (30), Shikhar Ice (25) [BOT]
+
+4. EXECUTION & VERIFICATION:
+   - Run `node scripts/seedMenu.mjs` to write directly to Firebase RTDB paths `menu/pillars`, `menu/categories`, and `menu/items`.
+   - Update `src/data/defaultSeeds.ts` to export these exact arrays.
+   - Run `npm run build` to confirm zero compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT delete or alter: `areaOrder` (Table Floor Plan Layout), `tables`, `customers`, `orders`, `payments`, `settings`, `meatEntries`, `groceryPurchases`, `kitchenPurchases`, `maintenanceExpenses`, `invMovements`, `pinResets`, or `users`.
+- DO NOT modify UI layout code in `.tsx` files.
