@@ -1,0 +1,53 @@
+Phase 2 Polish: Premium Spacious Table Cards & High-Readability 2D Spatial Layout
+
+Refactor `src/screens/TableOverview.tsx` and `src/components/tables/TableCard.tsx` to eliminate all cramped styling, expand card heights, and establish clear visual hierarchy across the physical venue blueprint:
+
+1. Premium Table Card Layout & Typography (`TableCard.tsx`):
+   - Increase default card height to `min-h-[98px] w-full rounded-2xl transition-all duration-150`:
+   
+   A. OCCUPIED TABLE CARDS:
+      - Container: `h-full w-full flex flex-col justify-between p-3.5 box-border rounded-2xl bg-amber-50/95 dark:bg-gradient-to-b dark:from-[#221813] dark:to-[#14100E] border-2 border-amber-500 shadow-md shadow-amber-500/10`.
+      - Row 1 (Header):
+        * Table Name: `text-xl font-black text-slate-950 dark:text-white tracking-wide`.
+        * Status Pill: `text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-white dark:bg-amber-500/25 dark:text-amber-300 dark:border dark:border-amber-500/40 shadow-sm`.
+      - Row 2 (Guest & Customer Info):
+        * `flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 py-0.5`:
+        * Guest Count: `👤 {guests} {guests === 1 ? 'Guest' : 'Guests'}`.
+        * Customer Pill: `bg-slate-900 text-white dark:bg-amber-500/20 dark:text-amber-200 dark:border dark:border-amber-500/30 px-2.5 py-0.5 rounded-md text-xs font-bold truncate max-w-[130px] shadow-sm`.
+      - Row 3 (Live Telemetry Footer):
+        * `flex items-center justify-between text-xs font-bold pt-2 border-t border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200`:
+        * Live Timer: `⏱️ {timer}` in `text-amber-600 dark:text-amber-400 font-black text-xs`.
+        * Item Count: `{itemCount} {itemCount === 1 ? 'Item' : 'Items'}`.
+
+   B. FREE TABLE CARDS:
+      - Container: `min-h-[98px] h-full w-full flex items-center justify-center p-3 rounded-2xl transition-all`:
+        * Light Mode: `bg-slate-100 hover:bg-slate-200 border-[1.5px] border-slate-900 text-slate-950 shadow-sm hover:shadow-md hover:-translate-y-0.5`.
+        * Dark Mode: `bg-[#13151F] hover:bg-[#1A1D2B] border border-white/10 hover:border-emerald-500/60 text-white shadow-sm hover:shadow-md hover:-translate-y-0.5`.
+      - Table Name: Centered in `text-2xl font-black tracking-wide`.
+
+2. Refined 2D Spatial Geometry (`TableOverview.tsx`):
+   - Wrap the entire floor inside `max-w-7xl mx-auto px-4 py-6 w-full space-y-8`:
+
+   A. FIRST FLOOR (HUTS & HALL) - 3 Columns (`grid grid-cols-12 gap-5 items-stretch`):
+      - Col 1 (cols 1-4, Hut 3): Stack of 3 cards (`H3-B`, `H3-A`, `T-1`), each `min-h-[98px]` with `gap-3`.
+      - Col 2 (cols 5-8, Hut 2): Stack of 3 cards (`H2-B`, `H2-A`, `T-2`), each `min-h-[98px]` with `gap-3`.
+      - Col 3 (cols 9-12, Hut 1): Single `H1` card spanning `h-full min-h-[320px]`.
+        * When Occupied: Render Row 1 header at top, prominent centered customer & guest block in the middle, and full-width telemetry footer at bottom.
+        * When Free: Large centered "H1" in `text-3xl font-black`.
+
+   B. GROUND FLOOR & COURTYARD - 3 Columns (`grid grid-cols-12 gap-5 items-start`):
+      - Column 1 (Sofa & Lounge, cols 1-4):
+        * Top: Wide "Sofa" group card (`min-h-[98px]`).
+        * Middle: 2x2 grid for `L4`, `L3` (top row) and `L2`, `L1` (bottom row) (each `min-h-[98px]`, `gap-3`).
+        * Bottom: Landmark badge `[ 📺 TV AREA ]` (`py-2 rounded-xl text-xs font-bold text-center`).
+      - Column 2 (Bar & Courtyard, cols 5-8):
+        * Top: 2-column grid for `Bar 1` and `Bar 2` side-by-side (`min-h-[98px]`, `gap-3`).
+        * Middle: Landmark badge `[ 🅿️ PARKING AREA ]` (`py-3.5 rounded-xl text-xs font-bold text-center`).
+        * Bottom: Landmark badge `[ ⛩️ MAIN GATE ]` (`py-3.5 rounded-xl text-xs font-bold text-center`).
+      - Column 3 (Private Huts & Cabins, cols 9-12):
+        * Section 1 (`| PRIVATE HUTS`): 2x2 grid for `R3`, `R1` (top row) and `R4`, `R2` (bottom row) (each `min-h-[98px]`, `gap-3`).
+        * Section 2 (`| PRIVATE CABINS`): 2-column grid matching the huts' width for `R5`, `R6` (top row) and `R7` (bottom row, single column width) (each `min-h-[98px]`, `gap-3`).
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
