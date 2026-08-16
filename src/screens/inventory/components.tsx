@@ -30,7 +30,7 @@ export const ProdTypeBadge = ({ type }: { type: InvProductType }) => {
 
 // ── LowBadge ────────────────────────────────────────────────────────────────
 export const LowBadge = () => (
-  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/20 text-red-400 font-semibold leading-none">
+  <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 text-[11px] font-black uppercase tracking-wider leading-none">
     LOW
   </span>
 );
@@ -38,9 +38,9 @@ export const LowBadge = () => (
 // ── StatusBadge ─────────────────────────────────────────────────────────────
 export const StatusBadge = ({ status }: { status: 'active' | 'inactive' }) =>
   status === 'active' ? (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 border border-green-500/20 text-green-400 font-semibold leading-none">Active</span>
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-black uppercase tracking-wider shadow-sm">Active</span>
   ) : (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/35 font-semibold leading-none">Inactive</span>
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-zinc-300 text-[11px] font-black uppercase tracking-wider">Inactive</span>
   );
 
 // ── ValueCard ────────────────────────────────────────────────────────────────

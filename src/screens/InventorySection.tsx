@@ -67,7 +67,7 @@ interface SecBtnProps {
   active: SecondaryView;
   label: string;
   Icon: React.ComponentType<any>;
-  activeStyle: React.CSSProperties;
+  activeStyle?: React.CSSProperties;
   onClick: (id: SecondaryView) => void;
 }
 
@@ -76,13 +76,9 @@ const SecBtn = ({ id, active, label, Icon, activeStyle, onClick }: SecBtnProps) 
   return (
     <button
       onClick={() => onClick(isActive ? null : id)}
-      className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-        isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-      }`}
-      style={isActive
-        ? activeStyle
-        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }
-      }
+      className={isActive
+        ? 'px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 active:scale-95'
+        : 'px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95'}
     >
       <Icon size={13} />
       {label}
@@ -102,12 +98,11 @@ export const InventorySection = () => {
     <div className="space-y-5">
 
       {/* ── Section header: pillar tabs + secondary action buttons ─────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
 
         {/* Pillar tab bar */}
         <div
-          className="flex items-center gap-1 p-1 rounded-xl flex-1"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+          className="flex flex-wrap items-center gap-2"
         >
           {PILLARS.map(({ id, label, Icon }) => {
             const isActive = id === activePillar;
@@ -115,16 +110,9 @@ export const InventorySection = () => {
               <button
                 key={id}
                 onClick={() => setActivePillar(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 justify-center ${
-                  isActive
-                    ? 'text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                }`}
-                style={isActive ? {
-                  background: 'linear-gradient(135deg, rgba(249,115,22,0.22) 0%, rgba(234,88,12,0.15) 100%)',
-                  border: '1px solid rgba(249,115,22,0.35)',
-                  color: '#fb923c',
-                } : undefined}
+                className={isActive
+                  ? 'px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 active:scale-95'
+                  : 'px-5 py-2.5 rounded-xl bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95'}
               >
                 <Icon size={14} />
                 <span className="hidden sm:inline">{label}</span>
