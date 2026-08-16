@@ -42,6 +42,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   const settings    = usePOSStore((s) => s.settings);
   const [remoteLogo, setRemoteLogo] = useState<string | null>(null);
   const [hasLoadedRemoteLogo, setHasLoadedRemoteLogo] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToLogo((logo) => {
@@ -82,7 +83,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         )}
       </div>
       <span
-        className="hidden truncate text-lg font-black tracking-wide text-slate-900 leading-tight dark:text-white sm:block"
+        className="hidden truncate text-lg font-black tracking-wide text-slate-900 leading-tight dark:text-white lg:block"
       >
         {title}
       </span>
@@ -92,7 +93,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
     <div className="flex flex-shrink-0 items-center gap-2.5">
-      <div className="hidden flex-col items-center justify-center gap-0.5 text-center sm:flex">
+      <div className="hidden flex-col items-center justify-center gap-0.5 text-center lg:flex">
         <span className="text-xs font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
         <span
           className={`rounded border px-2 py-0.5 text-[11px] font-bold ${
@@ -116,7 +117,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/10"
       >
         <LogOut size={13} />
-        <span className="hidden sm:inline">Switch User</span>
+        <span className="hidden lg:inline">Switch User</span>
       </button>
     </div>
   ) : null;
@@ -147,34 +148,14 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
     </nav>
   );
 
-  // ── Mobile tab buttons (scrollable row) ────────────────────────────────────
-  const mobileTabs = navItems.map(({ path, label, icon }) => {
-    const active = location.pathname === path;
-    return (
-      <button
-        key={path}
-        onClick={() => navigate(path)}
-        data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
-         className={`flex shrink-0 items-center gap-2 rounded-xl text-sm whitespace-nowrap transition-colors duration-200 select-none active:scale-95 ${
-           active
-             ? 'bg-emerald-600 px-4 py-2 font-bold text-white shadow-sm'
-             : 'border-0 bg-transparent px-4 py-2 font-bold text-slate-700 transition-all hover:bg-white/60 hover:text-slate-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
-         }`}
-      >
-         <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
-        {label}
-      </button>
-    );
-  });
-
   return (
     <div
        className="min-h-screen h-[100dvh] flex flex-col overflow-hidden bg-white text-slate-900 transition-colors dark:bg-[#0A0B0E] dark:text-slate-100"
     >
       {/* ── Header ── */}
-        <header className="flex h-16 flex-shrink-0 items-center border-b border-slate-200 bg-white px-6 py-2.5 shadow-sm dark:border-white/10 dark:bg-[#10121A]">
-         {/* ── TABLET / DESKTOP: single row (sm+) ── */}
-        <div className="hidden h-full w-full items-center justify-between gap-4 sm:flex">
+        <header className="flex-shrink-0 border-b border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10121A] lg:flex lg:h-16 lg:items-center lg:px-6 lg:py-2.5">
+         {/* ── TABLET / DESKTOP: single row (lg+) ── */}
+        <div className="hidden h-full w-full items-center justify-between gap-4 lg:flex">
           {/* Left: brand */}
           {brandBlock}
           {/* Center: nav */}
@@ -186,24 +167,128 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           </div>
         </div>
 
-        {/* ── MOBILE: two rows (<sm) ── */}
-        <div className="sm:hidden">
-           {/* Row 1: brand + theme/user */}
-            <div className="flex items-center justify-between gap-3">
-            {brandBlock}
-              <div className="flex flex-shrink-0 items-center gap-3">
-              <ThemeToggle />
-              {userBadge}
+        {/* ── MOBILE: compact bar + slide-over drawer (<lg) ── */}
+        <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-white/10 dark:bg-[#0A0B0E] lg:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-white/20 dark:bg-white/10">
+              {logoSrc ? (
+                <img src={logoSrc} alt="logo" className="h-8 w-8 rounded-lg object-contain" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-emerald-700 dark:text-accent" stroke="currentColor" strokeWidth={1.8}>
+                  <path d="M3 10h18M3 14h18M9 10V5a3 3 0 016 0v5M5 20h14a2 2 0 002-2V8H3v10a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
             </div>
+            <span className="truncate text-sm font-black tracking-tight text-slate-900 dark:text-white sm:text-base">
+              {title}
+            </span>
           </div>
-          {/* Row 2: nav tabs (scrollable) */}
-          {mobileTabs.length > 0 && (
-              <div className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-300 bg-slate-300/60 p-1 no-scrollbar dark:border-zinc-800 dark:bg-zinc-900/90">
-              {mobileTabs}
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/10"
+            >
+              <span className="relative h-5 w-5">
+                <span className={`absolute left-0 top-1 block h-0.5 w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-1.5 rotate-45' : ''}`} />
+                <span className={`absolute left-0 top-2.5 block h-0.5 w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`} />
+                <span className={`absolute left-0 top-4 block h-0.5 w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? '-translate-y-1.5 -rotate-45' : ''}`} />
+              </span>
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* ── MOBILE: animated navigation drawer ── */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          isMobileMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-hidden={!isMobileMenuOpen}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+      <aside
+        className={`fixed right-0 top-0 z-50 flex h-full w-[280px] flex-col justify-between border-l border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-in-out dark:border-white/10 dark:bg-[#12141D] sm:w-[320px] lg:hidden ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        aria-label="Mobile navigation"
+      >
+        <div>
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {currentUser && (
+                <>
+                  <p className="truncate text-base font-black text-slate-900 dark:text-white">{currentUser.name}</p>
+                  <span
+                    className={`mt-1 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold ${
+                      currentUser.role === 'ADMIN'
+                        ? 'border-purple-300 bg-purple-100 text-purple-800 dark:border-purple-400/30 dark:bg-purple-500/25 dark:text-purple-200'
+                        : 'border-purple-400/30 bg-purple-500/25 text-purple-200'
+                    }`}
+                    style={currentUser.role === 'ADMIN' ? undefined : {
+                      background: ROLE_COLORS[currentUser.role].bg,
+                      border: `1px solid ${ROLE_COLORS[currentUser.role].border}`,
+                      color: ROLE_COLORS[currentUser.role].text,
+                    }}
+                  >
+                    {ROLE_LABEL[currentUser.role]}
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-lg font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/10"
+            >
+              ×
+            </button>
+          </div>
+
+          {currentUser && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleSwitchUser();
+              }}
+              className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              <LogOut size={14} />
+              Switch User
+            </button>
+          )}
+
+          <nav className="flex flex-col gap-2">
+            {navItems.map(({ path, label, icon }) => {
+              const active = location.pathname === path;
+              return (
+                <button
+                  key={path}
+                  type="button"
+                  onClick={() => {
+                    navigate(path);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  data-testid={`mobile-nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors ${
+                    active
+                      ? 'border border-emerald-500/30 bg-emerald-500/15 font-bold text-emerald-600 dark:text-emerald-400'
+                      : 'font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <span className={active ? 'opacity-100' : 'opacity-75'}>{icon}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">

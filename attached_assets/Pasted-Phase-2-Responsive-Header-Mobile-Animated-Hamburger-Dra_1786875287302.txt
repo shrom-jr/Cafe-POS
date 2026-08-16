@@ -1,0 +1,32 @@
+Phase 2 Responsive Header: Mobile Animated Hamburger Drawer with Zero Desktop Impact
+
+Refactor `src/components/ui/TopNav.tsx` (or `AppLayout.tsx` / Header component) to introduce a dedicated mobile header with an animated slide-over navigation drawer:
+
+1. Desktop Header Isolation (`lg:flex`, width >= 1024px):
+   - Wrap the existing desktop top navigation layout inside a container with `hidden lg:flex items-center justify-between px-6 h-16 w-full`.
+   - DO NOT modify any existing desktop CSS classes, layout spacing, portal tabs, or right-side staff controls.
+
+2. Mobile Top Bar (`lg:hidden`, width < 1024px):
+   - Create a clean, compact mobile navbar (`flex lg:hidden items-center justify-between px-4 h-14 w-full border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#0A0B0E] sticky top-0 z-40`):
+     * Left Section: Brand logo (compact `h-8 w-8 rounded-lg`) + full restaurant title:
+       `<span className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">S Bamboo Cottage & Sekuwa Corner</span>`
+     * Right Section (`flex items-center gap-2`):
+       - Theme Toggle Button (`☀️ / 🌙`).
+       - Animated Hamburger Button: 3-line SVG/span icon that smoothly morphs into an `✕` when the drawer is open (`transition-all duration-300`).
+
+3. Mobile Slide-Over Drawer (`lg:hidden`):
+   - Manage state with `const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)`.
+   - Backdrop Overlay: Fixed backdrop with smooth fade-in (`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity`) that closes the menu on click.
+   - Slide-over Drawer Container: `fixed top-0 right-0 h-full w-[280px] sm:w-[320px] bg-white dark:bg-[#12141D] border-l border-slate-200 dark:border-white/10 shadow-2xl z-50 flex flex-col justify-between p-5 transform transition-transform duration-300 ease-in-out`:
+     * Drawer Header:
+       - Staff Badge: Prominent user name ("Sanjib Basnet"), role tag ("Admin"), and a full-width "Switch User" button.
+       - Close Button (`✕`) at the top-right corner.
+     * Drawer Navigation Links:
+       - Vertical stack of full-width buttons for `Tables`, `Customers`, `Kitchen Portal`, `Bar Portal`, and `Admin`.
+       - Active Tab Styling: `bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold`.
+       - Inactive Tab Styling: `text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 font-semibold`.
+       - Each button must include its respective icon and automatically trigger `setIsMobileMenuOpen(false)` on click.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
