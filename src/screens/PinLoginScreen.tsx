@@ -3,7 +3,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { StaffUser, Role } from '@/types/staff';
 import { getFirstPermittedRoute } from '@/utils/permissions';
-import { ArrowLeft, Mail, RotateCcw, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Mail, RotateCcw, Loader2, X, LockKeyhole } from 'lucide-react';
 import { writePinReset } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
@@ -154,6 +154,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       setTimeout(() => { setShake(false); setPin(''); setTimeout(() => setShowError(false), 200); }, 600);
     }
   };
+  const handleForgotPin = () => setView('email');
 
   const handleNewPinDigit = (digit: string) => {
     if (newPinStepRef.current === 'enter') {
@@ -209,37 +210,39 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Circular glass keypad — 1-9 then ⌫/0/✕ ──────────────────────────────
-  const BtnCls = 'h-14 w-14 rounded-full text-2xl font-bold bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 active:border-amber-400 text-white flex items-center justify-center transition-all shadow-sm select-none';
-  const SmBtnCls = 'h-11 w-11 rounded-full text-base font-bold bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 active:border-amber-400 text-white flex items-center justify-center transition-all shadow-sm select-none';
-
+  // ── Rectangular tactile keypad — 1-9 then placeholder/0/⌫ ────────────────
   const Keypad = ({
-    onDigit, onBack, onCancel, small,
-  }: { onDigit: (d: string) => void; onBack: () => void; onCancel?: () => void; small?: boolean }) => {
-    const cls = small ? SmBtnCls : BtnCls;
+    onDigit, onBack, small,
+  }: { onDigit: (d: string) => void; onBack: () => void; small?: boolean }) => {
+    const cls = small
+      ? 'h-12 w-full rounded-2xl bg-[#F1F3F5] text-slate-900 hover:bg-white active:scale-95 transition-all flex items-center justify-center shadow-sm font-black text-xl cursor-pointer select-none'
+      : 'h-14 sm:h-[60px] w-full rounded-2xl bg-[#F1F3F5] text-slate-900 hover:bg-white active:scale-95 transition-all flex items-center justify-center shadow-sm font-black text-2xl cursor-pointer select-none';
+    const backspaceCls = small
+      ? 'h-12 w-full rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center text-lg transition-all cursor-pointer'
+      : 'h-14 sm:h-[60px] w-full rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center text-xl transition-all cursor-pointer';
     return (
-      <div className="flex flex-col items-center gap-3">
-        {[[1,2,3],[4,5,6],[7,8,9]].map((row, ri) => (
-          <div key={ri} className="flex gap-3">
-            {row.map((d) => (
-              <button key={d} onClick={() => onDigit(String(d))} className={cls}>{d}</button>
-            ))}
-          </div>
+      <div className="grid grid-cols-3 gap-2.5 w-full max-w-[280px] mx-auto">
+        {[1,2,3,4,5,6,7,8,9].map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => onDigit(String(d))}
+            className={cls}
+            aria-label={`Enter ${d}`}
+          >
+            {d}
+          </button>
         ))}
-        <div className="flex gap-3">
-          <button onClick={onBack} className={cls}>⌫</button>
-          <button onClick={() => onDigit('0')} className={cls}>0</button>
-          {onCancel
-            ? <button onClick={onCancel} className={`${cls} text-white/50 hover:text-white/90`}><X size={small ? 14 : 18} /></button>
-            : <div className={small ? 'h-11 w-11' : 'h-14 w-14'} />}
-        </div>
+        <div aria-hidden="true" />
+        <button type="button" onClick={() => onDigit('0')} className={cls} aria-label="Enter 0">0</button>
+        <button type="button" onClick={onBack} className={backspaceCls} aria-label="Backspace">⌫</button>
       </div>
     );
   };
 
-  // ── Modal header with staff chip ─────────────────────────────────────────
+  // ── Staff header used by the reset flow ──────────────────────────────────
   const ModalHeader = ({ label }: { label?: string }) => (
-    <div className="flex items-center justify-between w-full">
+    <div className="flex items-center gap-3 w-full">
       <div className="flex items-center gap-3">
         <div
           className="h-10 w-10 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0"
@@ -257,19 +260,12 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
           </span>
         </div>
       </div>
-      <button
-        onClick={onClose}
-        className="p-1.5 rounded-lg transition-colors text-white/30 hover:text-white/70"
-        aria-label="Close"
-      >
-        <X size={15} />
-      </button>
     </div>
   );
 
   // ── Glowing PIN dots ──────────────────────────────────────────────────────
   const PinDots = ({ filled, error }: { filled: number; error?: boolean }) => (
-    <div className="flex justify-center gap-4">
+    <div className="flex items-center justify-center gap-3 mb-6">
       {[0,1,2,3].map((i) => (
         <div
           key={i}
@@ -277,7 +273,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
             filled > i
               ? error
                 ? 'bg-red-500 border-red-500 scale-110'
-                : 'bg-amber-400 border-amber-400 shadow-md shadow-amber-400/60 scale-110'
+                : 'bg-amber-400 border-amber-400 shadow-lg shadow-amber-400/50 scale-110'
               : 'bg-transparent border-white/30'
           }`}
         />
@@ -286,19 +282,38 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <div
         ref={containerRef}
         tabIndex={-1}
-        className={`max-w-xs w-full p-6 rounded-3xl bg-black/95 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black flex flex-col items-center gap-5 z-50 outline-none transition-transform ${
+        className={`relative w-full max-w-[340px] rounded-[28px] p-6 sm:p-7 bg-[#0E1017]/95 dark:bg-[#0E1017]/95 border border-white/15 shadow-2xl shadow-black flex flex-col items-center gap-5 outline-none transition-transform ${
           (shake && view === 'pin') || (newPinShake && view === 'newpin') ? 'animate-shake' : ''
         }`}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-5 right-5 text-zinc-400 hover:text-white transition-colors p-1"
+          aria-label="Close PIN dialog"
+        >
+          <X size={18} />
+        </button>
 
         {/* ═══════════════════════════ PIN VIEW ════════════════════════════════ */}
         {view === 'pin' && (
           <>
-            <ModalHeader />
+            <div className="flex flex-col items-center text-center">
+              <LockKeyhole className="text-xl text-zinc-400 mb-1" size={20} aria-hidden="true" />
+              <p className="text-xs font-bold text-zinc-400 tracking-wider uppercase">
+                Enter your PIN to access
+              </p>
+              <div className="flex items-center gap-2 mt-1 mb-5">
+                <span className="text-sm font-black text-white">{user.name}</span>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-white/10 text-amber-300 border border-amber-500/30">
+                  {ROLE_LABEL[user.role]}
+                </span>
+              </div>
+            </div>
             <PinDots filled={pin.length} error={shake} />
             <p
               className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200 -mt-2"
@@ -309,12 +324,12 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
             <Keypad
               onDigit={(d) => { if (pin.length < 4) handleDigit(d); }}
               onBack={handleBackspace}
-              onCancel={onClose}
             />
             {user.email && (
               <button
-                onClick={() => setView('email')}
-                className="mt-4 text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors tracking-wide"
+                type="button"
+                onClick={handleForgotPin}
+                className="mt-6 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
               >
                 Forgot PIN?
               </button>
@@ -432,7 +447,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
             {newPinShake && (
               <p className="text-center text-xs font-semibold text-red-400 -mt-3">PINs don't match — try again</p>
             )}
-            <Keypad onDigit={handleNewPinDigit} onBack={handleNewPinBackspace} onCancel={onClose} />
+            <Keypad onDigit={handleNewPinDigit} onBack={handleNewPinBackspace} />
           </>
         )}
 

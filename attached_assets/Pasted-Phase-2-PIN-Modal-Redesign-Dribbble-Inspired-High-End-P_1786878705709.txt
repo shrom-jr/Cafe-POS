@@ -1,0 +1,36 @@
+Phase 2 PIN Modal Redesign: Dribbble-Inspired High-End POS Keypad
+
+Refactor the PIN login modal in `src/screens/PinLoginScreen.tsx` (or `src/components/auth/PinModal.tsx`) to match the vertical POS terminal keypad layout:
+
+1. Modal Container & Aspect Ratio:
+   - Backdrop: `fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4`.
+   - Card Surface: `relative w-full max-w-[340px] rounded-[28px] p-6 sm:p-7 bg-[#0E1017]/95 dark:bg-[#0E1017]/95 border border-white/15 shadow-2xl shadow-black flex flex-col items-center`.
+   - Top Right Close Button: `absolute top-5 right-5 text-zinc-400 hover:text-white transition-colors p-1`.
+
+2. Header & PIN Indicator Area:
+   - Header Lock & Title:
+     * Render a subtle lock icon `🔒` or staff avatar at top-center (`text-xl text-zinc-400 mb-1`).
+     * Heading: `<p className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Enter your PIN to access</p>`.
+     * Staff Tag: `<div className="flex items-center gap-2 mt-1 mb-5"><span className="text-sm font-black text-white">{staff.name}</span><span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-white/10 text-amber-300 border border-amber-500/30">{staff.role}</span></div>`.
+   - PIN Indicator Dots:
+     * 4 clean circular indicators (`flex items-center justify-center gap-3 mb-6`):
+     * Unfilled state: `h-3.5 w-3.5 rounded-full border-2 border-white/30 bg-transparent transition-all duration-150`.
+     * Filled state: `h-3.5 w-3.5 rounded-full bg-amber-400 border-2 border-amber-400 shadow-lg shadow-amber-400/50 scale-110 transition-all duration-150`.
+     * Error animation: Trigger an instant horizontal shake on invalid PIN submission.
+
+3. Dribbble-Style Rectangular Tactile Keypad:
+   - Grid Container: `grid grid-cols-3 gap-2.5 w-full max-w-[280px] mx-auto`.
+   - Number Keys (1-9 & 0):
+     * High-contrast tactile keycap: `h-14 sm:h-15 w-full rounded-2xl bg-[#F1F3F5] text-slate-900 hover:bg-white active:scale-95 transition-all flex items-center justify-center shadow-sm font-black text-2xl cursor-pointer select-none`.
+     * Clean typography: DO NOT render any alphabet sub-labels (no "ABC", "DEF", etc.) — display only the bold number.
+   - Bottom Row Layout:
+     * Column 1 (Left): Empty invisible placeholder `<div />`.
+     * Column 2 (Center): Keycap for `0`.
+     * Column 3 (Right): Backspace Keycap (`⌫` or backspace icon in `h-14 w-full rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center text-xl transition-all cursor-pointer`).
+
+4. Minimalist Footer:
+   - "Forgot PIN?" Button: `<button type="button" onClick={handleForgotPin} className="mt-6 text-xs font-semibold text-zinc-400 hover:text-white transition-colors">Forgot PIN?</button>`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any staff user data, PIN validation logic, Firebase auth/reset flows, or permission routing.
+- Run `npm run build` to confirm zero TypeScript or build errors.
