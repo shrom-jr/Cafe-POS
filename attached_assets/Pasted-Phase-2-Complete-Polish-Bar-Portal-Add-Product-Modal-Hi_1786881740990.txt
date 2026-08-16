@@ -1,0 +1,62 @@
+Phase 2 Complete Polish: Bar Portal & Add Product Modal High-Contrast Amber Redesign
+
+Refactor `src/screens/BarPortal.tsx` (and all associated Bar modal/sub-components):
+
+1. High-Contrast Metric Summary Cards (`BarPortal.tsx`):
+   - Grid: `grid grid-cols-1 md:grid-cols-3 gap-5 mt-6`.
+   - Card 1 (Today's Entries):
+     * Container: `p-6 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl shadow-black/40`.
+     * Title: `text-xs font-black uppercase tracking-widest text-amber-400`.
+     * Value: `text-3xl font-black text-white mt-1.5 tracking-tight`.
+   - Card 2 (Total Spend Today):
+     * Container: `p-6 rounded-2xl bg-[#0F1916] border border-emerald-500/50 shadow-xl shadow-emerald-500/10`.
+     * Title: `text-xs font-black uppercase tracking-widest text-emerald-400`.
+     * Value: `text-3xl font-black text-emerald-400 mt-1.5 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]`.
+   - Card 3 (Items Updated):
+     * Container: `p-6 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl shadow-black/40`.
+     * Title: `text-xs font-black uppercase tracking-widest text-amber-400`.
+     * Value: `text-3xl font-black text-white mt-1.5 tracking-tight`.
+   - REMOVE all dim subtexts like "0 log entries", "Restocks only", and "unique products".
+
+2. Left Form Column: High-Contrast "Log Bar Entry" (`BarPortal.tsx`):
+   - Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4`.
+   - Header:
+     * Title: `text-base font-black text-white flex items-center gap-2`.
+     * "+ New Item" Trigger: `text-xs font-black text-amber-400 hover:text-amber-300 uppercase tracking-wider transition-colors ml-auto cursor-pointer`.
+   - Labels ("PRODUCT", "ENTRY TYPE", "QUANTITY", "TOTAL COST (RS.)", "SUPPLIER / PAYMENT SOURCE"):
+     * Standardize to: `text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block`.
+     * Remove the "(optional)" subtext from the supplier label.
+   - Input Fields & Select Dropdowns:
+     * `w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner`.
+   - Entry Type Toggle Buttons:
+     * Restock Selected: `flex-1 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider border-2 border-amber-400 shadow-md shadow-amber-500/20 transition-all`.
+     * Spill/Loss Selected: `flex-1 py-3 rounded-xl bg-rose-500 text-white font-black text-xs uppercase tracking-wider border-2 border-rose-400 shadow-md shadow-rose-500/20 transition-all`.
+     * Unselected: `flex-1 py-3 rounded-xl bg-white/5 text-zinc-300 hover:text-white border border-white/15 text-xs font-black uppercase tracking-wider transition-all`.
+   - Primary Submit Button:
+     * Replace emerald green with vibrant Amber matching the Kitchen portal:
+       `w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] mt-2`.
+
+3. Right Column: "Today's Restocks" & Empty State Feed (`BarPortal.tsx`):
+   - Container: `bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex-1 flex flex-col`.
+   - Header:
+     * Title: `text-base font-black text-white tracking-wide`.
+     * Date Badge: `px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-black font-mono text-zinc-200`.
+   - Empty State Container:
+     * `flex-1 min-h-[300px] flex flex-col items-center justify-center text-center gap-2 p-8 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4`.
+     * Icon: `text-4xl text-zinc-400 mb-1`.
+     * Primary Message: `<p className="text-sm font-black text-white">No restock entries recorded today.</p>`.
+     * Sub-message: `<p className="text-xs font-bold text-zinc-300">Use the form on the left to record incoming stock or loss.</p>`.
+
+4. High-Contrast "Add New Product" Modal (`AddProductModal.tsx` or modal component):
+   - Modal Container: `max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4`.
+   - Header Title: `text-lg font-black text-white tracking-tight flex items-center gap-2`.
+   - Labels ("PRODUCT NAME", "CATEGORY", "UNIT TYPE", "BOTTLE / CAN SIZE (ML)", "OPENING QTY", "TOTAL COST"):
+     * `text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block`.
+   - Inputs: `bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none`.
+   - Action Buttons:
+     * Cancel: `flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all`.
+     * Add to Inventory: `flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all`.
+
+STRICT CONSTRAINTS:
+- Do NOT alter any bar stock calculations, unit volume conversions, Firebase listeners, or other screens.
+- Run `npm run build` to confirm zero TypeScript or build errors.

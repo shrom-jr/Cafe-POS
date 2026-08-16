@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { GlassWater, PackagePlus, Trash2, TrendingDown, TrendingUp, BarChart3, ShoppingBag, Plus, X } from 'lucide-react';
+import { GlassWater, PackagePlus, Trash2, TrendingDown, TrendingUp, Plus, X } from 'lucide-react';
 import AppLayout from '@/components/ui/AppLayout';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useStaffStore } from '@/store/useStaffStore';
@@ -76,27 +76,21 @@ const ITEMS_META: Record<InvProductType, { label: string; placeholder: string; d
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({
-  label, value, sub, icon: Icon, color,
+  label, value, color,
 }: {
-  label: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string;
+  label: string; value: string | number; color: string;
 }) {
+  const isSpend = color === '#34d399';
   return (
-    <div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl flex-1 min-w-0"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-    >
-      <div
-        className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg"
-        style={{ background: `${color}20`, border: `1px solid ${color}40` }}
-      >
-        <Icon size={16} style={{ color }} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-white/45 uppercase tracking-wide truncate">{label}</p>
-        <p className="text-lg font-bold text-white/90 leading-tight">{value}</p>
-        {sub && <p className="text-[10px] text-white/35 truncate">{sub}</p>}
-      </div>
+    <div className={isSpend
+      ? 'p-6 rounded-2xl bg-[#0F1916] border border-emerald-500/50 shadow-xl shadow-emerald-500/10'
+      : 'p-6 rounded-2xl bg-[#13151F] border border-white/15 shadow-xl shadow-black/40'
+    }>
+      <p className={`text-xs font-black uppercase tracking-widest ${isSpend ? 'text-emerald-400' : 'text-amber-400'}`}>{label}</p>
+      <p className={`text-3xl font-black mt-1.5 tracking-tight ${isSpend
+        ? 'text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+        : 'text-white'
+      }`}>{value}</p>
     </div>
   );
 }
@@ -295,32 +289,9 @@ const BarPortal = () => {
     toast.success('Entry removed and stock corrected');
   };
 
-  // ── Input style ──
-  const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    color: 'rgba(255,255,255,0.85)',
-    outline: 'none',
-    width: '100%',
-    padding: '8px 12px',
-    fontSize: 14,
-  };
-
-  const selectStyle: React.CSSProperties = {
-    ...inputStyle,
-    colorScheme: 'dark',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'rgba(255,255,255,0.45)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    marginBottom: 6,
-    display: 'block',
-  };
+  const barInputClass = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
+  const barSelectClass = `${barInputClass} appearance-none cursor-pointer`;
+  const barLabelClass = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block';
 
   // ── Render ──
   return (
@@ -328,26 +299,20 @@ const BarPortal = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
         {/* ── Stat Cards ── */}
-        <div className="flex gap-3 flex-wrap">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
           <StatCard
             label="Today's Entries"
             value={todayEntries.length}
-            sub={todayEntries.length === 1 ? '1 log entry' : `${todayEntries.length} log entries`}
-            icon={BarChart3}
             color="#818cf8"
           />
           <StatCard
             label="Total Spend Today"
             value={`Rs. ${fmt(totalSpend)}`}
-            sub="Restocks only"
-            icon={ShoppingBag}
             color="#34d399"
           />
           <StatCard
             label="Items Updated"
             value={uniqueItems}
-            sub={uniqueItems === 1 ? 'unique product' : 'unique products'}
-            icon={GlassWater}
             color="#60a5fa"
           />
         </div>
@@ -356,28 +321,27 @@ const BarPortal = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 items-start">
 
           {/* ── Log Entry Form ── */}
-          <div
-            className="rounded-xl p-5 space-y-4 flex-shrink-0"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
-          >
+          <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4 flex-shrink-0">
             {/* Header */}
             <div className="flex items-center gap-2">
-              <div
-                className="flex items-center justify-center w-7 h-7 rounded-lg"
-                style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}
+              <PackagePlus size={17} className="text-amber-400" />
+              <span className="text-base font-black text-white">Log Bar Entry</span>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="text-xs font-black text-amber-400 hover:text-amber-300 uppercase tracking-wider transition-colors ml-auto cursor-pointer flex items-center gap-1"
               >
-                <PackagePlus size={14} style={{ color: '#818cf8' }} />
-              </div>
-              <span className="text-sm font-semibold text-white/80">Log Bar Entry</span>
+                <Plus size={12} /> New Item
+              </button>
             </div>
 
             {/* Product select */}
             <div>
-              <label style={labelStyle}>Product</label>
+              <label className={barLabelClass}>Product</label>
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                style={selectStyle}
+                className={barSelectClass}
               >
                 <option value="" style={{ background: '#1e293b', color: '#e2e8f0' }}>
                   — Select a product —
@@ -404,33 +368,15 @@ const BarPortal = () => {
                   );
                 })}
               </select>
-              <div className="flex items-center justify-between mt-1.5">
-                {allProducts.length === 0 ? (
-                  <p className="text-xs text-white/30">
-                    No active products yet — add one below.
-                  </p>
-                ) : <span />}
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1 text-xs font-semibold transition-colors"
-                  style={{ color: '#818cf8' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = '#a5b4fc')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = '#818cf8')}
-                >
-                  <Plus size={11} />
-                  New Item
-                </button>
-              </div>
+              {allProducts.length === 0 && (
+                <p className="text-xs font-bold text-zinc-300 mt-1.5">No active products yet — add one above.</p>
+              )}
             </div>
 
             {/* Entry type toggle */}
             <div>
-              <label style={labelStyle}>Entry Type</label>
-              <div
-                className="flex rounded-lg p-1 gap-1"
-                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
+              <label className={barLabelClass}>Entry Type</label>
+              <div className="flex rounded-xl p-1 gap-1 bg-black/30 border border-white/10">
                 {(['Restock', 'Spill/Loss'] as const).map((t) => {
                   const active = entryType === t;
                   const m = ENTRY_TYPE_META[t];
@@ -439,14 +385,11 @@ const BarPortal = () => {
                     <button
                       key={t}
                       onClick={() => setEntryType(t)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all"
-                      style={active ? {
-                        background: m.bg,
-                        border: `1px solid ${m.border}`,
-                        color: m.text,
-                      } : {
-                        color: 'rgba(255,255,255,0.35)',
-                      }}
+                      className={active
+                        ? t === 'Restock'
+                          ? 'flex-1 py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider border-2 border-amber-400 shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5'
+                          : 'flex-1 py-3 rounded-xl bg-rose-500 text-white font-black text-xs uppercase tracking-wider border-2 border-rose-400 shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-1.5'
+                        : 'flex-1 py-3 rounded-xl bg-white/5 text-zinc-300 hover:text-white border border-white/15 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5'}
                     >
                       <Icon size={13} />
                       {t}
@@ -459,7 +402,7 @@ const BarPortal = () => {
             {/* Size / Portion — only for alcohol */}
             {selectedProduct?.productType === 'alcohol' && (
               <div>
-                <label style={labelStyle}>Size / Portion</label>
+                <label className={barLabelClass}>Size / Portion</label>
                 <div
                   className="grid grid-cols-5 gap-1 rounded-lg p-1"
                   style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
@@ -499,7 +442,7 @@ const BarPortal = () => {
 
             {/* Quantity */}
             <div>
-              <label style={labelStyle}>
+              <label className={barLabelClass}>
                 Quantity
                 {selectedProduct && (
                   <span className="ml-1.5 text-white/30 normal-case font-normal tracking-normal">
@@ -526,7 +469,7 @@ const BarPortal = () => {
                       : '');
                   }
                 }}
-                style={inputStyle}
+                className={barInputClass}
               />
               {/* Volume preview — only for alcohol with a valid qty */}
               {selectedProduct?.productType === 'alcohol' && Number(qty) > 0 && portionMl > 0 && (
@@ -548,7 +491,7 @@ const BarPortal = () => {
             {entryType === 'Restock' && (
               <>
                 <div>
-                  <label style={labelStyle}>Total Cost (Rs.)</label>
+                   <label className={barLabelClass}>Total Cost (Rs.)</label>
                   <input
                     type="number"
                     min="0"
@@ -559,12 +502,7 @@ const BarPortal = () => {
                       setTotalCost(e.target.value);
                       setIsCostEditedByUser(true);
                     }}
-                    style={{
-                      ...inputStyle,
-                      borderColor: isCostEditedByUser
-                        ? 'rgba(251,191,36,0.45)'
-                        : 'rgba(255,255,255,0.1)',
-                    }}
+                     className={`${barInputClass} ${isCostEditedByUser ? 'border-amber-400/60' : ''}`}
                   />
                   {totalCost !== '' && (
                     <p className="mt-1.5 text-[11px] leading-snug" style={{
@@ -579,16 +517,15 @@ const BarPortal = () => {
                   )}
                 </div>
                 <div>
-                  <label style={labelStyle}>
+                   <label className={barLabelClass}>
                     Supplier / Payment Source
-                    <span className="ml-1 text-white/25 font-normal tracking-normal normal-case">optional</span>
                   </label>
                   <input
                     type="text"
                     placeholder="Cash, Credit, Supplier name…"
                     value={supplier}
                     onChange={(e) => setSupplier(e.target.value)}
-                    style={inputStyle}
+                     className={barInputClass}
                   />
                 </div>
               </>
@@ -597,46 +534,30 @@ const BarPortal = () => {
             {/* Submit */}
             <button
               onClick={handleSubmit}
-              className="w-full py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95 hover:brightness-110"
-              style={{
-                background: entryType === 'Restock'
-                  ? 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)'
-                  : 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(185,28,28,0.8) 100%)',
-                color: '#fff',
-                border: entryType === 'Restock'
-                  ? '1px solid rgba(16,185,129,0.5)'
-                  : '1px solid rgba(239,68,68,0.5)',
-              }}
+               className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] mt-2"
             >
               + Log {entryType}
             </button>
           </div>
 
           {/* ── Today's Ledger ── */}
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
-          >
+          <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex-1 flex flex-col">
             {/* Ledger header */}
             <div
-              className="flex items-center justify-between px-4 py-3"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+              className="flex items-center justify-between mb-4"
             >
-              <span className="text-sm font-semibold text-white/70">Today's Restocks</span>
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}
-              >
+              <span className="text-base font-black text-white tracking-wide">Today's Restocks</span>
+              <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-black font-mono text-zinc-200">
                 {today}
               </span>
             </div>
 
             {/* Ledger body */}
             {todayEntries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16">
-                <GlassWater size={32} className="text-white/15" />
-                <p className="text-sm text-white/30 font-medium">No entries logged today</p>
-                <p className="text-xs text-white/20">Use the form to log restocks or losses</p>
+              <div className="flex-1 min-h-[300px] flex flex-col items-center justify-center text-center gap-2 p-8 border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
+                <GlassWater size={36} className="text-4xl text-zinc-400 mb-1" />
+                <p className="text-sm font-black text-white">No restock entries recorded today.</p>
+                <p className="text-xs font-bold text-zinc-300">Use the form on the left to record incoming stock or loss.</p>
               </div>
             ) : (
               <div className="divide-y divide-white/[0.05]">
@@ -883,90 +804,64 @@ function QuickAddModal({
     onCreated(newId);
   };
 
-  // ── Shared styles ──
-  const fieldStyle: React.CSSProperties = {
-    background: '#1e293b',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: 8,
-    color: '#f1f5f9',
-    outline: 'none',
-    width: '100%',
-    padding: '8px 12px',
-    fontSize: 14,
-    colorScheme: 'dark',
-  };
-  const lbl: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
-    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'block',
-  };
-  const optStyle: React.CSSProperties = { background: '#1e293b', color: '#f1f5f9' };
+  // ── Shared modal styles ──
+  const mInput = 'bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none w-full';
+  const mSelect = `${mInput} appearance-none cursor-pointer`;
+  const mLabel = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block';
+  const optStyle: React.CSSProperties = { background: '#181B26', color: '#f1f5f9' };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="w-full max-w-md rounded-2xl p-6 space-y-5"
-        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}
-      >
+      <div className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-lg"
-              style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}
-            >
-              <Plus size={15} style={{ color: '#818cf8' }} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white/90">Add New Product</p>
-              <p className="text-[11px] text-white/35">Item will be added to inventory immediately</p>
-            </div>
-          </div>
+          <p className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+            <Plus size={18} className="text-amber-400" />
+            Add New Product
+          </p>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-            style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)' }}
+            className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
           >
-            <X size={14} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Product Name */}
         <div>
-          <label style={lbl}>Product Name</label>
+          <label className={mLabel}>Product Name</label>
           <input
             ref={nameRef}
             type="text"
             placeholder="e.g. Tuborg Beer"
             value={rawName}
             onChange={(e) => setRawName(e.target.value)}
-            style={{
-              ...fieldStyle,
-              borderColor: isDuplicate ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.12)',
-            }}
+            className={`${mInput} ${isDuplicate ? 'border-rose-500/60' : ''}`}
           />
           {isDuplicate && (
-            <p className="mt-1.5 text-xs font-medium" style={{ color: '#f87171' }}>
+            <p className="mt-1.5 text-xs font-bold text-rose-400">
               ⚠ <strong>{dupMatch}</strong> already exists — select it from the dropdown.
             </p>
           )}
           {!isDuplicate && displayName.length > 0 && (
-            <p className="mt-1.5 text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              Will be saved as: <span style={{ color: '#a5b4fc' }}>{displayName}</span>
+            <p className="mt-1.5 text-[11px] text-zinc-400">
+              Will be saved as: <span className="text-amber-400 font-bold">{displayName}</span>
             </p>
           )}
         </div>
 
         {/* Category */}
         <div>
-          <label style={lbl}>Category</label>
+          <label className={mLabel}>Category</label>
           <select
             value={category}
             onChange={(e) => handleCategoryChange(e.target.value as InvProductType)}
-            style={fieldStyle}
+            className={mSelect}
           >
             <option value="alcohol"   style={optStyle}>Alcohol</option>
             <option value="beverage"  style={optStyle}>Beverage</option>
@@ -977,11 +872,11 @@ function QuickAddModal({
         {/* Unit Type + Items per Unit — side by side */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label style={lbl}>Unit Type</label>
+            <label className={mLabel}>Unit Type</label>
             <select
               value={unitType}
               onChange={(e) => setUnitType(e.target.value)}
-              style={fieldStyle}
+              className={mSelect}
             >
               {CATEGORY_UNITS[category].map((u) => (
                 <option key={u.value} value={u.value} style={optStyle}>{u.label}</option>
@@ -989,7 +884,7 @@ function QuickAddModal({
             </select>
           </div>
           <div>
-            <label style={lbl}>{ITEMS_META[category].label}</label>
+            <label className={mLabel}>{ITEMS_META[category].label}</label>
             <input
               type="number"
               min="1"
@@ -997,22 +892,19 @@ function QuickAddModal({
               placeholder={ITEMS_META[category].placeholder}
               value={itemsPerUnit}
               onChange={(e) => setItemsPerUnit(Math.max(1, Number(e.target.value) || 1))}
-              style={fieldStyle}
+              className={mInput}
             />
           </div>
         </div>
 
         {/* Initial Restock (optional) */}
-        <div
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <p className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Initial Restock <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+        <div className="rounded-2xl p-4 space-y-3 bg-white/[0.03] border border-white/10">
+          <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+            Initial Restock <span className="text-zinc-600 font-normal normal-case tracking-normal">(optional)</span>
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={lbl}>Opening Qty</label>
+              <label className={mLabel}>Opening Qty</label>
               <input
                 type="number"
                 min="0"
@@ -1020,11 +912,11 @@ function QuickAddModal({
                 placeholder="0"
                 value={initQty}
                 onChange={(e) => setInitQty(e.target.value)}
-                style={fieldStyle}
+                className={mInput}
               />
             </div>
             <div>
-              <label style={lbl}>Total Cost (Rs.)</label>
+              <label className={mLabel}>Total Cost</label>
               <input
                 type="number"
                 min="0"
@@ -1032,35 +924,26 @@ function QuickAddModal({
                 placeholder="0"
                 value={initCost}
                 onChange={(e) => setInitCost(e.target.value)}
-                style={fieldStyle}
+                className={mInput}
               />
             </div>
           </div>
         </div>
 
         {/* Footer buttons */}
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-3 pt-1">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+            className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!canSubmit}
-            className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95"
-            style={canSubmit ? {
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.9) 0%, rgba(79,70,229,0.9) 100%)',
-              border: '1px solid rgba(99,102,241,0.5)',
-              color: '#fff',
-            } : {
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.2)',
-              cursor: 'not-allowed',
-            }}
+            className={canSubmit
+              ? 'flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all'
+              : 'flex-1 py-3.5 rounded-xl bg-white/5 text-white/20 font-black text-xs uppercase tracking-wider cursor-not-allowed'}
           >
             Add to Inventory
           </button>
