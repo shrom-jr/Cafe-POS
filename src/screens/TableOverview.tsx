@@ -188,9 +188,9 @@ const GroundFloorBlueprint = ({
           <Slot table={l2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={l1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <div className="flex items-center justify-center gap-2 py-2 text-xs font-black tracking-wider text-slate-500 dark:text-zinc-400">
-          <span className="text-lg" aria-hidden="true">📺</span>
-          <span>TV AREA</span>
+        <div className="flex min-h-[38px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-3 py-2 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+          <span className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400" aria-hidden="true">📺</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">TV AREA</span>
         </div>
         <OverflowGrid tables={overflowLounge} orderData={orderData} onTableClick={onTableClick} />
       </div>
@@ -202,13 +202,13 @@ const GroundFloorBlueprint = ({
           <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <div className="flex min-h-[140px] flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-4 transition-all dark:border-zinc-800 dark:bg-zinc-900/30">
-          <span className="text-3xl leading-none" aria-hidden="true">🅿️</span>
-          <span className="text-sm font-black tracking-widest text-slate-700 dark:text-zinc-300">PARKING AREA</span>
+        <div className="flex min-h-[130px] flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-3 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+          <span className="text-xl leading-none" aria-hidden="true">🅿️</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">PARKING AREA</span>
         </div>
-        <div className="flex min-h-[60px] items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-3.5 transition-all dark:border-zinc-800 dark:bg-zinc-900/30">
-          <span className="text-2xl leading-none" aria-hidden="true">⛩️</span>
-          <span className="text-sm font-black tracking-widest text-slate-700 dark:text-zinc-300">MAIN GATE</span>
+        <div className="flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2.5 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+          <span className="text-lg leading-none" aria-hidden="true">⛩️</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">MAIN GATE</span>
         </div>
         <OverflowGrid tables={overflowBar} orderData={orderData} onTableClick={onTableClick} />
       </div>
