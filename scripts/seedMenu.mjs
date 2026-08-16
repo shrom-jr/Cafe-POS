@@ -431,9 +431,29 @@ async function put(path, data) {
   return res.json();
 }
 
+/** Remove a top-level node completely (sets it to null via DELETE). */
+async function deleteNode(path) {
+  const url = `${DB_URL}/${path}.json`;
+  const res = await fetch(url, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`DELETE ${path} failed (${res.status}): ${text}`);
+  }
+}
+
 async function main() {
+  // ── 1. Clean up deprecated top-level nodes ────────────────────────────────
+  // SAFE: only removes the three stale menu nodes; orders, tables, customers,
+  // inventory, expenses, users, and settings are never touched.
+  const staleNodes = ['categories', 'menuItems', 'pillars'];
+  for (const node of staleNodes) {
+    await deleteNode(node);
+    console.log(`🗑️   Removed stale top-level /${node}`);
+  }
+
+  // ── 2. Write canonical menu paths ─────────────────────────────────────────
   console.log(
-    `Seeding ${categories.length} categories and ${menuItems.length} items ` +
+    `\nSeeding ${categories.length} categories and ${menuItems.length} items ` +
     `to menu/categories and menu/items …`
   );
 

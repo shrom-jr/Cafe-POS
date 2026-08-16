@@ -211,7 +211,7 @@ export async function pushLogoToFirebase(logo: string | null) {
 // Push Menu Items
 export async function pushMenuItemsToFirebase(menuItems: MenuItem[]) {
   try {
-    await set(ref(db, "menuItems"), JSON.parse(JSON.stringify(menuItems || [])));
+    await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(menuItems || [])));
   } catch (error) {
     console.error("❌ [Firebase Menu Items Push FAILED]:", error);
   }
@@ -220,7 +220,7 @@ export async function pushMenuItemsToFirebase(menuItems: MenuItem[]) {
 // Push Categories
 export async function pushCategoriesToFirebase(categories: Category[]) {
   try {
-    await set(ref(db, "categories"), JSON.parse(JSON.stringify(categories || [])));
+    await set(ref(db, "menu/categories"), JSON.parse(JSON.stringify(categories || [])));
   } catch (error) {
     console.error("❌ [Firebase Categories Push FAILED]:", error);
   }
@@ -229,7 +229,7 @@ export async function pushCategoriesToFirebase(categories: Category[]) {
 // Push Pillars
 export async function pushPillarsToFirebase(pillars: string[]) {
   try {
-    await set(ref(db, "pillars"), JSON.parse(JSON.stringify(pillars || [])));
+    await set(ref(db, "menu/pillars"), JSON.parse(JSON.stringify(pillars || [])));
   } catch (error) {
     console.error("❌ [Firebase Pillars Push FAILED]:", error);
   }
@@ -340,21 +340,21 @@ export function subscribeToLogo(callback: (logo: string | null) => void) {
 
 // Subscribe to Live Menu Items
 export function subscribeToMenuItems(store: FirebaseSyncStore) {
-  return onValue(ref(db, "menuItems"), (snapshot) => {
+  return onValue(ref(db, "menu/items"), (snapshot) => {
     store.setMenuItems(toArray(snapshot.val()) as MenuItem[]);
   });
 }
 
 // Subscribe to Live Categories
 export function subscribeToCategories(store: FirebaseSyncStore) {
-  return onValue(ref(db, "categories"), (snapshot) => {
+  return onValue(ref(db, "menu/categories"), (snapshot) => {
     store.setCategories(toArray(snapshot.val()) as Category[]);
   });
 }
 
 // Subscribe to Live Pillars
 export function subscribeToPillars(store: FirebaseSyncStore) {
-  return onValue(ref(db, "pillars"), (snapshot) => {
+  return onValue(ref(db, "menu/pillars"), (snapshot) => {
     store.setPillars(toArray(snapshot.val()) as string[]);
   });
 }
