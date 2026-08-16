@@ -341,10 +341,9 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
         <div className="flex flex-wrap items-end gap-4">
 
           {/* Date — for backdated logging */}
-          <div className="w-44">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">
-              Date
-              <span className="ml-2 text-zinc-400 font-normal normal-case tracking-normal">defaults to today</span>
+          <div className="w-44 self-end">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block truncate">
+              DATE
             </label>
             <div className="relative">
               <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-orange-400 w-5 h-5 z-10" />
@@ -360,8 +359,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Item Name — grouped dropdown */}
-          <div className="w-52 space-y-2">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Item Name</label>
+          <div className="w-52 self-end">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block truncate">ITEM NAME</label>
             <div className="relative">
               <select
                 value={selectedItem}
@@ -396,8 +395,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Quantity — value + unit side by side */}
-          <div className="w-44">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Quantity</label>
+          <div className="w-44 self-end">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block truncate">QUANTITY</label>
             <div className="flex gap-2">
               <input
                 value={qtyValue}
@@ -434,8 +433,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Rate */}
-          <div className="w-32">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Rate / Price (Rs.)</label>
+          <div className="w-32 self-end">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block truncate">RATE / PRICE (RS.)</label>
             <input
               value={rate}
               onChange={(e) => handleRateChange(e.target.value)}
@@ -448,11 +447,8 @@ const PurchasesTab = ({ purchases, onPurchaseAdded, onPurchaseDeleted }: Purchas
           </div>
 
           {/* Total Cost */}
-          <div className="w-32">
-            <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">
-              Total (Rs.)
-              <span className="ml-1.5 text-zinc-400 font-normal normal-case tracking-normal">auto-calc</span>
-            </label>
+          <div className="w-32 self-end">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block truncate">TOTAL (RS.)</label>
             <input
               value={totalCost}
               onChange={(e) => handleCostChange(e.target.value)}
