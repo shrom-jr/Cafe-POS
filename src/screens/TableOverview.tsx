@@ -110,7 +110,23 @@ const FirstFloorBlueprint = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-12 items-stretch gap-5">
+      {/* Mobile: Hut 3 and Hut 2 side-by-side, then H1 across the full width. */}
+      <div className="grid grid-cols-2 gap-3 lg:hidden">
+        <div className="flex flex-col gap-3">
+          <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+          <Slot table={h3a} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+          <Slot table={t1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Slot table={h2b} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+          <Slot table={h2a} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+          <Slot table={t2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
+        </div>
+        <Slot table={h1} orderData={orderData} onTableClick={onTableClick} className="col-span-2 min-h-[98px]" />
+      </div>
+
+      {/* Desktop: preserve the physical 12-column first-floor blueprint. */}
+      <div className="hidden grid-cols-12 items-stretch gap-5 lg:grid">
         {/* Hut 3 */}
         <div className="col-span-4 flex h-full flex-col gap-3">
           <Slot table={h3b} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
@@ -175,9 +191,9 @@ const GroundFloorBlueprint = ({
   const overflowCabins = overflowTables(cabinTs, KNOWN_CABINS);
 
   return (
-    <div className="grid grid-cols-12 items-stretch gap-5">
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-stretch lg:gap-5">
       {/* ── LEFT: Sofa & Lounge ── */}
-      <div className="col-span-4 flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:col-span-4">
         <AreaHeader label="Sofa & Lounge" areaIndex={1} />
         {/* Sofa — wide single card */}
         <Slot table={sofa} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
@@ -188,7 +204,7 @@ const GroundFloorBlueprint = ({
           <Slot table={l2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={l1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <div className="flex min-h-[38px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-3 py-2 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+        <div className="hidden min-h-[38px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-3 py-2 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20 lg:flex">
           <span className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400" aria-hidden="true">📺</span>
           <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">TV AREA</span>
         </div>
@@ -196,17 +212,17 @@ const GroundFloorBlueprint = ({
       </div>
 
       {/* ── MIDDLE: Bar Counter + Landmarks ── */}
-      <div className="col-span-4 flex h-full flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:col-span-4 lg:h-full">
         <AreaHeader label="Bar Counter" areaIndex={2} />
         <div className="grid grid-cols-2 gap-3">
           <Slot table={bar1} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
           <Slot table={bar2} orderData={orderData} onTableClick={onTableClick} className="min-h-[98px]" />
         </div>
-        <div className="flex min-h-[130px] flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-3 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+        <div className="hidden min-h-[130px] flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-3 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20 lg:flex">
           <span className="text-xl leading-none" aria-hidden="true">🅿️</span>
           <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">PARKING AREA</span>
         </div>
-        <div className="flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2.5 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20">
+        <div className="hidden min-h-[50px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2.5 transition-all dark:border-zinc-800/80 dark:bg-zinc-900/20 lg:flex">
           <span className="text-lg leading-none" aria-hidden="true">⛩️</span>
           <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-400">MAIN GATE</span>
         </div>
@@ -214,7 +230,7 @@ const GroundFloorBlueprint = ({
       </div>
 
       {/* ── RIGHT: Private Huts + Private Cabins ── */}
-      <div className="col-span-4 flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:col-span-4">
         <AreaHeader label="Private Huts" areaIndex={3} />
         {/* Private Huts: R3/R1 top row, R4/R2 bottom row */}
         <div className="grid grid-cols-2 gap-3">

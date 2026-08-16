@@ -1,0 +1,30 @@
+Phase 2 Responsive Optimization: Clean Mobile Portrait Stacking & Desktop Landmark Preservation
+
+Refactor `src/screens/TableOverview.tsx` to introduce responsive layout breakpoints (`lg:`):
+
+1. Desktop Layout (`lg:`, width >= 1024px):
+   - KEEP the exact existing desktop 2D spatial blueprint 100% untouched.
+   - Maintain the 3-column side-by-side architecture (Sofa/Lounge, Bar/Parking/Gate, Huts/Cabins).
+   - Display all landmarks (`📺 TV AREA`, `🅿️ PARKING AREA`, `⛩️ MAIN GATE`) on desktop screens.
+
+2. Mobile Portrait Layout (`< lg`, width < 1024px):
+   - Landmarks: Add `hidden lg:flex` to the containers for `📺 TV AREA`, `🅿️ PARKING AREA`, and `⛩️ MAIN GATE` so they are completely hidden on mobile screens.
+   - Layout Structure (`flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-5`):
+     * FIRST FLOOR:
+       - On Mobile: Render Hut 3 stack (left) and Hut 2 stack (right) side-by-side (`grid grid-cols-2 gap-3`), with `H1` spanning full width across both columns (`col-span-2 min-h-[98px]`) below them.
+       - On Desktop (`lg:`): Render Hut 3 (cols 1-4), Hut 2 (cols 5-8), and tall Hut 1 (cols 9-12).
+     * GROUND FLOOR & COURTYARD:
+       - On Mobile: Stack sections vertically in clean, thumb-friendly groups:
+         1. SOFA & LOUNGE: Wide `Sofa` (full width), followed by 2x2 grid for `L4/L3` and `L2/L1`.
+         2. BAR COUNTER: 2-column grid for `Bar 1` and `Bar 2` side-by-side (`grid grid-cols-2 gap-3`).
+         3. PRIVATE HUTS: 2-column grid for `R3, R1` (top row) and `R4, R2` (bottom row).
+         4. PRIVATE CABINS: 2-column grid for `R5, R6` (top row) and `R7` (bottom row, full width or single col).
+       - On Desktop (`lg:`): Retain 3 side-by-side columns with all landmarks.
+
+3. TableCard Touch & Readability Standards:
+   - Ensure all cards maintain a minimum touch height of `min-h-[98px]` on both mobile and desktop with zero text clipping.
+   - Occupied cards retain full contrast, bold table titles, guest counts, customer tags, live timers, and item counters.
+
+STRICT CONSTRAINTS:
+- Do not alter Firebase listeners, active order state calculations, drawer click handlers, or theme tokens.
+- Run `npm run build` to confirm zero TypeScript or build errors.
