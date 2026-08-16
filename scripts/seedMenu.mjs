@@ -16,24 +16,27 @@ const DB_URL =
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const categories = [
-  // ── KOT categories (go to kitchen printer) ──────────────────────────────
-  { id: 'cat-hot-bev',        name: 'Hot Beverages',              order: 1,  printRoute: 'KOT' },
-  { id: 'cat-crafted-cold',   name: 'Crafted Cold Beverages',     order: 2,  printRoute: 'KOT' },
-  { id: 'cat-soups',          name: 'Soups',                      order: 3,  printRoute: 'KOT' },
-  { id: 'cat-burgers',        name: 'Burgers & Sandwiches',       order: 4,  printRoute: 'KOT' },
-  { id: 'cat-sizzlers-chh',   name: 'Sizzlers & Chhoila',         order: 5,  printRoute: 'KOT' },
-  { id: 'cat-chefs-fish',     name: "Chef's Special & Fish",      order: 6,  printRoute: 'KOT' },
-  { id: 'cat-veg-snacks',     name: 'Vegetarian Snacks & Salads', order: 7,  printRoute: 'KOT' },
-  { id: 'cat-nonveg-snacks',  name: 'Non-Vegetarian Snacks',      order: 8,  printRoute: 'KOT' },
-  { id: 'cat-platters-momo',  name: 'Platters, Momo & Noodles',   order: 9,  printRoute: 'KOT' },
-  { id: 'cat-rice-curries',   name: 'Rice, Curries & Sets',       order: 10, printRoute: 'KOT' },
-  { id: 'cat-sekuwa',         name: 'Special Sekuwa',             order: 11, printRoute: 'KOT' },
-  // ── BOT categories (go to bar/bottle printer) ────────────────────────────
-  { id: 'cat-soft-drinks',    name: 'Soft Drinks & Energy',       order: 12, printRoute: 'BOT' },
-  { id: 'cat-beers-wines',    name: 'Beers & Wines',              order: 13, printRoute: 'BOT' },
-  { id: 'cat-dom-spirits',    name: 'Domestic Spirits',           order: 14, printRoute: 'BOT' },
-  { id: 'cat-imp-spirits',    name: 'Imported Spirits',           order: 15, printRoute: 'BOT' },
-  { id: 'cat-hookah-cigs',    name: 'Hookah & Cigarettes',        order: 16, printRoute: 'BOT' },
+  // ── KOT / Food ───────────────────────────────────────────────────────────
+  { id: 'cat-soups',          name: 'Soups',                      order: 3,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-burgers',        name: 'Burgers & Sandwiches',       order: 4,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-sizzlers-chh',   name: 'Sizzlers & Chhoila',         order: 5,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-chefs-fish',     name: "Chef's Special & Fish",      order: 6,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-veg-snacks',     name: 'Vegetarian Snacks & Salads', order: 7,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-nonveg-snacks',  name: 'Non-Vegetarian Snacks',      order: 8,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-platters-momo',  name: 'Platters, Momo & Noodles',   order: 9,  parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-rice-curries',   name: 'Rice, Curries & Sets',       order: 10, parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  { id: 'cat-sekuwa',         name: 'Special Sekuwa',             order: 11, parentCategory: 'Food',       sendToKitchen: true,  printRoute: 'KOT' },
+  // ── KOT / Beverages (non-alcoholic) ──────────────────────────────────────
+  { id: 'cat-hot-bev',        name: 'Hot Beverages',              order: 1,  parentCategory: 'Beverages',  sendToKitchen: true,  subGroup: 'Non-Alcoholic', printRoute: 'KOT' },
+  { id: 'cat-crafted-cold',   name: 'Crafted Cold Beverages',     order: 2,  parentCategory: 'Beverages',  sendToKitchen: true,  subGroup: 'Non-Alcoholic', printRoute: 'KOT' },
+  // ── BOT / Beverages (non-alcoholic) ──────────────────────────────────────
+  { id: 'cat-soft-drinks',    name: 'Soft Drinks & Energy',       order: 12, parentCategory: 'Beverages',  sendToKitchen: false, subGroup: 'Non-Alcoholic', printRoute: 'BOT' },
+  // ── BOT / Alcohol ─────────────────────────────────────────────────────────
+  { id: 'cat-beers-wines',    name: 'Beers & Wines',              order: 13, parentCategory: 'Alcohol',    sendToKitchen: false, subGroup: 'Alcoholic',     printRoute: 'BOT' },
+  { id: 'cat-dom-spirits',    name: 'Domestic Spirits',           order: 14, parentCategory: 'Alcohol',    sendToKitchen: false, subGroup: 'Alcoholic',     printRoute: 'BOT' },
+  { id: 'cat-imp-spirits',    name: 'Imported Spirits',           order: 15, parentCategory: 'Alcohol',    sendToKitchen: false, subGroup: 'Alcoholic',     printRoute: 'BOT' },
+  // ── BOT / Others ──────────────────────────────────────────────────────────
+  { id: 'cat-hookah-cigs',    name: 'Hookah & Cigarettes',        order: 16, parentCategory: 'Others',     sendToKitchen: false, printRoute: 'BOT' },
 ];
 
 // ── Helper ────────────────────────────────────────────────────────────────────
