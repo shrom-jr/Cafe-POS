@@ -29,6 +29,11 @@ export interface Category {
 
 export type PrintRoute = 'KOT' | 'BOT';
 
+export interface MenuItemVariant {
+  label: string;  // e.g. "60ml", "200g", "Large"
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   categoryId: string;
@@ -43,6 +48,10 @@ export interface MenuItem {
   subcategory?: string;
   subcategoryName?: string;
   description?: string;
+  /** Whether the item is available for ordering. Defaults to true when absent. */
+  available?: boolean;
+  /** Multi-tier variants (e.g. peg sizes, portion sizes). When present, `price` holds the base/lowest tier. */
+  variants?: MenuItemVariant[];
 }
 
 export interface OrderItem {

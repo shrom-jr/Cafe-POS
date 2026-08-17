@@ -292,11 +292,29 @@ export function subscribeToMenuItems(store: FirebaseSyncStore) {
   });
 }
 
+// Push Menu Items to Firebase
+export async function pushMenuItemsToFirebase(items: MenuItem[]) {
+  try {
+    await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(items || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Menu Items Push FAILED]:", error);
+  }
+}
+
 // Subscribe to Live Categories
 export function subscribeToCategories(store: FirebaseSyncStore) {
   return onValue(ref(db, "menu/categories"), (snapshot) => {
     store.setCategories(toArray(snapshot.val()) as Category[]);
   });
+}
+
+// Push Categories to Firebase
+export async function pushCategoriesToFirebase(categories: Category[]) {
+  try {
+    await set(ref(db, "menu/categories"), JSON.parse(JSON.stringify(categories || [])));
+  } catch (error) {
+    console.error("❌ [Firebase Categories Push FAILED]:", error);
+  }
 }
 
 // Subscribe to Live Pillars

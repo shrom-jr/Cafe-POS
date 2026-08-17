@@ -1,0 +1,55 @@
+PHASE 3: BUILD STANDALONE ADMIN MENU MANAGEMENT SYSTEM
+
+Build a dedicated, high-contrast Admin Menu Management interface inside `src/screens/admin/MenuManagement.tsx` (or integrate cleanly into `src/screens/AdminPanel.tsx`) with complete CRUD controls for categories, menu items, pricing/variants, printer station routing, and real-time availability toggling.
+
+1. ADMIN SIDEBAR NAVIGATION & TELEMETRY BAR:
+   - Restore the "Menu" navigation tab in `src/screens/AdminPanel.tsx` sidebar with a Lucide icon (e.g., `UtensilsCrossed` or `BookOpen`).
+   - Add a Live Telemetry Bar at the top of the Menu Management screen displaying:
+     * Total Active Items count
+     * Total Categories count
+     * KOT Items count (Kitchen routed)
+     * BOT Items count (Reception / Bar routed)
+     * Sold Out / Unavailable Items count
+
+2. TWO-TIER FILTERING & SEARCH:
+   - Pillar Filter Bar: Switcher tabs for 'All', 'Food', 'Beverages', 'Alcohol', and 'Others'.
+   - Category Pills: Horizontal scrollable badges showing each category under the selected pillar with active item counts.
+   - Live Search Input: Instant real-time filter searching across item names and categories.
+
+3. ITEM CATALOG TABLE & LIVE CONTROLS:
+   Render an interactive data table with the following columns:
+   - Item Name & Sub-details (Name, Category tag, and variant indicator).
+   - Pillar Badge (Food, Beverages, Alcohol, Others).
+   - Pricing / Variants Display (Single price e.g., 'Rs. 280' or a badge indicating variant count e.g., '5 Peg Sizes' / '3 Portions').
+   - Print Station Route (High-contrast emerald badge for 'KOT - Kitchen' vs blue/purple badge for 'BOT - Reception').
+   - Availability Toggle Switch: One-tap toggle that updates `available` / `inStock` in Firebase RTDB `menu/items` immediately, updating all connected waiter mobile devices in real time.
+   - Actions:
+     * 'Edit' button: Opens the Item Edit modal.
+     * 'Delete' button: Opens a safety confirmation dialog before removing from `menu/items`.
+
+4. MODALS & FORMS (ADD / EDIT):
+   A. Category Management Modal:
+      - Add New Category & Edit Category dialog.
+      - Fields: Category Name, Parent Pillar ('Food' | 'Beverages' | 'Alcohol' | 'Others'), Default Station Route ('KOT' | 'BOT').
+      - Saves directly to Firebase RTDB path `menu/categories`.
+   
+   B. Menu Item Management Modal:
+      - Add New Item & Edit Item dialog.
+      - Fields:
+        * Item Name
+        * Pillar & Category selector (dynamically populated from `menu/categories`)
+        * Pricing Mode:
+          - Single Base Price (numeric input in Rs.)
+          - Multi-Tier Variants (dynamic key-value table: e.g., '60ml' -> 380, '90ml' -> 550, or '200g' -> 300, '500g' -> 650)
+        * Print Station Route selector: 'KOT' (Kitchen) vs 'BOT' (Reception)
+        * Initial Availability Toggle (Active / Sold Out)
+      - Writes directly to Firebase RTDB path `menu/items`.
+
+5. STATE MANAGEMENT & FIREBASE SYNCHRONIZATION:
+   - Ensure the Menu Management screen binds to `menu/categories`, `menu/items`, and `menu/pillars` in Firebase RTDB singleton.
+   - Any edits, creations, deletions, or status toggles must update both the local Zustand store (`useMenuStore` / `usePOSStore`) and Firebase Realtime Database in real time.
+   - Verify `npm run build` compiles with exit code 0.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT MODIFY OR DELETE: `areaOrder` (Table Layout), `tables`, `orders`, `payments`, `settings`, `invMovements`, `alcoholProducts`, `beverageProducts`, `cigaretteProducts`, `customers`, or `staff`.
+- Maintain complete consistency with the existing deep matte black / carbon-glass UI theme and styling tokens.

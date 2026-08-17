@@ -6,6 +6,7 @@
 - [Staff Firebase sync](staff-firebase-sync.md) — setUsers must persist to localStorage; subscribeToStaff must default active:true; never seed defaults back to Firebase
 - [Firebase Inventory Source of Truth](firebase-inventory-source-of-truth.md) — alcohol/beverage/cigarette products and invMovements must never be read from or written to localStorage; Firebase is the single master
 - [POS Inventory Auto-Deduction](pos-inventory-deduction.md) — sendToKitchen deducts via invMappings; voidOrderItem restores via restoreInventoryForVoid (sent items only); invMappings auto-seeded by seedInventory.mjs
+- [Menu Firebase Write Pattern](menu-firebase-writes.md) — menuItems/categories have NO push effects in useFirebaseSync; all Menu Management writes must call pushMenuItemsToFirebase/pushCategoriesToFirebase directly AND update the Zustand store
 - [Firebase Settings Hydration](firebase-settings-hydration.md) — remote settings snapshots may be legacy/incomplete; merge nested wallet defaults instead of replacing local settings wholesale
 - [Inventory Category Model](inventory-category-model.md) — wine stays in the ml-tracked alcohol collection for shared bottle/glass deductions; beer and soft drinks use direct packaged units
 - [Maintenance Expenses Architecture](maintenance-expenses.md) — Firebase-backed expense store; Admin "Expenses" tab between Inventory and Settings; Net Profit card in Reports = Revenue − Maintenance Expenses

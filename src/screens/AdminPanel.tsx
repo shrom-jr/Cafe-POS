@@ -8,6 +8,7 @@ import { InventorySection } from '@/screens/InventorySection';
 import { KitchenReportTab } from '@/screens/reports/KitchenReportTab';
 import StaffManagement from '@/screens/admin/StaffManagement';
 import { ExpensesSection } from '@/screens/admin/ExpensesSection';
+import MenuManagement from '@/screens/admin/MenuManagement';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
@@ -19,7 +20,7 @@ import {
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
-  Search, Printer, ArrowUp, ArrowDown, Wrench,
+  Search, Printer, ArrowUp, ArrowDown, Wrench, UtensilsCrossed,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -37,7 +38,7 @@ import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 import { pushLogoToFirebase } from '@/utils/firebaseSync';
 
-type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses';
+type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
@@ -440,13 +441,14 @@ const AdminPanel = () => {
   }
 
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode; subtitle: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} />,  subtitle: 'Overview of your café performance' },
-    { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,     subtitle: 'Add or remove tables' },
-    { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />, subtitle: 'Sales reports and exports' },
-    { id: 'customers', label: 'Customers', icon: <Users size={15} />,      subtitle: 'Customer Khatta balances and repayments' },
-    { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,    subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
-    { id: 'expenses',  label: 'Expenses',  icon: <Wrench size={15} />,     subtitle: 'Log and track maintenance expenses' },
-    { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,   subtitle: 'Company profile, payments, and staff management' },
+    { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} />,         subtitle: 'Overview of your café performance' },
+    { id: 'menu',      label: 'Menu',      icon: <UtensilsCrossed size={15} />,   subtitle: 'Manage categories, items, pricing & printer routing' },
+    { id: 'tables',    label: 'Tables',    icon: <Table2 size={15} />,            subtitle: 'Add or remove tables' },
+    { id: 'reports',   label: 'Reports',   icon: <TrendingUp size={15} />,        subtitle: 'Sales reports and exports' },
+    { id: 'customers', label: 'Customers', icon: <Users size={15} />,             subtitle: 'Customer Khatta balances and repayments' },
+    { id: 'inventory', label: 'Inventory', icon: <Package size={15} />,           subtitle: 'Stock management for alcohol, beverages, cigarettes & groceries' },
+    { id: 'expenses',  label: 'Expenses',  icon: <Wrench size={15} />,            subtitle: 'Log and track maintenance expenses' },
+    { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,          subtitle: 'Company profile, payments, and staff management' },
   ];
 
   // Fall back to Dashboard if hot reload or a stale session retains a removed tab.
@@ -543,6 +545,13 @@ const AdminPanel = () => {
                     Customer khata balances, repayments &amp; lifetime revenue analytics
                   </p>
                 </div>
+              ) : resolvedActiveTab === 'menu' ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Menu Management</h1>
+                  <p className="text-xs font-black uppercase tracking-widest text-amber-400 mt-1">
+                    Categories, items, pricing, variants &amp; printer station routing
+                  </p>
+                </div>
               ) : resolvedActiveTab === 'inventory' ? (
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Inventory Control</h1>
@@ -593,6 +602,7 @@ const AdminPanel = () => {
                 {reportView === 'kitchen' && <KitchenReportTab />}
               </div>
             )}
+            {resolvedActiveTab === 'menu'      && <MenuManagement />}
             {resolvedActiveTab === 'customers' && <AdminCustomerAnalytics />}
             {resolvedActiveTab === 'inventory' && <InventorySection />}
             {resolvedActiveTab === 'expenses'  && <ExpensesSection />}
