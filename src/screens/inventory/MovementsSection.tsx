@@ -125,7 +125,7 @@ export const MovementsSection = () => {
         search={search}
         onSearchChange={setSearch}
       />
-      <p className="text-xs text-slate-400">{filtered.length} records</p>
+      <p className="text-amber-400 font-bold text-xs uppercase tracking-wider">{filtered.length} records</p>
 
       {visible.length === 0 ? (
         <EmptyActivityState

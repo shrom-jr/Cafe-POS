@@ -1,0 +1,28 @@
+FIX VIEWPORT ROOT OVERLAY & HIGH-CONTRAST TYPOGRAPHY ACROSS INVENTORY DRAWERS
+
+Fix the top-cutoff backdrop bug and upgrade all micro-text typography across Purchases Ledger, Stock Movements, and Bar Restock Audit in `src/screens/admin/InventorySection.tsx` and its drawer subcomponents (`DrawerToolbar.tsx`, `ActivityCard.tsx`):
+
+1. FIX FULL-VIEWPORT ROOT OVERLAY & Z-INDEX (TOP CUTOFF FIX):
+   - Ensure the drawer backdrop overlay and slide-out container cover the ENTIRE browser screen from top edge (y=0) to bottom edge, covering the top navigation bar:
+     * Backdrop Overlay: `fixed inset-0 z-[100] bg-black/70 backdrop-blur-md transition-opacity`
+     * Drawer Panel: `fixed inset-y-0 right-0 z-[101] w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col h-full`
+   - If the component is trapped inside an `overflow-hidden` or `relative` admin container, wrap the drawer in a React Portal (`createPortal(..., document.body)`) or ensure `z-[100]` renders over the POS header.
+
+2. HIGH-CONTRAST TYPOGRAPHY PASS (ELIMINATE UNREADABLE GRAY TEXT):
+   - Drawer Header Subtitles: Upgrade from dim micro-text to `text-slate-300 text-sm font-medium mt-1`.
+   - Telemetry Card Sub-Labels (e.g. "all time", "purchases", "deliveries logged", "restock cost"):
+     * Change from dark gray micro-text to `text-slate-300 text-xs font-medium uppercase tracking-wider mt-1`.
+   - Records Count Badge ("0 records"):
+     * Upgrade to `text-amber-400 font-bold text-xs uppercase tracking-wider`.
+   - Empty State Text:
+     * Title: `text-white font-bold text-base`
+     * Description: `text-slate-300 text-sm mt-1 max-w-sm text-center`
+   - Bottom Footer Note Box ("Note: 1 grocery purchase..."):
+     * Container: `bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 text-xs font-medium`
+
+3. VERIFY & BUILD:
+   - Ensure opening any drawer cleanly dims and blurs the entire viewport including the top bar.
+   - Run `npm run build` to confirm zero compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT modify inventory calculations, ML stock deduction logic, Firebase RTDB paths, or table layouts.

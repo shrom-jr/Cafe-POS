@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Package, Receipt, Activity, X, ClipboardList } from 'lucide-react';
 import { PackagedStockTab } from './inventory/PackagedStockTab';
 import { PurchasesSection } from './inventory/PurchasesSection';
@@ -31,36 +32,45 @@ interface DrawerProps {
   children:    React.ReactNode;
 }
 
-const Drawer = ({ title, description, onClose, children }: DrawerProps) => (
-    <div className="fixed inset-0 z-50">
-    {/* Backdrop */}
-    <div
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    />
-    {/* Panel */}
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col text-slate-100 overflow-hidden">
-      {/* Drawer header */}
-      <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-slate-800/80 flex-shrink-0">
-        <div>
-          <h2 className="text-lg font-bold text-white">{title}</h2>
-          <p className="text-slate-400 text-xs font-medium mt-1">{description}</p>
+const Drawer = ({ title, description, onClose, children }: DrawerProps) => {
+  const drawer = (
+    <>
+      {/* Portal ensures the dimmer covers the full browser viewport, including the POS header. */}
+      <div
+        className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="fixed inset-y-0 right-0 z-[101] w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col h-full text-slate-100 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        {/* Drawer header */}
+        <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-slate-800/80 flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-white">{title}</h2>
+            <p className="text-slate-300 text-sm font-medium mt-1">{description}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+            aria-label={`Close ${title}`}
+          >
+            <X size={17} />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
-          aria-label={`Close ${title}`}
-        >
-          <X size={17} />
-        </button>
+        {/* Drawer content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {children}
+        </div>
       </div>
-      {/* Drawer content */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        {children}
-      </div>
-    </div>
-  </div>
-);
+    </>
+  );
+
+  return typeof document === 'undefined' ? null : createPortal(drawer, document.body);
+};
 
 // ── Secondary button helper ───────────────────────────────────────────────────
 

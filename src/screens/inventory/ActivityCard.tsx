@@ -66,7 +66,7 @@ export const ActivityCard = ({
         </div>
         {actions && <div className="shrink-0">{actions}</div>}
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-slate-400">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pt-3 border-t border-white/[0.06] text-xs text-slate-300">
         <span className="inline-flex items-center gap-1.5">
           <CalendarDays size={12} />
           {format(timestamp, 'dd MMM yyyy, hh:mm a')}
@@ -92,6 +92,6 @@ export const EmptyActivityState = ({ icon, title, helper }: EmptyActivityStatePr
       {icon}
     </div>
     <p className="text-white font-bold text-base mt-4">{title}</p>
-    <p className="text-slate-400 text-xs mt-1 max-w-sm">{helper}</p>
+    <p className="text-slate-300 text-sm mt-1 max-w-sm text-center">{helper}</p>
   </div>
 );

@@ -61,7 +61,7 @@ export const DrawerToolbar = ({
       </SelectTrigger>
       <SelectContent className="bg-slate-900 border-slate-700 text-white">
         {DRAWER_CATEGORIES.map((option) => (
-          <SelectItem key={option.id} value={option.id} className="text-xs focus:bg-amber-500 focus:text-slate-950">
+        <SelectItem key={option.id} value={option.id} className="text-sm focus:bg-amber-500 focus:text-slate-950">
             {option.label}
           </SelectItem>
         ))}

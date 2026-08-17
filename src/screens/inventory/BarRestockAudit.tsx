@@ -262,7 +262,7 @@ export const BarRestockAudit = () => {
             <span className="text-xs font-semibold text-slate-300">Total Entries</span>
           </div>
           <p className="text-lg font-bold text-white">{stats.total}</p>
-          <p className="text-xs text-slate-400 mt-1">all time</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">all time</p>
         </div>
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -270,7 +270,7 @@ export const BarRestockAudit = () => {
             <span className="text-xs font-semibold text-slate-300">Restocks Logged</span>
           </div>
           <p className="text-lg font-bold text-emerald-300">{stats.restocks}</p>
-          <p className="text-xs text-slate-400 mt-1">deliveries logged</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">deliveries logged</p>
         </div>
         <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -278,7 +278,7 @@ export const BarRestockAudit = () => {
             <span className="text-xs font-semibold text-slate-300">Loss / Spills</span>
           </div>
           <p className="text-lg font-bold text-rose-300">{stats.spills}</p>
-          <p className="text-xs text-slate-400 mt-1">loss entries</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">loss entries</p>
         </div>
         <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -286,7 +286,7 @@ export const BarRestockAudit = () => {
             <span className="text-xs font-semibold text-slate-300">Total Spend</span>
           </div>
           <p className="text-lg font-bold text-amber-300">Rs. {fmt(stats.totalSpend)}</p>
-          <p className="text-xs text-slate-400 mt-1">restock cost</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">restock cost</p>
         </div>
       </div>
 
@@ -298,7 +298,7 @@ export const BarRestockAudit = () => {
         search={search}
         onSearchChange={setSearch}
       />
-      <p className="text-xs text-slate-400">{filtered.length} records</p>
+      <p className="text-amber-400 font-bold text-xs uppercase tracking-wider">{filtered.length} records</p>
 
       {/* ── Human-readable audit cards ── */}
       {visible.length === 0 ? (

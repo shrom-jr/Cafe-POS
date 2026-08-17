@@ -135,22 +135,22 @@ export const PurchasesSection = () => {
         <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3 shadow-lg shadow-amber-950/20">
           <div className="flex items-center gap-2 mb-2"><ShoppingBag size={15} className="text-amber-400" /><span className="text-xs font-semibold text-slate-300">Total Purchases</span></div>
           <p className="text-lg font-bold text-amber-300">{stats.total}</p>
-          <p className="text-xs text-slate-400 mt-1">all time</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">all time</p>
         </div>
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3 shadow-lg shadow-emerald-950/20">
           <div className="flex items-center gap-2 mb-2"><Calendar size={15} className="text-emerald-400" /><span className="text-xs font-semibold text-slate-300">Today</span></div>
           <p className="text-lg font-bold text-emerald-300">{stats.todayCount}</p>
-          <p className="text-xs text-slate-400 mt-1">purchases</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">purchases</p>
         </div>
         <div className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3 shadow-lg shadow-cyan-950/20">
           <div className="flex items-center gap-2 mb-2"><TrendingUp size={15} className="text-cyan-400" /><span className="text-xs font-semibold text-slate-300">This Week</span></div>
           <p className="text-lg font-bold text-cyan-300">{stats.weekCount}</p>
-          <p className="text-xs text-slate-400 mt-1">purchases</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">purchases</p>
         </div>
         <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-3 shadow-lg shadow-purple-950/20">
           <div className="flex items-center gap-2 mb-2"><PieChart size={15} className="text-purple-400" /><span className="text-xs font-semibold text-slate-300">This Month</span></div>
           <p className="text-lg font-bold text-purple-300">{stats.monthCount}</p>
-          <p className="text-xs text-slate-400 mt-1">purchases</p>
+          <p className="text-slate-300 text-xs font-medium uppercase tracking-wider mt-1">purchases</p>
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export const PurchasesSection = () => {
         search={search}
         onSearchChange={setSearch}
       />
-      <p className="text-xs text-slate-400">{purchases.length} records</p>
+      <p className="text-amber-400 font-bold text-xs uppercase tracking-wider">{purchases.length} records</p>
 
       {/* Human-readable activity cards */}
       {purchases.length === 0 ? (
@@ -197,7 +197,7 @@ export const PurchasesSection = () => {
 
       {/* Grocery purchases note */}
       {groceryPurchases.length > 0 && (
-        <div className="px-4 py-3 rounded-xl border border-slate-800 bg-slate-900/70 text-xs text-slate-400">
+        <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 text-xs font-medium">
           Note: {groceryPurchases.length} grocery purchase{groceryPurchases.length !== 1 ? 's' : ''} are tracked separately in the Groceries section.
         </div>
       )}
