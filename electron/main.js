@@ -24,7 +24,7 @@ const path = require('path');
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 
-const APP_URL   = 'https://pos.sbamboocottage.com.np';
+const APP_URL   = 'https://pos.sbambocottage.com.np';
 const ICON_PATH = path.join(__dirname, 'assets', 'icon-512.png');
 
 // ── Splash window ──────────────────────────────────────────────────────────────
@@ -69,9 +69,10 @@ function createMainWindow() {
     height:    800,
     minWidth:  900,
     minHeight: 600,
-    title:     'S Bamboo Cottage POS',
-    icon:      ICON_PATH,
-    show:      false,   // revealed after splash delay
+    title:           'Bamboo POS',
+    icon:            ICON_PATH,
+    show:            false,        // revealed after splash delay
+    backgroundColor: '#0b0f17',   // prevents white flash during initial load
     webPreferences: {
       preload:          path.join(__dirname, 'preload.js'),
       contextIsolation: true,
