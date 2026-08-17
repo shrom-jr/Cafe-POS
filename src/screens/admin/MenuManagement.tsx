@@ -301,7 +301,7 @@ export default function MenuManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search items or categories…"
-            className="w-full pl-9 pr-4 py-2.5 bg-[#13151F] border border-white/10 rounded-xl text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
@@ -338,7 +338,7 @@ export default function MenuManagement() {
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
               pillarFilter === p
                 ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-lg shadow-amber-500/20'
-                : 'bg-transparent border-white/15 text-zinc-300 hover:text-white hover:border-white/30'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 font-medium'
             }`}
           >
             {p}
@@ -354,10 +354,10 @@ export default function MenuManagement() {
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
               categoryFilter === 'all'
                 ? 'bg-white/15 text-white border-white/30'
-                : 'bg-transparent border-white/10 text-zinc-400 hover:text-white hover:border-white/25'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500 font-medium'
             }`}
           >
-            All ({visibleCategories.reduce((s, c) => s + (catCounts[c.id] ?? 0), 0)})
+            All <span className="text-amber-400 font-bold">({visibleCategories.reduce((s, c) => s + (catCounts[c.id] ?? 0), 0)})</span>
           </button>
           {visibleCategories.map((cat) => (
             <button
@@ -366,10 +366,10 @@ export default function MenuManagement() {
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                 categoryFilter === cat.id
                   ? 'bg-white/15 text-white border-white/30'
-                  : 'bg-transparent border-white/10 text-zinc-400 hover:text-white hover:border-white/25'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500 font-medium'
               }`}
             >
-              {cat.name} ({catCounts[cat.id] ?? 0})
+              {cat.name} <span className="text-amber-400 font-bold">({catCounts[cat.id] ?? 0})</span>
             </button>
           ))}
         </div>
@@ -378,7 +378,7 @@ export default function MenuManagement() {
       {/* ── Item Table ── */}
       <div className="bg-[#13151F] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/40">
         {/* Table header */}
-        <div className="grid grid-cols-[1fr_100px_130px_120px_64px_80px] gap-2 px-5 py-3 bg-white/[0.03] border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+        <div className="grid grid-cols-[1fr_100px_130px_120px_64px_80px] gap-2 px-5 py-3 bg-white/[0.03] border-b border-white/10 text-slate-300 font-bold text-xs uppercase tracking-wider">
           <span>Item</span>
           <span>Pillar</span>
           <span>Pricing</span>
@@ -412,7 +412,7 @@ export default function MenuManagement() {
                     <p className="text-sm font-bold text-white truncate">{item.name}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {cat && (
-                        <span className="text-[10px] text-zinc-500 font-medium truncate max-w-[160px]">{cat.name}</span>
+                        <span className="text-slate-300 text-xs font-medium truncate max-w-[160px]">{cat.name}</span>
                       )}
                       {hasVars && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/8 text-zinc-400 font-bold shrink-0">
@@ -776,7 +776,7 @@ export default function MenuManagement() {
             <div className="flex items-center justify-between bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
               <div>
                 <p className="text-sm font-bold text-white">Available</p>
-                <p className="text-xs text-zinc-500">Item is visible and orderable by waiters</p>
+                <p className="text-slate-300 text-xs">Item is visible and orderable by waiters</p>
               </div>
               <button
                 type="button"
@@ -896,12 +896,12 @@ export default function MenuManagement() {
 }
 
 // ── Shared style constants ──────────────────────────────────────────────────
-const inputCls = 'w-full px-3.5 py-2.5 bg-white/5 border border-white/12 rounded-xl text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 transition-colors';
-const variantInputCls = 'bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 px-3 py-2 rounded-lg focus:border-amber-500 focus:outline-none transition-colors';
+const inputCls = 'w-full px-3.5 py-2.5 bg-white/5 border border-white/12 rounded-xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50 transition-colors';
+const variantInputCls = 'bg-slate-900 border border-slate-700 text-white placeholder:text-slate-400 px-3 py-2 rounded-lg focus:border-amber-500 focus:outline-none transition-colors';
 const selectCls = 'w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 const selectContentCls = 'bg-slate-900 border border-slate-700 text-white shadow-2xl rounded-xl z-50';
 const selectItemCls = 'text-slate-200 hover:bg-slate-800 hover:text-amber-400 cursor-pointer px-3 py-2 rounded-lg';
-const labelCls = 'block text-[11px] font-black uppercase tracking-widest text-zinc-500 mb-1.5';
+const labelCls = 'block text-slate-200 font-bold text-xs uppercase tracking-wider mb-1.5';
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
