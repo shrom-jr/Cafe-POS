@@ -117,6 +117,10 @@ interface InventoryState {
   deductInventoryForSale: (
     items: Array<{ menuItemId: string; quantity: number; name: string }>
   ) => void;
+  /** Reverse a prior deduction when a sent item is voided. Logs a 'Correction' movement. */
+  restoreInventoryForVoid: (
+    items: Array<{ menuItemId: string; quantity: number; name: string }>
+  ) => void;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -661,6 +665,100 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
               type: 'Sale',
               reference: item.name,
               notes: `${item.quantity} × ${mapping.deductQty} sticks`,
+              timestamp: now,
+            });
+          }
+        }
+      }
+    }
+
+    if (newMovements.length === 0) return;
+
+    const movements = [...s.invMovements, ...newMovements];
+    set({
+      alcoholProducts:   updatedAlcohol,
+      beverageProducts:  updatedBeverages,
+      cigaretteProducts: updatedCigarettes,
+      invMovements:      movements,
+    });
+  },
+
+  // ── VOID RESTORATION ─────────────────────────────────────────────────────
+  // Mirrors deductInventoryForSale but adds stock back and logs 'Correction'
+  // movements. Called only when an already-sent item is voided in the POS.
+  restoreInventoryForVoid: (items) => {
+    const s = get();
+    let updatedAlcohol    = [...s.alcoholProducts];
+    let updatedBeverages  = [...s.beverageProducts];
+    let updatedCigarettes = [...s.cigaretteProducts];
+    const newMovements: InventoryMovement[] = [];
+    const now = Date.now();
+
+    for (const item of items) {
+      const mappings = s.invMappings.filter((m) => m.menuItemId === item.menuItemId);
+      for (const mapping of mappings) {
+        const totalRestore = mapping.deductQty * item.quantity;
+
+        if (mapping.productType === 'alcohol') {
+          const product = updatedAlcohol.find((p) => p.id === mapping.productId);
+          if (product) {
+            updatedAlcohol = updatedAlcohol.map((p) =>
+              p.id === mapping.productId
+                ? { ...p, currentStockMl: p.currentStockMl + totalRestore }
+                : p
+            );
+            newMovements.push({
+              id: crypto.randomUUID(),
+              productType: 'alcohol',
+              productId: mapping.productId,
+              productName: product.name,
+              quantity: totalRestore,
+              unit: 'ml',
+              type: 'Correction',
+              reference: item.name,
+              notes: `Void: ${item.quantity} × ${mapping.deductQty}ml`,
+              timestamp: now,
+            });
+          }
+        } else if (mapping.productType === 'beverage') {
+          const product = updatedBeverages.find((p) => p.id === mapping.productId);
+          if (product) {
+            updatedBeverages = updatedBeverages.map((p) =>
+              p.id === mapping.productId
+                ? { ...p, currentStock: p.currentStock + totalRestore }
+                : p
+            );
+            newMovements.push({
+              id: crypto.randomUUID(),
+              productType: 'beverage',
+              productId: mapping.productId,
+              productName: product.name,
+              quantity: totalRestore,
+              unit: 'pcs',
+              type: 'Correction',
+              reference: item.name,
+              notes: `Void: ${item.quantity} × ${mapping.deductQty} pcs`,
+              timestamp: now,
+            });
+          }
+        } else if (mapping.productType === 'cigarette') {
+          const product = updatedCigarettes.find((p) => p.id === mapping.productId);
+          if (product) {
+            updatedCigarettes = updatedCigarettes.map((p) =>
+              p.id === mapping.productId
+                ? { ...p, currentSticks: p.currentSticks + totalRestore }
+                : p
+            );
+            newMovements.push({
+              id: crypto.randomUUID(),
+              productType: 'cigarette',
+              productId: mapping.productId,
+              productName: product.name,
+              quantity: totalRestore,
+              unit: 'sticks',
+              type: 'Correction',
+              reference: item.name,
+              notes: `Void: ${item.quantity} × ${mapping.deductQty} sticks`,
               timestamp: now,
             });
           }

@@ -1,0 +1,47 @@
+PHASE 2: CLEAN INVENTORY RESET, MASTER BAR CATALOG SEED & REAL-TIME POS DEDUCTION BRIDGE
+
+1. RESET TEST INVENTORY MOVEMENTS:
+   - Clear Firebase RTDB path `/invMovements` to `null` to remove all leftover testing logs.
+   - Ensure the Purchases Ledger, Stock Movements, and Bar Restock Audit modals start at a clean zero-baseline.
+
+2. SEED MASTER BAR INVENTORY CATALOG (scripts/seedInventory.mjs):
+   Update and execute `scripts/seedInventory.mjs` to populate the 5 bar inventory categories in Firebase RTDB with 0 initial stock (ready for live opening inventory counts):
+   
+   A. SPIRITS (Tracked in milliliters — ml):
+      - Domestic (13 brands): Mustang, Golden Oak, Black Oak, Highlander, 8848 Vodka, Ruslan Vodka, NUDE Vodka, Signature Green, Signature Red, Old Durbar Red, Old Durbar Black, Gurkhas & Guns, Yarchagumba.
+      - Imported (7 brands): Red Label, Black Label, Double Black, Jack Daniel's, Chivas Regal, Jameson, Absolut Vodka.
+      - Unit: 'ml', containerUnit: 'bottles', containerSizeMl: 750 (or 1000 for specific imports), startingStock: 0.
+
+   B. WINES (Tracked in bottles):
+      - Big Master, Divine, Robertson, J.P. Chenet.
+      - Unit: 'bottles', startingStock: 0.
+
+   C. BEERS (Tracked in bottles/cans):
+      - Mini Gorkha, Mini Tuborg, Gorkha Strong, Gorkha Pilsner, Gorkha Craft, Tuborg, Carlsberg.
+      - Unit: 'bottles' / 'cans', startingStock: 0.
+
+   D. SOFT DRINKS & MIXERS (Tracked in bottles/cans):
+      - Coke, Fanta, Sprite, Pepsi, Dew, Slice, Red Bull, Xtreme Energy Drink.
+      - Unit: 'cans' / 'bottles', startingStock: 0.
+
+   E. CIGARETTES (Tracked in sticks):
+      - Surya Red, Surya Light, Surya Arctic, Shikhar Ice.
+      - Unit: 'sticks', startingStock: 0.
+
+3. REAL-TIME POS INVENTORY AUTO-DEDUCTION & VOID RESTORATION:
+   - When an order containing bar/inventory items is sent (Dispatched):
+     * Spirit Pegs (30ml, 60ml, 90ml, 180ml/Qtr, 375ml/Half, 750ml/Full) deduct the exact ml volume from the corresponding spirit product in Firebase.
+     * Wines, Beers, Soft Drinks, and Cigarettes deduct 1 unit per item ordered.
+     * Create an automatic background record in `invMovements` with type: 'Sale' logging the deducted quantity, productId, orderId, and timestamp.
+   - When an item is voided before final payment:
+     * Restore the deducted ml volume or unit count back to the inventory product in Firebase.
+     * Log a correction movement in `invMovements`.
+
+4. VERIFICATION & BUILD:
+   - Run `node scripts/seedInventory.mjs`.
+   - Verify that Admin Inventory and Bar Portal display the 5 category tabs populated with zero stock.
+   - Run `npm run build` to confirm zero TypeScript compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT MODIFY OR DELETE: `menu/*` (Pillars, Categories, Items), `areaOrder` (Table Floor Plan), `tables`, `customers`, `orders`, `payments`, `settings`, `meatEntries`, `groceryPurchases`, `kitchenPurchases`, `maintenanceExpenses`, or `users`.
+- Keep all UI styling and color tokens intact across Admin Inventory and Bar Portal.

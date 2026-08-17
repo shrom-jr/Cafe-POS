@@ -541,6 +541,17 @@ export const usePOSStore = create<POSState>((set, get) => ({
   voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {
     const state0 = get();
 
+    // Restore inventory for already-sent bar/beverage items before modifying order state
+    const targetOrder = state0.orders.find((o) => o.id === orderId);
+    const targetItem  = targetOrder?.items.find((i) => i.id === itemId);
+    if (targetItem && (targetItem.kitchenStatus === 'sent' || targetItem.sentToKitchen)) {
+      useInventoryStore.getState().restoreInventoryForVoid([{
+        menuItemId: targetItem.menuItemId,
+        quantity:   qty,
+        name:       targetItem.name,
+      }]);
+    }
+
     // Build lookup maps once (needed for VOID ticket routing)
     const menuItemCategoryMap = new Map<string, string>(
       state0.menuItems.map((m) => [m.id, m.categoryId]),
