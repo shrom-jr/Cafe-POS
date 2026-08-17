@@ -1,0 +1,52 @@
+PHASE 5: DUAL USB WEBUSB ESC/POS SILENT PRINTING ENGINE & SETTINGS REDESIGN
+
+Redesign the printer settings UI and build a high-speed, 100% silent dual-printer dispatch engine using direct WebUSB ESC/POS communication for two Pantum PD-80BW printers connected via USB.
+
+1. REDESIGN SETTINGS -> PRINTERS UI (`src/screens/admin/SettingsSection.tsx` or `PrintersSettings.tsx`):
+   - Completely remove the broken Wi-Fi/Network IP and System/Browser print mode selectors.
+   - Clean, modern Carbon-Dark UI with 3 primary sections:
+     A. Kitchen Station (KOT Printer - Pantum PD-80BW):
+        - Status Indicator: Connected badge (`bg-emerald-950 border-emerald-500 text-emerald-400`) or Not Paired badge (`bg-slate-900 border-slate-700 text-slate-400`).
+        - Pair Button: "Pair Kitchen USB Printer" (triggers WebUSB device authorization and saves vendor/product/serial ID to localStorage under `printer_kitchen_usb`).
+        - Test Button: "Test Print KOT" (sends a silent ESC/POS sample food ticket with auto-cut).
+     B. Reception / Bar Station (BOT & Receipts - Pantum PD-80BW):
+        - Status Indicator: Connected or Not Paired badge.
+        - Pair Button: "Pair Reception USB Printer" (saves device ID under `printer_reception_usb`).
+        - Test Button: "Test Print BOT / Receipt" (sends a silent ESC/POS sample bar/bill ticket with auto-cut).
+     C. Auto-Print Hub (Desktop Background Listener):
+        - Toggle Switch: "Enable Silent Auto-Print on this Desktop".
+        - Helper description: "Listens for mobile waiter orders in real-time and silently prints KOT to the Kitchen USB and BOT to the Reception USB."
+        - Live Pulse Status: Green pulse showing active queue listener.
+
+2. RAW ESC/POS SILENT STREAMING ENGINE (`src/services/escposPrinter.ts` / `src/services/usbPrinterService.ts`):
+   - Build direct WebUSB transport sending raw Uint8Array buffers to the USB bulk OUT endpoint (NO browser window.print dialogs):
+     * Initialize connection using `navigator.usb.getDevices()` / `navigator.usb.requestDevice()`.
+     * Claim interface #0 and open endpoint for raw transfers.
+     * Auto-reconnect to paired devices on page load/app start.
+   - ESC/POS Command formatting (80mm width / 48 columns):
+     * Text alignment (Left, Center, Right).
+     * Bold typography headers (`\x1b\x45\x01`).
+     * Clean item row formatting with quantity, item name, variant (e.g. 60ml / Steam), and kitchen notes.
+     * Horizontal separator lines.
+     * Paper cut command (`\x1d\x56\x00` - Full cut) and 3 line feeds.
+     * Buzzer/Alarm: disabled by default for silent operation (or optional trigger).
+
+3. SIMULTANEOUS TICKET SPLITTER & DISPATCH LOGIC (`src/services/ticketSplitter.ts`):
+   - When an order is sent (`sendToKitchen`):
+     * Split ordered items based on `item.printRoute` or category default (`KOT` vs `BOT`).
+     * If order contains Food/Kitchen items -> Send formatted KOT payload silently to Kitchen USB Printer.
+     * If order contains Bar/Beverage/Cigarette items -> Send formatted BOT payload silently to Reception USB Printer.
+     * If both exist in one order -> Dispatch BOTH simultaneously in parallel via `Promise.all`.
+   - When printing Pre-Bill or Final Tax Invoice -> Route exclusively to Reception USB Printer.
+
+4. FIREBASE REAL-TIME MOBILE AUTO-PRINT QUEUE:
+   - When a mobile waiter punches an order:
+     * Mobile writes order to Firebase RTDB with `printStatus: { kot: 'pending', bot: 'pending' }`.
+     * The Desktop Auto-Print Listener detects the pending order, generates ESC/POS binaries, dispatches to the respective USB printers, and updates `printStatus` to `'printed'`.
+
+5. VERIFY & BUILD:
+   - Verify that clicking "Test Print" directly triggers the respective USB printer without opening any browser dialogs.
+   - Run `npm run build` to confirm zero compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT alter menu items, categories, pricing, table layout, inventory stock deduction, or user authentication.
