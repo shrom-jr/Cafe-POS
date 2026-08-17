@@ -153,6 +153,15 @@ export interface Order {
   voidHistory?: VoidRecord[];
   /** All KOT / BOT / VOID tickets generated for this order session */
   tickets?: Ticket[];
+  /**
+   * Per-station print confirmation for the auto-print hub.
+   * Written as 'pending' when tickets are created (e.g. by a mobile waiter)
+   * and flipped to 'printed' by the desktop hub after a successful USB dispatch.
+   */
+  printStatus?: {
+    kot?: 'pending' | 'printed';
+    bot?: 'pending' | 'printed';
+  };
 }
 
 export interface Payment {
@@ -391,20 +400,10 @@ export interface Settings {
   customWallets?: CustomWallet[];
   printerAddress?: string;
   // ── Printer hardware configuration ──────────────────────────────────────────
-  /** Connection mode for the kitchen thermal printer (default 'network') */
-  kitchenPrinterMode?: 'webusb' | 'network' | 'system';
-  /** IP address of the kitchen thermal printer (e.g. 192.168.1.200) */
-  kitchenPrinterIp?: string;
-  /** TCP port of the kitchen thermal printer (default 9100) */
-  kitchenPrinterPort?: number;
+  // Both stations are always driven via direct WebUSB ESC/POS. Device pairing
+  // is device-local (localStorage: printer_kitchen_usb / printer_reception_usb).
   /** Enable kitchen printer buzzer/bell command on KOT print */
   kitchenPrinterBuzzer?: boolean;
-  /** Connection mode for the reception/bar printer ('browser'/'usb' are legacy values, treated as 'webusb') */
-  receptionPrinterMode?: 'browser' | 'usb' | 'network' | 'webusb' | 'system';
-  /** IP address of the reception/bar network printer */
-  receptionPrinterIp?: string;
-  /** TCP port of the reception/bar network printer (default 9100) */
-  receptionPrinterPort?: number;
   /** When true this device runs the background auto-print listener */
   autoPrintEnabled?: boolean;
   billCounter: number;

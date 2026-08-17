@@ -2,21 +2,20 @@
  * escpos.ts
  *
  * Zero-install ESC/POS byte-level formatter for 80mm thermal printers.
- * Produces Uint8Array buffers that can be sent directly to a network printer
- * via a WebSocket relay or a browser-based serial/USB API.
+ * Produces Uint8Array buffers sent directly to USB via WebUSB.
  *
  * Supported ticket types:
- *   buildKOT       — Kitchen Order Ticket
- *   buildBOT       — Bar Order Ticket
+ *   buildKOT        — Kitchen Order Ticket
+ *   buildBOT        — Bar Order Ticket
  *   buildVoidTicket — VOID_KOT / VOID_BOT cancellation slip
- *   buildPreBill   — Estimate slip before payment
+ *   buildPreBill    — Estimate slip before payment
  *   buildTaxInvoice — Official tax receipt
  *
  * 80mm paper = 48 characters wide in monospace at normal density.
  */
 
-import { Settings, Ticket } from '@/types/pos';
-import { sendRawToUSB, getUSBConnectionStatus } from '@/utils/webusbPrinter';
+import { Ticket } from '@/types/pos';
+import { sendRawToUSB, getUSBConnectionStatus, PrinterSlot } from '@/utils/webusbPrinter';
 
 // ── ESC/POS command constants ─────────────────────────────────────────────────
 
@@ -145,7 +144,6 @@ export function buildKOT({ cafeName, ticket, pax = 1, buzzer = false }: EscKOTOp
 
   for (const item of ticket.items) {
     const qty = String(item.quantity).padEnd(5);
-    // wrap long item names
     const nameLines = wrap(item.name, WIDTH - 5);
     parts.push(line(`${qty}${nameLines[0] || ''}`));
     for (let i = 1; i < nameLines.length; i++) {
@@ -455,145 +453,40 @@ function twoColTotals(label: string, value: string): number[][] {
   return [twoCol(label, value, WIDTH - value.length - 1)];
 }
 
-// ── Network print dispatcher ──────────────────────────────────────────────────
+// ── Silent WebUSB dispatch helpers ────────────────────────────────────────────
+
+export type PrinterTarget = PrinterSlot;
 
 /**
- * Send an ESC/POS buffer to a network printer at `ip:port` via a
- * browser-accessible WebSocket relay.  The relay listens on ws://ip:port/ws
- * and proxies raw bytes to the TCP socket.
- *
- * HTTPS constraint: browsers block unencrypted ws:// connections from HTTPS
- * pages as "active mixed content".  sendToNetworkPrinter detects this at
- * runtime and returns 'error' without attempting the connection, so no
- * browser security warning is triggered.  Network mode is only viable when
- * the app runs over HTTP (e.g. Electron, local dev server, or a local LAN
- * deployment without TLS).  On the public HTTPS deployment use WebUSB or
- * System / Browser Print instead.
- *
- * If no relay is reachable the function falls back gracefully (no throw and
- * no browser print dialog). Real relay integration requires a sidecar service
- * (e.g. node-escpos-server) running on the LAN.
- *
- * The hook usePrintQueue calls this for KOT/BOT/VOID tickets when this browser
- * is the designated auto-print hub.
+ * Send an ESC/POS buffer directly to the USB printer on the given slot.
+ * Returns true on success. Silent on failure — never opens any dialog.
  */
-/**
- * Unified silent print dispatcher.
- *
- * Routes a raw ESC/POS buffer to the configured printer for the given target:
- *   'kitchen'   — kitchenPrinterMode:  'webusb' | 'network'
- *   'reception' — receptionPrinterMode: 'webusb' | 'network'
- *                 (legacy 'browser' / 'usb' values are treated as 'webusb')
- *
- * If unconfigured or the hardware is unreachable it logs a console warning and
- * resolves false — it NEVER opens window.print(), an alert, or any dialog.
- */
-export type PrinterTarget = 'kitchen' | 'reception';
-
-export function resolvePrinterMode(
-  settings: Settings,
-  target: PrinterTarget,
-): 'webusb' | 'network' | 'system' {
-  if (target === 'kitchen') {
-    if (settings.kitchenPrinterMode === 'webusb') return 'webusb';
-    if (settings.kitchenPrinterMode === 'system') return 'system';
-    return 'network';
-  }
-  // Reception
-  const m = settings.receptionPrinterMode;
-  if (m === 'network') return 'network';
-  if (m === 'system') return 'system';
-  // 'webusb' | 'usb' | 'browser' | undefined → webusb
-  return 'webusb';
-}
-
 export async function dispatchEscpos(
   buffer: Uint8Array,
-  settings: Settings,
   target: PrinterTarget,
 ): Promise<boolean> {
-  const mode = resolvePrinterMode(settings, target);
-
-  if (mode === 'system') {
-    // System/Browser print requires structured data — it must be triggered
-    // at the fireSilentPrintJob or test-print level where the original data
-    // objects are still available. Raw ESC/POS bytes cannot be re-rendered
-    // as HTML from here.
-    console.warn(`[escpos] ${target} printer is in System/Browser mode — dispatch must go through fireSilentPrintJob or browserPrint* helpers, not dispatchEscpos.`);
+  if (!getUSBConnectionStatus(target)) {
+    console.warn(`[escpos] ${target} USB printer not connected — job skipped silently.`);
     return false;
   }
-
-  if (mode === 'webusb') {
-    if (!getUSBConnectionStatus()) {
-      console.warn(`[escpos] ${target} printer is in WebUSB mode but no USB printer is paired/connected — job skipped silently.`);
-      return false;
-    }
-    const ok = await sendRawToUSB(buffer);
-    if (!ok) {
-      console.warn(`[escpos] WebUSB dispatch to ${target} printer failed — job skipped silently.`);
-    }
-    return ok;
+  const ok = await sendRawToUSB(buffer, target);
+  if (!ok) {
+    console.warn(`[escpos] WebUSB dispatch to ${target} printer failed — job skipped silently.`);
   }
-
-  // network mode
-  const ip = target === 'kitchen' ? settings.kitchenPrinterIp : settings.receptionPrinterIp;
-  const port = (target === 'kitchen' ? settings.kitchenPrinterPort : settings.receptionPrinterPort) ?? 9100;
-  if (!ip) {
-    console.warn(`[escpos] ${target} printer is in network mode but no IP is configured — job skipped silently.`);
-    return false;
-  }
-  const result = await sendToNetworkPrinter(buffer, ip, port);
-  if (result !== 'ok') {
-    console.warn(`[escpos] Network dispatch to ${target} printer at ${ip}:${port} failed — job skipped silently.`);
-  }
-  return result === 'ok';
+  return ok;
 }
 
-export async function sendToNetworkPrinter(
-  buffer: Uint8Array,
-  ip: string,
-  port = 9100,
-): Promise<'ok' | 'error'> {
-  // ── HTTPS mixed-content guard ──────────────────────────────────────────────
-  // Browsers block unencrypted ws:// connections initiated from an HTTPS page
-  // as "active mixed content" — the browser drops the request before it even
-  // leaves the machine, so no bytes reach the printer and a console error is
-  // logged.  We detect this situation and bail early so no warning fires.
-  //
-  // Network / WebSocket mode is only viable in:
-  //   • Electron desktop app (loads the cloud URL but runs Chromium locally,
-  //     where ws:// to LAN IPs is treated as a local resource — allowed)
-  //   • A plain HTTP deployment (LAN-only, no public TLS)
-  //   • Local development server (http://localhost)
-  //
-  // On the public HTTPS deployment (pos.sbamboocottage.com.np) use WebUSB or
-  // System / Browser Print instead.
-  if (typeof window !== 'undefined' && window.location?.protocol === 'https:') {
-    console.warn(
-      `[escpos] Network printer ws://${ip}:${port}/ws skipped — ws:// connections` +
-      ` are blocked as mixed content on HTTPS pages. Switch to WebUSB or` +
-      ` System / Browser Print, or use the Electron desktop app for network printing.`,
-    );
-    return 'error';
-  }
-
-  const wsUrl = `ws://${ip}:${port}/ws`;
-  return new Promise((resolve) => {
-    try {
-      const ws = new WebSocket(wsUrl);
-      ws.binaryType = 'arraybuffer';
-      const timer = setTimeout(() => {
-        ws.close();
-        resolve('error');
-      }, 4000);
-      ws.onopen = () => {
-        ws.send(buffer);
-        clearTimeout(timer);
-        setTimeout(() => { ws.close(); resolve('ok'); }, 200);
-      };
-      ws.onerror = () => { clearTimeout(timer); resolve('error'); };
-    } catch {
-      resolve('error');
-    }
-  });
+/**
+ * Dispatch a KOT buffer to kitchen and a BOT buffer to reception simultaneously.
+ * Either buffer may be null (skipped). Returns per-slot success flags.
+ */
+export async function dispatchKOTAndBOT(
+  kotBuffer: Uint8Array | null,
+  botBuffer: Uint8Array | null,
+): Promise<{ kotOk: boolean; botOk: boolean }> {
+  const [kotOk, botOk] = await Promise.all([
+    kotBuffer ? dispatchEscpos(kotBuffer, 'kitchen') : Promise.resolve(false),
+    botBuffer ? dispatchEscpos(botBuffer, 'reception') : Promise.resolve(false),
+  ]);
+  return { kotOk, botOk };
 }

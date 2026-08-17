@@ -1,18 +1,20 @@
 /**
  * usePrintQueue.ts
  *
- * Background auto-print listener.  Activates only on the designated print-hub
+ * Background auto-print listener. Activates only on the designated print-hub
  * device — i.e. the browser where localStorage key 'pos_is_print_hub' === 'true'.
  * All other devices (waiter phones, etc.) write tickets to Firebase and never
  * attempt to print; this hook's effect becomes a no-op for them.
  *
- *   KOT        → kitchen printer  (IP / buzzer from settings)
- *   BOT        → reception printer (IP or browser)
- *   VOID_KOT   → kitchen printer
- *   VOID_BOT   → reception printer
+ *   KOT      → kitchen USB printer
+ *   BOT      → reception USB printer
+ *   VOID_KOT → kitchen USB printer
+ *   VOID_BOT → reception USB printer
  *
- * After dispatching, the ticket status is updated to 'printed' on the order
- * so other devices don't re-print the same ticket.
+ * After dispatching, the ticket status is updated to 'printed' locally (which
+ * useFirebaseSync propagates to Firebase via the orders node), and
+ * updateOrderPrintStatus patches the dedicated printStatus node so mobile
+ * waiters can confirm print completion independently.
  *
  * Mount this hook once in App.tsx (inside <App>, after useFirebaseSync).
  */
@@ -25,16 +27,31 @@ import {
   buildBOT,
   buildVoidTicket,
   dispatchEscpos,
-  resolvePrinterMode,
 } from '@/utils/escpos';
-import { browserPrintKOT } from '@/utils/browserPrint';
 import { autoReconnectUSB } from '@/utils/webusbPrinter';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
 
+/**
+ * Same-tab notification channel. The browser `storage` event only fires in
+ * OTHER tabs, so writers must call setPrintHubEnabled (or dispatch this event)
+ * for the change to take effect in the tab where it was made.
+ */
+export const PRINT_HUB_EVENT = 'pos-print-hub-changed';
+
 /** Returns true only when this browser has explicitly been marked as the print hub. */
 function isPrintHub(): boolean {
   return localStorage.getItem(PRINT_HUB_KEY) === 'true';
+}
+
+/**
+ * Persist the hub flag AND notify the current tab immediately.
+ * All UI toggles must go through this helper — writing localStorage directly
+ * would leave the local listener stale until the next reload.
+ */
+export function setPrintHubEnabled(enabled: boolean): void {
+  localStorage.setItem(PRINT_HUB_KEY, enabled ? 'true' : 'false');
+  window.dispatchEvent(new CustomEvent(PRINT_HUB_EVENT, { detail: enabled }));
 }
 
 export function usePrintQueue() {
@@ -55,17 +72,28 @@ export function usePrintQueue() {
   const [isHub, setIsHub] = useState(isPrintHub);
 
   useEffect(() => {
+    // Cross-tab changes arrive via the storage event…
     const onStorage = (e: StorageEvent) => {
       if (e.key === PRINT_HUB_KEY) setIsHub(e.newValue === 'true');
     };
+    // …same-tab changes via the custom event fired by setPrintHubEnabled.
+    const onLocalChange = () => setIsHub(isPrintHub());
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener(PRINT_HUB_EVENT, onLocalChange);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(PRINT_HUB_EVENT, onLocalChange);
+    };
   }, []);
 
-  // On the hub device, silently re-attach an already-paired WebUSB printer so
-  // direct-cable printing works right after a page refresh (no prompt).
+  // On the hub device, silently re-attach both USB printers so direct-cable
+  // printing works right after a page refresh (no prompt required).
   useEffect(() => {
-    if (isHub) void autoReconnectUSB();
+    if (!isHub) return;
+    void Promise.all([
+      autoReconnectUSB('kitchen'),
+      autoReconnectUSB('reception'),
+    ]);
   }, [isHub]);
 
   useEffect(() => {
@@ -110,7 +138,7 @@ export function usePrintQueue() {
         if (processedTicketIds.current.has(ticket.id)) continue;
 
         processedTicketIds.current.add(ticket.id);
-        void dispatchTicket(ticket, pax);
+        void dispatchTicket(ticket, pax, order.id);
       }
     }
 
@@ -119,38 +147,22 @@ export function usePrintQueue() {
       return Number.isFinite(createdAt) && createdAt > sessionStartTime.current;
     }
 
-    async function dispatchTicket(ticket: Ticket, pax: number) {
+    async function dispatchTicket(ticket: Ticket, pax: number, orderId: string) {
       const cafeName = settings.cafeName || 'Cafe';
 
       const isKitchenTicket = ticket.ticketType === 'KOT' || ticket.ticketType === 'VOID_KOT';
       const target = isKitchenTicket ? 'kitchen' : 'reception';
 
-      // ── System/Browser Print path for KOT ─────────────────────────────────
-      // When the kitchen printer is set to 'System / Browser Print', route KOT
-      // tickets through the HTML renderer instead of raw ESC/POS bytes.
-      // In Electron this prints silently to the named kitchen printer;
-      // in a web browser it opens the OS print dialog.
-      if (ticket.ticketType === 'KOT' && resolvePrinterMode(settings, 'kitchen') === 'system') {
-        const success = await browserPrintKOT({
+      // ── ESC/POS WebUSB path ───────────────────────────────────────────────
+      let buffer: Uint8Array | null = null;
+
+      if (ticket.ticketType === 'KOT') {
+        buffer = buildKOT({
           cafeName,
           ticket,
           pax,
           buzzer: settings.kitchenPrinterBuzzer ?? false,
         });
-        if (!success) {
-          console.warn(
-            `[print-queue] browserPrintKOT failed for KOT #${ticket.ticketNumber} in system mode.`,
-          );
-        }
-        if (success) markPrinted(ticket.id);
-        return;
-      }
-
-      // ── ESC/POS path (WebUSB or network) ──────────────────────────────────
-      let buffer: Uint8Array | null = null;
-
-      if (ticket.ticketType === 'KOT') {
-        buffer = buildKOT({ cafeName, ticket, pax, buzzer: settings.kitchenPrinterBuzzer ?? false });
       } else if (ticket.ticketType === 'BOT') {
         buffer = buildBOT({ cafeName, ticket, pax });
       } else if (ticket.ticketType === 'VOID_KOT' || ticket.ticketType === 'VOID_BOT') {
@@ -159,32 +171,50 @@ export function usePrintQueue() {
 
       if (!buffer) return;
 
-      // dispatchEscpos routes to WebUSB or network per settings and is fully
+      // dispatchEscpos routes directly to the correct USB slot and is fully
       // silent on failure (console warning only — no dialogs, no window.print).
-      const success = await dispatchEscpos(buffer, settings, target);
+      const success = await dispatchEscpos(buffer, target);
 
       if (!success) {
-        // Hardware failures are deliberately silent to the user. The ticket
-        // stays pending for visibility, while processedTicketIds prevents a
-        // retry loop during this browser session.
         console.warn(
           `[print-queue] Could not dispatch ${ticket.ticketType} #${ticket.ticketNumber}.`,
         );
       }
 
-      if (success) markPrinted(ticket.id);
+      if (success) {
+        // Single atomic persistence path: the ticket status AND the order's
+        // printStatus flip in ONE setOrders call, so the full /orders sync
+        // (useFirebaseSync) carries 'printed' to Firebase. A separate narrow
+        // printStatus patch would race the full-array write and could be
+        // reverted to 'pending' by whichever request lands last.
+        const slot = isKitchenTicket ? ('kot' as const) : ('bot' as const);
+        markPrinted(ticket.id, orderId, slot);
+      }
     }
 
-    function markPrinted(ticketId: string) {
+    function markPrinted(ticketId: string, orderId: string, slot: 'kot' | 'bot') {
       const currentOrders = usePOSStore.getState().orders;
       const updatedOrders = currentOrders.map((o) => {
         if (!o.tickets?.some((t) => t.id === ticketId)) return o;
-        return {
-          ...o,
-          tickets: o.tickets.map((t) =>
-            t.id === ticketId ? { ...t, status: 'printed' as const } : t,
-          ),
-        };
+
+        const updatedTickets = o.tickets.map((t) =>
+          t.id === ticketId ? { ...t, status: 'printed' as const } : t,
+        );
+
+        // Flip the station's printStatus to 'printed' only when no OTHER
+        // pending ticket for the same station remains on this order.
+        const stationHasPending = updatedTickets.some((t) => {
+          const isKitchen = t.ticketType === 'KOT' || t.ticketType === 'VOID_KOT';
+          const tSlot = isKitchen ? 'kot' : 'bot';
+          return tSlot === slot && t.status === 'pending';
+        });
+
+        const printStatus =
+          o.id === orderId && !stationHasPending
+            ? { ...(o.printStatus ?? {}), [slot]: 'printed' as const }
+            : o.printStatus;
+
+        return { ...o, tickets: updatedTickets, printStatus };
       });
       setOrders(updatedOrders);
     }

@@ -1,13 +1,14 @@
 /**
  * webusbPrinter.ts
  *
- * Native WebUSB driver for direct-cable thermal printers (Pantum PD-80BW and
- * other ESC/POS-compatible printers).  Uses the browser's navigator.usb API —
- * zero installs, no OS driver required for raw bulk transfers.
+ * Dual-slot WebUSB driver for direct-cable thermal printers.
+ * Manages two independent USB device slots:
+ *   'kitchen'   — Pantum PD-80BW for KOT tickets
+ *   'reception' — Pantum PD-80BW for BOT tickets, pre-bills and invoices
  *
- * Pairing is a one-time user gesture (pairUSBPrinter). After that,
- * autoReconnectUSB() silently re-attaches to the already-authorised device on
- * every app mount without any prompt.
+ * Each slot pairs independently, persists its device identity (vendorId +
+ * productId) to localStorage, and auto-reconnects on next app load without
+ * any browser prompt.
  *
  * All failures resolve silently (return false / null). This module NEVER
  * opens a dialog, alert, or window.print() fallback.
@@ -39,8 +40,11 @@ interface USBConfiguration {
 }
 
 interface USBDevice {
+  vendorId: number;
+  productId: number;
   productName?: string;
   manufacturerName?: string;
+  serialNumber?: string;
   opened: boolean;
   configuration: USBConfiguration | null;
   configurations: USBConfiguration[];
@@ -64,15 +68,127 @@ function getUSB(): USBNavigator | null {
   return nav.usb ?? null;
 }
 
-// ── Module state — one active claimed device per browser session ─────────────
+// ── Printer slot type ─────────────────────────────────────────────────────────
 
-let activeDevice: USBDevice | null = null;
-let activeOutEndpoint: number | null = null;
+export type PrinterSlot = 'kitchen' | 'reception';
 
-/** True when the browser supports WebUSB at all (Chrome/Edge over HTTPS). */
+interface SlotState {
+  device: USBDevice;
+  outEndpoint: number;
+}
+
+// ── Module state — one slot map per browser session ───────────────────────────
+
+const slots = new Map<PrinterSlot, SlotState>();
+
+/** localStorage keys that persist paired device identity across page loads. */
+const STORAGE_KEYS: Record<PrinterSlot, string> = {
+  kitchen:   'printer_kitchen_usb',
+  reception: 'printer_reception_usb',
+};
+
+// ── Persisted device identity helpers ────────────────────────────────────────
+
+interface DeviceIdentity {
+  vendorId: number;
+  productId: number;
+  /**
+   * Stable per-unit identifier. Two same-model printers share vendorId and
+   * productId, so the serial number is the only way to tell them apart across
+   * page loads. `null` means the unit did not expose one.
+   */
+  serialNumber: string | null;
+}
+
+function saveDeviceIdentity(slot: PrinterSlot, device: USBDevice): void {
+  try {
+    const identity: DeviceIdentity = {
+      vendorId: device.vendorId,
+      productId: device.productId,
+      serialNumber: device.serialNumber ?? null,
+    };
+    localStorage.setItem(STORAGE_KEYS[slot], JSON.stringify(identity));
+  } catch {
+    // localStorage unavailable — ignore
+  }
+}
+
+function loadDeviceIdentity(slot: PrinterSlot): DeviceIdentity | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS[slot]);
+    if (!raw) return null;
+    return JSON.parse(raw) as DeviceIdentity;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Strict identity match. When a serial number was recorded at pairing time,
+ * only the device with that exact serial qualifies — a same-model unit with a
+ * different (or missing) serial is rejected rather than silently substituted.
+ * Identities recorded without a serial fall back to vendor/product matching.
+ */
+function matchesIdentity(device: USBDevice, identity: DeviceIdentity): boolean {
+  if (device.vendorId !== identity.vendorId || device.productId !== identity.productId) {
+    return false;
+  }
+  if (identity.serialNumber) {
+    return device.serialNumber === identity.serialNumber;
+  }
+  return true;
+}
+
+/** True when the device is currently claimed by any slot in this session. */
+function isDeviceClaimed(device: USBDevice): boolean {
+  for (const state of slots.values()) {
+    if (state.device === device) return true;
+  }
+  return false;
+}
+
+/**
+ * True when a device is reserved for a DIFFERENT slot by its persisted serial
+ * identity. Prevents a serial-less reconnect from stealing a unit that
+ * verifiably belongs to the other station.
+ */
+function isReservedForOtherSlot(device: USBDevice, slot: PrinterSlot): boolean {
+  if (!device.serialNumber) return false;
+  for (const other of Object.keys(STORAGE_KEYS) as PrinterSlot[]) {
+    if (other === slot) continue;
+    const otherIdentity = loadDeviceIdentity(other);
+    if (otherIdentity?.serialNumber && otherIdentity.serialNumber === device.serialNumber) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── Reconnect serialization ──────────────────────────────────────────────────
+//
+// Kitchen and reception reconnects are often fired together (Promise.all).
+// Running them concurrently would let both observe the same unclaimed device
+// and race to claim it. A module-level promise chain makes every reconnect
+// atomic: each one sees the slot assignments left by the previous one.
+
+let reconnectChain: Promise<unknown> = Promise.resolve();
+
+function withReconnectLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = reconnectChain.then(fn, fn);
+  reconnectChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+// ── True when the browser supports WebUSB at all (Chrome/Edge over HTTPS) ─────
+
 export function isWebUSBSupported(): boolean {
   return getUSB() !== null;
 }
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
 interface BulkOutCandidate {
   configurationValue: number;
@@ -87,22 +203,20 @@ function getBulkOutCandidates(config: USBConfiguration): BulkOutCandidate[] {
     .flatMap((iface) =>
       iface.alternates.flatMap((alt) =>
         alt.endpoints
-          .filter((endpoint) => endpoint.direction === 'out' && endpoint.type === 'bulk')
-          .map((endpoint) => ({
+          .filter((ep) => ep.direction === 'out' && ep.type === 'bulk')
+          .map((ep) => ({
             configurationValue: config.configurationValue,
             interfaceNumber: iface.interfaceNumber,
             alternateSetting: alt.alternateSetting,
-            endpointNumber: endpoint.endpointNumber,
+            endpointNumber: ep.endpointNumber,
             interfaceClass: alt.interfaceClass,
           })),
       ),
     )
-    // USB printer class is 7. Vendor-specific printers are retained as
-    // fallbacks because several ESC/POS devices do not advertise class 7.
+    // USB printer class is 7. Vendor-specific printers are retained as fallbacks.
     .sort((a, b) => {
       const classScore = Number(b.interfaceClass === 7) - Number(a.interfaceClass === 7);
-      if (classScore !== 0) return classScore;
-      return a.alternateSetting - b.alternateSetting;
+      return classScore !== 0 ? classScore : a.alternateSetting - b.alternateSetting;
     });
 }
 
@@ -110,30 +224,26 @@ async function releaseInterfaceQuietly(device: USBDevice, interfaceNumber: numbe
   try {
     await device.releaseInterface?.(interfaceNumber);
   } catch {
-    // The browser may already have released it while changing configuration.
+    // May already be released during configuration transitions.
   }
 }
 
 /**
- * Open the device, scan every configuration and every alternate setting, then
+ * Open the device, scan every configuration and alternate setting, then
  * claim the first usable interface with a bulk OUT endpoint.
- *
- * Windows printers commonly expose a non-zero interface number or put their
- * printer endpoint behind an alternate setting. Never assume interface 0,
- * configuration 1, or alternate setting 0. A failed candidate is isolated so
- * the next configuration/interface can still be tried.
+ * Returns the endpoint number on success, null on failure.
  */
-async function claimDevice(device: USBDevice): Promise<boolean> {
+async function claimDevice(device: USBDevice): Promise<number | null> {
   if (!device.opened) {
     try {
       await device.open();
     } catch {
-      return false;
+      return null;
     }
   }
 
   const configurations = device.configurations ?? [];
-  if (configurations.length === 0) return false;
+  if (configurations.length === 0) return null;
 
   for (const configuration of configurations) {
     try {
@@ -141,8 +251,6 @@ async function claimDevice(device: USBDevice): Promise<boolean> {
         await device.selectConfiguration(configuration.configurationValue);
       }
     } catch {
-      // A configuration may be unavailable while Windows is transitioning the
-      // device. Continue scanning the remaining configurations.
       continue;
     }
 
@@ -163,8 +271,6 @@ async function claimDevice(device: USBDevice): Promise<boolean> {
           claimedHere = true;
         }
 
-        // The endpoint descriptor belongs to this alternate setting. It is
-        // not usable until that setting is selected after claiming the iface.
         if (candidate.alternateSetting !== 0) {
           if (!device.selectAlternateInterface) {
             if (claimedHere) await releaseInterfaceQuietly(device, candidate.interfaceNumber);
@@ -176,12 +282,8 @@ async function claimDevice(device: USBDevice): Promise<boolean> {
           );
         }
 
-        activeDevice = device;
-        activeOutEndpoint = candidate.endpointNumber;
-        return true;
+        return candidate.endpointNumber;
       } catch {
-        // claimInterface/selectAlternateInterface can reject for an occupied
-        // interface. Do not let that abort discovery of the next candidate.
         if (claimedHere) {
           await releaseInterfaceQuietly(device, candidate.interfaceNumber);
         }
@@ -189,46 +291,108 @@ async function claimDevice(device: USBDevice): Promise<boolean> {
     }
   }
 
-  return false;
+  return null;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/** True when a printer is claimed and ready for raw writes on the given slot. */
+export function getUSBConnectionStatus(slot: PrinterSlot): boolean {
+  const s = slots.get(slot);
+  return s !== undefined && s.device.opened;
+}
+
+/** Product name of the printer on the given slot, if any. */
+export function getUSBPrinterName(slot: PrinterSlot): string | null {
+  const s = slots.get(slot);
+  if (!s) return null;
+  return s.device.productName ?? 'USB Printer';
 }
 
 /**
- * On app mount: silently re-attach to an already-paired printer without any
- * browser prompt. Safe to call multiple times.
+ * On app mount: silently re-attach to a previously paired printer for the
+ * given slot, using the persisted vendorId + productId to filter candidates.
+ * Safe to call multiple times; returns immediately if already connected.
  */
-export async function autoReconnectUSB(): Promise<boolean> {
-  const usb = getUSB();
-  if (!usb) return false;
-  if (getUSBConnectionStatus()) return true;
+export function autoReconnectUSB(slot: PrinterSlot): Promise<boolean> {
+  // Serialized: concurrent kitchen/reception reconnects run one at a time so
+  // they can never race to claim the same physical device.
+  return withReconnectLock(async () => {
+    const usb = getUSB();
+    if (!usb) return false;
+    if (getUSBConnectionStatus(slot)) return true;
 
-  try {
-    const devices = await usb.getDevices();
-    for (const device of devices) {
-      if (await claimDevice(device)) {
-        console.info(`[webusb] Auto-reconnected to ${device.productName ?? 'USB printer'}`);
-        return true;
+    const identity = loadDeviceIdentity(slot);
+    if (!identity) return false; // never paired on this slot — nothing to reattach
+
+    try {
+      const devices = await usb.getDevices();
+      for (const device of devices) {
+        if (!matchesIdentity(device, identity)) continue;
+        // Never claim a device already held by another slot in this session,
+        // or one whose serial number is persisted for the other station.
+        if (isDeviceClaimed(device)) continue;
+        if (isReservedForOtherSlot(device, slot)) continue;
+
+        const endpointNumber = await claimDevice(device);
+        if (endpointNumber !== null) {
+          slots.set(slot, { device, outEndpoint: endpointNumber });
+          saveDeviceIdentity(slot, device);
+          console.info(`[webusb:${slot}] Auto-reconnected to ${device.productName ?? 'USB printer'}`);
+          return true;
+        }
       }
+    } catch (err) {
+      console.warn(`[webusb:${slot}] autoReconnectUSB failed:`, err);
     }
-  } catch (err) {
-    console.warn('[webusb] autoReconnectUSB failed:', err);
-  }
-  return false;
+    return false;
+  });
 }
 
 /**
- * User-gesture pairing: opens the browser's device selector, then claims the
- * chosen printer. Returns the product name on success, null on cancel/failure.
+ * User-gesture pairing: opens the browser's device selector, claims the
+ * chosen printer, and assigns it to the given slot. Returns the product name
+ * on success, null on cancel / failure.
  */
-export async function pairUSBPrinter(): Promise<string | null> {
+export async function pairUSBPrinter(slot: PrinterSlot): Promise<string | null> {
   const usb = getUSB();
   if (!usb) return null;
 
   try {
-    // Empty filters — show every connected USB device so any ESC/POS printer
-    // (Pantum, Epson, generic) can be selected.
     const device = await usb.requestDevice({ filters: [] });
-    if (await claimDevice(device)) {
-      return device.productName ?? 'USB Printer';
+
+    // An explicit pairing gesture wins: if the chosen device is currently held
+    // by — or persistently reserved for — the other station, fully displace it
+    // there (in-memory slot AND stored identity). Leaving the old identity
+    // behind would make BOTH slots claim the same serial, deadlocking every
+    // future reconnect ("reserved for the other slot" on both sides).
+    for (const otherSlot of Object.keys(STORAGE_KEYS) as PrinterSlot[]) {
+      if (otherSlot === slot) continue;
+
+      const otherState = slots.get(otherSlot);
+      if (otherState && otherState.device === device) {
+        slots.delete(otherSlot);
+        console.info(`[webusb:${otherSlot}] Released — device re-paired to ${slot}`);
+      }
+
+      const otherIdentity = loadDeviceIdentity(otherSlot);
+      if (otherIdentity && matchesIdentity(device, otherIdentity)) {
+        try {
+          localStorage.removeItem(STORAGE_KEYS[otherSlot]);
+        } catch {
+          // localStorage unavailable — ignore
+        }
+        console.info(`[webusb:${otherSlot}] Stored identity cleared — device re-paired to ${slot}`);
+      }
+    }
+
+    const endpointNumber = await claimDevice(device);
+    if (endpointNumber !== null) {
+      slots.set(slot, { device, outEndpoint: endpointNumber });
+      saveDeviceIdentity(slot, device);
+      const name = device.productName ?? 'USB Printer';
+      console.info(`[webusb:${slot}] Paired with ${name}`);
+      return name;
     }
     return null;
   } catch {
@@ -237,41 +401,33 @@ export async function pairUSBPrinter(): Promise<string | null> {
   }
 }
 
-/** True when a printer is claimed and ready for raw writes. */
-export function getUSBConnectionStatus(): boolean {
-  return activeDevice !== null && activeDevice.opened && activeOutEndpoint !== null;
-}
-
-/** Product name of the active printer, if any. */
-export function getUSBPrinterName(): string | null {
-  return activeDevice?.productName ?? (activeDevice ? 'USB Printer' : null);
-}
-
 /**
- * Send raw ESC/POS bytes to the claimed printer's bulk OUT endpoint.
+ * Send raw ESC/POS bytes to the claimed printer on the given slot.
  * Silent on failure — resolves false, never throws or opens a dialog.
  */
-export async function sendRawToUSB(buffer: Uint8Array): Promise<boolean> {
-  if (!getUSBConnectionStatus() || !activeDevice || activeOutEndpoint === null) {
+export async function sendRawToUSB(buffer: Uint8Array, slot: PrinterSlot): Promise<boolean> {
+  const s = slots.get(slot);
+  if (!s || !s.device.opened) {
+    console.warn(`[webusb:${slot}] No device connected — job skipped silently.`);
     return false;
   }
   try {
-    const result = await activeDevice.transferOut(activeOutEndpoint, buffer as BufferSource);
+    const result = await s.device.transferOut(s.outEndpoint, buffer as BufferSource);
     return result.status === 'ok';
   } catch (err) {
-    console.warn('[webusb] transferOut failed:', err);
+    console.warn(`[webusb:${slot}] transferOut failed:`, err);
     // Device likely unplugged — drop the stale handle so status reports false.
-    activeDevice = null;
-    activeOutEndpoint = null;
+    slots.delete(slot);
     return false;
   }
 }
 
-// Keep status accurate when the cable is unplugged.
+// Keep slot status accurate when a cable is unplugged.
 getUSB()?.addEventListener?.('disconnect', (e) => {
-  if (e.device === activeDevice) {
-    activeDevice = null;
-    activeOutEndpoint = null;
-    console.info('[webusb] Printer disconnected');
+  for (const [slot, state] of slots.entries()) {
+    if (state.device === e.device) {
+      slots.delete(slot);
+      console.info(`[webusb:${slot}] Printer disconnected`);
+    }
   }
 });

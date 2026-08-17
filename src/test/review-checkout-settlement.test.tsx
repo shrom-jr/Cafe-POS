@@ -8,12 +8,11 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { DEFAULT_PERMISSIONS } from '@/types/staff';
 import type { Role, StaffUser } from '@/types/staff';
 import type { CafeTable, Order } from '@/types/pos';
-import { firePrintJob } from '@/utils/printEngine';
+import { fireSilentPrintJob } from '@/utils/silentPrint';
 
-vi.mock('@/utils/printEngine', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/utils/printEngine')>();
-  return { ...actual, firePrintJob: vi.fn() };
-});
+vi.mock('@/utils/silentPrint', () => ({
+  fireSilentPrintJob: vi.fn().mockResolvedValue(true),
+}));
 vi.mock('@/utils/sounds', () => ({ playSuccess: vi.fn(), playError: vi.fn(), playClick: vi.fn() }));
 
 const TABLE: CafeTable = { id: 'table-1', number: '1', status: 'occupied', section: 'Ground Floor' } as CafeTable;
@@ -124,7 +123,7 @@ describe('checkout previous-due settlement', () => {
     expect(payment.amountTendered).toBe(BILL_TOTAL + PREVIOUS_DUE);
 
     // The printed invoice states the same collected amount
-    const job = vi.mocked(firePrintJob).mock.calls.at(-1)![0];
+    const job = vi.mocked(fireSilentPrintJob).mock.calls.at(-1)![0];
     expect(job.type).toBe('TAX_INVOICE');
     if (job.type === 'TAX_INVOICE') {
       expect(job.data.total).toBe(BILL_TOTAL);
@@ -203,7 +202,7 @@ describe('checkout previous-due settlement', () => {
     expect(payment.dueSettlement?.amount).toBe(300);
     expect(payment.amountTendered).toBe(BILL_TOTAL + 300);
 
-    const job = vi.mocked(firePrintJob).mock.calls.at(-1)![0];
+    const job = vi.mocked(fireSilentPrintJob).mock.calls.at(-1)![0];
     if (job.type === 'TAX_INVOICE') {
       expect(job.data.dueSettlement?.amount).toBe(300);
       expect(job.data.amountTendered).toBe(BILL_TOTAL + 300);
@@ -234,6 +233,8 @@ describe('checkout previous-due settlement', () => {
     // Unchecking brings Pay Later back and it books only the new bill
     fireEvent.click(screen.getByTestId('checkbox-include-prev-due'));
     fireEvent.click(screen.getAllByTestId('button-payment-method-khatta')[0]);
+    // Credit now opens a confirmation modal before booking
+    fireEvent.click(screen.getByText('Confirm Credit & Settle'));
 
     const payment = usePOSStore.getState().payments.at(-1)!;
     expect(payment.method).toBe('khatta');

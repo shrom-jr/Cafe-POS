@@ -2,20 +2,43 @@
  * ticketSplitter.ts
  *
  * Determines whether each OrderItem routes to the Kitchen (KOT) or the
- * Bar / Reception (BOT) based on the Category.sendToKitchen flag that admins
- * manage through the AdminPanel.
+ * Bar / Reception (BOT).
  *
- * Routing rules (mirrors the spec):
- *   KOT — Category.sendToKitchen === true
- *       Food items, Hot Beverages, Milk Shakes, Smoothies, etc.
- *   BOT — Category.sendToKitchen === false / undefined
- *       Alcohol, Cold Drinks, Energy Drinks, Juices, Water, Cigarettes, Hookah
+ * Routing precedence (highest first):
+ *   1. MenuItem.printRoute  — explicit per-item route ('KOT' | 'BOT')
+ *   2. Category.printRoute  — explicit per-category route
+ *   3. Category.sendToKitchen === true → KOT, otherwise BOT
  *
- * The admin already controls this via the per-category KOT toggle in AdminPanel,
- * so we simply trust that flag rather than hard-coding name patterns.
+ * Typical routes:
+ *   KOT — Food items, Hot Beverages, Milk Shakes, Smoothies, etc.
+ *   BOT — Alcohol, Cold Drinks, Energy Drinks, Juices, Water, Cigarettes, Hookah
  */
 
-import { Category, OrderItem, Ticket, TicketItem, TicketType } from '@/types/pos';
+import { Category, MenuItem, OrderItem, PrintRoute, Ticket, TicketItem, TicketType } from '@/types/pos';
+
+/** Resolve the print route for one menu item with full precedence rules. */
+export function resolvePrintRoute(
+  menuItemId: string,
+  menuItemMap: Map<string, MenuItem>,
+  categoryMap: Map<string, Category>,
+): PrintRoute {
+  const menuItem = menuItemMap.get(menuItemId);
+
+  // 1. Explicit per-item route wins
+  if (menuItem?.printRoute === 'KOT' || menuItem?.printRoute === 'BOT') {
+    return menuItem.printRoute;
+  }
+
+  const category = menuItem?.categoryId ? categoryMap.get(menuItem.categoryId) : undefined;
+
+  // 2. Explicit per-category route
+  if (category?.printRoute === 'KOT' || category?.printRoute === 'BOT') {
+    return category.printRoute;
+  }
+
+  // 3. Legacy sendToKitchen flag
+  return category?.sendToKitchen === true ? 'KOT' : 'BOT';
+}
 
 /**
  * Classify a list of draft OrderItems into kitchen vs bar groups.
@@ -23,16 +46,14 @@ import { Category, OrderItem, Ticket, TicketItem, TicketType } from '@/types/pos
  */
 export function splitDraftItems(
   draftItems: OrderItem[],
-  menuItemCategoryMap: Map<string, string>,   // menuItemId → categoryId
-  categoryMap: Map<string, Category>,          // categoryId → Category
+  menuItemMap: Map<string, MenuItem>,       // menuItemId → MenuItem
+  categoryMap: Map<string, Category>,        // categoryId → Category
 ): { kitchenItems: TicketItem[]; barItems: TicketItem[] } {
   const kitchenItems: TicketItem[] = [];
   const barItems: TicketItem[] = [];
 
   for (const item of draftItems) {
-    const categoryId = menuItemCategoryMap.get(item.menuItemId);
-    const category = categoryId ? categoryMap.get(categoryId) : undefined;
-    const isKitchen = category?.sendToKitchen === true;
+    const route = resolvePrintRoute(item.menuItemId, menuItemMap, categoryMap);
 
     const ticketItem: TicketItem = {
       id: item.id,
@@ -40,7 +61,7 @@ export function splitDraftItems(
       quantity: item.quantity,
     };
 
-    if (isKitchen) {
+    if (route === 'KOT') {
       kitchenItems.push(ticketItem);
     } else {
       barItems.push(ticketItem);
@@ -64,17 +85,15 @@ export function nextTicketNumber(
 }
 
 /**
- * Determine whether a sent item's category routes it to the kitchen or bar.
+ * Determine whether a sent item's route sends it to the kitchen or bar.
  * Used when generating VOID tickets for a single item.
  */
 export function resolveItemDestination(
   menuItemId: string,
-  menuItemCategoryMap: Map<string, string>,
+  menuItemMap: Map<string, MenuItem>,
   categoryMap: Map<string, Category>,
 ): 'KOT' | 'BOT' {
-  const categoryId = menuItemCategoryMap.get(menuItemId);
-  const category = categoryId ? categoryMap.get(categoryId) : undefined;
-  return category?.sendToKitchen === true ? 'KOT' : 'BOT';
+  return resolvePrintRoute(menuItemId, menuItemMap, categoryMap);
 }
 
 /**

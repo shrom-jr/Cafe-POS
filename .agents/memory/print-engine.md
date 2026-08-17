@@ -1,22 +1,21 @@
 ---
 name: Print Engine Architecture
-description: Silent dual-mode ESC/POS printing (WebUSB + network); firePrintJob iframe pipeline is legacy
+description: Dual-slot WebUSB-only ESC/POS printing — durable constraints on device identity, sync ordering, and hub toggling
 ---
 
 ## Rule
-All production printing is silent raw ESC/POS — no window.print(), alert, or iframe dialogs anywhere in the hardware path.
+All production printing is silent raw ESC/POS over direct WebUSB. No window.print(), alerts, iframes, network (IP:9100) relays, or printer-mode settings may ever return to the hardware path.
 
-- Screens still build structured `PrintJob` objects (KITCHEN_KOT / PRE_BILL / TAX_INVOICE from `printEngine.ts` types) but dispatch them through `fireSilentPrintJob()` in `src/utils/silentPrint.ts`, which converts to ESC/POS bytes and routes via `dispatchEscpos()` in `src/utils/escpos.ts`.
-- `dispatchEscpos(buffer, settings, 'kitchen' | 'reception')` routes per configured mode: `'webusb'` → `sendRawToUSB()` (native navigator.usb driver in `src/utils/webusbPrinter.ts`), `'network'` → WebSocket relay to IP:port. Unconfigured/offline = console.warn only, resolves false.
-- Kitchen mode: `settings.kitchenPrinterMode` ('webusb'|'network', default network). Reception: `settings.receptionPrinterMode` — legacy 'browser'/'usb' values are treated as 'webusb'.
-- WebUSB pairing is a one-time user gesture (`pairUSBPrinter`); `autoReconnectUSB()` silently re-attaches on mount (called by usePrintQueue on the hub device and by the printer settings panel).
-- WebUSB connection discovery scans every device configuration and bulk-OUT alternate setting, preferring USB printer class 7 but falling back to vendor-specific interfaces; never assume configuration 1 or interface 0.
-- Background KOT/BOT/VOID queue (`usePrintQueue`) runs only on the device where localStorage `pos_is_print_hub === 'true'`; it also uses `dispatchEscpos`.
+**Why:** Two identical same-model thermal printers are cabled directly to the desktop hub; waiter phones must never pop dialogs, and Wi-Fi/browser fallbacks proved unreliable in the venue.
 
-**Why:** Waiter phones and the cashier hub must never pop a browser print dialog; the Pantum PD-80BW works over direct USB cable (WebUSB) or Wi-Fi (port 9100).
+## Durable constraints
+- **Identical printers share vendor/product IDs** — per-slot identity must rely on the USB serial number, reconnects must run one at a time (never concurrently), and an explicit re-pairing must fully displace the other station's stored identity or both slots deadlock reserving the same unit.
+- **Never split one logical state change across two Firebase writes.** Orders sync as a whole array; a narrow patch racing the full-array push can silently revert. Flip ticket status and the order's print confirmation in a single store update so the one sync path carries the final state.
+- **The `storage` event never fires in the tab that wrote it** — any localStorage-backed toggle (like the auto-print hub flag) needs a same-tab notification or it stays stale until reload.
+- Ticket routing precedence: item-level print route > category print route > legacy send-to-kitchen boolean.
+- Unpaired/offline printer = silent skip (warn + resolve false). Never throw or open a dialog from the print path.
 
 **How to apply:**
-- `firePrintJob()` / `openPrintIframe()` in `printEngine.ts` still exist but are LEGACY — no screen should call them. Its HTML builders and PrintJob types are still used for typing and by tests.
-- `ThermalReceiptLayout` + `src/utils/print.ts` remain only for AdminPanel ReceiptPreview (visual preview). Do NOT remove.
-- Callers keep the last job in a `useRef<PrintJob | null>` for reprint; reprint also goes through `fireSilentPrintJob`.
-- KOT snapshot must be taken BEFORE calling `sendToKitchen(order.id)` — the store marks items as sent immediately.
+- The legacy iframe/HTML print pipeline exists only for typing and the admin receipt preview — no screen may dispatch through it.
+- KOT snapshot must be taken BEFORE calling sendToKitchen — the store marks items as sent immediately.
+- A station's print confirmation flips to printed only when no other pending ticket for that station remains on the order.

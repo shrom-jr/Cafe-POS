@@ -443,16 +443,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
     }));
     useInventoryStore.getState().deductInventoryForSale(unsentForInventory);
 
-    // Build lookup maps for ticket splitting
-    const menuItemCategoryMap = new Map<string, string>(
-      state0.menuItems.map((m) => [m.id, m.categoryId]),
+    // Build lookup maps for ticket splitting (printRoute-aware)
+    const menuItemMap = new Map<string, MenuItem>(
+      state0.menuItems.map((m) => [m.id, m]),
     );
     const categoryMap = new Map<string, Category>(
       state0.categories.map((c) => [c.id, c]),
     );
 
     // Split draft items into kitchen vs bar groups
-    const { kitchenItems, barItems } = splitDraftItems(draftItems, menuItemCategoryMap, categoryMap);
+    const { kitchenItems, barItems } = splitDraftItems(draftItems, menuItemMap, categoryMap);
 
     const nowIso = new Date().toISOString();
     const serverName = order.takenBy?.name ?? '';
@@ -523,12 +523,20 @@ export const usePOSStore = create<POSState>((set, get) => ({
                   }
                 }
               }
+              // Mark the print queue state for the auto-print hub: any station
+              // receiving a new ticket flips (back) to 'pending'.
+              const printStatus = {
+                ...(o.printStatus ?? {}),
+                ...(kitchenItems.length > 0 ? { kot: 'pending' as const } : {}),
+                ...(barItems.length > 0 ? { bot: 'pending' as const } : {}),
+              };
               return {
                 ...o,
                 kitchenStatus: 'placed' as const,
                 hasUnsentItems: false,
                 items: mergedItems,
                 tickets: [...(o.tickets ?? []), ...newTickets],
+                ...(kitchenItems.length > 0 || barItems.length > 0 ? { printStatus } : {}),
               };
             })()
           : o
@@ -552,9 +560,9 @@ export const usePOSStore = create<POSState>((set, get) => ({
       }]);
     }
 
-    // Build lookup maps once (needed for VOID ticket routing)
-    const menuItemCategoryMap = new Map<string, string>(
-      state0.menuItems.map((m) => [m.id, m.categoryId]),
+    // Build lookup maps once (needed for VOID ticket routing, printRoute-aware)
+    const menuItemMap = new Map<string, MenuItem>(
+      state0.menuItems.map((m) => [m.id, m]),
     );
     const categoryMap = new Map<string, Category>(
       state0.categories.map((c) => [c.id, c]),
@@ -589,7 +597,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         const existingTickets = o.tickets ?? [];
         const voidTickets = [];
         if (target.kitchenStatus === 'sent' || target.sentToKitchen) {
-          const destination = resolveItemDestination(target.menuItemId, menuItemCategoryMap, categoryMap);
+          const destination = resolveItemDestination(target.menuItemId, menuItemMap, categoryMap);
           const voidType = destination === 'KOT' ? 'VOID_KOT' as const : 'VOID_BOT' as const;
           // Count existing VOID tickets of the same type to get the next number
           const existingVoids = existingTickets.filter((t) => t.ticketType === voidType);

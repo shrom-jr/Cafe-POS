@@ -1,23 +1,14 @@
 /**
  * silentPrint.ts
  *
- * Unified print dispatcher for structured PrintJob objects.
+ * Unified silent print dispatcher for structured PrintJob objects.
  *
- * Accepts KITCHEN_KOT / PRE_BILL / TAX_INVOICE jobs and routes each to the
- * correct print path based on the configured printer mode:
+ * Every job routes directly to a WebUSB ESC/POS printer — zero browser
+ * dialogs, zero window.print() calls:
  *
- *   KITCHEN_KOT → kitchen printer mode:
- *                   'system'  → browserPrintKOT()         (window.print or Electron silent)
- *                   'webusb'  → dispatchEscpos → sendRawToUSB
- *                   'network' → dispatchEscpos → sendToNetworkPrinter
- *   PRE_BILL    → reception printer mode:
- *                   'system'  → browserPrintPreBill()   (window.print via iframe)
- *                   'webusb'  → dispatchEscpos → sendRawToUSB
- *                   'network' → dispatchEscpos → sendToNetworkPrinter
- *   TAX_INVOICE → same routing as PRE_BILL
- *
- * System/browser mode is intercepted BEFORE building ESC/POS bytes because
- * the HTML renderer needs the original structured data, not raw bytes.
+ *   KITCHEN_KOT → Kitchen USB printer   (slot 'kitchen')
+ *   PRE_BILL    → Reception USB printer (slot 'reception')
+ *   TAX_INVOICE → Reception USB printer (slot 'reception')
  *
  * All paths resolve true/false — nothing throws or opens alerts.
  */
@@ -29,15 +20,9 @@ import {
   buildPreBill,
   buildTaxInvoice,
   dispatchEscpos,
-  resolvePrinterMode,
   type EscPreBillOptions,
   type EscTaxInvoiceOptions,
 } from '@/utils/escpos';
-import {
-  browserPrintKOT,
-  browserPrintPreBill,
-  browserPrintTaxInvoice,
-} from '@/utils/browserPrint';
 import { Ticket } from '@/types/pos';
 
 export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
@@ -59,23 +44,13 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         status: 'pending',
       };
 
-      // System/Browser Print mode: render HTML and route to window.print or Electron.
-      if (resolvePrinterMode(settings, 'kitchen') === 'system') {
-        return browserPrintKOT({
-          cafeName: d.cafeName,
-          ticket,
-          pax: d.pax,
-          buzzer: settings.kitchenPrinterBuzzer ?? false,
-        });
-      }
-
       const buffer = buildKOT({
         cafeName: d.cafeName,
         ticket,
         pax: d.pax,
         buzzer: settings.kitchenPrinterBuzzer ?? false,
       });
-      return dispatchEscpos(buffer, settings, 'kitchen');
+      return dispatchEscpos(buffer, 'kitchen');
     }
 
     case 'PRE_BILL': {
@@ -96,12 +71,8 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         timestamp: d.timestamp,
       };
 
-      if (resolvePrinterMode(settings, 'reception') === 'system') {
-        return browserPrintPreBill(preBillData);
-      }
-
       const buffer = buildPreBill(preBillData);
-      return dispatchEscpos(buffer, settings, 'reception');
+      return dispatchEscpos(buffer, 'reception');
     }
 
     case 'TAX_INVOICE': {
@@ -129,12 +100,8 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         timestamp: d.timestamp,
       };
 
-      if (resolvePrinterMode(settings, 'reception') === 'system') {
-        return browserPrintTaxInvoice(invoiceData);
-      }
-
       const buffer = buildTaxInvoice(invoiceData);
-      return dispatchEscpos(buffer, settings, 'reception');
+      return dispatchEscpos(buffer, 'reception');
     }
   }
 }
