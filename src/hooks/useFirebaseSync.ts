@@ -241,9 +241,20 @@ export function useFirebaseSync() {
         }
       },
 
-      setGroceryPurchases: (remotePurchases: typeof groceryPurchases) => {
+      setGroceryPurchases: (
+        remotePurchases: typeof groceryPurchases,
+        remoteExists = true,
+      ) => {
         hasLoadedGroceryPurchases.current = true;
         const currentPurchases = useInventoryStore.getState().groceryPurchases;
+
+        // An explicitly absent Firebase node is an intentional clean baseline,
+        // not a transient empty snapshot to repopulate from localStorage.
+        if (!remoteExists) {
+          isRemoteGroceryPurchasesUpdate.current = true;
+          setGroceryPurchases([]);
+          return;
+        }
 
         // FIREWALL: preserve local purchase history if remote is empty
         if (remotePurchases.length === 0 && currentPurchases.length > 0) {
@@ -290,9 +301,15 @@ export function useFirebaseSync() {
       },
     };
 
-    const unsubscribeKitchenPurchases = subscribeToKitchenPurchases((remote) => {
+    const unsubscribeKitchenPurchases = subscribeToKitchenPurchases((remote, remoteExists) => {
       hasLoadedKitchenPurchases.current = true;
       const current = useKitchenPurchasesStore.getState().purchases;
+
+      if (!remoteExists) {
+        isRemoteKitchenPurchasesUpdate.current = true;
+        setKitchenPurchases([]);
+        return;
+      }
 
       // FIREWALL: preserve local purchase history if remote is empty
       if (remote.length === 0 && current.length > 0) {
@@ -306,9 +323,15 @@ export function useFirebaseSync() {
       }
     });
 
-    const unsubscribeMeatEntries = subscribeToMeatEntries((remote) => {
+    const unsubscribeMeatEntries = subscribeToMeatEntries((remote, remoteExists) => {
       hasLoadedMeatEntries.current = true;
       const current = useMeatTrackerStore.getState().meatEntries;
+
+      if (!remoteExists) {
+        isRemoteMeatEntriesUpdate.current = true;
+        setMeatEntries([]);
+        return;
+      }
 
       // FIREWALL: preserve local meat tracker history if remote is empty
       if (remote.length === 0 && current.length > 0) {
@@ -322,9 +345,15 @@ export function useFirebaseSync() {
       }
     });
 
-    const unsubscribeMaintenanceExpenses = subscribeToMaintenanceExpenses((remote) => {
+    const unsubscribeMaintenanceExpenses = subscribeToMaintenanceExpenses((remote, remoteExists) => {
       hasLoadedMaintenanceExpenses.current = true;
       const current = useMaintenanceStore.getState().expenses;
+
+      if (!remoteExists) {
+        isRemoteMaintenanceExpensesUpdate.current = true;
+        setMaintenanceExpenses([]);
+        return;
+      }
 
       // FIREWALL: preserve local expense records if remote is empty
       if (remote.length === 0 && current.length > 0) {

@@ -64,7 +64,6 @@ interface NormRow {
 
 export const PurchasesSection = () => {
   const movements        = useInventoryStore((s) => s.invMovements);
-  const groceryPurchases = useInventoryStore((s) => s.groceryPurchases);
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [dateFilter, setDateFilter] = useState<DrawerTimeframe>('all');
@@ -195,12 +194,6 @@ export const PurchasesSection = () => {
         </div>
       )}
 
-      {/* Grocery purchases note */}
-      {groceryPurchases.length > 0 && (
-        <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-slate-200 text-xs font-medium">
-          Note: {groceryPurchases.length} grocery purchase{groceryPurchases.length !== 1 ? 's' : ''} are tracked separately in the Groceries section.
-        </div>
-      )}
     </div>
   );
 };

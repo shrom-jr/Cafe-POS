@@ -32,7 +32,7 @@ type FirebaseSyncStore = {
   setAlcoholProducts: (products: AlcoholProduct[]) => void;
   setBeverageProducts: (products: BeverageProduct[]) => void;
   setCigaretteProducts: (products: CigaretteProduct[]) => void;
-  setGroceryPurchases: (purchases: GroceryPurchase[]) => void;
+  setGroceryPurchases: (purchases: GroceryPurchase[], exists?: boolean) => void;
   setInvMovements: (movements: InventoryMovement[]) => void;
   setInvMappings: (mappings: InvMenuMapping[]) => void;
 };
@@ -364,7 +364,10 @@ export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
 // Subscribe to Live Grocery Purchases
 export function subscribeToGroceryPurchases(store: FirebaseSyncStore) {
   return onValue(ref(db, "groceryPurchases"), (snapshot) => {
-    store.setGroceryPurchases(toArray(snapshot.val()) as GroceryPurchase[]);
+    store.setGroceryPurchases(
+      toArray(snapshot.val()) as GroceryPurchase[],
+      snapshot.exists(),
+    );
   });
 }
 
@@ -441,9 +444,11 @@ export async function pushKitchenPurchasesToFirebase(purchases: PurchaseEntry[])
 }
 
 // Subscribe to Live Kitchen Purchases
-export function subscribeToKitchenPurchases(callback: (purchases: PurchaseEntry[]) => void) {
+export function subscribeToKitchenPurchases(
+  callback: (purchases: PurchaseEntry[], exists: boolean) => void,
+) {
   return onValue(ref(db, "kitchenPurchases"), (snapshot) => {
-    callback(toArray(snapshot.val()) as PurchaseEntry[]);
+    callback(toArray(snapshot.val()) as PurchaseEntry[], snapshot.exists());
   });
 }
 
@@ -457,9 +462,11 @@ export async function pushMeatEntriesToFirebase(entries: MeatEntry[]) {
 }
 
 // Subscribe to Live Meat Entries
-export function subscribeToMeatEntries(callback: (entries: MeatEntry[]) => void) {
+export function subscribeToMeatEntries(
+  callback: (entries: MeatEntry[], exists: boolean) => void,
+) {
   return onValue(ref(db, "meatEntries"), (snapshot) => {
-    callback(toArray(snapshot.val()) as MeatEntry[]);
+    callback(toArray(snapshot.val()) as MeatEntry[], snapshot.exists());
   });
 }
 
@@ -473,8 +480,10 @@ export async function pushMaintenanceExpensesToFirebase(expenses: MaintenanceExp
 }
 
 // Subscribe to Live Maintenance Expenses
-export function subscribeToMaintenanceExpenses(callback: (expenses: MaintenanceExpense[]) => void) {
+export function subscribeToMaintenanceExpenses(
+  callback: (expenses: MaintenanceExpense[], exists: boolean) => void,
+) {
   return onValue(ref(db, "maintenanceExpenses"), (snapshot) => {
-    callback(toArray(snapshot.val()) as MaintenanceExpense[]);
+    callback(toArray(snapshot.val()) as MaintenanceExpense[], snapshot.exists());
   });
 }

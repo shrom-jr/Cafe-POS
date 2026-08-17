@@ -19,3 +19,10 @@ description: How the MaintenanceExpense feature is wired — store, Firebase syn
 **Why:** Requirements asked for Firebase-backed real-time sync consistent with the rest of the inventory module, and for Net Profit in Reports to include all three operating cost streams.
 
 **How to apply:** Any future expense category or cost stream (e.g. staff wages) should follow the same store → firebaseSync → useFirebaseSync → screen pattern.
+
+## Historical reset semantics
+An explicitly absent Firebase node is authoritative for the historical kitchen, meat, grocery-purchase, and maintenance-expense collections; it must clear local cached records rather than re-seed them.
+
+**Why:** A deliberate RTDB cleanup otherwise looked identical to a transient empty snapshot and the localStorage fallback could immediately recreate deleted test history.
+
+**How to apply:** Preserve the snapshot-existence signal through subscriptions and set the corresponding store to an empty array before any push effect can run.
