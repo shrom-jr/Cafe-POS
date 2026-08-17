@@ -20,6 +20,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "splash.html",
       "assets/**/*"
     ],
     "extraResources": [],
@@ -27,10 +28,9 @@
       "output": "../dist-electron"
     },
     "win": {
-      "target": [
-        { "target": "nsis", "arch": ["x64"] }
-      ],
-      "icon": "assets/icon-512.png",
+      "target": ["nsis"],
+      "icon": "assets/icon.ico",
+      "artifactName": "${productName} Setup ${version}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {

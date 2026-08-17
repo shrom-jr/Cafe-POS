@@ -1,0 +1,38 @@
+CREATE NATIVE STARTUP SPLASH SCREEN & CONFIGURE BRAND PACKAGING
+
+1. CREATE SPLASH SCREEN UI (`electron/splash.html`):
+   - Design a dark-mode splash screen (`#0b0f17`):
+     * Top: Centered logo container referencing `assets/icon.png` (with clean CSS fallback styling if image is missing).
+     * Header: "S Bamboo Cottage & Sekuwa Corner" (bold, clean typography, slate-100).
+     * Subtitle: "Smart POS Terminal" (amber/gold accent or slate-400).
+     * Animated Loader: A slim, rounded progress track with a smooth glowing gradient beam animation.
+     * Status Caption: "Initializing system engine & hardware..." (muted slate-400, 12px).
+     * Footer: "Designed & Developed by Shramik" (centered, 11px, subtle slate-500).
+     * Styling: Modern CSS reset, `overflow: hidden`, `user-select: none`, zero window scrollbars.
+
+2. WIRE SPLASH LIFECYCLE IN ELECTRON (`electron/main.js`):
+   - In `createWindow()`:
+     * Launch a frameless, centered splash window immediately:
+       `const splash = new BrowserWindow({ width: 500, height: 380, frame: false, transparent: false, alwaysOnTop: true, resizable: false, center: true, backgroundColor: '#0b0f17', webPreferences: { nodeIntegration: false } });`
+       `splash.loadFile(path.join(__dirname, 'splash.html'));`
+     * Initialize `mainWin` with `{ show: false, title: "S Bamboo Cottage POS" }`.
+     * On `mainWin.once('ready-to-show')`:
+       - Introduce a 1000ms display delay to ensure a smooth transition.
+       - Destroy `splash`.
+       - Maximize and show `mainWin`.
+
+3. UPDATE ELECTRON PACKAGING CONFIGURATION (`electron/package.json`):
+   - Set application and executable branding:
+     * `"name": "sbamboo-pos-desktop"`
+     * `"productName": "S Bamboo Cottage POS"`
+     * `"appId": "com.sbamboocottage.pos"`
+     * Configure `build.win`:
+       - `"target": ["nsis"]`
+       - `"icon": "assets/icon.ico"`
+       - `"artifactName": "${productName} Setup ${version}.${ext}"`
+   - Ensure an `electron/assets/` directory exists for icon placement.
+
+4. STRICT CREDIT-SAVING & MINIMAL TESTING GUARDRAIL:
+   - DO NOT run full test suites, repetitive test loops, or browser automation tests.
+   - Run ONLY a single fast TypeScript/syntax verification (`npm run build`) to confirm zero compilation errors.
+   - Avoid modifying unrelated components, menu databases, inventory logic, or Firebase listeners.

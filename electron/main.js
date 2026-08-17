@@ -27,11 +27,36 @@ const path = require('path');
 const APP_URL   = 'https://pos.sbamboocottage.com.np';
 const ICON_PATH = path.join(__dirname, 'assets', 'icon-512.png');
 
+// ── Splash window ──────────────────────────────────────────────────────────────
+
+/**
+ * Opens a frameless branded splash screen immediately, before the main window
+ * starts loading the cloud app.  Destroyed once the main window is ready to show.
+ */
+function createSplashWindow() {
+  const splash = new BrowserWindow({
+    width:           500,
+    height:          380,
+    frame:           false,
+    transparent:     false,
+    alwaysOnTop:     true,
+    resizable:       false,
+    center:          true,
+    backgroundColor: '#0b0f17',
+    webPreferences:  { nodeIntegration: false },
+  });
+
+  splash.loadFile(path.join(__dirname, 'splash.html'));
+  return splash;
+}
+
 // ── Main window ────────────────────────────────────────────────────────────────
 
 let mainWindow = null;
 
 function createMainWindow() {
+  const splash = createSplashWindow();
+
   mainWindow = new BrowserWindow({
     width:     1280,
     height:    800,
@@ -39,6 +64,7 @@ function createMainWindow() {
     minHeight: 600,
     title:     'S Bamboo Cottage POS',
     icon:      ICON_PATH,
+    show:      false,   // revealed after splash delay
     webPreferences: {
       preload:          path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -53,6 +79,17 @@ function createMainWindow() {
   mainWindow.setAutoHideMenuBar(true);
 
   mainWindow.loadURL(APP_URL);
+
+  // Once the app has painted, hold the splash for 1 s then transition.
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(() => {
+      try { splash.destroy(); } catch { /* already closed */ }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.maximize();
+        mainWindow.show();
+      }
+    }, 1000);
+  });
 
   // Open external links in the OS default browser, not a new Electron window.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
