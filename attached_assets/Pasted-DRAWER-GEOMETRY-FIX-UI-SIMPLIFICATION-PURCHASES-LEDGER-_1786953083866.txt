@@ -1,0 +1,32 @@
+DRAWER GEOMETRY FIX & UI SIMPLIFICATION: PURCHASES LEDGER, STOCK MOVEMENTS & BAR AUDIT
+
+Drastically simplify the UI and fix layout issues across the three inventory drawers in `src/screens/admin/InventorySection.tsx`:
+
+1. FIX TOP CUTOFF & FULL-HEIGHT DRAWER POSITIONING:
+   - Ensure the slide-out drawer wrapper uses `fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col`.
+   - Ensure the drawer header has clean top padding (`p-6 pb-4`) and is never hidden or clipped under the top navigation bar.
+
+2. ELIMINATE CLUTTERED FILTER BUTTON STACKS (ONE CLEAN TOOLBAR):
+   - In all 3 drawers, eliminate the 3-4 stacked rows of pill buttons. Replace them with a single clean, uncluttered toolbar:
+     * Left side: High-contrast search input (`placeholder="Search product, table, staff..."`).
+     * Middle: Single compact Radix dropdown for Category (`All Categories`, `Spirits`, `Wine`, `Beer`, `Soft Drinks`, `Cigarettes`).
+     * Right side: Compact timeframe segment with 4 clean tabs (`Today` | `This Week` | `This Month` | `All`).
+
+3. SIMPLIFIED TELEMETRY BAR:
+   - Clean single-row grid of 4 compact stat cards with clear icons, subtle borders, and bold numbers.
+
+4. HUMAN-READABLE ACTIVITY CARDS:
+   - When transactions exist, render each record as an easy-to-read card:
+     * Green accent for Restock / Inflow: e.g. `+10 btls • Mustang` (Cost: Rs. 15,000 • Supplier: Cash).
+     * Red accent for Sales Deduction: e.g. `-60 ml • Old Durbar Red` (Table: H-1 • Order #104).
+     * Amber accent for Spill / Loss: e.g. `-1 btl • 8848 Vodka` (Reason: Broken bottle).
+     * Clean metadata row at the bottom: formatted date/time and logged-by staff name.
+
+5. POLISHED EMPTY STATE:
+   - Clean, centered card with an icon, bold friendly title (e.g. "No Stock Movements Yet"), and simple 1-line helper text.
+
+6. VERIFY & BUILD:
+   - Run `npm run build` to confirm zero TypeScript compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT alter underlying stock subtraction math, ML deduction logic, Firebase RTDB sync, or table schemas.
