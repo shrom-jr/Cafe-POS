@@ -1,0 +1,43 @@
+FIX MENU MANAGEMENT MODAL DROPDOWNS, CASCADING SELECTORS & VARIANT FORM POLISH
+
+1. FIX DROPDOWN POPOVER & SELECT STYLING IN MenuManagement.tsx:
+   - Fix the blank white dropdown popover bug for "Select Pillar" and "Select Category" in the Add/Edit Menu Item modal.
+   - Replace any unstyled/default light-mode select elements or Radix SelectContent containers with high-contrast carbon styling:
+     * Trigger / Select element: `bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 focus:border-amber-500 focus:outline-none`
+     * Popover / Dropdown Menu: `bg-slate-900 border border-slate-700 text-white shadow-2xl rounded-xl z-50`
+     * Option items: `text-slate-200 hover:bg-slate-800 hover:text-amber-400 cursor-pointer px-3 py-2 rounded-lg`
+   - Explicitly list the 4 primary pillars in the Pillar dropdown:
+     * "Food"
+     * "Beverages"
+     * "Alcohol"
+     * "Others"
+
+2. CASCADING PILLAR-TO-CATEGORY FILTERING:
+   - When a user selects a Pillar:
+     * Dynamically filter the Category dropdown to display ONLY categories belonging to that Pillar (`c.parentCategory === selectedPillar`).
+     * If no pillar is selected yet, show placeholder "-- Select Pillar First --" and keep the Category select disabled.
+     * When a category is chosen, automatically set the Default Print Station route based on the category's route (`KOT` for Food/Hot Bev/Crafted Cold, `BOT` for Bar/Soft Drinks/Spirits/Cigarettes/Hookah).
+
+3. MULTI-TIER VARIANT BUILDER POLISH:
+   - In the Multi-Tier Variants mode of Add/Edit Item:
+     * Provide two clearly proportioned side-by-side inputs per tier row:
+       1. Label Input: `placeholder="Variant name (e.g. 60ml, 500g, Steam)"` (`flex-1 bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg`)
+       2. Price Input: `placeholder="Price (Rs.)"` (`w-32 bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg`)
+       3. Delete Row Button: Red-accented trash icon (`Trash2`) aligned cleanly to remove the row.
+     * Ensure the "+ Add Tier" button appends a clean empty row `{ label: '', price: 0 }`.
+
+4. COMPLETE EDIT ITEM MODAL HYDRATION:
+   - When clicking the Edit (`✏️`) icon on any existing item in the catalog table:
+     * Pre-fill the item's `name`.
+     * Pre-select the item's `pillar` and corresponding `category`.
+     * If the item has `variants` with items, switch `pricingMode` to 'Multi-Tier Variants' and pre-fill all existing variant rows; otherwise set `pricingMode` to 'Single Price' and pre-fill `price`.
+     * Pre-select the item's `printRoute` ('KOT' vs 'BOT') and `available` toggle status.
+   - On submitting Edit, update the item in the local store and push directly to Firebase RTDB path `menu/items`.
+
+5. VERIFY & BUILD:
+   - Verify that clicking Pillar and Category dropdowns opens cleanly visible dark dropdowns.
+   - Run `npm run build` to confirm zero TypeScript compilation errors and exit code 0.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT MODIFY OR DELETE: `menu/categories`, `menu/pillars`, `areaOrder`, `tables`, `orders`, `payments`, `settings`, `invMovements`, `alcoholProducts`, `beverageProducts`, `cigaretteProducts`, `customers`, or `staff`.
+- Keep existing catalog data (328 items, 17 categories) completely intact.

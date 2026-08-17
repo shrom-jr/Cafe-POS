@@ -14,6 +14,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PILLARS: CategoryPillar[] = ['Food', 'Beverages', 'Alcohol', 'Others'];
@@ -48,11 +51,15 @@ function resolveRoute(item: MenuItem, cats: Category[]): PrintRoute {
   return cat?.sendToKitchen ? 'KOT' : 'BOT';
 }
 
+function routeForCategory(category?: Category): PrintRoute {
+  if (category?.printRoute) return category.printRoute;
+  return category?.sendToKitchen ? 'KOT' : 'BOT';
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function MenuManagement() {
   const menuItems  = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
-  const pillars    = usePOSStore((s) => s.pillars);
   const setMenuItems  = usePOSStore((s) => s.setMenuItems);
   const setCategories = usePOSStore((s) => s.setCategories);
 
@@ -65,6 +72,7 @@ export default function MenuManagement() {
   const [itemModal, setItemModal] = useState<{ open: boolean; mode: 'add' | 'edit'; item: Partial<MenuItem> & { id?: string } }>({
     open: false, mode: 'add', item: { ...EMPTY_ITEM },
   });
+  const [itemPillar, setItemPillar] = useState<CategoryPillar | ''>('');
   const [catModal, setCatModal] = useState<{ open: boolean; mode: 'add' | 'edit'; cat: Partial<Category> & { id?: string } }>({
     open: false, mode: 'add', cat: { ...EMPTY_CAT },
   });
@@ -153,9 +161,11 @@ export default function MenuManagement() {
   function openAddItem() {
     setPricingMode('single');
     setVariantRows([{ label: '', price: 0 }]);
+    setItemPillar('');
     setItemModal({ open: true, mode: 'add', item: { ...EMPTY_ITEM } });
   }
   function openEditItem(item: MenuItem) {
+    const category = categories.find((c) => c.id === item.categoryId);
     if (item.variants && item.variants.length > 0) {
       setPricingMode('variants');
       setVariantRows([...item.variants]);
@@ -163,6 +173,7 @@ export default function MenuManagement() {
       setPricingMode('single');
       setVariantRows([{ label: '', price: 0 }]);
     }
+    setItemPillar(category?.parentCategory ?? '');
     setItemModal({ open: true, mode: 'edit', item: { ...item } });
   }
 
@@ -173,11 +184,15 @@ export default function MenuManagement() {
     if (!it.categoryId) { toast.error('Category is required'); return; }
     setSaving(true);
     try {
+      const existing = itemModal.mode === 'edit'
+        ? menuItems.find((m) => m.id === it.id)
+        : undefined;
       let final: MenuItem;
       if (pricingMode === 'variants') {
         const validVariants = variantRows.filter((v) => v.label.trim() && v.price > 0);
         if (validVariants.length === 0) { toast.error('Add at least one valid variant'); setSaving(false); return; }
         final = {
+          ...existing,
           id: it.id ?? crypto.randomUUID(),
           name: it.name!.trim(),
           categoryId: it.categoryId!,
@@ -189,6 +204,7 @@ export default function MenuManagement() {
       } else {
         if (!it.price || it.price <= 0) { toast.error('Price must be greater than 0'); setSaving(false); return; }
         final = {
+          ...existing,
           id: it.id ?? crypto.randomUUID(),
           name: it.name!.trim(),
           categoryId: it.categoryId!,
@@ -590,35 +606,57 @@ export default function MenuManagement() {
             {/* Pillar → Category */}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Pillar">
-                <select
-                  value={categories.find((c) => c.id === itemModal.item.categoryId)?.parentCategory ?? ''}
-                  onChange={(e) => {
-                    // Reset category when pillar changes
-                    setItemModal((s) => ({ ...s, item: { ...s.item, categoryId: '' } }));
+                <Select
+                  value={itemPillar || undefined}
+                  onValueChange={(value) => {
+                    setItemPillar(value);
+                    setItemModal((s) => ({
+                      ...s,
+                      item: { ...s.item, categoryId: '' },
+                    }));
                   }}
-                  className={selectCls}
                 >
-                  <option value="">— Select Pillar —</option>
-                  {PILLARS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                  <SelectTrigger className={selectCls}>
+                    <SelectValue placeholder="-- Select Pillar --" />
+                  </SelectTrigger>
+                  <SelectContent className={selectContentCls}>
+                    {PILLARS.map((pillar) => (
+                      <SelectItem key={pillar} value={pillar} className={selectItemCls}>
+                        {pillar}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Category" required>
-                <select
-                  value={itemModal.item.categoryId ?? ''}
-                  onChange={(e) => setItemModal((s) => ({ ...s, item: { ...s.item, categoryId: e.target.value } }))}
-                  className={selectCls}
+                <Select
+                  value={itemModal.item.categoryId || undefined}
+                  disabled={!itemPillar}
+                  onValueChange={(value) => {
+                    const selectedCategory = categories.find((c) => c.id === value);
+                    setItemModal((s) => ({
+                      ...s,
+                      item: {
+                        ...s.item,
+                        categoryId: value,
+                        printRoute: routeForCategory(selectedCategory),
+                      },
+                    }));
+                  }}
                 >
-                  <option value="">— Select Category —</option>
-                  {categories
-                    .filter((c) => {
-                      const selectedPillar = categories.find((cat) => cat.id === itemModal.item.categoryId)?.parentCategory ?? '';
-                      return !selectedPillar || c.parentCategory === selectedPillar || true;
-                    })
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.parentCategory})</option>
-                    ))
-                  }
-                </select>
+                  <SelectTrigger className={selectCls}>
+                    <SelectValue placeholder={itemPillar ? "-- Select Category --" : "-- Select Pillar First --"} />
+                  </SelectTrigger>
+                  <SelectContent className={selectContentCls}>
+                    {categories
+                      .filter((category) => category.parentCategory === itemPillar)
+                      .map((category) => (
+                        <SelectItem key={category.id} value={category.id} className={selectItemCls}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </Field>
             </div>
 
@@ -675,8 +713,8 @@ export default function MenuManagement() {
                           rows[i] = { ...rows[i], label: e.target.value };
                           setVariantRows(rows);
                         }}
-                        placeholder="Label (e.g. 60ml)"
-                        className={`${inputCls} flex-1`}
+                        placeholder="Variant name (e.g. 60ml, 500g, Steam)"
+                        className={`${variantInputCls} flex-1`}
                       />
                       <input
                         type="number"
@@ -687,15 +725,16 @@ export default function MenuManagement() {
                           rows[i] = { ...rows[i], price: parseFloat(e.target.value) || 0 };
                           setVariantRows(rows);
                         }}
-                        placeholder="Rs."
-                        className={`${inputCls} w-24`}
+                        placeholder="Price (Rs.)"
+                        className={`${variantInputCls} w-32`}
                       />
                       <button
                         type="button"
                         onClick={() => setVariantRows((r) => r.filter((_, idx) => idx !== i))}
-                        className="p-2 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                        className="p-2 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-all"
+                        title="Delete tier"
                       >
-                        <X size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))}
@@ -790,13 +829,24 @@ export default function MenuManagement() {
             </Field>
 
             <Field label="Parent Pillar">
-              <select
+              <Select
                 value={catModal.cat.parentCategory ?? 'Food'}
-                onChange={(e) => setCatModal((s) => ({ ...s, cat: { ...s.cat, parentCategory: e.target.value as CategoryPillar } }))}
-                className={selectCls}
+                onValueChange={(value) => setCatModal((s) => ({
+                  ...s,
+                  cat: { ...s.cat, parentCategory: value as CategoryPillar },
+                }))}
               >
-                {PILLARS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
+                <SelectTrigger className={selectCls}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={selectContentCls}>
+                  {PILLARS.map((pillar) => (
+                    <SelectItem key={pillar} value={pillar} className={selectItemCls}>
+                      {pillar}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <div>
@@ -847,7 +897,10 @@ export default function MenuManagement() {
 
 // ── Shared style constants ──────────────────────────────────────────────────
 const inputCls = 'w-full px-3.5 py-2.5 bg-white/5 border border-white/12 rounded-xl text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 transition-colors';
-const selectCls = 'w-full px-3.5 py-2.5 bg-white/5 border border-white/12 rounded-xl text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none';
+const variantInputCls = 'bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 px-3 py-2 rounded-lg focus:border-amber-500 focus:outline-none transition-colors';
+const selectCls = 'w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+const selectContentCls = 'bg-slate-900 border border-slate-700 text-white shadow-2xl rounded-xl z-50';
+const selectItemCls = 'text-slate-200 hover:bg-slate-800 hover:text-amber-400 cursor-pointer px-3 py-2 rounded-lg';
 const labelCls = 'block text-[11px] font-black uppercase tracking-widest text-zinc-500 mb-1.5';
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
