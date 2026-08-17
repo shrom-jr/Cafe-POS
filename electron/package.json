@@ -30,7 +30,7 @@
     "win": {
       "target": ["nsis"],
       "icon": "assets/icon.ico",
-      "artifactName": "${productName} Setup ${version}.${ext}",
+      "artifactName": "Bamboo POS v1.0.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
