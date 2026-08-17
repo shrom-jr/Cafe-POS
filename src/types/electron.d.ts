@@ -7,14 +7,27 @@
  * Electron desktop container — never on the live web or waiter phones.
  *
  * Usage pattern:
- *   if (window.electronAPI?.printSilent) {
- *     window.electronAPI.printSilent(html);   // Electron: silent thermal print
+ *   if (window.electronAPI?.isElectron) {
+ *     const printers = await window.electronAPI.getPrinters();
+ *     const result = await window.electronAPI.printSilent(html, 'Kitchen');
  *   } else {
- *     // web / mobile: iframe window.print() fallback
+ *     // WebUSB ESC/POS path (browser / mobile)
  *   }
  */
 
 export {};   // make this a module so the `declare global` merges correctly
+
+/** Mirrors Electron's PrinterInfo subset we expose. */
+export interface ElectronPrinterInfo {
+  /** Exact Windows printer name — pass this to printSilent's deviceName. */
+  name: string;
+  /** True when this is the Windows default printer. */
+  isDefault: boolean;
+  /** "idle" | "printing" | "stopped" | "unknown" — driver-reported. */
+  status: string;
+  /** Human-readable printer description from the driver. */
+  description: string;
+}
 
 declare global {
   interface Window {
@@ -24,15 +37,27 @@ declare global {
      */
     electronAPI?: {
       /**
-       * Send a complete HTML document string to the Electron main process for
-       * silent printing on a Windows thermal printer.
-       * Resolves immediately (fire-and-forget via IPC).
-       *
-       * @param htmlContent  - Full HTML document including embedded <style>.
-       * @param printerName  - Optional Windows printer name (e.g. 'Kitchen Printer').
-       *                       When omitted the OS default printer is used.
+       * Fetch the list of printers installed on the Windows host.
+       * Used to populate the kitchen / reception printer dropdowns in Settings.
+       * Call on mount and again when the user clicks "Refresh Printers".
        */
-      printSilent: (htmlContent: string, printerName?: string) => void;
+      getPrinters(): Promise<ElectronPrinterInfo[]>;
+
+      /**
+       * Send a complete HTML document string to the Electron main process for
+       * silent printing on a named Windows thermal printer.
+       *
+       * Returns a settled result so the caller can update print status only
+       * after the native Windows print callback confirms delivery.
+       *
+       * @param html        - Full HTML document including embedded <style>.
+       * @param deviceName  - Exact Windows printer name (e.g. "Kitchen").
+       *                      When omitted the OS default printer is used.
+       */
+      printSilent(
+        html: string,
+        deviceName?: string,
+      ): Promise<{ success: boolean; error?: string }>;
 
       /** True when running inside the Electron desktop container. */
       isElectron: boolean;

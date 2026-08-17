@@ -3,12 +3,19 @@
  *
  * Unified silent print dispatcher for structured PrintJob objects.
  *
- * Every job routes directly to a WebUSB ESC/POS printer — zero browser
- * dialogs, zero window.print() calls:
+ * Transport selection (automatic):
  *
- *   KITCHEN_KOT → Kitchen USB printer   (slot 'kitchen')
- *   PRE_BILL    → Reception USB printer (slot 'reception')
- *   TAX_INVOICE → Reception USB printer (slot 'reception')
+ *   Electron desktop  — detected via window.electronAPI?.isElectron
+ *     → Renders an 80mm HTML receipt.
+ *     → Calls window.electronAPI.printSilent(html, deviceName).
+ *     → deviceName is read from localStorage (set by the admin in Settings):
+ *         printer_kitchen_device_name   → KOT tickets
+ *         printer_reception_device_name → PRE_BILL, TAX_INVOICE
+ *     → Returns actual { success } from the native Windows print callback.
+ *
+ *   Browser / mobile — WebUSB ESC/POS path (unchanged from Phase 5)
+ *     → Builds raw ESC/POS bytes.
+ *     → Sends directly to the claimed USB printer slot.
  *
  * All paths resolve true/false — nothing throws or opens alerts.
  */
@@ -23,7 +30,31 @@ import {
   type EscPreBillOptions,
   type EscTaxInvoiceOptions,
 } from '@/utils/escpos';
-import { Ticket } from '@/types/pos';
+import {
+  browserPrintKOT,
+  browserPrintPreBill,
+  browserPrintTaxInvoice,
+} from '@/utils/browserPrint';
+import type { Ticket } from '@/types/pos';
+
+// ── Electron detection ────────────────────────────────────────────────────────
+
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
+}
+
+function getDeviceName(slot: 'kitchen' | 'reception'): string | undefined {
+  try {
+    const key = slot === 'kitchen'
+      ? 'printer_kitchen_device_name'
+      : 'printer_reception_device_name';
+    return localStorage.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// ── Main dispatcher ───────────────────────────────────────────────────────────
 
 export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
   const settings = usePOSStore.getState().settings;
@@ -43,6 +74,13 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         createdAt: new Date(d.timestamp).toISOString(),
         status: 'pending',
       };
+
+      if (isElectron()) {
+        return browserPrintKOT(
+          { cafeName: d.cafeName, ticket, pax: d.pax, buzzer: settings.kitchenPrinterBuzzer ?? false },
+          getDeviceName('kitchen'),
+        );
+      }
 
       const buffer = buildKOT({
         cafeName: d.cafeName,
@@ -70,6 +108,10 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         total: d.total,
         timestamp: d.timestamp,
       };
+
+      if (isElectron()) {
+        return browserPrintPreBill(preBillData, getDeviceName('reception'));
+      }
 
       const buffer = buildPreBill(preBillData);
       return dispatchEscpos(buffer, 'reception');
@@ -99,6 +141,10 @@ export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
         creditSettlement: d.creditSettlement,
         timestamp: d.timestamp,
       };
+
+      if (isElectron()) {
+        return browserPrintTaxInvoice(invoiceData, getDeviceName('reception'));
+      }
 
       const buffer = buildTaxInvoice(invoiceData);
       return dispatchEscpos(buffer, 'reception');

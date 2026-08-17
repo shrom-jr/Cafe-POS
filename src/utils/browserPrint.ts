@@ -1,27 +1,23 @@
 /**
  * browserPrint.ts
  *
- * System / Browser Print path for the 80mm thermal receipt pipeline.
+ * HTML receipt builder + dual-transport dispatcher for 80mm thermal printing.
  *
- * Renders structured receipt data as a clean HTML page styled for an 80mm
- * thermal roll (Pantum PD-80BW or any Windows-recognised thermal printer)
- * and delivers it to the OS print dialog via an invisible iframe.
+ * Transport selection (automatic, per call):
+ *   Electron desktop  → window.electronAPI.printSilent(html, deviceName)
+ *                       Silent native Windows print — zero dialogs.
+ *   Web / mobile      → hidden iframe + window.print()
+ *                       OS print dialog, pre-styled for 80mm thermal paper.
  *
- * Rules:
- *   - @page sets size: 80mm auto with zero margins — suppresses browser
- *     headers/footers on all Chromium and Firefox builds.
- *   - window.print() is only called from inside the hidden iframe, so the
- *     main app UI is never disrupted.
- *   - All failures resolve false; nothing throws.
+ * Exported functions accept an optional `printerName` argument that is
+ * forwarded to the Electron IPC as `deviceName` so each station can target
+ * its own Windows printer (e.g. "Kitchen" or "Reception").
  *
- * Exported surface:
- *   browserPrintKOT(data)         — Kitchen Order Ticket
- *   browserPrintBOT(data)         — Bar Order Ticket
- *   browserPrintPreBill(data)     — Pre-bill / estimate slip
- *   browserPrintTaxInvoice(data)  — Final tax invoice / receipt
+ * All failures resolve false; nothing throws.
  */
 
 import type { EscKOTOptions, EscBOTOptions, EscPreBillOptions, EscTaxInvoiceOptions } from '@/utils/escpos';
+import type { Ticket } from '@/types/pos';
 
 // ── Shared CSS ────────────────────────────────────────────────────────────────
 
@@ -166,9 +162,18 @@ const RECEIPT_CSS = `
     margin-top: 2mm;
     font-style: italic;
   }
+  /* VOID slip */
+  .void-banner {
+    text-align: center;
+    font-weight: bold;
+    font-size: 12pt;
+    border: 2px solid #000;
+    padding: 2mm;
+    margin-bottom: 2mm;
+  }
 `;
 
-// ── Core printer ──────────────────────────────────────────────────────────────
+// ── Core dispatcher ───────────────────────────────────────────────────────────
 
 function buildFullHTML(bodyHTML: string): string {
   return `<!DOCTYPE html>
@@ -186,27 +191,28 @@ ${bodyHTML}
 }
 
 /**
- * Deliver an HTML receipt string to the appropriate print path:
+ * Deliver an HTML receipt string to the appropriate print transport.
  *
- *   Electron desktop app → window.electronAPI.printSilent()
- *     The Electron main process opens a hidden off-screen BrowserWindow,
- *     loads the HTML, and calls webContents.print({ silent: true }) —
- *     zero dialogs, zero previews, direct to the Windows default printer.
+ * Electron:  window.electronAPI.printSilent(html, printerName)
+ *            The main process opens a hidden BrowserWindow and calls
+ *            webContents.print({ silent: true, deviceName: printerName }).
+ *            Returns the native print result { success, error? }.
  *
- *   Web / mobile browsers → hidden iframe + window.print()
- *     Opens the OS print dialog pre-styled for 80mm thermal paper.
- *     The caller (System/Browser Print mode) has already explained to the
- *     user that a dialog will appear.
+ * Web/mobile: hidden iframe + window.print() (OS dialog).
+ *
+ * @param html        - Full HTML document.
+ * @param printerName - Windows printer name for Electron routing.
+ *                      Omit to use the OS default printer.
  */
-function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> {
+async function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> {
   // ── Electron path ──────────────────────────────────────────────────────────
   if (typeof window !== 'undefined' && window.electronAPI?.printSilent) {
     try {
-      window.electronAPI.printSilent(html, printerName);
-      return Promise.resolve(true);
+      const result = await window.electronAPI.printSilent(html, printerName);
+      return result.success;
     } catch (err) {
       console.warn('[browserPrint] electronAPI.printSilent threw:', err);
-      return Promise.resolve(false);
+      return false;
     }
   }
 
@@ -230,7 +236,6 @@ function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> 
       doc.write(html);
       doc.close();
 
-      // Give the iframe time to parse styles before printing.
       const doPrint = () => {
         try {
           iframe.contentWindow?.focus();
@@ -240,7 +245,6 @@ function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> 
           console.warn('[browserPrint] window.print() failed:', err);
           resolve(false);
         } finally {
-          // Remove iframe after a short delay so the print job is queued.
           setTimeout(cleanup, 1500);
         }
       };
@@ -249,7 +253,6 @@ function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> 
         doPrint();
       } else {
         iframe.addEventListener('load', doPrint, { once: true });
-        // Fallback if load event doesn't fire (some browsers don't for srcdoc).
         setTimeout(doPrint, 400);
       }
     } catch (err) {
@@ -282,7 +285,10 @@ function fmtRs(n: number): string {
 
 // ── KOT (Kitchen Order Ticket) ────────────────────────────────────────────────
 
-export async function browserPrintKOT({ cafeName, ticket, pax = 1 }: EscKOTOptions): Promise<boolean> {
+export async function browserPrintKOT(
+  { cafeName, ticket, pax = 1 }: EscKOTOptions,
+  printerName?: string,
+): Promise<boolean> {
   const itemRows = ticket.items.map((item) => `
     <div class="ticket-item">
       <div class="tqty">${item.quantity}×</div>
@@ -308,14 +314,15 @@ export async function browserPrintKOT({ cafeName, ticket, pax = 1 }: EscKOTOptio
     <div class="notice">*** KITCHEN COPY — NO PRICING ***</div>
   `;
 
-  // Pass 'Kitchen Printer' as the target so the Electron main process can
-  // route this job to a dedicated kitchen printer (deviceName in webContents.print).
-  return fireBrowserPrint(buildFullHTML(body), 'Kitchen Printer');
+  return fireBrowserPrint(buildFullHTML(body), printerName);
 }
 
 // ── BOT (Bar Order Ticket) ────────────────────────────────────────────────────
 
-export async function browserPrintBOT({ cafeName, ticket, pax = 1 }: EscBOTOptions): Promise<boolean> {
+export async function browserPrintBOT(
+  { cafeName, ticket, pax = 1 }: EscBOTOptions,
+  printerName?: string,
+): Promise<boolean> {
   const itemRows = ticket.items.map((item) => `
     <div class="ticket-item">
       <div class="tqty">${item.quantity}×</div>
@@ -341,12 +348,55 @@ export async function browserPrintBOT({ cafeName, ticket, pax = 1 }: EscBOTOptio
     <div class="notice">*** BAR COPY — NO PRICING ***</div>
   `;
 
-  return fireBrowserPrint(buildFullHTML(body));
+  return fireBrowserPrint(buildFullHTML(body), printerName);
+}
+
+// ── Void Ticket (VOID_KOT / VOID_BOT) ────────────────────────────────────────
+
+export interface EscVoidOptions {
+  cafeName: string;
+  ticket: Ticket;
+}
+
+export async function browserPrintVoidTicket(
+  { cafeName, ticket }: EscVoidOptions,
+  printerName?: string,
+): Promise<boolean> {
+  const isKitchen = ticket.ticketType === 'VOID_KOT';
+  const label = isKitchen ? 'KITCHEN' : 'BAR';
+
+  const itemRows = ticket.items.map((item) => `
+    <div class="ticket-item">
+      <div class="tqty">${item.quantity}×</div>
+      <div class="tname">${esc(item.name)}</div>
+    </div>`).join('');
+
+  const body = `
+    <div class="void-banner">⚠ VOID / CANCELLED ⚠</div>
+    <div class="cafe-name">${esc(cafeName)}</div>
+    <div class="doc-title">${label} VOID TICKET #${ticket.ticketNumber}</div>
+    <hr>
+    <div class="meta-row"><span>Table: <b>${esc(ticket.tableName)}</b></span></div>
+    <div class="meta-row"><span>Waiter: ${esc(ticket.serverName || 'N/A')}</span><span>${formatDate(ticket.createdAt)}</span></div>
+    ${ticket.voidedBy ? `<div class="meta-row"><span>Voided By: ${esc(ticket.voidedBy)}</span></div>` : ''}
+    <hr>
+    <div class="bold" style="font-size:8.5pt;margin-bottom:1mm;">QTY  ITEM</div>
+    <hr class="solid">
+    <div class="ticket-items">${itemRows}</div>
+    <hr>
+    ${ticket.voidReason ? `<div class="meta-row bold"><span>Reason: ${esc(ticket.voidReason)}</span></div>` : ''}
+    <div class="notice">*** CANCELLATION RECORD ***</div>
+  `;
+
+  return fireBrowserPrint(buildFullHTML(body), printerName);
 }
 
 // ── Pre-Bill ──────────────────────────────────────────────────────────────────
 
-export async function browserPrintPreBill(data: EscPreBillOptions): Promise<boolean> {
+export async function browserPrintPreBill(
+  data: EscPreBillOptions,
+  printerName?: string,
+): Promise<boolean> {
   const vatPct = Math.round((data.vatRate ?? 0.13) * 100);
 
   const itemRows = data.items.map((item, i) => `
@@ -388,12 +438,15 @@ export async function browserPrintPreBill(data: EscPreBillOptions): Promise<bool
     <div class="notice">** SUBJECT TO CHANGE BEFORE FINAL BILL **</div>
   `;
 
-  return fireBrowserPrint(buildFullHTML(body));
+  return fireBrowserPrint(buildFullHTML(body), printerName);
 }
 
 // ── Tax Invoice ───────────────────────────────────────────────────────────────
 
-export async function browserPrintTaxInvoice(data: EscTaxInvoiceOptions): Promise<boolean> {
+export async function browserPrintTaxInvoice(
+  data: EscTaxInvoiceOptions,
+  printerName?: string,
+): Promise<boolean> {
   const vatPct = Math.round((data.vatRate ?? 0.13) * 100);
   const settlementAmt = data.dueSettlement?.amount ?? 0;
   const collected = data.amountTendered ?? data.total + settlementAmt;
@@ -461,5 +514,5 @@ export async function browserPrintTaxInvoice(data: EscTaxInvoiceOptions): Promis
     <div class="footer">${esc(data.billFooter || 'Thank you for visiting!')}</div>
   `;
 
-  return fireBrowserPrint(buildFullHTML(body));
+  return fireBrowserPrint(buildFullHTML(body), printerName);
 }

@@ -4,9 +4,8 @@
  * Runs in a sandboxed renderer context before any page scripts.
  * Exposes a minimal, typed API surface to the web app via contextBridge.
  *
- * The web app checks for window.electronAPI at runtime:
- *   if (window.electronAPI?.printSilent) — inside Electron → silent IPC print
- *   else                                 — on web/mobile  → browser print dialog
+ * The web app checks window.electronAPI?.isElectron at runtime to decide
+ * whether to use native IPC printing or the WebUSB ESC/POS path.
  */
 
 'use strict';
@@ -15,23 +14,35 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   /**
-   * Send a complete HTML receipt string to the main process for silent
-   * printing on a Windows thermal printer.
+   * Fetch the list of printers installed on this Windows host.
+   * Returns an array of Electron PrinterInfo objects.
+   * Used to populate the kitchen/reception printer dropdowns in Settings.
    *
-   * @param {string}           htmlContent  - Full HTML document including <style> block.
-   * @param {string|undefined} printerName  - Optional Windows printer name.
-   *                                          When omitted the OS default printer is used.
-   *                                          Pass 'Kitchen Printer' for the kitchen thermal
-   *                                          and omit (or pass undefined) for the reception printer.
+   * @returns {Promise<Array<{ name: string, isDefault: boolean, status: string, description: string }>>}
    */
-  printSilent: (htmlContent, printerName) => {
-    if (typeof htmlContent !== 'string') {
-      console.warn('[electronAPI] printSilent: htmlContent must be a string');
-      return;
+  getPrinters: () => ipcRenderer.invoke('get-printers'),
+
+  /**
+   * Send a complete HTML receipt string to the main process for silent
+   * printing on a named Windows thermal printer.
+   *
+   * @param {string}           html        - Full HTML document including <style> block.
+   * @param {string|undefined} deviceName  - Exact Windows printer name.
+   *                                         When omitted the OS default printer is used.
+   *                                         Pass 'Kitchen' for the kitchen station and
+   *                                         'Reception' for the reception/bar station,
+   *                                         or whatever name is configured in Windows
+   *                                         Settings → Printers & scanners.
+   * @returns {Promise<{ success: boolean, error?: string }>}
+   */
+  printSilent: (html, deviceName) => {
+    if (typeof html !== 'string') {
+      console.warn('[electronAPI] printSilent: html must be a string');
+      return Promise.resolve({ success: false, error: 'invalid-payload' });
     }
-    ipcRenderer.send('silent-print', htmlContent, printerName ?? null);
+    return ipcRenderer.invoke('silent-print', { html, deviceName: deviceName ?? undefined });
   },
 
-  /** Runtime flag so the web app can confirm it is inside Electron. */
+  /** Runtime flag so the web app can confirm it is running inside Electron. */
   isElectron: true,
 });

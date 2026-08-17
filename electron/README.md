@@ -8,17 +8,43 @@ zero previews.
 
 | Layer | File | Role |
 |---|---|---|
-| Main process | `main.js` | Loads the live app URL; handles `silent-print` IPC |
-| Preload | `preload.js` | Exposes `window.electronAPI.printSilent()` via contextBridge |
-| Web app | `src/utils/browserPrint.ts` | Detects Electron and routes receipts through `printSilent` |
+| Main process | `main.js` | Loads the live app URL; handles `get-printers` and `silent-print` IPC |
+| Preload | `preload.js` | Exposes `window.electronAPI.getPrinters()` and `window.electronAPI.printSilent()` via contextBridge |
+| Web app — detect | `src/utils/silentPrint.ts` | Checks `window.electronAPI?.isElectron`; routes to HTML path in Electron, WebUSB path in browser |
+| Web app — dispatch | `src/utils/browserPrint.ts` | Builds 80mm HTML receipts and calls `printSilent(html, deviceName)` |
+| Web app — auto queue | `src/hooks/usePrintQueue.ts` | Background listener; uses HTML path in Electron, ESC/POS path in browser |
+| Web app — settings | `src/components/settings/PrinterSettingsModal.tsx` | OS printer dropdown (Electron) or USB pair button (browser) |
 
-When `window.electronAPI` is **present** (desktop), the web app sends the HTML
-receipt string to the main process, which opens a hidden off-screen window and
-calls `webContents.print({ silent: true, ... })` — the OS delivers it directly
-to the PD-80BW without any UI.
+### Electron path (desktop)
 
-When `window.electronAPI` is **absent** (browsers / waiter phones), the
-existing iframe `window.print()` fallback runs as before.
+```
+waiter creates order
+  → Firebase ticket written
+  → auto-print hub picks it up (usePrintQueue)
+  → browserPrintKOT / browserPrintBOT / browserPrintVoidTicket
+  → window.electronAPI.printSilent(html, deviceName)   [preload → IPC]
+  → main.js: hidden BrowserWindow.loadURL(data:...) → webContents.print({ silent: true, deviceName })
+  → Windows delivers job to the named printer — zero dialogs
+```
+
+### Browser / WebUSB path (Chrome hub tab)
+
+```
+usePrintQueue → buildKOT / buildBOT → dispatchEscpos → sendRawToUSB → USB cable → printer
+```
+
+## Printer names (Windows, one time)
+
+1. Install the thermal printer driver (Pantum PD-80BW or similar).
+2. In **Windows Settings → Printers & scanners**, rename the two printers to whatever
+   names you prefer (e.g. **Kitchen** and **Reception**).
+3. In the POS app: **Admin → Settings → Printers**.
+   - Under *Kitchen Station*, open the dropdown and select the kitchen printer name.
+   - Under *Reception / Bar Station*, select the reception printer name.
+   - Click **Save Printer Settings**.
+4. Use **Test Print KOT / BOT** to verify delivery before going live.
+
+The admin can change the assigned printer at any time without rebuilding the app.
 
 ## Build the installer
 
@@ -33,12 +59,6 @@ npm run build
 ```
 
 The NSIS one-click installer lands at `../dist-electron/S Bamboo Cottage POS Setup 1.0.0.exe`.
-
-## Printer setup (Windows, one time)
-
-1. Install the Pantum PD-80BW Windows driver (from Pantum website).
-2. Set **PD-80BW** as the **Default Printer** in Windows Settings → Bluetooth & devices → Printers.
-3. Launch the installed POS desktop app — all receipts print silently from that point on.
 
 ## Adding the icon
 

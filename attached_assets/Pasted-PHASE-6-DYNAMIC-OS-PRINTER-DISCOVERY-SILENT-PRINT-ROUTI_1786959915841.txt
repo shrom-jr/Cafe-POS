@@ -1,0 +1,62 @@
+PHASE 6: DYNAMIC OS PRINTER DISCOVERY & SILENT PRINT ROUTING VIA ELECTRON
+
+Upgrade the Electron print architecture so printer names are never hardcoded. Allow admins to dynamically discover all installed Windows printers and assign them to Kitchen and Reception stations via dropdowns in Settings.
+
+1. ELECTRON MAIN PROCESS PRINTER DISCOVERY & SILENT IPC (`electron/main.js`):
+   - Expose an IPC handler to fetch installed OS printers:
+     `ipcMain.handle('get-printers', async (event) => {`
+     `  const win = BrowserWindow.fromWebContents(event.sender);`
+     `  return await win.webContents.getPrintersAsync();`
+     `});`
+   - Expose an async silent print handler that accepts an explicit `deviceName`:
+     `ipcMain.handle('silent-print', async (event, { html, deviceName }) => {`
+     `  const printWin = new BrowserWindow({ show: false, width: 302, height: 600, webPreferences: { nodeIntegration: false, contextIsolation: true } });`
+     `  await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);`
+     `  return new Promise((resolve) => {`
+     `    printWin.webContents.print({`
+     `      silent: true,`
+     `      printBackground: true,`
+     `      margins: { marginType: 'none' },`
+     `      deviceName: deviceName || undefined`
+     `    }, (success, failureReason) => {`
+     `      printWin.destroy();`
+     `      if (!success) resolve({ success: false, error: failureReason });`
+     `      else resolve({ success: true });`
+     `    });`
+     `  });`
+     `});`
+
+2. EXPOSE APIS IN PRELOAD & TYPES (`electron/preload.js` & `src/types/electron.d.ts`):
+   - In `electron/preload.js`:
+     `getPrinters: () => ipcRenderer.invoke('get-printers'),`
+     `printSilent: (html, deviceName) => ipcRenderer.invoke('silent-print', { html, deviceName }),`
+     `isElectron: true`
+   - Update `src/types/electron.d.ts` with typed definitions for `getPrinters()` and `printSilent()`.
+
+3. DYNAMIC PRINTER SELECTION UI IN SETTINGS (`src/components/settings/PrinterSettingsModal.tsx` or `SettingsSection.tsx`):
+   - When running in Electron (`window.electronAPI?.isElectron`):
+     * On mount, call `window.electronAPI.getPrinters()` to fetch the list of installed Windows printers.
+     * Include a "🔄 Refresh Printers" button to re-fetch the list at any time.
+     * Kitchen Station Card:
+       - Render a Radix Dropdown showing all installed OS printers.
+       - Let the admin select the target printer and save it to POS settings / localStorage (`printer_kitchen_device_name`).
+       - "Test Print KOT" button sends a sample food ticket to the selected printer.
+     * Reception / Bar Station Card:
+       - Render a Radix Dropdown showing all installed OS printers.
+       - Let the admin select the target printer and save it to POS settings / localStorage (`printer_reception_device_name`).
+       - "Test Print BOT / Receipt" button sends a sample bar ticket to the selected printer.
+     * Status indicator: Show a green "Configured: [Printer Name]" badge or yellow "Select a Printer" badge.
+
+4. DYNAMIC PRINT DISPATCH & SPLITTING (`src/utils/silentPrint.ts` & `src/hooks/usePrintQueue.ts`):
+   - In `fireSilentPrintJob()`:
+     * Read the saved device names (`printer_kitchen_device_name` and `printer_reception_device_name`).
+     * Route KOT tickets to the configured Kitchen device name.
+     * Route BOT, Pre-Bill, and Tax Invoices to the configured Reception device name.
+     * If an order is mixed (Food + Bar), dispatch both in parallel via `Promise.all`.
+     * Upon `{ success: true }`, mark the ticket as printed in Firebase RTDB.
+
+5. VERIFY & BUILD:
+   - Run `npm run build` to confirm zero TypeScript compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT alter menu items, categories, pricing, table layout, inventory stock deduction, or user authentication.

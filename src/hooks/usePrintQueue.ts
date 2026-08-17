@@ -6,15 +6,20 @@
  * All other devices (waiter phones, etc.) write tickets to Firebase and never
  * attempt to print; this hook's effect becomes a no-op for them.
  *
- *   KOT      → kitchen USB printer
- *   BOT      → reception USB printer
- *   VOID_KOT → kitchen USB printer
- *   VOID_BOT → reception USB printer
+ * Transport selection (automatic per ticket):
  *
- * After dispatching, the ticket status is updated to 'printed' locally (which
- * useFirebaseSync propagates to Firebase via the orders node), and
- * updateOrderPrintStatus patches the dedicated printStatus node so mobile
- * waiters can confirm print completion independently.
+ *   Electron desktop  — detected via window.electronAPI?.isElectron
+ *     → Renders HTML receipts and calls window.electronAPI.printSilent()
+ *       routed to the Windows printer names stored in localStorage.
+ *
+ *   Browser / print-hub  — WebUSB ESC/POS
+ *     → buildKOT / buildBOT / buildVoidTicket → dispatchEscpos → sendRawToUSB
+ *
+ *   KOT / VOID_KOT  → kitchen station
+ *   BOT / VOID_BOT  → reception station
+ *
+ * After dispatching, the ticket status and order printStatus flip in one
+ * setOrders call so the /orders Firebase sync carries 'printed' atomically.
  *
  * Mount this hook once in App.tsx (inside <App>, after useFirebaseSync).
  */
@@ -28,6 +33,11 @@ import {
   buildVoidTicket,
   dispatchEscpos,
 } from '@/utils/escpos';
+import {
+  browserPrintKOT,
+  browserPrintBOT,
+  browserPrintVoidTicket,
+} from '@/utils/browserPrint';
 import { autoReconnectUSB } from '@/utils/webusbPrinter';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
@@ -53,6 +63,25 @@ export function setPrintHubEnabled(enabled: boolean): void {
   localStorage.setItem(PRINT_HUB_KEY, enabled ? 'true' : 'false');
   window.dispatchEvent(new CustomEvent(PRINT_HUB_EVENT, { detail: enabled }));
 }
+
+// ── Electron helpers ──────────────────────────────────────────────────────────
+
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
+}
+
+function getElectronDeviceName(slot: 'kitchen' | 'reception'): string | undefined {
+  try {
+    const key = slot === 'kitchen'
+      ? 'printer_kitchen_device_name'
+      : 'printer_reception_device_name';
+    return localStorage.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function usePrintQueue() {
   const orders    = usePOSStore((s) => s.orders);
@@ -88,8 +117,10 @@ export function usePrintQueue() {
 
   // On the hub device, silently re-attach both USB printers so direct-cable
   // printing works right after a page refresh (no prompt required).
+  // Skipped in Electron mode — native Windows printing needs no WebUSB.
   useEffect(() => {
     if (!isHub) return;
+    if (isElectron()) return;
     void Promise.all([
       autoReconnectUSB('kitchen'),
       autoReconnectUSB('reception'),
@@ -149,31 +180,48 @@ export function usePrintQueue() {
 
     async function dispatchTicket(ticket: Ticket, pax: number, orderId: string) {
       const cafeName = settings.cafeName || 'Cafe';
-
       const isKitchenTicket = ticket.ticketType === 'KOT' || ticket.ticketType === 'VOID_KOT';
       const target = isKitchenTicket ? 'kitchen' : 'reception';
 
-      // ── ESC/POS WebUSB path ───────────────────────────────────────────────
-      let buffer: Uint8Array | null = null;
+      let success = false;
 
-      if (ticket.ticketType === 'KOT') {
-        buffer = buildKOT({
-          cafeName,
-          ticket,
-          pax,
-          buzzer: settings.kitchenPrinterBuzzer ?? false,
-        });
-      } else if (ticket.ticketType === 'BOT') {
-        buffer = buildBOT({ cafeName, ticket, pax });
-      } else if (ticket.ticketType === 'VOID_KOT' || ticket.ticketType === 'VOID_BOT') {
-        buffer = buildVoidTicket({ cafeName, ticket });
+      if (isElectron()) {
+        // ── Electron path: HTML → native Windows print ──────────────────────
+        const deviceName = getElectronDeviceName(target);
+
+        if (ticket.ticketType === 'KOT') {
+          success = await browserPrintKOT(
+            { cafeName, ticket, pax, buzzer: settings.kitchenPrinterBuzzer ?? false },
+            deviceName,
+          );
+        } else if (ticket.ticketType === 'BOT') {
+          success = await browserPrintBOT({ cafeName, ticket, pax }, deviceName);
+        } else if (ticket.ticketType === 'VOID_KOT' || ticket.ticketType === 'VOID_BOT') {
+          success = await browserPrintVoidTicket({ cafeName, ticket }, deviceName);
+        }
+      } else {
+        // ── WebUSB ESC/POS path ─────────────────────────────────────────────
+        let buffer: Uint8Array | null = null;
+
+        if (ticket.ticketType === 'KOT') {
+          buffer = buildKOT({
+            cafeName,
+            ticket,
+            pax,
+            buzzer: settings.kitchenPrinterBuzzer ?? false,
+          });
+        } else if (ticket.ticketType === 'BOT') {
+          buffer = buildBOT({ cafeName, ticket, pax });
+        } else if (ticket.ticketType === 'VOID_KOT' || ticket.ticketType === 'VOID_BOT') {
+          buffer = buildVoidTicket({ cafeName, ticket });
+        }
+
+        if (!buffer) return;
+
+        // dispatchEscpos routes directly to the correct USB slot and is fully
+        // silent on failure (console warning only — no dialogs, no window.print).
+        success = await dispatchEscpos(buffer, target);
       }
-
-      if (!buffer) return;
-
-      // dispatchEscpos routes directly to the correct USB slot and is fully
-      // silent on failure (console warning only — no dialogs, no window.print).
-      const success = await dispatchEscpos(buffer, target);
 
       if (!success) {
         console.warn(

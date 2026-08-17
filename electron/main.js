@@ -4,14 +4,17 @@
  * Loads the live cloud POS web app so every web-side update is automatically
  * reflected in the desktop app without rebuilding the installer.
  *
- * Silent printing:
- *   The renderer calls window.electronAPI.printSilent(htmlContent).
- *   The preload forwards it here via IPC.
+ * Silent printing (Phase 6):
+ *   The renderer calls window.electronAPI.printSilent(html, deviceName).
+ *   The preload forwards it via ipcRenderer.invoke('silent-print', { html, deviceName }).
  *   We open a hidden BrowserWindow, load the HTML, and call
- *   webContents.print({ silent: true, ... }) — zero dialogs, zero previews.
+ *   webContents.print({ silent: true, deviceName }) — zero dialogs, zero previews.
+ *   The result ({ success, error? }) is returned to the renderer so it can
+ *   update print status only after the native callback confirms delivery.
  *
- * The default Windows thermal printer (PD-80BW) receives the job directly
- * from the OS print subsystem with no user interaction required.
+ * Printer discovery (Phase 6):
+ *   The renderer calls window.electronAPI.getPrinters() to get the list of
+ *   installed Windows printers for display in the Settings UI.
  */
 
 'use strict';
@@ -62,31 +65,47 @@ function createMainWindow() {
   });
 }
 
+// ── Printer discovery IPC ──────────────────────────────────────────────────────
+
+/**
+ * Returns the list of printers installed on the Windows host.
+ * The renderer uses this to populate the kitchen/reception station dropdowns.
+ */
+ipcMain.handle('get-printers', async (event) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return [];
+    return await win.webContents.getPrintersAsync();
+  } catch (err) {
+    console.error('[electron] get-printers failed:', err);
+    return [];
+  }
+});
+
 // ── Silent print IPC handler ───────────────────────────────────────────────────
 
 /**
  * Receives an HTML receipt string from the renderer, loads it into a hidden
  * off-screen window, and prints it silently to a Windows thermal printer.
  *
- * Arguments (via IPC):
- *   htmlContent  {string}      — Full HTML document (includes @page 80mm CSS).
- *   printerName  {string|null} — Optional Windows printer name for routing.
- *                                Pass null / omit to use the OS default printer.
- *                                Pass 'Kitchen Printer' (exact Windows name) to
- *                                send the job to a dedicated kitchen thermal printer.
+ * Payload: { html: string, deviceName?: string }
+ *   html        — Full HTML document (includes @page 80mm CSS).
+ *   deviceName  — Exact Windows printer name (e.g. "Kitchen", "Reception").
+ *                 When omitted the OS default printer is used.
  *
- * The @page CSS inside the HTML already sets size: 80mm auto; margin: 0 so
- * the OS receives exactly the right paper geometry for the thermal roll.
+ * Returns: { success: true } | { success: false, error: string }
+ * The renderer waits for this result before marking a ticket as printed.
  */
-ipcMain.on('silent-print', (_event, htmlContent, printerName) => {
-  if (typeof htmlContent !== 'string' || htmlContent.length === 0) {
+ipcMain.handle('silent-print', async (_event, { html, deviceName }) => {
+  if (typeof html !== 'string' || html.length === 0) {
     console.warn('[electron] silent-print: received empty or non-string payload — ignored.');
-    return;
+    return { success: false, error: 'empty-payload' };
   }
 
   const printWin = new BrowserWindow({
     show:   false,
-    width:  800,   // must be non-zero for layout to render
+    // 302 px ≈ 80 mm at 96 dpi — keeps the layout engine honest for 80mm paper.
+    width:  302,
     height: 600,
     webPreferences: {
       nodeIntegration:  false,
@@ -96,44 +115,52 @@ ipcMain.on('silent-print', (_event, htmlContent, printerName) => {
 
   // data: URLs are the simplest way to inject arbitrary HTML without writing
   // temp files. encodeURIComponent handles all special characters safely.
-  const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);
+  const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
 
-  printWin.loadURL(dataUrl);
+  try {
+    await printWin.loadURL(dataUrl);
+  } catch (loadErr) {
+    console.warn('[electron] silent-print: HTML load failed:', loadErr);
+    try { printWin.destroy(); } catch { /* ok */ }
+    return { success: false, error: String(loadErr) };
+  }
 
-  printWin.webContents.once('did-finish-load', () => {
+  return new Promise((resolve) => {
     /** @type {Electron.WebContentsPrintOptions} */
     const printOptions = {
       silent:          true,
       printBackground: true,
       margins:         { marginType: 'none' },
-      // pageSize can be overridden here; the @page CSS declaration inside
-      // the HTML is already setting 80mm × auto, which Chromium honours.
-      pageSize: 'A4',   // fallback for drivers that ignore @page
+      // Let the @page CSS in the HTML control paper size (80mm auto).
+      // Do not force a specific pageSize here — thermal drivers honour @page.
     };
 
     // Route to a specific Windows printer when a name is provided.
-    // The name must match exactly as it appears in Windows Settings → Printers.
-    // Example: name the kitchen printer 'Kitchen Printer' in Windows to use it here.
-    if (typeof printerName === 'string' && printerName.length > 0) {
-      printOptions.deviceName = printerName;
+    // The name must match exactly as shown in Windows Settings → Printers & scanners.
+    if (typeof deviceName === 'string' && deviceName.length > 0) {
+      printOptions.deviceName = deviceName;
     }
 
-    printWin.webContents.print(
-      printOptions,
-      (success, errorType) => {
-        if (!success) {
-          console.warn(`[electron] Print job failed (printer: ${printerName ?? 'default'}):`, errorType);
-        }
-        // Destroy regardless so hidden windows don't accumulate.
-        try { printWin.destroy(); } catch { /* already destroyed */ }
-      },
-    );
-  });
+    printWin.webContents.print(printOptions, (success, failureReason) => {
+      try { printWin.destroy(); } catch { /* already destroyed */ }
+      if (success) {
+        resolve({ success: true });
+      } else {
+        console.warn(`[electron] Print job failed (printer: ${deviceName ?? 'default'}):`, failureReason);
+        resolve({ success: false, error: failureReason });
+      }
+    });
 
-  // Safety net: destroy the print window after 30 s even if load never fires.
-  setTimeout(() => {
-    try { if (!printWin.isDestroyed()) printWin.destroy(); } catch { /* ok */ }
-  }, 30_000);
+    // Safety net: resolve + destroy after 30 s even if the callback never fires.
+    setTimeout(() => {
+      try {
+        if (!printWin.isDestroyed()) {
+          printWin.destroy();
+          resolve({ success: false, error: 'timeout' });
+        }
+      } catch { /* ok */ }
+    }, 30_000);
+  });
 });
 
 // ── App lifecycle ──────────────────────────────────────────────────────────────
