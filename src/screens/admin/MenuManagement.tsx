@@ -813,7 +813,7 @@ export default function MenuManagement() {
         <DialogContent className="bg-[#13151F] border border-white/15 text-white max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-black">
-              <BookOpen size={16} className="text-sky-400" />
+              <BookOpen size={16} className="text-amber-400" />
               {catModal.mode === 'add' ? 'Add Category' : 'Edit Category'}
             </DialogTitle>
           </DialogHeader>
@@ -824,7 +824,7 @@ export default function MenuManagement() {
                 value={catModal.cat.name ?? ''}
                 onChange={(e) => setCatModal((s) => ({ ...s, cat: { ...s.cat, name: e.target.value } }))}
                 placeholder="e.g. Sekuwa & Grills"
-                className={inputCls}
+                className={categoryInputCls}
               />
             </Field>
 
@@ -860,9 +860,9 @@ export default function MenuManagement() {
                     className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-all ${
                       catModal.cat.printRoute === route
                         ? route === 'KOT'
-                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                          : 'bg-blue-500/15 border-blue-500/40 text-blue-300'
-                        : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                          ? 'bg-emerald-950/80 border border-emerald-500/80 text-emerald-400 font-semibold'
+                          : 'bg-amber-950/80 border border-amber-500/80 text-amber-400 font-semibold'
+                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     {route === 'KOT' ? '🍽 KOT' : '🍺 BOT'}
@@ -884,7 +884,7 @@ export default function MenuManagement() {
               type="button"
               onClick={saveCategory}
               disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white text-sm font-black transition-all"
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm rounded-xl px-6 py-2.5 shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving…' : catModal.mode === 'add' ? 'Add Category' : 'Save Changes'}
             </button>
@@ -897,6 +897,7 @@ export default function MenuManagement() {
 
 // ── Shared style constants ──────────────────────────────────────────────────
 const inputCls = 'w-full px-3.5 py-2.5 bg-white/5 border border-white/12 rounded-xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500/50 transition-colors';
+const categoryInputCls = 'bg-slate-900 border border-slate-700 text-white placeholder:text-slate-400 focus:border-amber-500 rounded-xl px-4 py-2.5 focus:outline-none transition-colors w-full';
 const variantInputCls = 'bg-slate-900 border border-slate-700 text-white placeholder:text-slate-400 px-3 py-2 rounded-lg focus:border-amber-500 focus:outline-none transition-colors';
 const selectCls = 'w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 const selectContentCls = 'bg-slate-900 border border-slate-700 text-white shadow-2xl rounded-xl z-50';
