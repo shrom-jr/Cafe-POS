@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import {
   Cable,
   ChevronDown,
+  Power,
   Printer,
   RefreshCw,
   Save,
@@ -352,6 +353,7 @@ const PrinterSettingsSection = () => {
   const [kitchenDevice,    setKitchenDevice]    = useState(() => loadDeviceName(KITCHEN_DEVICE_KEY));
   const [receptionDevice,  setReceptionDevice]  = useState(() => loadDeviceName(RECEPTION_DEVICE_KEY));
   const [testingElectron,  setTestingElectron]  = useState<'kot' | 'bot' | null>(null);
+  const [autoLaunch,       setAutoLaunch]       = useState(false);
 
   const fetchPrinters = useCallback(async () => {
     if (!inElectron || !window.electronAPI?.getPrinters) return;
@@ -381,6 +383,7 @@ const PrinterSettingsSection = () => {
   useEffect(() => {
     if (inElectron) {
       void fetchPrinters();
+      void window.electronAPI?.getAutoStart?.().then((v) => setAutoLaunch(Boolean(v)));
     } else {
       let cancelled = false;
       void Promise.all([
@@ -598,7 +601,36 @@ const PrinterSettingsSection = () => {
         </div>
       )}
 
-      {/* ── C. Auto-Print Hub (shared) ───────────────────────────────────── */}
+      {/* ── D. Auto-Launch on Windows Boot (Electron only) ──────────────── */}
+      {inElectron && (
+        <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-black text-white flex items-center gap-1.5">
+                <Power size={13} className="text-sky-400" /> Auto-Launch on Windows Boot
+              </p>
+              <p className="text-xs font-bold text-zinc-400 mt-0.5">
+                Start the POS automatically when this Windows PC powers on
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                const next = !autoLaunch;
+                const confirmed = await window.electronAPI?.setAutoStart?.(next);
+                setAutoLaunch(typeof confirmed === 'boolean' ? confirmed : next);
+                toast.success(next ? 'Auto-launch enabled' : 'Auto-launch disabled');
+              }}
+              className="flex-shrink-0 transition-all active:scale-95"
+            >
+              {autoLaunch
+                ? <ToggleRight size={36} className="text-sky-400" />
+                : <ToggleLeft  size={36} className="text-zinc-500" />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── E. Auto-Print Hub (shared) ───────────────────────────────────── */}
       <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-5">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Auto-Print Hub</h3>

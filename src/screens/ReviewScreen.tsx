@@ -12,7 +12,7 @@ import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { getStaffName } from '@/utils/staffName';
 import { toRepaymentMethod } from '@/utils/repaymentMethod';
 import { tableDisplayName } from '@/utils/tableName';
-import { playSuccess } from '@/utils/sounds';
+import { playBillSettled } from '@/utils/sounds';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
@@ -451,7 +451,7 @@ const ReviewScreen = () => {
       };
       lastPrintJobRef.current = creditTaxJob;
       updateOrderStatus(orderIdRef.current, 'paid');
-      playSuccess();
+      playBillSettled();
       setBillNum(bn);
       setPaidAt(now);
       setPaidMethod(`CREDIT · ${attachedCustomer.name}`);
@@ -640,7 +640,7 @@ const ReviewScreen = () => {
     };
     lastPrintJobRef.current = taxJob;
 
-    playSuccess();
+    playBillSettled();
     setShowQRModal(false);
 
     if (allDone) {

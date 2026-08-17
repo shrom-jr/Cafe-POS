@@ -19,7 +19,7 @@
 
 'use strict';
 
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 
 // ── Config ─────────────────────────────────────────────────────────────────────
@@ -49,6 +49,13 @@ function createSplashWindow() {
   splash.loadFile(path.join(__dirname, 'splash.html'));
   return splash;
 }
+
+// ── App-quit guard ─────────────────────────────────────────────────────────────
+
+// Tracks whether the quit was intentional (menu, taskbar, or confirmed dialog).
+// Set to true before calling app.quit() or mainWindow.destroy() so the 'close'
+// handler knows to skip the confirmation dialog.
+app.isQuitting = false;
 
 // ── Main window ────────────────────────────────────────────────────────────────
 
@@ -95,6 +102,28 @@ function createMainWindow() {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(APP_URL)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // ── Accidental-close guard ────────────────────────────────────────────────
+  // Intercept the close event and show a native confirmation dialog unless the
+  // app is already in an intentional quit flow (app.isQuitting === true).
+  mainWindow.on('close', (e) => {
+    if (app.isQuitting) return; // intentional — let the close proceed
+    e.preventDefault();
+    dialog.showMessageBox(mainWindow, {
+      type:      'question',
+      title:     'Exit Bamboo POS',
+      message:   'Are you sure you want to exit the POS terminal?',
+      detail:    'Please ensure all active orders and table receipts are settled or saved.',
+      buttons:   ['Cancel', 'Exit POS'],
+      defaultId: 0,   // Cancel is default — accidental Ctrl+W does nothing
+      cancelId:  0,
+    }).then(({ response }) => {
+      if (response === 1) {
+        app.isQuitting = true;
+        mainWindow.destroy();
+      }
+    }).catch(() => { /* dialog dismissed */ });
   });
 
   mainWindow.on('closed', () => {
@@ -200,6 +229,25 @@ ipcMain.handle('silent-print', async (_event, { html, deviceName }) => {
   });
 });
 
+// ── Windows auto-launch IPC ────────────────────────────────────────────────────
+
+/**
+ * Returns whether the app opens automatically on Windows boot.
+ * The renderer reads this on mount to initialise the auto-launch toggle.
+ */
+ipcMain.handle('get-autostart', () => {
+  return app.getLoginItemSettings().openAtLogin;
+});
+
+/**
+ * Enables or disables auto-launch on Windows startup.
+ * Returns the new openAtLogin value as confirmed by the OS.
+ */
+ipcMain.handle('set-autostart', (_event, enable) => {
+  app.setLoginItemSettings({ openAtLogin: Boolean(enable) });
+  return app.getLoginItemSettings().openAtLogin;
+});
+
 // ── App lifecycle ──────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
@@ -209,6 +257,11 @@ app.whenReady().then(() => {
     // macOS: re-create the window when the dock icon is clicked.
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
+});
+
+app.on('before-quit', () => {
+  // Mark quit as intentional so the close-guard dialog is skipped.
+  app.isQuitting = true;
 });
 
 app.on('window-all-closed', () => {

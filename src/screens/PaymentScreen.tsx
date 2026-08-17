@@ -12,7 +12,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Banknote, Smartphone, CheckCircle2, Home, X, Loader2, Printer } from 'lucide-react';
 import { resolvePaymentLabel } from '@/utils/format';
 import { OrderItem } from '@/types/pos';
-import { playSuccess } from '@/utils/sounds';
+import { playBillSettled } from '@/utils/sounds';
 import { tableDisplayName } from '@/utils/tableName';
 
 const PaymentScreen = () => {
@@ -158,7 +158,7 @@ const PaymentScreen = () => {
 
     updateOrderStatus(snap.id, 'paid');
     if (tableId) resetTable(tableId);
-    playSuccess();
+    playBillSettled();
     setShowQRModal(false);
     setPaid(true);
 

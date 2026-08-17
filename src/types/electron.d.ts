@@ -59,6 +59,20 @@ declare global {
         deviceName?: string,
       ): Promise<{ success: boolean; error?: string }>;
 
+      /**
+       * Returns whether the app is configured to open automatically on Windows boot.
+       * Reads the OS login-item setting; call on mount to initialise the toggle.
+       */
+      getAutoStart(): Promise<boolean>;
+
+      /**
+       * Enable or disable auto-launch on Windows startup.
+       * Returns the new openAtLogin value as confirmed by the OS.
+       *
+       * @param enable - true to register the app as a startup item; false to remove it.
+       */
+      setAutoStart(enable: boolean): Promise<boolean>;
+
       /** True when running inside the Electron desktop container. */
       isElectron: boolean;
     };

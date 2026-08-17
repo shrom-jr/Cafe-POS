@@ -13,7 +13,7 @@ import CustomerPicker from '@/components/orders/CustomerPicker';
 import { Customer, OrderItem } from '@/types/pos';
 import { Search, ShoppingCart, ChevronUp, X, Info, ArrowRightLeft, UserCircle, Lock, Minus, Plus, Trash2 } from 'lucide-react';
 import VoidItemModal from '@/components/orders/VoidItemModal';
-import { playClick } from '@/utils/sounds';
+import { playClick, playOrderSent } from '@/utils/sounds';
 import { getStaffName } from '@/utils/staffName';
 import { filterMenuItems } from '@/utils/menuFilter';
 import { compareTableNames, tableDisplayName } from '@/utils/tableName';
@@ -249,6 +249,7 @@ const OrderScreen = () => {
     setShowKitchenWarning(false);
 
     sendToKitchen(order.id);
+    playOrderSent();
     // Tickets are now written to Firebase by sendToKitchen; the designated
     // print-hub device (pos_is_print_hub === 'true') picks them up via
     // usePrintQueue and dispatches to the printer. Waiter phones never

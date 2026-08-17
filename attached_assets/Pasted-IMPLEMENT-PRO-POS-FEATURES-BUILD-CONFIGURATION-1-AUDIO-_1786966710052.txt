@@ -1,0 +1,40 @@
+IMPLEMENT PRO POS FEATURES & BUILD CONFIGURATION
+
+1. AUDIO FEEDBACK SYSTEM (Zero-asset Web Audio API in `src/utils/soundEffects.ts` or existing sound helper):
+   - Implement synthesized audio cues using native Web Audio API oscillators:
+     * `playOrderSent()`: High-pitch ascending dual-tone chime (800Hz -> 1200Hz).
+     * `playBillSettled()`: Crisp cash-register / double chime tone.
+     * `playWarningAlert()`: Low-tone double pulse (300Hz).
+   - Hook into:
+     * KOT/BOT submission actions -> `playOrderSent()`
+     * Bill settlement / payment receipt actions -> `playBillSettled()`
+
+2. PREVENT ACCIDENTAL WINDOW CLOSE (`electron/main.js`):
+   - In `mainWindow`, intercept the `close` event:
+     * Check if the app is intentionally quitting (via `app.isQuitting` flag).
+     * If not, display a native Electron confirmation dialog:
+       - Title: "Exit Bamboo POS"
+       - Message: "Are you sure you want to exit the POS terminal?"
+       - Detail: "Please ensure all active orders and table receipts are settled or saved."
+       - Buttons: ["Cancel", "Exit POS"] (Cancel default).
+     * If user clicks "Exit POS", set `app.isQuitting = true` and destroy window; otherwise `e.preventDefault()`.
+
+3. WINDOWS AUTO-LAUNCH ON STARTUP (`electron/main.js` & `electron/preload.js`):
+   - In `electron/main.js`, add IPC handlers:
+     * `ipcMain.handle('get-autostart', () => app.getLoginItemSettings().openAtLogin)`
+     * `ipcMain.handle('set-autostart', (event, enable) => { app.setLoginItemSettings({ openAtLogin: enable }); return app.getLoginItemSettings().openAtLogin; })`
+   - Expose in `preload.js` via `window.electronAPI.getAutoStart` and `window.electronAPI.setAutoStart`.
+   - In the **Admin** settings view / printer modal, add an "Auto-Launch on Windows Boot" toggle switch wired to these IPC methods (gracefully hidden/disabled if not running inside Electron).
+
+4. TOP NAVIGATION REFRESH / SYNC BUTTON:
+   - In the top navigation bar (beside the Theme Toggle and Switch User button):
+     * Add a dedicated circular sync icon button (e.g., Lucide `RefreshCw` or `RotateCw`).
+     * On click: trigger the global table/order re-sync and animate the icon rotating smoothly.
+
+5. PACKAGE ARTIFACT NAME:
+   - In `electron/package.json` -> `build.win`:
+     * Ensure `"artifactName": "Bamboo POS v1.0.${ext}"`
+
+6. STRICT CREDIT-SAVING GUARDRAIL:
+   - DO NOT run repetitive end-to-end browser test suites.
+   - Run ONLY a single `npm run build` syntax/type check to verify zero errors.

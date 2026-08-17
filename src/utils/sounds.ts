@@ -46,6 +46,76 @@ export function playSuccess() {
   });
 }
 
+/**
+ * High-pitch ascending dual-tone chime (800 Hz → 1200 Hz).
+ * Call after a KOT / BOT is successfully sent to the kitchen.
+ */
+export function playOrderSent() {
+  const c = getCtx();
+  if (!c) return;
+  const tones = [800, 1200];
+  tones.forEach((freq, i) => {
+    const osc  = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.type = 'sine';
+    const t = c.currentTime + i * 0.13;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.22, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.start(t);
+    osc.stop(t + 0.22);
+  });
+}
+
+/**
+ * Crisp cash-register double chime.
+ * Call when a bill is settled / payment receipt is issued.
+ */
+export function playBillSettled() {
+  const c = getCtx();
+  if (!c) return;
+  // Two short metallic pings — classic cash-register feel.
+  const tones = [1047, 1319]; // C6, E6
+  tones.forEach((freq, i) => {
+    const osc  = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.type = 'triangle';
+    const t = c.currentTime + i * 0.14;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  });
+}
+
+/**
+ * Low-tone double pulse warning alert (300 Hz).
+ * Call for critical alerts or erroneous actions that need staff attention.
+ */
+export function playWarningAlert() {
+  const c = getCtx();
+  if (!c) return;
+  [0, 0.22].forEach((offset) => {
+    const osc  = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.type = 'sine';
+    const t = c.currentTime + offset;
+    osc.frequency.setValueAtTime(300, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.16);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    osc.start(t);
+    osc.stop(t + 0.16);
+  });
+}
+
 export function playError() {
   const c = getCtx();
   if (!c) return;

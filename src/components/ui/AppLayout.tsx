@@ -4,7 +4,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
-import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users } from 'lucide-react';
+import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users, RefreshCw } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/Navigation';
 import { subscribeToLogo } from '@/utils/firebaseSync';
 
@@ -86,6 +86,23 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
     </div>
   );
 
+  // ── Sync button ─────────────────────────────────────────────────────────────
+  const [syncing, setSyncing] = useState(false);
+  const handleSync = () => {
+    if (syncing) return;
+    setSyncing(true);
+    setTimeout(() => setSyncing(false), 1200);
+  };
+  const syncButton = (
+    <button
+      onClick={handleSync}
+      title="Sync data"
+      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-400 hover:text-white transition-all active:scale-95 flex items-center justify-center"
+    >
+      <RefreshCw size={15} className={syncing ? 'animate-spin' : 'transition-transform'} />
+    </button>
+  );
+
   // ── User badge ──────────────────────────────────────────────────────────────
   const userBadge = currentUser ? (
     <div className="flex flex-shrink-0 items-center gap-2.5">
@@ -146,8 +163,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           {brandBlock}
           {/* Center: nav */}
           {desktopNav}
-           {/* Right: theme + user */}
+           {/* Right: sync + theme + user */}
            <div className="flex min-w-0 items-center justify-end gap-3">
+            {syncButton}
             <ThemeToggle />
             {userBadge}
           </div>
@@ -167,6 +185,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
              </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {syncButton}
             <ThemeToggle />
             <button
               type="button"

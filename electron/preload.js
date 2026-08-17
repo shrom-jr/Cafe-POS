@@ -43,6 +43,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke('silent-print', { html, deviceName: deviceName ?? undefined });
   },
 
+  /**
+   * Returns whether the app is configured to launch automatically on Windows boot.
+   * @returns {Promise<boolean>}
+   */
+  getAutoStart: () => ipcRenderer.invoke('get-autostart'),
+
+  /**
+   * Enable or disable auto-launch on Windows startup.
+   * @param {boolean} enable
+   * @returns {Promise<boolean>} The new openAtLogin value as confirmed by the OS.
+   */
+  setAutoStart: (enable) => ipcRenderer.invoke('set-autostart', enable),
+
   /** Runtime flag so the web app can confirm it is running inside Electron. */
   isElectron: true,
 });
