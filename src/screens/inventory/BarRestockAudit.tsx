@@ -1,38 +1,50 @@
 import { useState, useMemo } from 'react';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
-import { Trash2, Pencil, X, Check, GlassWater, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { AlertOctagon, Boxes, Check, DollarSign, Pencil, Search, Trash2, TrendingDown, TrendingUp, Truck, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInventoryStore } from '@/store/useInventoryStore';
-import { InventoryMovement, InvProductType } from '@/types/pos';
+import { InventoryMovement } from '@/types/pos';
 import { fmt } from '@/utils/format';
 import {
-  CARD, CARD_SM, TH, TD, INPUT, LABEL, BTN_DANGER, BTN_EDIT,
-  PROD_TYPE_COLORS,
+  TH, TD, INPUT, LABEL, BTN_DANGER, BTN_EDIT,
 } from './styles';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type ProdFilter  = 'all' | InvProductType;
+type ProdFilter  = 'all' | 'spirits' | 'wine' | 'beer' | 'soft-drinks' | 'cigarettes';
 type EntryFilter = 'all' | 'Restock' | 'Spill/Loss';
 type DateFilter  = 'all' | 'today' | 'week' | 'month';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const PROD_LABEL: Record<InvProductType, string> = {
-  alcohol: 'Alcohol', beverage: 'Beverage', cigarette: 'Cigarette',
+function auditCategory(m: InventoryMovement): Exclude<ProdFilter, 'all'> {
+  const name = m.productName.toLowerCase();
+  if (m.productType === 'cigarette') return 'cigarettes';
+  if (m.productType === 'alcohol') return name.includes('wine') ? 'wine' : 'spirits';
+  return name.includes('beer') ? 'beer' : 'soft-drinks';
+}
+
+const CATEGORY_LABELS: Record<Exclude<ProdFilter, 'all'>, string> = {
+  spirits: 'Spirits',
+  wine: 'Wine',
+  beer: 'Beer',
+  'soft-drinks': 'Soft Drinks',
+  cigarettes: 'Cigarettes',
 };
 
-const ProdBadge = ({ type }: { type: InvProductType }) => (
-  <span className={`text-[10px] px-2 py-0.5 rounded border font-semibold leading-none ${PROD_TYPE_COLORS[type]}`}>
-    {PROD_LABEL[type]}
-  </span>
-);
+const CATEGORY_BADGE_CLASSES: Record<Exclude<ProdFilter, 'all'>, string> = {
+  spirits: 'bg-amber-950/70 border-amber-800/70 text-amber-300',
+  wine: 'bg-purple-950/70 border-purple-800/70 text-purple-300',
+  beer: 'bg-orange-950/70 border-orange-800/70 text-orange-300',
+  'soft-drinks': 'bg-sky-950/70 border-sky-800/70 text-sky-300',
+  cigarettes: 'bg-slate-800 border-slate-700 text-slate-300',
+};
 
 const EntryBadge = ({ t }: { t: 'Restock' | 'Spill/Loss' }) => (
   <span className={`text-[10px] px-2 py-0.5 rounded border font-semibold leading-none flex items-center gap-1 w-fit ${
     t === 'Restock'
-      ? 'bg-green-500/15 border-green-500/20 text-green-400'
-      : 'bg-red-500/15 border-red-500/20 text-red-400'
+      ? 'bg-emerald-950/80 border border-emerald-800/80 text-emerald-300'
+      : 'bg-amber-950/80 border border-amber-800/80 text-amber-300'
   }`}>
     {t === 'Restock' ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
     {t}
@@ -42,6 +54,11 @@ const EntryBadge = ({ t }: { t: 'Restock' | 'Spill/Loss' }) => (
 // Derive entry type from movement quantity sign
 const entryTypeOf = (m: InventoryMovement): 'Restock' | 'Spill/Loss' =>
   m.quantity >= 0 ? 'Restock' : 'Spill/Loss';
+
+const auditQtyBadgeClass = (entryType: 'Restock' | 'Spill/Loss') =>
+  entryType === 'Restock'
+    ? 'bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-bold px-2.5 py-1 rounded-lg text-xs'
+    : 'bg-amber-950/80 border border-amber-800/80 text-amber-300 font-semibold px-2.5 py-1 rounded-lg text-xs';
 
 // Human-display qty and unit from movement
 function displayQty(m: InventoryMovement): { qty: number; unit: string } {
@@ -76,13 +93,12 @@ const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl"
-        style={{ background: 'linear-gradient(160deg, #0f1929 0%, #0b1220 100%)', border: '1px solid rgba(255,255,255,0.1)' }}
+        className="relative w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl bg-slate-950 border border-slate-800"
       >
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white/90">Edit Entry</h3>
-            <p className="text-xs text-white/40 mt-0.5">{entry.productName} · {entryTypeOf(entry)}</p>
+            <h3 className="text-sm font-bold text-white">Edit Entry</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{entry.productName} · {entryTypeOf(entry)}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
             <X size={15} />
@@ -134,8 +150,7 @@ const EditModal = ({ entry, onSave, onClose }: EditModalProps) => {
         <div className="flex gap-2">
           <button
             onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all hover:brightness-110 active:scale-95"
-            style={{ background: 'rgba(59,130,246,0.3)', border: '1px solid rgba(59,130,246,0.5)', color: '#93c5fd' }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95"
           >
             <Check size={14} /> Save Changes
           </button>
@@ -160,13 +175,15 @@ const FilterBar = <T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) => (
-  <div className="flex gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.06] flex-wrap">
+    <div className="flex gap-1.5 flex-wrap">
     {options.map((o) => (
       <button
         key={o.id}
         onClick={() => onChange(o.id)}
-        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-          value === o.id ? 'bg-accent text-accent-foreground' : 'text-white/40 hover:text-white/70'
+        className={`px-3.5 py-1.5 rounded-lg text-xs transition-all ${
+          value === o.id
+            ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+            : 'bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
         }`}
       >
         {o.label}
@@ -205,7 +222,7 @@ export const BarRestockAudit = () => {
   // ── Filtered & sorted list ──
   const filtered = useMemo(() => {
     let list = [...barMovements];
-    if (prodFilter !== 'all') list = list.filter((m) => m.productType === prodFilter);
+    if (prodFilter !== 'all') list = list.filter((m) => auditCategory(m) === prodFilter);
     if (entryFilter === 'Restock')    list = list.filter((m) => m.quantity >= 0);
     if (entryFilter === 'Spill/Loss') list = list.filter((m) => m.quantity < 0);
     if (dateFilter === 'today') list = list.filter((m) => m.timestamp >= todayStart);
@@ -232,16 +249,13 @@ export const BarRestockAudit = () => {
   const stats = useMemo(() => {
     const restocks    = barMovements.filter((m) => m.quantity >= 0);
     const spills      = barMovements.filter((m) => m.quantity < 0);
-    const todaySpend  = restocks
-      .filter((m) => m.timestamp >= todayStart)
-      .reduce((s, m) => s + (m.totalCost ?? 0), 0);
     return {
       total:     barMovements.length,
       restocks:  restocks.length,
       spills:    spills.length,
-      todaySpend,
+      totalSpend: restocks.reduce((s, m) => s + (m.totalCost ?? 0), 0),
     };
-  }, [barMovements, todayStart]);
+  }, [barMovements]);
 
   // ── Edit save ──
   const handleSaveEdit = (newContainerQty: number, newCost: number, newSupplier: string) => {
@@ -291,37 +305,37 @@ export const BarRestockAudit = () => {
 
       {/* ── Summary stat cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className={CARD_SM}>
+        <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <GlassWater size={13} className="text-indigo-400" />
-            <span className="text-xs text-muted-foreground">Total Entries</span>
+            <Boxes size={15} className="text-amber-300" />
+            <span className="text-xs font-semibold text-slate-300">Total Entries</span>
           </div>
-          <p className="text-xl font-bold text-foreground">{stats.total}</p>
-          <p className="text-xs text-muted-foreground/60">all time</p>
+          <p className="text-xl font-bold text-white">{stats.total}</p>
+          <p className="text-xs text-slate-400 mt-1">all time</p>
         </div>
-        <div className={CARD_SM}>
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={13} className="text-green-400" />
-            <span className="text-xs text-muted-foreground">Restocks</span>
+            <Truck size={15} className="text-emerald-400" />
+            <span className="text-xs font-semibold text-slate-300">Restocks Logged</span>
           </div>
-          <p className="text-xl font-bold text-foreground">{stats.restocks}</p>
-          <p className="text-xs text-muted-foreground/60">deliveries logged</p>
+          <p className="text-xl font-bold text-emerald-300">{stats.restocks}</p>
+          <p className="text-xs text-slate-400 mt-1">deliveries logged</p>
         </div>
-        <div className={CARD_SM}>
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingDown size={13} className="text-red-400" />
-            <span className="text-xs text-muted-foreground">Spill / Loss</span>
+            <AlertOctagon size={15} className="text-rose-400" />
+            <span className="text-xs font-semibold text-slate-300">Loss / Spills</span>
           </div>
-          <p className="text-xl font-bold text-foreground">{stats.spills}</p>
-          <p className="text-xs text-muted-foreground/60">loss entries</p>
+          <p className="text-xl font-bold text-rose-300">{stats.spills}</p>
+          <p className="text-xs text-slate-400 mt-1">loss entries</p>
         </div>
-        <div className={CARD_SM}>
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign size={13} className="text-amber-400" />
-            <span className="text-xs text-muted-foreground">Today's Spend</span>
+            <span className="text-xs font-semibold text-slate-300">Total Spend</span>
           </div>
-          <p className="text-xl font-bold text-foreground">Rs. {fmt(stats.todaySpend)}</p>
-          <p className="text-xs text-muted-foreground/60">restock cost</p>
+          <p className="text-xl font-bold text-amber-300">Rs. {fmt(stats.totalSpend)}</p>
+          <p className="text-xs text-slate-400 mt-1">restock cost</p>
         </div>
       </div>
 
@@ -330,10 +344,12 @@ export const BarRestockAudit = () => {
         <div className="flex flex-wrap gap-2 items-center">
           <FilterBar<ProdFilter>
             options={[
-              { id: 'all',       label: 'All Categories' },
-              { id: 'alcohol',   label: 'Alcohol'        },
-              { id: 'beverage',  label: 'Beverage'       },
-              { id: 'cigarette', label: 'Cigarette'      },
+               { id: 'all',         label: 'All'         },
+               { id: 'spirits',     label: 'Spirits'     },
+               { id: 'wine',        label: 'Wine'        },
+               { id: 'beer',        label: 'Beer'        },
+               { id: 'soft-drinks', label: 'Soft Drinks' },
+               { id: 'cigarettes',  label: 'Cigarettes'  },
             ]}
             value={prodFilter}
             onChange={setProdFilter}
@@ -360,24 +376,30 @@ export const BarRestockAudit = () => {
             onChange={setDateFilter}
           />
           <input
-            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent w-52"
+            className="bg-slate-900/90 border border-slate-800 text-white placeholder:text-slate-400 rounded-xl px-4 py-2 text-sm focus:border-amber-500 focus:outline-none w-full sm:w-56"
             placeholder="Search item or staff name…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} records</span>
+            <span className="text-xs text-slate-400 ml-auto">{filtered.length} records</span>
         </div>
       </div>
 
       {/* ── Audit table ── */}
       {visible.length === 0 ? (
-        <div className={`${CARD} text-center py-12 text-muted-foreground text-sm`}>
-          {barMovements.length === 0
-            ? 'No bar restock entries recorded yet.'
-            : 'No entries match the selected filters.'}
+        <div className="flex flex-col items-center justify-center py-12 px-6 bg-slate-950 border border-slate-800 rounded-2xl">
+          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-amber-400 shadow-lg shadow-amber-950/30">
+            <Boxes size={24} />
+          </div>
+          <p className="text-slate-200 font-semibold text-base mt-4">
+            {barMovements.length === 0 ? 'No bar restock entries recorded' : 'No entries match the filters'}
+          </p>
+          <p className="text-slate-400 text-xs max-w-sm text-center mt-1">
+            {barMovements.length === 0 ? 'Bar restocks, spills, and losses will appear here.' : 'Try changing the category, entry type, timeframe, or search.'}
+          </p>
         </div>
       ) : (
-        <div className={CARD}>
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[700px]">
               <thead>
@@ -405,18 +427,21 @@ export const BarRestockAudit = () => {
                     >
                       {/* Date & Time */}
                       <td className={`${TD} text-xs whitespace-nowrap`}>
-                        <p className="text-muted-foreground">{format(m.timestamp, 'dd MMM yyyy')}</p>
-                        <p className="text-muted-foreground/50">{format(m.timestamp, 'hh:mm a')}</p>
+                        <p className="text-slate-300">{format(m.timestamp, 'dd MMM yyyy')}</p>
+                        <p className="text-slate-500">{format(m.timestamp, 'hh:mm a')}</p>
                       </td>
 
                       {/* Item */}
-                      <td className={`${TD} font-medium text-foreground max-w-[140px]`}>
+                       <td className={`${TD} font-bold text-white max-w-[140px]`}>
                         <span className="truncate block">{m.productName}</span>
                       </td>
 
                       {/* Category */}
                       <td className={`${TD} hidden sm:table-cell`}>
-                        <ProdBadge type={m.productType} />
+                         {(() => {
+                           const category = auditCategory(m);
+                           return <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold ${CATEGORY_BADGE_CLASSES[category]}`}>{CATEGORY_LABELS[category]}</span>;
+                         })()}
                       </td>
 
                       {/* Entry type */}
@@ -425,28 +450,27 @@ export const BarRestockAudit = () => {
                       </td>
 
                       {/* Qty — container unit primary, raw secondary */}
-                      <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
-                        <span className={et === 'Restock' ? 'text-green-400' : 'text-red-400'}>
-                          {et === 'Restock' ? '+' : '−'}{qty}
-                        </span>{' '}
-                        <span className="text-muted-foreground/60">{unit}</span>
+                       <td className={`${TD} whitespace-nowrap`}>
+                         <span className={`inline-flex items-center gap-1 ${auditQtyBadgeClass(et)}`}>
+                           {et === 'Restock' ? '+' : '−'}{qty} {unit}
+                         </span>
                       </td>
 
                       {/* Cost */}
-                      <td className={`${TD} hidden md:table-cell text-muted-foreground`}>
+                       <td className={`${TD} hidden md:table-cell text-slate-300`}>
                         {(m.totalCost ?? 0) > 0
-                          ? <span className="text-foreground font-medium">Rs. {fmt(m.totalCost!)}</span>
-                          : <span className="text-muted-foreground/40">—</span>}
+                           ? <span className="text-amber-300 font-bold">Rs. {fmt(m.totalCost!)}</span>
+                           : <span className="text-slate-500">—</span>}
                       </td>
 
                       {/* Supplier */}
-                      <td className={`${TD} hidden md:table-cell text-muted-foreground text-xs max-w-[110px]`}>
+                       <td className={`${TD} hidden md:table-cell text-slate-300 text-xs max-w-[110px]`}>
                         <span className="truncate block">{m.supplier || '—'}</span>
                       </td>
 
                       {/* Logged By */}
-                      <td className={`${TD} hidden lg:table-cell text-muted-foreground text-xs`}>
-                        {m.loggedBy || '—'}
+                       <td className={`${TD} hidden lg:table-cell text-slate-300 text-xs`}>
+                         {m.loggedBy || <span className="text-slate-500">—</span>}
                       </td>
 
                       {/* Actions */}
@@ -491,7 +515,7 @@ export const BarRestockAudit = () => {
           {/* Pagination */}
           {pageCount > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.06]">
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-slate-400">
                 Page {page} of {pageCount} · {filtered.length} total
               </span>
               <div className="flex gap-2">
@@ -516,7 +540,7 @@ export const BarRestockAudit = () => {
       )}
 
       {barMovements.length > 0 && (
-        <p className="text-xs text-muted-foreground/50 text-center">
+        <p className="text-xs text-slate-500 text-center">
           Deleting or editing an entry automatically corrects live inventory stock.
         </p>
       )}

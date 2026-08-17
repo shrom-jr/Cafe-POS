@@ -1,0 +1,58 @@
+PHASE 4: VISUAL & UX OVERHAUL FOR PURCHASES LEDGER, STOCK MOVEMENTS & BAR RESTOCK AUDIT DRAWERS
+
+Redesign and upgrade the three inventory slide-out drawers (`Purchases Ledger`, `Stock Movements`, and `Bar Restock Audit`) in `src/screens/admin/InventorySection.tsx` (or their respective modal/drawer subcomponents) into a modern, carbon-dark, high-contrast UI matching the rest of the application.
+
+1. DRAWER GEOMETRY & BACKDROP:
+   - Expand the drawer width from narrow to a spacious `max-w-3xl` (approx. 760px–800px) to prevent horizontal truncation and give tables/cards proper breathing room.
+   - Canvas Styling: `bg-slate-950 border-l border-slate-800/80 text-slate-100 shadow-2xl backdrop-blur-xl`.
+   - Header: Bold title, descriptive subtext (`text-slate-400 text-xs font-medium`), and a circular close button (`p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all`).
+
+2. TELEMETRY STAT COUNTERS:
+   Replace plain dark boxes with distinct, color-coded metric cards:
+   - Purchases Ledger:
+     * Total Purchases (All Time): Amber icon (`ShoppingBag`) with gold metric text.
+     * Today: Emerald icon (`Calendar`) with bright green counter.
+     * This Week: Cyan icon (`TrendingUp`) with cyan counter.
+     * This Month: Purple icon (`PieChart`) with purple counter.
+   - Stock Movements:
+     * Total Events: Slate icon (`Activity`) with crisp white counter.
+     * Restock / Purchases (+): Emerald icon (`ArrowDownLeft`) with green badge.
+     * POS Sales (-): Rose icon (`ArrowUpRight`) with rose badge.
+     * Spills / Loss: Amber icon (`AlertTriangle`) with orange/amber badge.
+   - Bar Restock Audit:
+     * Total Entries: Slate/Amber icon (`Boxes`).
+     * Restocks Logged: Emerald icon (`Truck`).
+     * Loss / Spills: Rose icon (`AlertOctagon`).
+     * Total Spend: Gold currency badge (`Rs. XX,XXX` formatted with bold typography).
+
+3. FILTER CONTROLS & SEARCH BAR:
+   - Eliminate electric blue active states (`bg-blue-600`).
+   - Standardize Segmented Filter Pills:
+     * Active Tab: `bg-amber-500 text-slate-950 font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-md shadow-amber-500/20`
+     * Inactive Tab: `bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white text-xs px-3.5 py-1.5 rounded-lg transition-all`
+   - Include clear filter groups: Category filter (`All`, `Spirits`, `Wine`, `Beer`, `Soft Drinks`, `Cigarettes`) and Timeframe filter (`All Time`, `Today`, `This Week`, `This Month`).
+   - Live Search Input: `bg-slate-900/90 border border-slate-800 text-white placeholder-slate-400 rounded-xl px-4 py-2 text-sm focus:border-amber-500 focus:outline-none w-full`.
+
+4. TRANSACTION LIST & COLOR-CODED RECORD CARDS:
+   Render ledger entries with high-contrast data rows/cards:
+   - Item Name: `font-bold text-white text-sm` accompanied by a category badge (`Spirits`, `Wine`, `Beer`, etc.).
+   - Quantity Delta Badges:
+     * Sales Deduction: `bg-rose-950/80 border border-rose-800/80 text-rose-300 font-bold px-2.5 py-1 rounded-lg text-xs` (e.g. `-60 ml` or `-2 btls`)
+     * Restock / Purchase: `bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-bold px-2.5 py-1 rounded-lg text-xs` (e.g. `+750 ml` or `+12 btls`)
+     * Spills / Waste: `bg-amber-950/80 border border-amber-800/80 text-amber-300 font-semibold px-2.5 py-1 rounded-lg text-xs`
+   - Metadata & Source: Clean date/time stamp, logged-by operator tag, and cost breakdown (e.g. `Rs. 2,000`).
+   - Bar Restock Audit Actions: Retain edit/delete correction capabilities with safety confirmation.
+
+5. POLISHED EMPTY STATES:
+   - When no records match the filter, render an empty state card:
+     * Centered glowing ambient icon container (`p-4 bg-slate-900 border border-slate-800 rounded-2xl`).
+     * Bold header: `text-slate-200 font-semibold text-base`.
+     * Descriptive helper subtext: `text-slate-400 text-xs max-w-sm text-center`.
+
+6. VERIFY & BUILD:
+   - Ensure all data binds smoothly to `invMovements` and `inventory` state.
+   - Run `npm run build` to confirm 0 compilation errors.
+
+STRICT SAFETY GUARDRAILS:
+- DO NOT alter underlying inventory calculation math, ML deduction logic, Firebase RTDB endpoints, or table schemas.
+- DO NOT touch menu items, categories, or table layouts.

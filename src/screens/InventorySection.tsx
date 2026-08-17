@@ -25,12 +25,13 @@ const PILLARS: PillarDef[] = [
 // ── Slide-over drawer wrapper ─────────────────────────────────────────────────
 
 interface DrawerProps {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
+  title:       string;
+  description: string;
+  onClose:     () => void;
+  children:    React.ReactNode;
 }
 
-const Drawer = ({ title, onClose, children }: DrawerProps) => (
+const Drawer = ({ title, description, onClose, children }: DrawerProps) => (
   <div className="fixed inset-0 z-50 flex justify-end">
     {/* Backdrop */}
     <div
@@ -38,18 +39,19 @@ const Drawer = ({ title, onClose, children }: DrawerProps) => (
       onClick={onClose}
     />
     {/* Panel */}
-    <div
-      className="relative flex flex-col w-full max-w-3xl h-full overflow-hidden shadow-2xl"
-      style={{ background: 'linear-gradient(160deg, #0d1626 0%, #080f1a 100%)', borderLeft: '1px solid rgba(255,255,255,0.08)' }}
-    >
+    <div className="relative flex flex-col w-full max-w-3xl h-full overflow-hidden bg-slate-950 border-l border-slate-800/80 text-slate-100 shadow-2xl backdrop-blur-xl">
       {/* Drawer header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07] flex-shrink-0">
-        <h2 className="text-base font-semibold text-white/90">{title}</h2>
+      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-800/80 flex-shrink-0">
+        <div>
+          <h2 className="text-lg font-bold text-white">{title}</h2>
+          <p className="text-slate-400 text-xs font-medium mt-1">{description}</p>
+        </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+          aria-label={`Close ${title}`}
         >
-          <X size={16} />
+          <X size={17} />
         </button>
       </div>
       {/* Drawer content */}
@@ -156,19 +158,31 @@ export const InventorySection = () => {
 
       {/* ── Secondary slide-over drawers ──────────────────────────────────── */}
       {activeSecondaryView === 'purchases' && (
-        <Drawer title="Purchases Ledger" onClose={closeSecondary}>
+        <Drawer
+          title="Purchases Ledger"
+          description="Every purchase and restock recorded across your inventory."
+          onClose={closeSecondary}
+        >
           <PurchasesSection />
         </Drawer>
       )}
 
       {activeSecondaryView === 'movements' && (
-        <Drawer title="Stock Movements" onClose={closeSecondary}>
+        <Drawer
+          title="Stock Movements"
+          description="A live audit trail of stock flowing in, out, and through corrections."
+          onClose={closeSecondary}
+        >
           <MovementsSection />
         </Drawer>
       )}
 
       {activeSecondaryView === 'bar-audit' && (
-        <Drawer title="Bar Restock Audit" onClose={closeSecondary}>
+        <Drawer
+          title="Bar Restock Audit"
+          description="Review, correct, and reconcile bar restocks, spills, and losses."
+          onClose={closeSecondary}
+        >
           <BarRestockAudit />
         </Drawer>
       )}
