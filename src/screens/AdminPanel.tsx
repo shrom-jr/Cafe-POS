@@ -15,6 +15,7 @@ import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
 import { db } from '@/storage/db';
+import type { ClosedShift } from '@/storage/db';
 import { toast } from 'sonner';
 import {
   BarChart3, CreditCard, Table2, TrendingUp,
@@ -24,6 +25,7 @@ import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
   Search, Printer, ArrowUp, ArrowDown, Wrench, UtensilsCrossed,
   AlertTriangle, RotateCcw, ShieldAlert, FileJson,
+  ClipboardCheck, History, CheckCircle2,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -381,7 +383,7 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('bill');
-  const [reportView,    setReportView]    = useState<'sales' | 'kitchen'>('sales');
+  const [reportView,    setReportView]    = useState<'sales' | 'kitchen' | 'shifts'>('sales');
   const settings = usePOSStore((s) => s.settings);
 
   // Hard RBAC guard — belt-and-suspenders on top of the route-level RequireAdmin.
@@ -589,7 +591,8 @@ const AdminPanel = () => {
                   {([
                     { id: 'sales',   label: '📊 Sales Reports' },
                     { id: 'kitchen', label: '🍳 Kitchen & Meat Analytics' },
-                  ] as { id: 'sales' | 'kitchen'; label: string }[]).map(({ id, label }) => (
+                    { id: 'shifts',  label: '📋 Z-Report History' },
+                  ] as { id: 'sales' | 'kitchen' | 'shifts'; label: string }[]).map(({ id, label }) => (
                     <button
                       key={id}
                       onClick={() => setReportView(id)}
@@ -603,6 +606,7 @@ const AdminPanel = () => {
                 </div>
                 {reportView === 'sales'   && <ReportsSection />}
                 {reportView === 'kitchen' && <KitchenReportTab />}
+                {reportView === 'shifts'  && <ShiftHistorySection />}
               </div>
             )}
             {resolvedActiveTab === 'menu'      && <MenuManagement />}
@@ -2124,7 +2128,16 @@ const ReportsSection = () => {
   const [customEnd,   setCustomEnd]   = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const PAGE_SIZE = 8;
 
+  // Z-Report modal state
+  const [zModal,      setZModal]      = useState(false);
+  const [zPin,        setZPin]        = useState('');
+  const [zStep,       setZStep]       = useState<'pin' | 'success'>('pin');
+  const [zPinError,   setZPinError]   = useState('');
+  const [zSavedShift, setZSavedShift] = useState<ClosedShift | null>(null);
+
   const now = new Date();
+  const currentUser   = useStaffStore((s) => s.currentUser);
+  const todayDateStr  = format(now, 'yyyy-MM-dd');
 
   const periodStart = (() => {
     switch (period) {
@@ -2180,7 +2193,12 @@ const ReportsSection = () => {
   const totalDiscounts = periodPayments.reduce((s, p) => s + (p.discount || 0), 0);
   const netSales       = grossSales - totalDiscounts;
   const totalRevenue   = periodPayments.reduce((s, p) => s + p.total, 0);
+  const totalVat       = periodPayments.reduce((s, p) => s + (p.vatAmount || 0), 0);
   const discountedCount = periodPayments.filter((p) => p.discount > 0).length;
+  // Check if today has already been closed (locked Z-Report)
+  const todaysClosed = period === 'today'
+    ? (db.getClosedShifts().find((s) => s.date === todayDateStr) ?? null)
+    : null;
 
   // Payment breakdown
   const paymentBreakdown: Record<string, number> = {};
@@ -2220,6 +2238,39 @@ const ReportsSection = () => {
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const changePeriod = (p: ReportPeriod) => { setPeriod(p); setPage(1); setSearch(''); };
+
+  const openZModal = () => {
+    setZPin(''); setZPinError(''); setZStep('pin'); setZSavedShift(null); setZModal(true);
+  };
+
+  const handleZReportClose = () => {
+    if (zPin !== settings.adminPin) {
+      setZPinError('Incorrect PIN. Try again.');
+      return;
+    }
+    const shift: ClosedShift = {
+      shiftId:              crypto.randomUUID(),
+      date:                 todayDateStr,
+      closedAt:             new Date().toISOString(),
+      closedBy:             currentUser?.name || 'Admin',
+      grossSales,
+      totalDiscounts,
+      netSales,
+      totalVat,
+      totalRevenue,
+      paymentBreakdown:     { ...paymentBreakdown },
+      maintenanceExpenses:  totalMaintenanceExpenses,
+      kitchenPurchases:     totalKitchenPurchases,
+      barRestocks:          totalBarRestocks,
+      totalOperatingExpenses,
+      netProfit:            totalRevenue - totalOperatingExpenses,
+      transactionCount:     periodPayments.length,
+    };
+    db.appendClosedShift(shift);
+    setZSavedShift(shift);
+    setZStep('success');
+    toast.success('Day-end register closed — Z-Report archived.');
+  };
 
   const exportCSV = () => {
     const headers = 'Time,Bill#,Table,Items,Subtotal,Discount,Total,Method,Staff\n';
@@ -2275,6 +2326,20 @@ const ReportsSection = () => {
           >
             <Printer size={14} /> PDF
           </button>
+          {period === 'today' && (
+            todaysClosed ? (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider">
+                <Lock size={13} /> Locked {format(new Date(todaysClosed.closedAt), 'hh:mm a')}
+              </div>
+            ) : (
+              <button
+                onClick={openZModal}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm shadow-emerald-900/40"
+              >
+                <ClipboardCheck size={14} /> Day-End Close
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -2304,6 +2369,27 @@ const ReportsSection = () => {
             {periodPayments.length} transaction{periodPayments.length !== 1 ? 's' : ''} in range
           </span>
         </div>
+      )}
+
+      {/* ── X-Report / Z-lock status banner ── */}
+      {period === 'today' && (
+        todaysClosed ? (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25">
+            <Lock size={15} className="text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Day Closed — Z-Report Locked</p>
+              <p className="text-xs text-zinc-300">Totals locked at {format(new Date(todaysClosed.closedAt), 'hh:mm a')} by {todaysClosed.closedBy}. This is an audited snapshot — live order changes do not affect it.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/[0.07] border border-amber-500/20">
+            <History size={15} className="text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Live X-Report — Real-Time Preview</p>
+              <p className="text-xs text-zinc-300">Numbers update as orders are completed. Use "Day-End Close" to permanently lock today's totals into the Z-Report archive.</p>
+            </div>
+          </div>
+        )
       )}
 
       {/* ── Data cards ── */}
@@ -2521,6 +2607,219 @@ const ReportsSection = () => {
           </>
         )}
       </div>
+
+      {/* ── Z-Report / Day-End Close Modal ── */}
+      <Dialog open={zModal} onOpenChange={(o) => { if (!o) { setZModal(false); setZPin(''); setZStep('pin'); setZPinError(''); } }}>
+        <DialogContent className="max-w-lg bg-[#0d0f1a] border border-white/15 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white font-black flex items-center gap-2">
+              {zStep === 'success'
+                ? <><CheckCircle2 size={18} className="text-emerald-400" /> Day-End Closed — Z-Report Archived</>
+                : <><ClipboardCheck size={18} className="text-amber-400" /> Day-End Close (Z-Report)</>
+              }
+            </DialogTitle>
+            <DialogDescription className="text-zinc-300 text-xs">
+              {zStep === 'success'
+                ? "Today's financial totals are permanently locked. View the full record in Z-Report History."
+                : "Lock today's financial totals into a tamper-proof archive. This cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {zStep === 'pin' && (
+            <div className="space-y-4 py-2">
+              {/* Today's compiled summary */}
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { label: 'Total Revenue',  value: `Rs. ${fmt(totalRevenue)}` },
+                  { label: 'Transactions',   value: String(periodPayments.length) },
+                  { label: 'Discounts',      value: `Rs. ${fmt(totalDiscounts)}` },
+                  { label: 'VAT Collected',  value: `Rs. ${fmt(totalVat)}` },
+                  { label: 'Expenses',       value: `Rs. ${fmt(totalOperatingExpenses)}` },
+                  { label: 'Net Profit',     value: `Rs. ${fmt(totalRevenue - totalOperatingExpenses)}` },
+                ] as { label: string; value: string }[]).map(({ label, value }) => (
+                  <div key={label} className="bg-[#13151F] border border-white/10 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">{label}</p>
+                    <p className="text-sm font-black text-white mt-0.5">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black uppercase tracking-wider text-zinc-300">Admin PIN</label>
+                <input
+                  type="password"
+                  value={zPin}
+                  onChange={(e) => { setZPin(e.target.value); setZPinError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleZReportClose()}
+                  placeholder="Enter admin PIN to lock"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#13151F] border-2 border-white/20 text-white font-bold text-sm placeholder:text-zinc-400 focus:outline-none focus:border-amber-400"
+                  autoFocus
+                />
+                {zPinError && <p className="text-xs font-bold text-rose-400">{zPinError}</p>}
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle size={14} className="text-amber-400 flex-shrink-0" />
+                <p className="text-xs font-bold text-amber-300">Once locked, archived totals cannot be modified or recalculated.</p>
+              </div>
+            </div>
+          )}
+
+          {zStep === 'success' && zSavedShift && (
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                <CheckCircle2 size={22} className="text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-black text-white">Z-Report saved for {zSavedShift.date}</p>
+                  <p className="text-xs text-emerald-300 mt-0.5">
+                    Closed {format(new Date(zSavedShift.closedAt), 'hh:mm a')} · {zSavedShift.transactionCount} transaction{zSavedShift.transactionCount !== 1 ? 's' : ''} · Rs. {fmt(zSavedShift.totalRevenue)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] font-mono text-zinc-600 px-1">Shift ID: {zSavedShift.shiftId}</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {zStep === 'pin' ? (
+              <>
+                <button
+                  onClick={() => { setZModal(false); setZPin(''); setZPinError(''); }}
+                  className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white font-black text-xs uppercase tracking-wider hover:bg-white/20 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleZReportClose}
+                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95"
+                >
+                  <Lock size={13} /> Lock & Archive
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { setZModal(false); setZPin(''); setZStep('pin'); setZSavedShift(null); }}
+                className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider transition-all active:scale-95"
+              >
+                Done
+              </button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ── SHIFT HISTORY (Z-Report Archive) ─────────────────────────────────────────
+const ShiftHistorySection = () => {
+  const settings = usePOSStore((s) => s.settings);
+  const [shifts]   = useState<ClosedShift[]>(() => db.getClosedShifts().slice().reverse());
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  if (shifts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
+        <History size={40} className="text-amber-400 mb-3" />
+        <p className="text-sm font-black text-white">No closed shifts yet</p>
+        <p className="text-xs font-bold text-zinc-300 mt-2">
+          Use "Day-End Close" in Sales Reports to permanently lock and archive daily totals.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 mt-2">
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20">
+        <ShieldAlert size={15} className="text-emerald-400 flex-shrink-0" />
+        <p className="text-xs font-bold text-emerald-300">
+          These records are permanently locked snapshots. Subsequent order changes do not affect archived Z-Report totals.
+        </p>
+      </div>
+
+      {shifts.map((shift) => {
+        const isOpen = expanded === shift.shiftId;
+        return (
+          <div key={shift.shiftId} className="bg-[#13151F] border border-white/15 rounded-2xl overflow-hidden">
+            {/* Row header */}
+            <button
+              onClick={() => setExpanded(isOpen ? null : shift.shiftId)}
+              className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.04] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                  <ClipboardCheck size={15} className="text-emerald-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black text-white">{shift.date}</p>
+                  <p className="text-xs text-zinc-300">
+                    Closed {format(new Date(shift.closedAt), 'hh:mm a')} · by {shift.closedBy}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-black text-amber-400">Rs. {fmt(shift.totalRevenue)}</p>
+                  <p className="text-[10px] text-zinc-400">{shift.transactionCount} txn{shift.transactionCount !== 1 ? 's' : ''}</p>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                  Locked
+                </span>
+                {isOpen ? <ChevronUp size={15} className="text-zinc-400" /> : <ChevronDown size={15} className="text-zinc-400" />}
+              </div>
+            </button>
+
+            {/* Expanded detail */}
+            {isOpen && (
+              <div className="px-5 pb-5 border-t border-white/10 pt-4 space-y-4">
+                {/* Financial grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {([
+                    { label: 'Gross Sales',   value: shift.grossSales,              color: 'sky' },
+                    { label: 'Discounts',     value: shift.totalDiscounts,          color: 'purple' },
+                    { label: 'Net Sales',     value: shift.netSales,                color: 'emerald' },
+                    { label: 'VAT Collected', value: shift.totalVat,                color: 'zinc' },
+                    { label: 'Total Revenue', value: shift.totalRevenue,            color: 'amber' },
+                    { label: 'Expenses',      value: shift.totalOperatingExpenses,  color: 'rose' },
+                    { label: 'Net Profit',    value: shift.netProfit,               color: shift.netProfit >= 0 ? 'profit' : 'loss' },
+                  ] as { label: string; value: number; color: string }[]).map(({ label, value, color }) => {
+                    const tc =
+                      color === 'sky'     ? 'text-sky-400'     :
+                      color === 'purple'  ? 'text-purple-400'  :
+                      color === 'emerald' ? 'text-emerald-400' :
+                      color === 'amber'   ? 'text-amber-400'   :
+                      color === 'rose'    ? 'text-rose-400'    :
+                      color === 'profit'  ? 'text-emerald-400' :
+                      color === 'loss'    ? 'text-rose-400'    : 'text-white';
+                    return (
+                      <div key={label} className="bg-[#0d0f1a] border border-white/10 rounded-xl px-3 py-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">{label}</p>
+                        <p className={`text-sm font-black mt-0.5 ${tc}`}>Rs. {fmt(value)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Payment breakdown */}
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Payment Breakdown</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(shift.paymentBreakdown).map(([method, total]) => (
+                      <div key={method} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10">
+                        <span className="text-xs font-black text-white capitalize">
+                          {resolvePaymentLabel(method, settings)}
+                        </span>
+                        <span className="text-xs font-bold text-amber-400">Rs. {fmt(total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="text-[10px] font-mono text-zinc-600">Shift ID: {shift.shiftId}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -1,0 +1,33 @@
+TASK: Implement Immutable Financial Shifts (X/Z Reports & Day-End Register Lock)
+
+TARGET FILES:
+- src/storage/db.ts
+- src/store/usePOSStore.ts (or new src/store/useShiftStore.ts)
+- src/screens/admin/SalesReportsTab.tsx (or AdminPanel.tsx / Reports section)
+
+OBJECTIVE:
+Implement an industry-standard X-Report (live mid-shift preview) and Z-Report (immutable end-of-day register lock) system. Ensure closed day-end totals are permanently locked into a secure historical archive so subsequent order modifications or deletions never alter past financial reports.
+
+SPECIFICATIONS:
+
+1. Storage & Data Model (`src/storage/db.ts` or shift store):
+   - Create a closed shift storage structure (`pos_closed_shifts`) containing immutable snapshots:
+     * date / shiftId
+     * closedAt (ISO timestamp)
+     * closedBy (staff attribution)
+     * grossSales, netSales, totalRevenue, totalVat, totalDiscounts
+     * paymentBreakdown (Cash, Digital QR, Khatta Credits Given, Khatta Repayments Collected)
+     * expensesTotal (maintenance expenses logged today)
+   - Ensure these closed records are read-only and never recalculated dynamically from live orders.
+
+2. UI & Workflow in Admin / Reports:
+   - Add a "Day-End Close & Z-Report" action button inside the Reports or Admin panel, protected behind a Master Admin PIN check.
+   - **X-Report (Live Preview):** Allow managers to view real-time daily totals (sales, VAT, payment methods, expenses) at any time without locking counters.
+   - **Z-Report (Day-End Lock):** When executed, compile today's final audited numbers, require Admin PIN confirmation, save an immutable snapshot to `pos_closed_shifts`, and show a success confirmation.
+   - Historical Reports view must check `pos_closed_shifts` for past dates so audited numbers remain tamper-proof.
+
+CRITICAL PRODUCTION GUARDRAILS:
+- ZERO DESTRUCTIVE CHANGES: Do not modify existing active billing calculations (`src/utils/calcBill.ts`) or active order state machines.
+- DO NOT touch Firebase synchronization listeners in `src/hooks/useFirebaseSync.ts` or `src/utils/firebaseSync.ts`.
+- DO NOT alter Electron silent print handlers (`electron/main.js`, `src/utils/silentPrint.ts`).
+- HARDWARE INDEPENDENCE: Do not assume or require any cash drawer hardware.

@@ -1,5 +1,25 @@
 import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, Settings, StockMovement } from '@/types/pos';
 
+// ── Immutable day-end financial snapshot ───────────────────────────────────────
+export interface ClosedShift {
+  shiftId: string;
+  date: string;           // 'YYYY-MM-DD' — the business day this covers
+  closedAt: string;       // ISO timestamp of when the Z-Report was locked
+  closedBy: string;       // staff name or 'Admin'
+  grossSales: number;     // sum of all payment subtotals (pre-discount, pre-tax)
+  totalDiscounts: number;
+  netSales: number;       // grossSales - totalDiscounts
+  totalVat: number;       // sum of vatAmount across all payments
+  totalRevenue: number;   // actual amount collected (post-discount, post-tax)
+  paymentBreakdown: Record<string, number>; // method → total collected
+  maintenanceExpenses: number;
+  kitchenPurchases: number;
+  barRestocks: number;
+  totalOperatingExpenses: number;
+  netProfit: number;
+  transactionCount: number;
+}
+
 const KEYS = {
   tables: 'pos_tables',
   categories: 'pos_categories',
@@ -12,6 +32,7 @@ const KEYS = {
   stockMovements: 'pos_stockMovements',
   pillars: 'pos_pillars',
   areaOrder: 'pos_areaOrder',
+  closedShifts: 'pos_closed_shifts',
 };
 
 function get<T>(key: string, fallback: T): T {
@@ -159,6 +180,13 @@ export const db = {
   })),
   savePayments: (p: Payment[]) => set(KEYS.payments, p),
 
+  // ── Closed shift archive (immutable — append-only) ──────────────────────────
+  getClosedShifts: (): ClosedShift[] => get<ClosedShift[]>(KEYS.closedShifts, []),
+  appendClosedShift: (shift: ClosedShift): void => {
+    const existing = get<ClosedShift[]>(KEYS.closedShifts, []);
+    set(KEYS.closedShifts, [...existing, shift]);
+  },
+
   getIngredients: (): Ingredient[] => get(KEYS.ingredients, []),
   saveIngredients: (i: Ingredient[]) => set(KEYS.ingredients, i),
 
@@ -240,6 +268,8 @@ export const db = {
         // ── Grocery & inv-mappings (localStorage cache) ───────────────────────
         groceryPurchases: readLS('inv_grocery'),
         invMappings:      readLS('inv_mappings'),
+        // ── Closed shift archive (immutable day-end snapshots) ────────────────
+        closedShifts:     readLS(KEYS.closedShifts),
         // ── Firebase / Zustand-only domains (injected by caller) ─────────────
         maintenanceExpenses: opts.maintenanceExpenses ?? [],
         alcoholProducts:     opts.alcoholProducts    ?? [],
@@ -302,6 +332,8 @@ export const db = {
         // Grocery & inv-mappings cache
         writeIf('inv_grocery',   d.groceryPurchases);
         writeIf('inv_mappings',  d.invMappings);
+        // Closed shift archive
+        writeIf(KEYS.closedShifts, d.closedShifts);
         // Firebase-only domains are intentionally skipped;
         // they will be re-populated by Firebase subscriptions after reload.
 
