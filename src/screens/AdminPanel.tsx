@@ -23,6 +23,7 @@ import {
   Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
   Search, Printer, ArrowUp, ArrowDown, Wrench, UtensilsCrossed,
+  AlertTriangle, RotateCcw, ShieldAlert, FileJson,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -1553,6 +1554,75 @@ const CompanyProfileSection = () => {
     }
   };
 
+  // ── Data-management safeguard modal ─────────────────────────────────────
+  const restoreFileRef = useRef<HTMLInputElement>(null);
+  const [dmAction,      setDmAction]      = useState<null | 'restore' | 'reset'>(null);
+  const [dmStep,        setDmStep]        = useState<'warn' | 'pin' | 'confirm'>('warn');
+  const [dmPin,         setDmPin]         = useState('');
+  const [dmPinError,    setDmPinError]    = useState(false);
+  const [dmConfirmText, setDmConfirmText] = useState('');
+  const [dmFile,        setDmFile]        = useState<File | null>(null);
+  const [dmWorking,     setDmWorking]     = useState(false);
+
+  const openDM = (action: 'restore' | 'reset') => {
+    setDmAction(action);
+    setDmStep('warn');
+    setDmPin('');
+    setDmPinError(false);
+    setDmConfirmText('');
+    setDmFile(null);
+  };
+
+  const closeDM = () => {
+    if (dmWorking) return;
+    setDmAction(null);
+  };
+
+  const handleDMPinNext = () => {
+    if (dmPin === settings.adminPin) {
+      setDmPinError(false);
+      setDmStep('confirm');
+    } else {
+      setDmPinError(true);
+    }
+  };
+
+  const dmConfirmWord = dmAction === 'reset' ? 'RESET' : 'CONFIRM';
+  const dmReady = dmAction === 'reset'
+    ? dmConfirmText === 'RESET'
+    : dmConfirmText === 'CONFIRM' && dmFile !== null;
+
+  const handleDMExecute = async () => {
+    setDmWorking(true);
+    try {
+      // Step D-1: automatic safety backup first
+      handleDownloadFullBackup();
+      // Brief pause so the download can start before page unloads
+      await new Promise<void>((r) => setTimeout(r, 500));
+
+      if (dmAction === 'restore') {
+        if (!dmFile) { toast.error('No backup file selected.'); setDmWorking(false); return; }
+        const text = await dmFile.text();
+        const result = db.importFullBackup(text);
+        if (!result.success) {
+          toast.error(`Restore failed: ${result.error ?? 'Unknown error'}`);
+          setDmWorking(false);
+          return;
+        }
+        toast.success(`Backup restored (Schema v${result.version}). Reloading…`);
+      } else {
+        db.completeFactoryReset();
+        toast.success('Factory reset complete. Reloading…');
+      }
+
+      setTimeout(() => window.location.reload(), 1400);
+    } catch (err) {
+      console.error('[DataManagement] Execute failed:', err);
+      toast.error('Action failed — please try again.');
+      setDmWorking(false);
+    }
+  };
+
   const [cafeName, setCafeName] = useState(settings.cafeName);
   const [cafeAddress, setCafeAddress] = useState(settings.cafeAddress || '');
   const [cafePhone, setCafePhone] = useState(settings.cafePhone || '');
@@ -1669,13 +1739,15 @@ const CompanyProfileSection = () => {
       </div>
 
       {/* ── Data Management ─────────────────────────────────────────────── */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-3">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Data Management</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">
-            Export a full snapshot of all POS data — orders, payments, inventory, customers, staff, and more.
+            Export, restore, or fully reset all POS data. Destructive actions require Admin PIN and typed confirmation.
           </p>
         </div>
+
+        {/* Download full backup */}
         <button
           onClick={handleDownloadFullBackup}
           className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-white/20 hover:border-amber-400/60 hover:bg-[#1e2130] active:scale-[0.98] transition-all text-left"
@@ -1685,12 +1757,202 @@ const CompanyProfileSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Download Full Backup</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">
-              JSON · Schema v2 · All 22 data domains
-            </p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">JSON · Schema v2 · All 22 data domains</p>
+          </div>
+        </button>
+
+        {/* Restore backup */}
+        <button
+          onClick={() => openDM('restore')}
+          className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-orange-500/30 hover:border-orange-400/60 hover:bg-[#1e1814] active:scale-[0.98] transition-all text-left"
+        >
+          <div className="w-9 h-9 rounded-xl bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+            <FileJson size={17} className="text-orange-400" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white">Restore Backup (.json)</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">Overwrites current data · PIN protected</p>
+          </div>
+        </button>
+
+        {/* Factory reset */}
+        <button
+          onClick={() => openDM('reset')}
+          className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-red-500/30 hover:border-red-400/60 hover:bg-[#1e1415] active:scale-[0.98] transition-all text-left"
+        >
+          <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+            <RotateCcw size={17} className="text-red-400" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white">Factory Reset POS</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">Clears all data · Printer config preserved · PIN protected</p>
           </div>
         </button>
       </div>
+
+      {/* Hidden file input for restore */}
+      <input
+        ref={restoreFileRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          setDmFile(f);
+          e.target.value = '';
+        }}
+      />
+
+      {/* ── 4-Step Safeguard Modal ───────────────────────────────────────── */}
+      <Dialog open={dmAction !== null} onOpenChange={(open) => { if (!open) closeDM(); }}>
+        <DialogContent className="bg-[#0e1120] border border-white/10 rounded-3xl shadow-2xl max-w-md w-full p-0 overflow-hidden">
+          {/* Header */}
+          <div className={`px-6 pt-6 pb-4 border-b border-white/10 flex items-center gap-3 ${dmAction === 'reset' ? 'bg-red-950/30' : 'bg-orange-950/20'}`}>
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${dmAction === 'reset' ? 'bg-red-500/20' : 'bg-orange-500/20'}`}>
+              {dmAction === 'reset'
+                ? <ShieldAlert size={20} className="text-red-400" />
+                : <AlertTriangle size={20} className="text-orange-400" />}
+            </div>
+            <div>
+              <DialogTitle className="text-base font-black text-white">
+                {dmAction === 'reset' ? 'Factory Reset POS' : 'Restore Backup'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-zinc-400 mt-0.5">
+                Step {dmStep === 'warn' ? '1' : dmStep === 'pin' ? '2' : '3'} of 3
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="px-6 py-5 space-y-5">
+
+            {/* ── Step A: Warning ─────────────────────────────────────────── */}
+            {dmStep === 'warn' && (
+              <div className="space-y-4">
+                <div className={`rounded-2xl p-4 border text-sm font-bold leading-relaxed ${dmAction === 'reset' ? 'bg-red-950/40 border-red-500/30 text-red-200' : 'bg-orange-950/30 border-orange-500/30 text-orange-200'}`}>
+                  {dmAction === 'reset' ? (
+                    <>
+                      <p className="font-black text-white mb-2">⚠ This will permanently erase all POS data:</p>
+                      <ul className="space-y-1 text-xs list-disc list-inside text-red-200/80">
+                        <li>All orders, payments and transaction history</li>
+                        <li>Menu, categories, tables, and ingredients</li>
+                        <li>Customers, staff accounts, and inventory records</li>
+                        <li>Kitchen purchases, expenses, and meat tracker data</li>
+                      </ul>
+                      <p className="mt-3 text-xs font-black text-white/70">Printer hardware settings will be preserved.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-black text-white mb-2">⚠ Restoring a backup will overwrite your current data:</p>
+                      <ul className="space-y-1 text-xs list-disc list-inside text-orange-200/80">
+                        <li>All current orders and payment history will be replaced</li>
+                        <li>Menu, tables, customers, and staff will be replaced</li>
+                        <li>Firebase-only data will re-sync after reload</li>
+                      </ul>
+                      <p className="mt-3 text-xs font-black text-white/70">A safety backup of the current data will be downloaded automatically before the restore runs.</p>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={() => setDmStep('pin')}
+                  className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}
+                >
+                  I Understand — Continue
+                </button>
+                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* ── Step B: Admin PIN ────────────────────────────────────────── */}
+            {dmStep === 'pin' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
+                    Enter Master Admin PIN
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={8}
+                    autoFocus
+                    value={dmPin}
+                    onChange={(e) => { setDmPin(e.target.value); setDmPinError(false); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleDMPinNext()}
+                    placeholder="••••"
+                    className={`w-full bg-[#181B26] border-2 rounded-xl px-4 py-3.5 text-white font-black text-center text-lg tracking-[0.4em] outline-none transition-all shadow-inner ${dmPinError ? 'border-red-500 placeholder:text-red-400' : 'border-white/20 focus:border-amber-400 placeholder:text-zinc-500'}`}
+                  />
+                  {dmPinError && (
+                    <p className="text-xs font-black text-red-400 mt-2 text-center">Incorrect PIN — try again</p>
+                  )}
+                </div>
+                <button
+                  onClick={handleDMPinNext}
+                  disabled={dmPin.length < 4}
+                  className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm uppercase tracking-wider transition-all"
+                >
+                  Verify PIN
+                </button>
+                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* ── Step C: Typed confirmation ───────────────────────────────── */}
+            {dmStep === 'confirm' && (
+              <div className="space-y-4">
+                {/* File picker for restore */}
+                {dmAction === 'restore' && (
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
+                      Select Backup File
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => restoreFileRef.current?.click()}
+                      className={`w-full py-3 px-4 rounded-xl border-2 border-dashed text-sm font-black transition-all flex items-center justify-center gap-2 ${dmFile ? 'border-green-500/60 bg-green-950/20 text-green-300' : 'border-white/20 hover:border-amber-400/50 text-zinc-400 hover:text-white bg-[#181B26]'}`}
+                    >
+                      <FileJson size={15} />
+                      {dmFile ? dmFile.name : 'Choose .json backup file…'}
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
+                    Type <span className={`font-black ${dmAction === 'reset' ? 'text-red-400' : 'text-orange-400'}`}>{dmConfirmWord}</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus={dmAction === 'reset'}
+                    value={dmConfirmText}
+                    onChange={(e) => setDmConfirmText(e.target.value)}
+                    placeholder={dmConfirmWord}
+                    className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-black rounded-xl px-4 py-3.5 text-sm text-center tracking-widest outline-none transition-all shadow-inner placeholder:text-zinc-600"
+                  />
+                </div>
+
+                <button
+                  onClick={handleDMExecute}
+                  disabled={!dmReady || dmWorking}
+                  className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}
+                >
+                  {dmWorking
+                    ? <><RotateCcw size={14} className="animate-spin" /> Processing…</>
+                    : dmAction === 'reset'
+                      ? <><RotateCcw size={14} /> Execute Factory Reset</>
+                      : <><FileJson size={14} /> Execute Restore</>}
+                </button>
+                <button onClick={closeDM} disabled={dmWorking} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
+                  Cancel
+                </button>
+              </div>
+            )}
+
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <button
         onClick={saveAll}

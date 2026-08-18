@@ -1,0 +1,48 @@
+TASK: Implement Secure Multi-Domain Restore & Factory Reset with 4-Layer Safeguards
+
+TARGET FILES:
+- src/storage/db.ts
+- src/screens/AdminPanel.tsx
+- (Reference: src/store/usePOSStore.ts, src/store/useCustomerStore.ts, src/store/useStaffStore.ts, src/store/useMaintenanceStore.ts, src/store/useInventoryStore.ts, src/store/useKitchenPurchasesStore.ts, src/store/useMeatTrackerStore.ts)
+
+OBJECTIVE:
+Upgrade the Restore and Factory Reset system in `src/storage/db.ts` and `src/screens/AdminPanel.tsx` so that restoring a JSON backup or executing a factory reset is fully comprehensive across all 22 business domains, protected behind a Master PIN check, requires typed text confirmation ("CONFIRM" or "RESET"), and automatically triggers a full backup download before any destructive action.
+
+SPECIFICATIONS:
+
+1. Storage Engine Updates (`src/storage/db.ts`):
+   - Enhance `importFullBackup(jsonData)`:
+     * Parse and inspect the backup JSON (support schema version 2 and legacy v1 fallback).
+     * Populate core POS keys in localStorage: pos_tables, pos_categories, pos_menuItems, pos_orders, pos_payments, pos_settings, pos_pillars, pos_areaOrder, pos_ingredients, pos_recipes, pos_stockMovements.
+     * Populate customer & staff keys: pos_customers, pos_customer_repayments, pos_staff (or staff list).
+     * Populate specialized operational keys: pos_kitchen_purchases, pos_meat_entries, pos_maintenance_expenses, pos_grocery_purchases, pos_inv_mappings, pos_inv_movements.
+     * Return structured result `{ success: boolean, version: number, error?: string }`.
+   - Enhance `completeFactoryReset()`:
+     * Wipe all operational, transaction, customer, expense, and catalog localStorage keys.
+     * Reset active Zustand stores back to initial/clean state.
+     * PRESERVE hardware & printer configuration in localStorage untouched:
+       - `printer_kitchen_device_name`
+       - `printer_reception_device_name`
+       - `pos_is_print_hub`
+       - `pos_theme`
+
+2. UI & Safeguard Modal in Admin Panel (`src/screens/AdminPanel.tsx`):
+   - In Settings -> Company Profile (or Data Management card), add two distinct action buttons styled with warning/danger colors:
+     * "Restore Backup (.json)"
+     * "Factory Reset POS"
+   - When either button is clicked, open a dedicated Confirmation Modal with the following 4-step barrier:
+     * Step A (Warning Description): Clearly explain what will happen.
+     * Step B (Admin PIN Input): Require the 4-digit Master Admin PIN. Validate against the configured admin PIN before enabling the next control.
+     * Step C (Typed Text Confirmation):
+       - For Restore: The user must type exactly `CONFIRM` in an input box.
+       - For Factory Reset: The user must type exactly `RESET` in an input box.
+     * Step D (Execution & Auto-Backup):
+       - When the action button is clicked, immediately call `db.exportFullBackup()` to trigger an automatic safety backup download to the user's computer *first*.
+       - Then execute the restore (with file upload parsing) or completeFactoryReset.
+       - Show a success toast and reload active store data / reload the page cleanly.
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT break or modify existing active billing math in `src/utils/calcBill.ts` or table rendering in `src/screens/TableOverview.tsx`.
+- DO NOT disrupt Electron silent print handlers (`electron/main.js`, `src/utils/silentPrint.ts`).
+- HARDWARE PERSISTENCE: Ensure `printer_kitchen_device_name`, `printer_reception_device_name`, and `pos_is_print_hub` are never cleared during factory reset or backup restore.
+- BACKWARD COMPATIBILITY: Ensure the file input handles older backup formats gracefully without crashing.

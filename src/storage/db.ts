@@ -259,6 +259,107 @@ export const db = {
     });
   },
 
+  /**
+   * Restore a Schema v2 or legacy v1 backup JSON string to localStorage.
+   * Firebase-only domains (alcohol/beverage/cigarette products, invMovements,
+   * maintenanceExpenses) are skipped — Firebase re-syncs them on next connect.
+   * Returns { success, version, error? }.
+   */
+  importFullBackup: (jsonString: string): { success: boolean; version: number; error?: string } => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (typeof parsed !== 'object' || parsed === null) throw new Error('Not a valid JSON object');
+
+      const isV2 = parsed.version === 2 && typeof parsed.data === 'object' && parsed.data !== null;
+
+      if (isV2) {
+        const d = parsed.data as Record<string, unknown>;
+        const writeIf = (lsKey: string, val: unknown) => {
+          if (val !== null && val !== undefined) {
+            localStorage.setItem(lsKey, JSON.stringify(val));
+          }
+        };
+        // Core POS
+        writeIf(KEYS.tables,         d.tables);
+        writeIf(KEYS.areaOrder,      d.areaOrder);
+        writeIf(KEYS.pillars,        d.pillars);
+        writeIf(KEYS.categories,     d.categories);
+        writeIf(KEYS.menuItems,      d.menuItems);
+        writeIf(KEYS.orders,         d.orders);
+        writeIf(KEYS.payments,       d.payments);
+        writeIf(KEYS.settings,       d.settings);
+        writeIf(KEYS.ingredients,    d.ingredients);
+        writeIf(KEYS.recipes,        d.recipes);
+        writeIf(KEYS.stockMovements, d.stockMovements);
+        // Customers & Khatta
+        writeIf('pos_customers',            d.customers);
+        writeIf('pos_customer_repayments',  d.repayments);
+        // Staff
+        writeIf('pos_staff_users', d.staff);
+        // Kitchen operational
+        writeIf('kitchen_purchases',   d.kitchenPurchases);
+        writeIf('kitchen_meat_tracker', d.meatEntries);
+        // Grocery & inv-mappings cache
+        writeIf('inv_grocery',   d.groceryPurchases);
+        writeIf('inv_mappings',  d.invMappings);
+        // Firebase-only domains are intentionally skipped;
+        // they will be re-populated by Firebase subscriptions after reload.
+
+        return { success: true, version: 2 };
+      }
+
+      // ── Legacy v1 fallback (flat object, values are raw JSON strings) ──────
+      const legacyMap: [string, string][] = [
+        ['tables',         KEYS.tables],
+        ['areaOrder',      KEYS.areaOrder],
+        ['pillars',        KEYS.pillars],
+        ['categories',     KEYS.categories],
+        ['menuItems',      KEYS.menuItems],
+        ['orders',         KEYS.orders],
+        ['payments',       KEYS.payments],
+        ['settings',       KEYS.settings],
+        ['ingredients',    KEYS.ingredients],
+        ['recipes',        KEYS.recipes],
+        ['stockMovements', KEYS.stockMovements],
+      ];
+      let restored = 0;
+      legacyMap.forEach(([exportKey, lsKey]) => {
+        const val = parsed[exportKey];
+        if (val !== null && val !== undefined) {
+          localStorage.setItem(lsKey, typeof val === 'string' ? val : JSON.stringify(val));
+          restored++;
+        }
+      });
+      if (restored === 0) throw new Error('No recognisable data found in file');
+
+      return { success: true, version: 1 };
+    } catch (err) {
+      return { success: false, version: 0, error: String(err) };
+    }
+  },
+
+  /**
+   * Wipe all operational localStorage data and return the POS to a clean state.
+   * PRESERVES hardware / UX keys so printers and theme survive the reset:
+   *   printer_kitchen_device_name, printer_reception_device_name,
+   *   pos_is_print_hub, pos_theme.
+   */
+  completeFactoryReset: () => {
+    const PRESERVE = new Set([
+      'printer_kitchen_device_name',
+      'printer_reception_device_name',
+      'pos_is_print_hub',
+      'pos_theme',
+    ]);
+    // Collect first — do NOT mutate while iterating localStorage
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && !PRESERVE.has(key)) toRemove.push(key);
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  },
+
   // seed() is intentionally a no-op — all initial states start empty.
   // Data is only written to storage via explicit user actions.
   seed: () => {},
