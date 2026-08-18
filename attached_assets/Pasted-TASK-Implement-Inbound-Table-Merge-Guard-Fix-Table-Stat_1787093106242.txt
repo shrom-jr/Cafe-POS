@@ -1,0 +1,42 @@
+TASK: Implement Inbound Table Merge Guard (Fix Table Status Desync)
+
+TARGET FILE:
+- src/hooks/useFirebaseSync.ts
+
+OBJECTIVE:
+Add a `mergeRemoteTables` reconciliation helper in `src/hooks/useFirebaseSync.ts` (mirroring `mergeRemoteOrders`) so that incoming remote snapshots do not overwrite locally occupied, billed, or billing tables back to 'free' while a write is in-flight or local state is active.
+
+SPECIFICATIONS:
+
+1. Add `mergeRemoteTables` Helper:
+   - Create and use a reconciliation function:
+     ```typescript
+     function mergeRemoteTables(current: CafeTable[], remote: CafeTable[]): CafeTable[] {
+       return remote.map((remoteTable) => {
+         const local = current.find((t) => t.id === remoteTable.id);
+         if (!local) return remoteTable;
+
+         // If remote still shows 'free' but local has an active order / is occupied or billing
+         // preserve the local authoritative state while write is in-flight
+         if (
+           remoteTable.status === 'free' &&
+           (local.status === 'occupied' || local.status === 'billed' || local.status === 'billing')
+         ) {
+           return local;
+         }
+
+         return remoteTable;
+       });
+     }
+     ```
+
+2. Update `subscribeToTables` Inbound Listener:
+   - Inside `subscribeToTables` handler, replace the direct `setTables(remoteTables)` call:
+     * Compute `const merged = mergeRemoteTables(currentTables, remoteTables);`
+     * Compare and apply `if (JSON.stringify(currentTables) !== JSON.stringify(merged)) { setTables(merged); }`
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT modify `TableCard.tsx`, `TableOverview.tsx`, `AdminPanel.tsx`, or `src/store/usePOSStore.ts`.
+- DO NOT alter `mergeRemoteOrders` or existing order/payment subscription listeners.
+- DO NOT touch billing math (`src/utils/calcBill.ts`), ticket splitting (`src/utils/ticketSplitter.ts`), or Electron silent print utilities (`electron/main.js`, `src/utils/silentPrint.ts`).
+- DO NOT disrupt Schema v2 backup/restore in `src/storage/db.ts` or closed shift ledgers (`pos_closed_shifts`).

@@ -6,6 +6,7 @@ import { useKitchenPurchasesStore } from "@/store/useKitchenPurchasesStore";
 import { useMeatTrackerStore } from "@/store/useMeatTrackerStore";
 import { useMaintenanceStore } from "@/store/useMaintenanceStore";
 import { db } from "@/storage/db";
+import { CafeTable } from "@/types/pos";
 import {
   subscribeToOrders,
   subscribeToTables,
@@ -77,6 +78,26 @@ function mergeRemoteOrders(
   }
 
   return merged;
+}
+
+/**
+ * Preserve a locally active table when Firebase briefly reports the same
+ * table as free while the granular table write is still in flight.
+ */
+function mergeRemoteTables(current: CafeTable[], remote: CafeTable[]): CafeTable[] {
+  return remote.map((remoteTable) => {
+    const local = current.find((table) => table.id === remoteTable.id);
+    if (!local) return remoteTable;
+
+    if (
+      remoteTable.status === "free" &&
+      (local.status === "occupied" || local.status === "billed" || local.status === "billing")
+    ) {
+      return local;
+    }
+
+    return remoteTable;
+  });
 }
 
 export function useFirebaseSync() {
@@ -170,8 +191,9 @@ export function useFirebaseSync() {
         return;
       }
 
-      if (JSON.stringify(currentTables) !== JSON.stringify(remoteTables)) {
-        setTables(remoteTables);
+      const merged = mergeRemoteTables(currentTables, remoteTables);
+      if (JSON.stringify(currentTables) !== JSON.stringify(merged)) {
+        setTables(merged);
       }
     });
 
