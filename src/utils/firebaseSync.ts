@@ -1,4 +1,4 @@
-import { ref, onValue, set } from "firebase/database";
+import { ref, onValue, set, update } from "firebase/database";
 import { db } from "../firebase";
 import type {
   Order,
@@ -194,22 +194,127 @@ export async function pushPaymentsToFirebase(payments: Payment[]) {
 // These write directly to a child path so a single device update never
 // replaces the entire root array — safe for concurrent multi-device use.
 
+export type SyncMutation = {
+  syncRevision: number;
+  syncMutationId: string;
+};
+
+export type OrderTombstone = SyncMutation & {
+  id: string;
+};
+
+function compareSyncMutation(
+  left: Partial<SyncMutation> | undefined,
+  right: Partial<SyncMutation> | undefined,
+): number {
+  const leftRevision = left?.syncRevision ?? 0;
+  const rightRevision = right?.syncRevision ?? 0;
+  if (leftRevision !== rightRevision) return leftRevision - rightRevision;
+  return (left?.syncMutationId ?? "").localeCompare(right?.syncMutationId ?? "");
+}
+
+const pendingOrderWrites = new Map<string, SyncMutation>();
+const pendingTableWrites = new Map<string, SyncMutation>();
+const pendingOrderDeletes = new Map<string, SyncMutation>();
+
+function newSyncMutation(): SyncMutation {
+  return {
+    // A monotonic local clock is enough for acknowledging this tab's own
+    // write. The mutation ID breaks ties between two writes in one tick.
+    syncRevision: Date.now(),
+    syncMutationId: crypto.randomUUID(),
+  };
+}
+
+function withSyncMutation<T extends object>(record: T, mutation: SyncMutation): T & SyncMutation {
+  return {
+    ...record,
+    ...mutation,
+  };
+}
+
+function sameMutation(left: SyncMutation | undefined, right: SyncMutation): boolean {
+  return Boolean(
+    left &&
+      left.syncRevision === right.syncRevision &&
+      left.syncMutationId === right.syncMutationId,
+  );
+}
+
+function recordData<T>(record: T): T {
+  return JSON.parse(JSON.stringify(record));
+}
+
+/**
+ * Write related order/table records in one Firebase multi-location update.
+ * Every record in a logical POS mutation receives the same mutation metadata.
+ */
+export async function writeOrderTableMutation({
+  orders = [],
+  tables = [],
+  deletedOrderIds = [],
+}: {
+  orders?: Order[];
+  tables?: CafeTable[];
+  deletedOrderIds?: string[];
+}): Promise<void> {
+  if (!orders.length && !tables.length && !deletedOrderIds.length) return;
+
+  const mutation = newSyncMutation();
+  const updates: Record<string, unknown> = {};
+
+  for (const order of orders) {
+    const record = withSyncMutation(order, mutation);
+    pendingOrderWrites.set(order.id, mutation);
+    updates[`orders/${order.id}`] = recordData(record);
+  }
+
+  for (const table of tables) {
+    const record = withSyncMutation(table, mutation);
+    pendingTableWrites.set(table.id, mutation);
+    updates[`tables/${table.id}`] = recordData(record);
+  }
+
+  for (const orderId of deletedOrderIds) {
+    pendingOrderDeletes.set(orderId, mutation);
+    updates[`orders/${orderId}`] = null;
+    updates[`orderTombstones/${orderId}`] = {
+      id: orderId,
+      ...mutation,
+    };
+  }
+
+  try {
+    await update(ref(db), updates);
+  } catch (error) {
+    for (const order of orders) {
+      if (sameMutation(pendingOrderWrites.get(order.id), mutation)) {
+        pendingOrderWrites.delete(order.id);
+      }
+    }
+    for (const table of tables) {
+      if (sameMutation(pendingTableWrites.get(table.id), mutation)) {
+        pendingTableWrites.delete(table.id);
+      }
+    }
+    for (const orderId of deletedOrderIds) {
+      if (sameMutation(pendingOrderDeletes.get(orderId), mutation)) {
+        pendingOrderDeletes.delete(orderId);
+      }
+    }
+    console.error("❌ [Firebase Order/Table Mutation FAILED]:", error);
+  }
+}
+
 /** Write (or overwrite) one table record at `tables/${table.id}`. */
 export async function writeTableRecord(table: CafeTable): Promise<void> {
-  try {
-    await set(
-      ref(db, `tables/${table.id}`),
-      JSON.parse(JSON.stringify(table)),
-    );
-  } catch (error) {
-    console.error("❌ [Firebase Table Write FAILED]:", error);
-  }
+  await writeOrderTableMutation({ tables: [table] });
 }
 
 /** Delete one table record by writing `null` to `tables/${tableId}`. */
 export async function deleteTableRecord(tableId: string): Promise<void> {
   try {
-    await set(ref(db, `tables/${tableId}`), null);
+    await update(ref(db), { [`tables/${tableId}`]: null });
   } catch (error) {
     console.error("❌ [Firebase Table Delete FAILED]:", error);
   }
@@ -217,22 +322,38 @@ export async function deleteTableRecord(tableId: string): Promise<void> {
 
 /** Write (or overwrite) one order record at `orders/${order.id}`. */
 export async function writeOrderRecord(order: Order): Promise<void> {
-  try {
-    await set(
-      ref(db, `orders/${order.id}`),
-      JSON.parse(JSON.stringify(order)),
-    );
-  } catch (error) {
-    console.error("❌ [Firebase Order Write FAILED]:", error);
-  }
+  await writeOrderTableMutation({ orders: [order] });
 }
 
-/** Delete one order record by writing `null` to `orders/${orderId}`. */
+/** Delete one order record and publish a durable tombstone. */
 export async function deleteOrderRecord(orderId: string): Promise<void> {
-  try {
-    await set(ref(db, `orders/${orderId}`), null);
-  } catch (error) {
-    console.error("❌ [Firebase Order Delete FAILED]:", error);
+  await writeOrderTableMutation({ deletedOrderIds: [orderId] });
+}
+
+export function getPendingOrderWrite(orderId: string): SyncMutation | undefined {
+  return pendingOrderWrites.get(orderId);
+}
+
+export function getPendingTableWrite(tableId: string): SyncMutation | undefined {
+  return pendingTableWrites.get(tableId);
+}
+
+export function getPendingOrderDelete(orderId: string): SyncMutation | undefined {
+  return pendingOrderDeletes.get(orderId);
+}
+
+function acknowledgePendingWrite(
+  pending: Map<string, SyncMutation>,
+  id: string,
+  remote: Partial<SyncMutation> | undefined,
+) {
+  const local = pending.get(id);
+  if (
+    local &&
+    remote?.syncRevision === local.syncRevision &&
+    remote?.syncMutationId === local.syncMutationId
+  ) {
+    pending.delete(id);
   }
 }
 
@@ -313,12 +434,60 @@ export async function pushStaffToFirebase(users: StaffUser[]) {
   }
 }
 
-// Subscribe to Live Orders
-export function subscribeToOrders(callback: (orders: Order[]) => void) {
-  return onValue(ref(db, "orders"), (snapshot) => {
-    const cleanOrders = toArray(snapshot.val()).map(sanitizeOrder);
-    callback(cleanOrders);
+// Subscribe to Live Orders and durable delete tombstones.
+export function subscribeToOrders(
+  callback: (orders: Order[], tombstones: OrderTombstone[]) => void,
+) {
+  let remoteOrders: Order[] = [];
+  let tombstones: OrderTombstone[] = [];
+  let ordersReady = false;
+  let tombstonesReady = false;
+
+  const emit = () => {
+    if (!ordersReady || !tombstonesReady) return;
+
+    for (const order of remoteOrders) {
+      acknowledgePendingWrite(pendingOrderWrites, order.id, order);
+    }
+
+    const tombstoneById = new Map(tombstones.map((tombstone) => [tombstone.id, tombstone]));
+    const cleanOrders = remoteOrders
+      .filter((order) => {
+        const tombstone = tombstoneById.get(order.id);
+        if (!tombstone) return true;
+        // A later rewrite of the same order supersedes an older tombstone.
+        return compareSyncMutation(order, tombstone) > 0;
+      })
+      .map(sanitizeOrder);
+
+    for (const tombstone of tombstones) {
+      acknowledgePendingWrite(pendingOrderDeletes, tombstone.id, tombstone);
+    }
+
+    callback(cleanOrders, tombstones);
+  };
+
+  const unsubscribeOrders = onValue(ref(db, "orders"), (snapshot) => {
+    remoteOrders = toArray(snapshot.val()).map(sanitizeOrder);
+    ordersReady = true;
+    emit();
   });
+
+  const unsubscribeTombstones = onValue(ref(db, "orderTombstones"), (snapshot) => {
+    tombstones = Object.entries(snapshot.val() ?? {})
+      .filter(([, value]) => Boolean(value))
+      .map(([id, value]) => ({
+        id,
+        ...(value as Omit<OrderTombstone, "id">),
+      }));
+    tombstonesReady = true;
+    emit();
+  });
+
+  return () => {
+    unsubscribeOrders();
+    unsubscribeTombstones();
+  };
 }
 
 // Subscribe to Live Payments
@@ -489,6 +658,9 @@ export async function writePinReset(userId: string, otp: string, expiresAt: numb
 export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
   return onValue(ref(db, "tables"), (snapshot) => {
     const cleanTables = toArray(snapshot.val()) as CafeTable[];
+    for (const table of cleanTables) {
+      acknowledgePendingWrite(pendingTableWrites, table.id, table);
+    }
     callback(cleanTables);
   });
 }

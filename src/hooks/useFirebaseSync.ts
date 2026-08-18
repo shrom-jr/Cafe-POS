@@ -36,7 +36,9 @@ import {
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
-  writeTableRecord,
+  getPendingOrderWrite,
+  getPendingTableWrite,
+  type OrderTombstone,
 } from "@/utils/firebaseSync";
 import {
   DEFAULT_TABLES,
@@ -51,14 +53,29 @@ import {
 function mergeRemoteOrders(
   currentOrders: ReturnType<typeof usePOSStore.getState>['orders'],
   remoteOrders: ReturnType<typeof usePOSStore.getState>['orders'],
+  tombstones: OrderTombstone[] = [],
 ): ReturnType<typeof usePOSStore.getState>['orders'] {
   const remoteById = new Map(remoteOrders.map((o) => [o.id, o]));
+  const tombstoneById = new Map(tombstones.map((tombstone) => [tombstone.id, tombstone]));
+  const compare = (
+    left: { syncRevision?: number; syncMutationId?: string } | undefined,
+    right: { syncRevision?: number; syncMutationId?: string } | undefined,
+  ) => {
+    const revisionDifference = (left?.syncRevision ?? 0) - (right?.syncRevision ?? 0);
+    if (revisionDifference !== 0) return revisionDifference;
+    return (left?.syncMutationId ?? "").localeCompare(right?.syncMutationId ?? "");
+  };
 
   // Start from remote, substituting the local copy when it has unsent items
   // that haven't propagated to Firebase yet (write-in-flight).
   const merged = remoteOrders.map((remote) => {
     const local = currentOrders.find((o) => o.id === remote.id);
     if (!local) return remote;
+    if (compare(local, remote) > 0) return local;
+
+    const pendingWrite = getPendingOrderWrite(remote.id);
+    if (pendingWrite && compare(remote, pendingWrite) < 0) return local;
+
     const countDrafts = (items: typeof local.items) =>
       items.filter((i) => i.kitchenStatus !== 'sent' && !i.sentToKitchen && i.status !== 'paid').length;
     if (
@@ -71,9 +88,20 @@ function mergeRemoteOrders(
     return remote;
   });
 
-  // Preserve locally-created active orders not yet visible in Firebase.
+  // Preserve only locally-created orders whose write is still pending. A
+  // missing remote record without a pending write is a legitimate delete from
+  // another tab and must not be resurrected.
   for (const local of currentOrders) {
-    if (!remoteById.has(local.id) && (local.status === 'active' || local.status === 'billed')) {
+    if (remoteById.has(local.id)) continue;
+    const pendingWrite = getPendingOrderWrite(local.id);
+    const tombstone = tombstoneById.get(local.id);
+    const pendingCreateIsNewer =
+      Boolean(pendingWrite) && (!tombstone || compare(pendingWrite, tombstone) > 0);
+
+    if (
+      pendingCreateIsNewer &&
+      (local.status === 'active' || local.status === 'billed')
+    ) {
       merged.push(local);
     }
   }
@@ -122,17 +150,28 @@ function mergeRemoteTables(
     const local = current.find((table) => table.id === remoteTable.id);
     if (!local) return remoteTable;
 
+    const compareRevision =
+      (local.syncRevision ?? 0) - (remoteTable.syncRevision ?? 0);
+    if (
+      compareRevision > 0 ||
+      (compareRevision === 0 &&
+        (local.syncMutationId ?? "").localeCompare(remoteTable.syncMutationId ?? "") > 0)
+    ) {
+      return local;
+    }
+
+    const pendingWrite = getPendingTableWrite(remoteTable.id);
+    if (
+      pendingWrite &&
+      ((remoteTable.syncRevision ?? 0) < pendingWrite.syncRevision ||
+        ((remoteTable.syncRevision ?? 0) === pendingWrite.syncRevision &&
+          (remoteTable.syncMutationId ?? "").localeCompare(pendingWrite.syncMutationId) < 0))
+    ) {
+      return local;
+    }
+
     if (remoteTable.status === "free") {
       const activeOrder = activeOrderForTable(currentOrders, remoteTable.id);
-
-      if (
-        local.status === "occupied" ||
-        local.status === "billed" ||
-        local.status === "billing"
-      ) {
-        return local;
-      }
-
       if (activeOrder) {
         return {
           ...remoteTable,
@@ -144,6 +183,25 @@ function mergeRemoteTables(
     }
 
     return remoteTable;
+  });
+}
+
+function releaseTablesWithoutActiveOrders(
+  tables: CafeTable[],
+  orders: POSOrder[],
+): CafeTable[] {
+  return tables.map((table) => {
+    if (table.status === "free" || !table.orderId) return table;
+    if (activeOrderForTable(orders, table.id)) return table;
+    if (getPendingTableWrite(table.id)) return table;
+
+    return {
+      ...table,
+      status: "free",
+      orderId: undefined,
+      orderStartTime: undefined,
+      pax: undefined,
+    };
   });
 }
 
@@ -210,17 +268,11 @@ export function useFirebaseSync() {
     setCategories([]);
     setPillars([]);
 
-    const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
+    const unsubscribeOrders = subscribeToOrders((remoteOrders, tombstones) => {
       const currentOrders = usePOSStore.getState().orders;
 
-      // FIREWALL: never let an empty remote snapshot wipe non-empty local orders.
-      // Still run table repair below so an active local order cannot remain
-      // paired with a free table.
-      const preserveLocalOrders = remoteOrders.length === 0 && currentOrders.length > 0;
-      const merged = preserveLocalOrders
-        ? currentOrders
-        : mergeRemoteOrders(currentOrders, remoteOrders);
-      if (!preserveLocalOrders && JSON.stringify(currentOrders) !== JSON.stringify(merged)) {
+      const merged = mergeRemoteOrders(currentOrders, remoteOrders, tombstones);
+      if (JSON.stringify(currentOrders) !== JSON.stringify(merged)) {
         setOrders(merged);
       }
 
@@ -228,15 +280,10 @@ export function useFirebaseSync() {
       // active order arrives before its table update, repair the local table
       // immediately and persist only the affected table record.
       const currentTables = usePOSStore.getState().tables;
-      const repairedTables = promoteFreeTablesForActiveOrders(currentTables, merged);
+      const releasedTables = releaseTablesWithoutActiveOrders(currentTables, merged);
+      const repairedTables = promoteFreeTablesForActiveOrders(releasedTables, merged);
       if (JSON.stringify(currentTables) !== JSON.stringify(repairedTables)) {
         setTables(repairedTables);
-        repairedTables.forEach((table) => {
-          const previous = currentTables.find((candidate) => candidate.id === table.id);
-          if (previous?.status === "free" && table.status !== "free") {
-            writeTableRecord(table);
-          }
-        });
       }
     });
 
@@ -246,8 +293,8 @@ export function useFirebaseSync() {
 
       if (remoteTables.length === 0) {
         if (currentTables.length > 0) {
-          // Remote empty but local has tables — keep local silently.
-          // Granular writeTableRecord calls will re-sync on the next table action.
+          // Preserve the existing table catalog while Firebase is being
+          // bootstrapped, but do not apply the old occupied-state guard.
           return;
         }
         // Both sides empty — one-time bulk seed with restaurant defaults.
@@ -259,12 +306,6 @@ export function useFirebaseSync() {
       const merged = mergeRemoteTables(currentTables, remoteTables, currentOrders);
       if (JSON.stringify(currentTables) !== JSON.stringify(merged)) {
         setTables(merged);
-        merged.forEach((table) => {
-          const remote = remoteTables.find((candidate) => candidate.id === table.id);
-          if (remote?.status === "free" && table.status !== "free") {
-            writeTableRecord(table);
-          }
-        });
       }
     });
 

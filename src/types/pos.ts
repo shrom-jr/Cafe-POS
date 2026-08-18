@@ -8,6 +8,9 @@ export interface CafeTable {
   orderId?: string;
   orderStartTime?: number;
   pax?: number;
+  /** Firebase conflict-resolution metadata. */
+  syncRevision?: number;
+  syncMutationId?: string;
 }
 
 export type CategoryPillar = string;
@@ -162,6 +165,9 @@ export interface Order {
     kot?: 'pending' | 'printed';
     bot?: 'pending' | 'printed';
   };
+  /** Firebase conflict-resolution metadata. */
+  syncRevision?: number;
+  syncMutationId?: string;
 }
 
 export interface Payment {

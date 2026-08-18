@@ -8,7 +8,13 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { getStaffName } from '@/utils/staffName';
 import { tableNameKey } from '@/utils/tableName';
 import { buildTicket, nextTicketNumber, resolveItemDestination, splitDraftItems } from '@/utils/ticketSplitter';
-import { writeTableRecord, writeOrderRecord, writePaymentRecord, deleteTableRecord, deleteOrderRecord } from '../utils/firebaseSync';
+import {
+  writeTableRecord,
+  writeOrderRecord,
+  writePaymentRecord,
+  deleteTableRecord,
+  writeOrderTableMutation,
+} from '../utils/firebaseSync';
 
 type DynamicPillar = string;
 
@@ -227,12 +233,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { tables, orders };
     });
-    // Sync freed table and any orders that were marked paid
+    // Sync the freed table and settled orders in one logical mutation.
     const clearedTable = get().tables.find((t) => t.id === id);
-    if (clearedTable) writeTableRecord(clearedTable);
-    get().orders
+    const settledOrders = get().orders
       .filter((o) => o.tableId === id && o.status === 'paid')
-      .forEach((o) => writeOrderRecord(o));
+    if (clearedTable || settledOrders.length) {
+      writeOrderTableMutation({
+        tables: clearedTable ? [clearedTable] : [],
+        orders: settledOrders,
+      });
+    }
   },
 
   addPillar: (name) => {
@@ -353,10 +363,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
-    // Granular Firebase sync: new order + occupied table
-    writeOrderRecord(order);
     const occupiedTable = get().tables.find((t) => t.id === tableId);
-    if (occupiedTable) writeTableRecord(occupiedTable);
+    if (occupiedTable) {
+      writeOrderTableMutation({ orders: [order], tables: [occupiedTable] });
+    } else {
+      writeOrderRecord(order);
+    }
 
     return order;
   },
@@ -440,9 +452,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
     });
     const updatedOrder = get().orders.find((order) => order.id === orderId);
     if (updatedOrder) {
-      writeOrderRecord(updatedOrder);
       const table = get().tables.find((candidate) => candidate.id === updatedOrder.tableId);
-      if (table) writeTableRecord(table);
+      if (table) {
+        writeOrderTableMutation({ orders: [updatedOrder], tables: [table] });
+      } else {
+        writeOrderRecord(updatedOrder);
+      }
     }
   },
 
@@ -568,9 +583,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
     // Granular Firebase sync: updated order + table (sendToKitchen doesn't change table status but keeps it fresh)
     const updatedOrder = get().orders.find((o) => o.id === orderId);
     if (updatedOrder) {
-      writeOrderRecord(updatedOrder);
       const updatedTable = get().tables.find((t) => t.id === updatedOrder.tableId);
-      if (updatedTable) writeTableRecord(updatedTable);
+      if (updatedTable) {
+        writeOrderTableMutation({ orders: [updatedOrder], tables: [updatedTable] });
+      } else {
+        writeOrderRecord(updatedOrder);
+      }
     }
   },
 
@@ -691,13 +709,18 @@ export const usePOSStore = create<POSState>((set, get) => ({
       return { orders, tables };
     });
     const movedOrder = get().orders.find((order) => order.id === orderId);
-    if (movedOrder) writeOrderRecord(movedOrder);
-    if (oldTableId) {
-      const oldTable = get().tables.find((table) => table.id === oldTableId);
-      if (oldTable) writeTableRecord(oldTable);
-    }
+    const oldTable = oldTableId
+      ? get().tables.find((table) => table.id === oldTableId)
+      : undefined;
     const newTable = get().tables.find((table) => table.id === newTableId);
-    if (newTable) writeTableRecord(newTable);
+    if (movedOrder && oldTable && newTable) {
+      writeOrderTableMutation({
+        orders: [movedOrder],
+        tables: [oldTable, newTable],
+      });
+    } else if (movedOrder) {
+      writeOrderRecord(movedOrder);
+    }
   },
 
   attachCustomerToOrder: (orderId, customer) => {
@@ -763,13 +786,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
-    // Granular Firebase sync: updated/new order + table (covers both branches)
+    // Sync the updated/new order and table together when this created a draft.
     const syncedOrder = get().orders.find(
       (o) => o.tableId === tableId && (o.status === 'active' || o.status === 'billed'),
     );
-    if (syncedOrder) writeOrderRecord(syncedOrder);
     const syncedTable = get().tables.find((t) => t.id === tableId);
-    if (syncedTable) writeTableRecord(syncedTable);
+    if (syncedOrder && syncedTable) {
+      writeOrderTableMutation({ orders: [syncedOrder], tables: [syncedTable] });
+    } else if (syncedOrder) {
+      writeOrderRecord(syncedOrder);
+    }
   },
 
   clearOrder: (orderId) => {
@@ -788,11 +814,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
-    // Granular Firebase sync: remove order node + update freed table
+    // Delete the order and free its table in one atomic Firebase update. The
+    // delete also leaves a tombstone so another tab cannot resurrect it.
     if (orderToDelete) {
-      deleteOrderRecord(orderId);
       const clearedTable = get().tables.find((t) => t.id === orderToDelete.tableId);
-      if (clearedTable) writeTableRecord(clearedTable);
+      writeOrderTableMutation({
+        deletedOrderIds: [orderId],
+        tables: clearedTable ? [clearedTable] : [],
+      });
     }
   },
 
@@ -863,9 +892,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const fbNewPayment = allPayments[allPayments.length - 1];
     if (fbNewPayment) writePaymentRecord(fbNewPayment);
     const fbSettledOrder = get().orders.find((o) => o.id === payment.orderId);
-    if (fbSettledOrder) writeOrderRecord(fbSettledOrder);
     const fbSettledTable = fbSettledOrder ? get().tables.find((t) => t.id === fbSettledOrder.tableId) : undefined;
-    if (fbSettledTable) writeTableRecord(fbSettledTable);
+    if (fbSettledOrder && fbSettledTable) {
+      writeOrderTableMutation({ orders: [fbSettledOrder], tables: [fbSettledTable] });
+    } else if (fbSettledOrder) {
+      writeOrderRecord(fbSettledOrder);
+    }
 
     // ── Customer consumption metrics ─────────────────────────────────────────
     // When the settled order has an attached customer, record the visit,
