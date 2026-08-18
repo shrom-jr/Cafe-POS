@@ -1,0 +1,38 @@
+TASK: Connect Zustand Actions to Granular Firebase Writers (Multi-Device Safety Step 2)
+
+TARGET FILE:
+- src/store/usePOSStore.ts
+
+OBJECTIVE:
+Update state mutation actions in `src/store/usePOSStore.ts` to call the granular single-record Firebase writers (`writeTableRecord`, `writeOrderRecord`, `writePaymentRecord`, `deleteTableRecord`, `deleteOrderRecord`) imported from `src/utils/firebaseSync.ts`.
+
+SPECIFICATIONS:
+
+1. Import Writers:
+   - Import `{ writeTableRecord, writeOrderRecord, writePaymentRecord, deleteTableRecord, deleteOrderRecord }` from `../utils/firebaseSync`.
+
+2. Wire Individual Store Actions:
+   - `createOrder`:
+     * After updating local state, invoke `writeTableRecord(updatedTable)` and `writeOrderRecord(newOrder)` in the background.
+   - `sendToKitchen`:
+     * After splitting routes, generating KOT/BOT tickets, and updating item statuses on the order, invoke `writeOrderRecord(updatedOrder)` and `writeTableRecord(updatedTable)`.
+   - `voidOrderItem`:
+     * After updating order items and void tickets, invoke `writeOrderRecord(updatedOrder)`.
+   - `updateTableStatus` / `setTablePax` / `assignTableCustomer`:
+     * After updating the target table, invoke `writeTableRecord(updatedTable)`.
+   - Table Settlement & Payment Actions (`addPayment` / `settleTable` / bill payment):
+     * Invoke `writePaymentRecord(newPayment)`.
+     * Invoke `writeOrderRecord(updatedOrder)`.
+     * Invoke `writeTableRecord(updatedTable)`.
+   - Table Reset / Clear:
+     * Invoke `writeTableRecord(clearedTable)` (and `deleteOrderRecord(orderId)` if the active order is cleared).
+
+3. Execution Rules:
+   - Keep all local Zustand state updates completely synchronous and immediate so the UI never lags.
+   - Dispatch the Firebase writer calls asynchronously without blocking the UI thread (handle errors silently via the existing logging wrappers).
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT alter billing mathematics in `src/utils/calcBill.ts`.
+- DO NOT touch Electron silent printing or ticket splitting logic (`src/utils/ticketSplitter.ts`, `src/utils/silentPrint.ts`).
+- DO NOT disrupt Schema v2 backup/restore in `src/storage/db.ts` or closed shift ledgers (`pos_closed_shifts`).
+- Ensure every Firebase write call is safely null-checked against undefined table or order objects.

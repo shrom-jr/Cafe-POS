@@ -8,6 +8,7 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { getStaffName } from '@/utils/staffName';
 import { tableNameKey } from '@/utils/tableName';
 import { buildTicket, nextTicketNumber, resolveItemDestination, splitDraftItems } from '@/utils/ticketSplitter';
+import { writeTableRecord, writeOrderRecord, writePaymentRecord, deleteTableRecord, deleteOrderRecord } from '../utils/firebaseSync';
 
 type DynamicPillar = string;
 
@@ -180,6 +181,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { tables };
     });
+    const updatedTable = get().tables.find((t) => t.id === id);
+    if (updatedTable) writeTableRecord(updatedTable);
   },
 
   updateTableGuests: (id, guests) => {
@@ -196,6 +199,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { tables };
     });
+    const updatedTable = get().tables.find((t) => t.id === id);
+    if (updatedTable) writeTableRecord(updatedTable);
   },
 
   deleteTable: (id) => {
@@ -222,6 +227,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { tables, orders };
     });
+    // Sync freed table and any orders that were marked paid
+    const clearedTable = get().tables.find((t) => t.id === id);
+    if (clearedTable) writeTableRecord(clearedTable);
+    get().orders
+      .filter((o) => o.tableId === id && o.status === 'paid')
+      .forEach((o) => writeOrderRecord(o));
   },
 
   addPillar: (name) => {
@@ -342,6 +353,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
+    // Granular Firebase sync: new order + occupied table
+    writeOrderRecord(order);
+    const occupiedTable = get().tables.find((t) => t.id === tableId);
+    if (occupiedTable) writeTableRecord(occupiedTable);
 
     return order;
   },
@@ -544,6 +559,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { orders };
     });
+    // Granular Firebase sync: updated order + table (sendToKitchen doesn't change table status but keeps it fresh)
+    const updatedOrder = get().orders.find((o) => o.id === orderId);
+    if (updatedOrder) {
+      writeOrderRecord(updatedOrder);
+      const updatedTable = get().tables.find((t) => t.id === updatedOrder.tableId);
+      if (updatedTable) writeTableRecord(updatedTable);
+    }
   },
 
   voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {
@@ -628,6 +650,9 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { orders };
     });
+    // Granular Firebase sync: voided order
+    const voidedOrder = get().orders.find((o) => o.id === orderId);
+    if (voidedOrder) writeOrderRecord(voidedOrder);
   },
 
   moveOrder: (orderId, newTableId) => {
@@ -722,9 +747,18 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
+    // Granular Firebase sync: updated/new order + table (covers both branches)
+    const syncedOrder = get().orders.find(
+      (o) => o.tableId === tableId && (o.status === 'active' || o.status === 'billed'),
+    );
+    if (syncedOrder) writeOrderRecord(syncedOrder);
+    const syncedTable = get().tables.find((t) => t.id === tableId);
+    if (syncedTable) writeTableRecord(syncedTable);
   },
 
   clearOrder: (orderId) => {
+    // Pre-lookup before set so we have the tableId for Firebase writes
+    const orderToDelete = get().orders.find((o) => o.id === orderId);
     set((state) => {
       const order = state.orders.find((o) => o.id === orderId);
       if (!order) return {};
@@ -738,6 +772,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
+    // Granular Firebase sync: remove order node + update freed table
+    if (orderToDelete) {
+      deleteOrderRecord(orderId);
+      const clearedTable = get().tables.find((t) => t.id === orderToDelete.tableId);
+      if (clearedTable) writeTableRecord(clearedTable);
+    }
   },
 
   splitOrderItem: (orderId, menuItemId, qty) => {
@@ -802,6 +842,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.savePayments(payments);
       return { payments };
     });
+    // Granular Firebase sync: new payment record + settled order + associated table
+    const allPayments = get().payments;
+    const fbNewPayment = allPayments[allPayments.length - 1];
+    if (fbNewPayment) writePaymentRecord(fbNewPayment);
+    const fbSettledOrder = get().orders.find((o) => o.id === payment.orderId);
+    if (fbSettledOrder) writeOrderRecord(fbSettledOrder);
+    const fbSettledTable = fbSettledOrder ? get().tables.find((t) => t.id === fbSettledOrder.tableId) : undefined;
+    if (fbSettledTable) writeTableRecord(fbSettledTable);
 
     // ── Customer consumption metrics ─────────────────────────────────────────
     // When the settled order has an attached customer, record the visit,
