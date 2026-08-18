@@ -1,0 +1,82 @@
+PERFORM AN EXHAUSTIVE 360-DEGREE READ-ONLY CODEBASE & ARCHITECTURE AUDIT
+
+================================================================================
+STRICT SAFETY MANDATE: READ-ONLY INSPECTION ONLY
+- DO NOT create, modify, refactor, delete, or overwrite any files or code.
+- DO NOT execute database writes, seeds, tests, or state-altering scripts.
+- DO NOT alter packages, dependencies, or environment configurations.
+================================================================================
+
+Conduct an end-to-end inspection of this entire POS repository across all directories (`src/`, `electron/`, `scripts/`, `public/`, config files) and produce an exhaustive architectural report structured under the following 15 sections:
+
+1. FILE SYSTEM & CODE TOPOLOGY
+   - List every page, screen, modal, and drawer component with its exact file path:
+     * Order Screen, Cart Drawer, Item Modifiers/Notes
+     * Table Floor Plan & Room/Area Layout Management
+     * Kitchen Portal & Meat Tracker
+     * Bar Portal & Beverage Logs
+     * Admin Panel (Dashboard, Reports, Customers, Inventory, Expenses, Settings)
+     * Staff Login & PIN Authentication screens
+
+2. FIREBASE REALTIME DATABASE SCHEMA & DATA FLOW
+   - Document every Firebase RTDB node read or written across the codebase (`/orders`, `/tables`, `/menu/items`, `/menu/categories`, `/menu/pillars`, `/purchases`, `/expenses`, `/inventory`, `/settings`, `/staff`, `/autoPrintQueue`, `/customers`).
+   - Identify listener subscriptions, write triggers, and payload schemas for each path.
+
+3. OFFLINE ENGINE, LOCAL STORAGE & RECONNECTION SYNC
+   - Detail the offline persistence layer (LocalStorage, IndexedDB, In-Memory Store).
+   - How offline status is detected (`navigator.onLine`, custom ping, Firebase `.info/connected`).
+   - Trace the exact queuing and replay mechanism when pending offline orders push to Firebase upon Wi-Fi reconnection.
+
+4. REALTIME LISTENERS & SAFETY OVERWRITE VERIFICATION
+   - Audit all `.set()`, `.update()`, `.remove()`, and `.push()` operations.
+   - Confirm whether ANY auto-seed, auto-heal, default array write-back, or fallback repopulation logic exists in `src/utils/firebaseSync.ts`, `src/hooks/useFirebaseSync.ts`, `src/data/defaultSeeds.ts`, or component mount hooks (`useEffect`).
+   - Confirm that empty/null database responses render empty states rather than re-creating defaults.
+
+5. MULTI-DEVICE CONCURRENCY & RACE CONDITIONS
+   - How concurrent edits to the same table from multiple mobile devices/tablets are handled (atomic transactions vs direct `.update()` vs optimistic overwrites).
+
+6. ORDER LIFECYCLE & TABLE STATE MACHINE
+   - Trace data progression from table assignment -> item selection -> KOT generation -> status changes (Pending/Preparing/Served) -> Pre-bill -> Settlement -> Table clearance -> Sales archiving.
+
+7. HARDWARE INTEGRATION & NATIVE ELECTRON PRINTING PIPELINE
+   - Main process configuration (`electron/main.js`) and preload bridge (`window.electronAPI`).
+   - Silent print dispatching vs OS print dialogs.
+   - How printer names ('Kitchen' vs 'Reception/Counter') match OS print spoolers.
+   - Auto-Print background queue listener mechanics (catching waiter mobile orders on desktop).
+   - Cash drawer kick pulse support (`ESC p`) and paper width column limits (58mm vs 80mm).
+
+8. FINANCIAL ENGINE, TAXATION & MATHEMATICAL LOGIC
+   - Locate and audit all math helpers:
+     * Item totals, variant modifiers, and sub-totals.
+     * Item discounts and bill-level flat/percentage discounts.
+     * VAT, Tax, and Service Charge calculations.
+     * Split bill math and partial payment balance calculations.
+     * Kitchen purchase math (Quantity * Rate = Total).
+     * Meat Tracker stock reconciliation (Opening Stock + Purchases - Consumption = Closing Stock).
+
+9. PORTALS & SPECIALIZED MODULE AUDIT
+   - Kitchen Portal: Document all hardcoded categories (Meats, Groceries) and the exact structure of purchase logs and the Meat Tracker tab.
+   - Bar Portal: Document inventory deduction and BOT print routing logic.
+   - Inventory & Expenses: Document expense tracking, supplier linking, and stock adjustments.
+
+10. CUSTOMER CREDIT & KHATA / UDHARO SYSTEM
+    - How customer credit accounts, running debt balances, credit limits, and historical repayments are tracked and synchronized in Firebase.
+
+11. DAY-END CLOSING & SHIFT RECONCILIATION
+    - How daily register totals, opening cash float, cash vs QR vs card breakdowns, and end-of-day summary reports (X/Z reports) are handled.
+
+12. AUDIO FEEDBACK ENGINE
+    - Where audio chimes/synthesizers live, what sound events exist (KOT fired, payment complete, error), and whether remote orders trigger sounds.
+
+13. USER ROLES, PERMISSIONS & SETTINGS
+    - Permissions enforced across `Admin`, `Cashier`, `Waiter`, and `Kitchen` roles (discounts, voiding KOTs, reports, settings).
+    - Storage location of device-specific settings (printers, sound toggles, boot startup).
+
+14. DATA BACKUP & EMERGENCY RECOVERY
+    - Document any existing local database snapshot, JSON export, or recovery mechanism in the event of persistent network loss.
+
+15. TECHNICAL DEBT, HARDCODED LIMITATIONS & REGRESSION RISKS
+    - Catalog rigid hardcoding, missing null-checks, bundle bottlenecks, and provide safety rules for upcoming additive updates (Buff meat, vegetable sub-types, math bugfixes).
+
+OUTPUT FORMAT:
+Provide the complete diagnostic report in structured Markdown format.
