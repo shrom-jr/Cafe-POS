@@ -1,0 +1,30 @@
+TASK: Add Granular Single-Record Firebase RTDB Writers (Multi-Device Safety Step 1)
+
+TARGET FILE:
+- src/utils/firebaseSync.ts
+
+OBJECTIVE:
+Implement granular child-path writer functions in `src/utils/firebaseSync.ts` that write directly to specific record keys (e.g., `/tables/${tableId}`, `/orders/${orderId}`, `/payments/${paymentId}`) instead of replacing entire root arrays with `.set()`[cite: 1, 2].
+
+SPECIFICATIONS:
+
+1. Add Single-Record Writers:
+   - `writeTableRecord(table: CafeTable): Promise<void>`
+     * Writes table data directly to path `tables/${table.id}` using `set(ref(db, `tables/${table.id}`), table)`[cite: 1, 2].
+   - `deleteTableRecord(tableId: string): Promise<void>`
+     * Writes `null` directly to path `tables/${tableId}`[cite: 2].
+   - `writeOrderRecord(order: Order): Promise<void>`
+     * Writes order data directly to path `orders/${order.id}` using `set(ref(db, `orders/${order.id}`), order)`[cite: 1, 2].
+   - `deleteOrderRecord(orderId: string): Promise<void>`
+     * Writes `null` directly to path `orders/${orderId}`[cite: 2].
+   - `writePaymentRecord(payment: Payment): Promise<void>`
+     * Writes payment data directly to path `payments/${payment.id}` using `set(ref(db, `payments/${payment.id}`), payment)`[cite: 1, 2].
+
+2. Normalization & Safety Guards:
+   - Ensure all write helpers catch and log network errors gracefully without crashing the client state[cite: 2].
+   - Maintain the existing bulk export functions (`pushTablesToFirebase`, `pushOrdersToFirebase`, `pushPaymentsToFirebase`) for backward compatibility during this transition phase[cite: 1, 2].
+
+CRITICAL PRODUCTION GUARDRAILS:
+- ZERO BREAKING CHANGES: Do not remove or alter existing subscriber listeners (`subscribeToOrders`, `subscribeToTables`, `subscribeToPayments`, etc.) in `src/utils/firebaseSync.ts`[cite: 1, 2].
+- DO NOT modify store files or UI components in this step; only declare and export the new single-record writer helpers[cite: 2].
+- DO NOT touch billing math (`src/utils/calcBill.ts`), Schema v2 backup/restore in `src/storage/db.ts`, closed shifts (`pos_closed_shifts`), or Electron silent printing utilities (`electron/main.js`, `src/utils/silentPrint.ts`)[cite: 1, 2].

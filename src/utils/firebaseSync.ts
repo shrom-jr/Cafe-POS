@@ -190,6 +190,65 @@ export async function pushPaymentsToFirebase(payments: Payment[]) {
   }
 }
 
+// ── Granular single-record writers ────────────────────────────────────────────
+// These write directly to a child path so a single device update never
+// replaces the entire root array — safe for concurrent multi-device use.
+
+/** Write (or overwrite) one table record at `tables/${table.id}`. */
+export async function writeTableRecord(table: CafeTable): Promise<void> {
+  try {
+    await set(
+      ref(db, `tables/${table.id}`),
+      JSON.parse(JSON.stringify(table)),
+    );
+  } catch (error) {
+    console.error("❌ [Firebase Table Write FAILED]:", error);
+  }
+}
+
+/** Delete one table record by writing `null` to `tables/${tableId}`. */
+export async function deleteTableRecord(tableId: string): Promise<void> {
+  try {
+    await set(ref(db, `tables/${tableId}`), null);
+  } catch (error) {
+    console.error("❌ [Firebase Table Delete FAILED]:", error);
+  }
+}
+
+/** Write (or overwrite) one order record at `orders/${order.id}`. */
+export async function writeOrderRecord(order: Order): Promise<void> {
+  try {
+    await set(
+      ref(db, `orders/${order.id}`),
+      JSON.parse(JSON.stringify(order)),
+    );
+  } catch (error) {
+    console.error("❌ [Firebase Order Write FAILED]:", error);
+  }
+}
+
+/** Delete one order record by writing `null` to `orders/${orderId}`. */
+export async function deleteOrderRecord(orderId: string): Promise<void> {
+  try {
+    await set(ref(db, `orders/${orderId}`), null);
+  } catch (error) {
+    console.error("❌ [Firebase Order Delete FAILED]:", error);
+  }
+}
+
+/** Write (or overwrite) one payment record at `payments/${payment.id}`. */
+export async function writePaymentRecord(payment: Payment): Promise<void> {
+  try {
+    await set(
+      ref(db, `payments/${payment.id}`),
+      JSON.parse(JSON.stringify(payment)),
+    );
+  } catch (error) {
+    console.error("❌ [Firebase Payment Write FAILED]:", error);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Push Settings
 export async function pushSettingsToFirebase(settings: Settings) {
   try {
