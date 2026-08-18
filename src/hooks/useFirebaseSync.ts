@@ -25,9 +25,7 @@ import {
   subscribeToKitchenPurchases,
   subscribeToMeatEntries,
   subscribeToMaintenanceExpenses,
-  pushOrdersToFirebase,
   pushTablesToFirebase,
-  pushPaymentsToFirebase,
   pushSettingsToFirebase,
   pushAreaOrderToFirebase,
   pushGroceryPurchasesToFirebase,
@@ -42,10 +40,46 @@ import {
   DEFAULT_TABLES,
 } from "@/data/defaultSeeds";
 
+/**
+ * Merge inbound remote orders into current local state.
+ * Protects active orders that have unsent draft items not yet reflected in
+ * Firebase (the gap between a waiter adding items and sendToKitchen firing
+ * the granular writeOrderRecord).
+ */
+function mergeRemoteOrders(
+  currentOrders: ReturnType<typeof usePOSStore.getState>['orders'],
+  remoteOrders: ReturnType<typeof usePOSStore.getState>['orders'],
+): ReturnType<typeof usePOSStore.getState>['orders'] {
+  const remoteById = new Map(remoteOrders.map((o) => [o.id, o]));
+
+  // Start from remote, substituting the local copy when it has unsent items
+  // that haven't propagated to Firebase yet (write-in-flight).
+  const merged = remoteOrders.map((remote) => {
+    const local = currentOrders.find((o) => o.id === remote.id);
+    if (!local) return remote;
+    const countDrafts = (items: typeof local.items) =>
+      items.filter((i) => i.kitchenStatus !== 'sent' && !i.sentToKitchen && i.status !== 'paid').length;
+    if (
+      countDrafts(local.items) > countDrafts(remote.items) &&
+      (local.status === 'active' || local.status === 'billed')
+    ) {
+      // Local has more unsent items — write is in-flight; protect local.
+      return local;
+    }
+    return remote;
+  });
+
+  // Preserve locally-created active orders not yet visible in Firebase.
+  for (const local of currentOrders) {
+    if (!remoteById.has(local.id) && (local.status === 'active' || local.status === 'billed')) {
+      merged.push(local);
+    }
+  }
+
+  return merged;
+}
+
 export function useFirebaseSync() {
-  const orders = usePOSStore((s) => s.orders);
-  const tables = usePOSStore((s) => s.tables);
-  const payments = usePOSStore((s) => s.payments);
   const settings = usePOSStore((s) => s.settings);
   const menuItems = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
@@ -80,9 +114,6 @@ export function useFirebaseSync() {
   const setMeatEntries = useMeatTrackerStore((s) => s.setMeatEntries);
   const setMaintenanceExpenses = useMaintenanceStore((s) => s.setExpenses);
 
-  const isRemoteOrderUpdate = useRef(false);
-  const isRemoteTableUpdate = useRef(false);
-  const isRemotePaymentUpdate = useRef(false);
   const isRemoteSettingsUpdate = useRef(false);
   const isRemoteAreaOrderUpdate = useRef(false);
   const isRemoteStaffUpdate = useRef(false);
@@ -92,9 +123,6 @@ export function useFirebaseSync() {
   const isRemoteKitchenPurchasesUpdate = useRef(false);
   const isRemoteMeatEntriesUpdate = useRef(false);
   const isRemoteMaintenanceExpensesUpdate = useRef(false);
-  const hasLoadedOrders = useRef(false);
-  const hasLoadedTables = useRef(false);
-  const hasLoadedPayments = useRef(false);
   const hasLoadedSettings = useRef(false);
   const hasLoadedAreaOrder = useRef(false);
   const hasLoadedStaff = useRef(false);
@@ -115,59 +143,47 @@ export function useFirebaseSync() {
     setPillars([]);
 
     const unsubscribeOrders = subscribeToOrders((remoteOrders) => {
-      hasLoadedOrders.current = true;
       const currentOrders = usePOSStore.getState().orders;
 
-      // FIREWALL: never let an empty remote snapshot wipe non-empty local orders
-      if (remoteOrders.length === 0 && currentOrders.length > 0) {
-        pushOrdersToFirebase(currentOrders);
-        return;
-      }
+      // FIREWALL: never let an empty remote snapshot wipe non-empty local orders.
+      // Granular writeOrderRecord calls will re-sync on the next user action.
+      if (remoteOrders.length === 0 && currentOrders.length > 0) return;
 
-      if (JSON.stringify(currentOrders) !== JSON.stringify(remoteOrders)) {
-        isRemoteOrderUpdate.current = true;
-        setOrders(remoteOrders);
+      const merged = mergeRemoteOrders(currentOrders, remoteOrders);
+      if (JSON.stringify(currentOrders) !== JSON.stringify(merged)) {
+        setOrders(merged);
       }
     });
 
     const unsubscribeTables = subscribeToTables((remoteTables) => {
-      hasLoadedTables.current = true;
       const currentTables = usePOSStore.getState().tables;
 
-      // FIREWALL: never let an empty remote snapshot wipe non-empty local tables.
-      // Restore the required table layout only when both sides are empty.
       if (remoteTables.length === 0) {
         if (currentTables.length > 0) {
-          pushTablesToFirebase(currentTables);
+          // Remote empty but local has tables — keep local silently.
+          // Granular writeTableRecord calls will re-sync on the next table action.
           return;
         }
-        // Both empty — auto-seed with restaurant defaults
-        isRemoteTableUpdate.current = true;
+        // Both sides empty — one-time bulk seed with restaurant defaults.
         setTables(DEFAULT_TABLES);
         pushTablesToFirebase(DEFAULT_TABLES);
         return;
       }
 
       if (JSON.stringify(currentTables) !== JSON.stringify(remoteTables)) {
-        isRemoteTableUpdate.current = true;
         setTables(remoteTables);
       }
     });
 
     const store = {
-      setPayments: (remotePayments: typeof payments) => {
-        hasLoadedPayments.current = true;
+      setPayments: (remotePayments: Parameters<typeof setPayments>[0]) => {
         const currentPayments = usePOSStore.getState().payments;
 
-        // Payments are transactional; empty remote means genuinely no payments —
-        // preserve local history and seed Firebase if local has data.
-        if (remotePayments.length === 0 && currentPayments.length > 0) {
-          pushPaymentsToFirebase(currentPayments);
-          return;
-        }
+        // FIREWALL: never wipe local payment history with an empty remote snapshot.
+        // Granular writePaymentRecord writers keep Firebase current.
+        if (remotePayments.length === 0 && currentPayments.length > 0) return;
 
         if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
-          isRemotePaymentUpdate.current = true;
           setPayments(remotePayments);
         }
       },
@@ -440,43 +456,7 @@ export function useFirebaseSync() {
     setMaintenanceExpenses,
   ]);
 
-  // 2. Push Local Order Changes to Cloud
-  // Guard: only after first remote snapshot (hasLoaded) AND skip if the change
-  // came from Firebase itself (isRemoteUpdate).  Also never push an empty
-  // orders array — the subscription firewall already handles re-seeding.
-  useEffect(() => {
-    if (!hasLoadedOrders.current) return;
-    if (isRemoteOrderUpdate.current) {
-      isRemoteOrderUpdate.current = false;
-      return;
-    }
-    pushOrdersToFirebase(orders);
-  }, [orders]);
-
-  // 3. Push Local Table Status Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedTables.current) return;
-    if (isRemoteTableUpdate.current) {
-      isRemoteTableUpdate.current = false;
-      return;
-    }
-    // Never push empty tables — protects against a cold-start race where
-    // localStorage is also empty before the seed fires.
-    if (tables.length === 0) return;
-    pushTablesToFirebase(tables);
-  }, [tables]);
-
-  // 4. Push Local Payment Changes to Cloud
-  useEffect(() => {
-    if (!hasLoadedPayments.current) return;
-    if (isRemotePaymentUpdate.current) {
-      isRemotePaymentUpdate.current = false;
-      return;
-    }
-    pushPaymentsToFirebase(payments);
-  }, [payments]);
-
-  // 5. Push Local Settings Changes to Cloud
+  // 2. Push Local Settings Changes to Cloud
   useEffect(() => {
     if (!hasLoadedSettings.current) return;
     if (isRemoteSettingsUpdate.current) {

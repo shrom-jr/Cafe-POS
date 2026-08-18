@@ -1,0 +1,26 @@
+TASK: Decommission Bulk Push Effects & Refine Inbound Realtime Sync (Multi-Device Safety Step 3)
+
+TARGET FILE:
+- src/hooks/useFirebaseSync.ts
+
+OBJECTIVE:
+Update `src/hooks/useFirebaseSync.ts` to remove automatic whole-array push effects for tables, orders, and payments (which are now handled directly by targeted action writers in `usePOSStore.ts`), while maintaining robust inbound subscription merging.
+
+SPECIFICATIONS:
+
+1. Decommission Bulk Outbound Effects:
+   - Remove or disable the reactive `useEffect` hooks that call `pushTablesToFirebase(tables)`, `pushOrdersToFirebase(orders)`, and `pushPaymentsToFirebase(payments)` on local store mutation.
+   - Retain one-time initial seed/hydration safety checks if required, but ensure ongoing table/order/payment mutations rely strictly on granular single-record writes.
+   - Keep existing synchronization effects for non-order domains untouched (e.g., settings, menu items, categories, grocery purchases, maintenance expenses).
+
+2. Refine Inbound Realtime Subscriptions:
+   - Ensure inbound listeners (`subscribeToTables`, `subscribeToOrders`, `subscribeToPayments`) continue updating local Zustand state (`setTables`, `setOrders`, `setPayments`):
+     * Normalize snapshot payloads safely (handling arrays or keyed object dictionaries gracefully).
+     * Avoid infinite feedback loops or race conditions with local state.
+   - Ensure active draft items on the current terminal's active order are not prematurely wiped by remote snapshots while a waiter is actively adding items.
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT disrupt menu, categories, inventory, customer, or expense listeners in `src/hooks/useFirebaseSync.ts`.
+- DO NOT touch billing math (`src/utils/calcBill.ts`), ticket splitting (`src/utils/ticketSplitter.ts`), or Electron silent printing (`src/utils/silentPrint.ts`).
+- DO NOT modify Schema v2 backup/restore in `src/storage/db.ts` or closed shift ledgers (`pos_closed_shifts`).
+- Ensure the app builds with zero TypeScript errors or broken imports.
