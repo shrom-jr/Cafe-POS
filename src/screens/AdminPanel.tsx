@@ -42,7 +42,7 @@ import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/table
 import { pushLogoToFirebase } from '@/utils/firebaseSync';
 
 type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
-type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff';
+type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff' | 'data-management';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -614,11 +614,12 @@ const AdminPanel = () => {
                 {/* Sub-tab pills */}
                 <div className="flex gap-2 flex-wrap">
                   {([
-                    { id: 'bill',     label: 'Company Profile' },
-                    { id: 'billing',  label: 'Billing & Receipts' },
-                    { id: 'payments', label: 'Payments' },
-                    { id: 'printers', label: 'Printers' },
-                    { id: 'staff',    label: 'Staff & Users' },
+                    { id: 'bill',            label: 'Company Profile' },
+                    { id: 'billing',         label: 'Billing & Receipts' },
+                    { id: 'payments',        label: 'Payments' },
+                    { id: 'printers',        label: 'Printers' },
+                    { id: 'staff',           label: 'Staff & Users' },
+                    { id: 'data-management', label: 'Data Management' },
                   ] as { id: SettingsSubTab; label: string }[]).map((sub) => (
                     <button
                       key={sub.id}
@@ -634,11 +635,12 @@ const AdminPanel = () => {
                   ))}
                 </div>
                 {/* Sub-tab content */}
-                {settingsSubTab === 'bill'     && <CompanyProfileSection />}
-                {settingsSubTab === 'billing'  && <BillingReceiptsSection />}
-                {settingsSubTab === 'payments' && <PaymentsSection />}
-                {settingsSubTab === 'printers' && <PrinterSettingsSection />}
-                {settingsSubTab === 'staff'    && <StaffManagement />}
+                {settingsSubTab === 'bill'            && <CompanyProfileSection />}
+                {settingsSubTab === 'billing'         && <BillingReceiptsSection />}
+                {settingsSubTab === 'payments'        && <PaymentsSection />}
+                {settingsSubTab === 'printers'        && <PrinterSettingsSection />}
+                {settingsSubTab === 'staff'           && <StaffManagement />}
+                {settingsSubTab === 'data-management' && <DataManagementSection />}
               </div>
             )}
           </div>
@@ -1515,113 +1517,10 @@ const PaymentsSection = () => {
   );
 };
 
-// ── COMPANY PROFILE / BILL DESIGN ─────────────────────────────────────────
 // ── COMPANY PROFILE ────────────────────────────────────────────────────────
 const CompanyProfileSection = () => {
   const settings = usePOSStore((s) => s.settings);
   const updateSettings = usePOSStore((s) => s.updateSettings);
-
-  // ── Full backup ──────────────────────────────────────────────────────────
-  const maintenanceExpenses = useMaintenanceStore((s) => s.expenses);
-  const alcoholProducts     = useInventoryStore((s) => s.alcoholProducts);
-  const beverageProducts    = useInventoryStore((s) => s.beverageProducts);
-  const cigaretteProducts   = useInventoryStore((s) => s.cigaretteProducts);
-  const invMovements        = useInventoryStore((s) => s.invMovements);
-
-  const handleDownloadFullBackup = () => {
-    try {
-      const json = db.exportFullBackup({
-        maintenanceExpenses,
-        alcoholProducts,
-        beverageProducts,
-        cigaretteProducts,
-        invMovements,
-      });
-      const now  = new Date();
-      const pad  = (n: number) => String(n).padStart(2, '0');
-      const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
-      const blob = new Blob([json], { type: 'application/json' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `Bamboo_POS_Backup_${stamp}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Full backup downloaded');
-    } catch (err) {
-      console.error('[Backup] Export failed:', err);
-      toast.error('Backup failed — please try again.');
-    }
-  };
-
-  // ── Data-management safeguard modal ─────────────────────────────────────
-  const restoreFileRef = useRef<HTMLInputElement>(null);
-  const [dmAction,      setDmAction]      = useState<null | 'restore' | 'reset'>(null);
-  const [dmStep,        setDmStep]        = useState<'warn' | 'pin' | 'confirm'>('warn');
-  const [dmPin,         setDmPin]         = useState('');
-  const [dmPinError,    setDmPinError]    = useState(false);
-  const [dmConfirmText, setDmConfirmText] = useState('');
-  const [dmFile,        setDmFile]        = useState<File | null>(null);
-  const [dmWorking,     setDmWorking]     = useState(false);
-
-  const openDM = (action: 'restore' | 'reset') => {
-    setDmAction(action);
-    setDmStep('warn');
-    setDmPin('');
-    setDmPinError(false);
-    setDmConfirmText('');
-    setDmFile(null);
-  };
-
-  const closeDM = () => {
-    if (dmWorking) return;
-    setDmAction(null);
-  };
-
-  const handleDMPinNext = () => {
-    if (dmPin === settings.adminPin) {
-      setDmPinError(false);
-      setDmStep('confirm');
-    } else {
-      setDmPinError(true);
-    }
-  };
-
-  const dmConfirmWord = dmAction === 'reset' ? 'RESET' : 'CONFIRM';
-  const dmReady = dmAction === 'reset'
-    ? dmConfirmText === 'RESET'
-    : dmConfirmText === 'CONFIRM' && dmFile !== null;
-
-  const handleDMExecute = async () => {
-    setDmWorking(true);
-    try {
-      // Step D-1: automatic safety backup first
-      handleDownloadFullBackup();
-      // Brief pause so the download can start before page unloads
-      await new Promise<void>((r) => setTimeout(r, 500));
-
-      if (dmAction === 'restore') {
-        if (!dmFile) { toast.error('No backup file selected.'); setDmWorking(false); return; }
-        const text = await dmFile.text();
-        const result = db.importFullBackup(text);
-        if (!result.success) {
-          toast.error(`Restore failed: ${result.error ?? 'Unknown error'}`);
-          setDmWorking(false);
-          return;
-        }
-        toast.success(`Backup restored (Schema v${result.version}). Reloading…`);
-      } else {
-        db.completeFactoryReset();
-        toast.success('Factory reset complete. Reloading…');
-      }
-
-      setTimeout(() => window.location.reload(), 1400);
-    } catch (err) {
-      console.error('[DataManagement] Execute failed:', err);
-      toast.error('Action failed — please try again.');
-      setDmWorking(false);
-    }
-  };
 
   const [cafeName, setCafeName] = useState(settings.cafeName);
   const [cafeAddress, setCafeAddress] = useState(settings.cafeAddress || '');
@@ -1738,16 +1637,169 @@ const CompanyProfileSection = () => {
         </div>
       </div>
 
-      {/* ── Data Management ─────────────────────────────────────────────── */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-3">
+      <button
+        onClick={saveAll}
+        data-testid="button-save-bill-design"
+        className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+      >
+        <Save size={16} /> Save Changes
+      </button>
+    </div>
+  );
+};
+
+// ── DATA MANAGEMENT ────────────────────────────────────────────────────────
+const DataManagementSection = () => {
+  const settings = usePOSStore((s) => s.settings);
+
+  // Live Zustand state injected into the backup payload
+  const maintenanceExpenses = useMaintenanceStore((s) => s.expenses);
+  const alcoholProducts     = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts    = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts   = useInventoryStore((s) => s.cigaretteProducts);
+  const invMovements        = useInventoryStore((s) => s.invMovements);
+
+  // ── Backup download ───────────────────────────────────────────────────────
+  const handleDownloadFullBackup = () => {
+    try {
+      const json = db.exportFullBackup({
+        maintenanceExpenses,
+        alcoholProducts,
+        beverageProducts,
+        cigaretteProducts,
+        invMovements,
+      });
+      const now   = new Date();
+      const pad   = (n: number) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      const blob  = new Blob([json], { type: 'application/json' });
+      const url   = URL.createObjectURL(blob);
+      const a     = document.createElement('a');
+      a.href      = url;
+      a.download  = `Bamboo_POS_Backup_${stamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Full backup downloaded');
+    } catch (err) {
+      console.error('[Backup] Export failed:', err);
+      toast.error('Backup failed — please try again.');
+    }
+  };
+
+  // ── Safeguard modal state ─────────────────────────────────────────────────
+  const restoreFileRef  = useRef<HTMLInputElement>(null);
+  const [dmAction,      setDmAction]      = useState<null | 'restore' | 'reset'>(null);
+  const [dmStep,        setDmStep]        = useState<'warn' | 'pin' | 'confirm'>('warn');
+  const [dmPin,         setDmPin]         = useState('');
+  const [dmPinError,    setDmPinError]    = useState(false);
+  const [dmConfirmText, setDmConfirmText] = useState('');
+  const [dmFile,        setDmFile]        = useState<File | null>(null);
+  const [dmWorking,     setDmWorking]     = useState(false);
+
+  const openDM = (action: 'restore' | 'reset') => {
+    setDmAction(action);
+    setDmStep('warn');
+    setDmPin('');
+    setDmPinError(false);
+    setDmConfirmText('');
+    setDmFile(null);
+  };
+
+  const closeDM = () => { if (!dmWorking) setDmAction(null); };
+
+  const handleDMPinNext = () => {
+    if (dmPin === settings.adminPin) { setDmPinError(false); setDmStep('confirm'); }
+    else setDmPinError(true);
+  };
+
+  const dmConfirmWord = dmAction === 'reset' ? 'RESET' : 'CONFIRM';
+  const dmReady = dmAction === 'reset'
+    ? dmConfirmText === 'RESET'
+    : dmConfirmText === 'CONFIRM' && dmFile !== null;
+
+  const handleDMExecute = async () => {
+    setDmWorking(true);
+    try {
+      handleDownloadFullBackup();
+      await new Promise<void>((r) => setTimeout(r, 500));
+      if (dmAction === 'restore') {
+        if (!dmFile) { toast.error('No backup file selected.'); setDmWorking(false); return; }
+        const text   = await dmFile.text();
+        const result = db.importFullBackup(text);
+        if (!result.success) { toast.error(`Restore failed: ${result.error ?? 'Unknown error'}`); setDmWorking(false); return; }
+        toast.success(`Backup restored (Schema v${result.version}). Reloading…`);
+      } else {
+        db.completeFactoryReset();
+        toast.success('Factory reset complete. Reloading…');
+      }
+      setTimeout(() => window.location.reload(), 1400);
+    } catch (err) {
+      console.error('[DataManagement] Execute failed:', err);
+      toast.error('Action failed — please try again.');
+      setDmWorking(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Info & coverage panel ─────────────────────────────────────────── */}
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4">
         <div>
-          <h3 className="text-base font-black text-white tracking-wide">Data Management</h3>
-          <p className="text-xs font-bold text-zinc-300 mt-1">
-            Export, restore, or fully reset all POS data. Destructive actions require Admin PIN and typed confirmation.
+          <h3 className="text-base font-black text-white tracking-wide">Backup Coverage</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 22 operational data domains in a single JSON file.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-2 text-xs font-bold text-zinc-300">
+          {[
+            'Orders & payments', 'Tables & floor layout', 'Menu, categories & pillars',
+            'Ingredients, recipes & stock', 'Customers & Khatta ledgers', 'Staff accounts',
+            'Kitchen purchases', 'Meat tracker entries', 'Maintenance expenses',
+            'Grocery purchases', 'Inventory mappings', 'Alcohol / beverage / cigarettes',
+          ].map((d) => (
+            <div key={d} className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+              {d}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Security safeguards notice ────────────────────────────────────── */}
+      <div className="bg-[#13151F] border border-amber-500/20 p-5 rounded-3xl shadow-xl flex gap-3">
+        <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <ShieldAlert size={17} className="text-amber-400" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-black text-white">Security Safeguards</p>
+          <p className="text-xs font-bold text-zinc-300 leading-relaxed">
+            Restore and Factory Reset require <span className="text-amber-400">Admin PIN verification</span> followed by typed text confirmation
+            (<span className="text-orange-400 font-black">CONFIRM</span> or <span className="text-red-400 font-black">RESET</span>).
+            A safety backup is automatically downloaded <span className="text-white">before</span> any destructive action runs.
           </p>
         </div>
+      </div>
 
-        {/* Download full backup */}
+      {/* ── Hardware protection notice ────────────────────────────────────── */}
+      <div className="bg-[#13151F] border border-blue-500/20 p-5 rounded-3xl shadow-xl flex gap-3">
+        <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Printer size={17} className="text-blue-400" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-black text-white">Hardware Config Always Preserved</p>
+          <p className="text-xs font-bold text-zinc-300 leading-relaxed">
+            Local Windows printer configuration (<span className="text-blue-300 font-black">printer_kitchen_device_name</span>,{' '}
+            <span className="text-blue-300 font-black">printer_reception_device_name</span>,{' '}
+            <span className="text-blue-300 font-black">pos_is_print_hub</span>) is strictly
+            protected and never cleared during any reset or restore operation.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Action cards ─────────────────────────────────────────────────── */}
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-3">
+        <h3 className="text-base font-black text-white tracking-wide">Actions</h3>
+
+        {/* Download */}
         <button
           onClick={handleDownloadFullBackup}
           className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-white/20 hover:border-amber-400/60 hover:bg-[#1e2130] active:scale-[0.98] transition-all text-left"
@@ -1757,11 +1809,11 @@ const CompanyProfileSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Download Full Backup</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">JSON · Schema v2 · All 22 data domains</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">JSON · Schema v2 · All 22 data domains · Instant download</p>
           </div>
         </button>
 
-        {/* Restore backup */}
+        {/* Restore */}
         <button
           onClick={() => openDM('restore')}
           className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-orange-500/30 hover:border-orange-400/60 hover:bg-[#1e1814] active:scale-[0.98] transition-all text-left"
@@ -1771,7 +1823,7 @@ const CompanyProfileSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Restore Backup (.json)</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">Overwrites current data · PIN protected</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">Overwrites current data · Admin PIN + CONFIRM required</p>
           </div>
         </button>
 
@@ -1785,7 +1837,7 @@ const CompanyProfileSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Factory Reset POS</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">Clears all data · Printer config preserved · PIN protected</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">Clears all data · Printer config preserved · Admin PIN + RESET required</p>
           </div>
         </button>
       </div>
@@ -1796,22 +1848,15 @@ const CompanyProfileSection = () => {
         type="file"
         accept=".json,application/json"
         className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0] ?? null;
-          setDmFile(f);
-          e.target.value = '';
-        }}
+        onChange={(e) => { setDmFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
       />
 
       {/* ── 4-Step Safeguard Modal ───────────────────────────────────────── */}
       <Dialog open={dmAction !== null} onOpenChange={(open) => { if (!open) closeDM(); }}>
         <DialogContent className="bg-[#0e1120] border border-white/10 rounded-3xl shadow-2xl max-w-md w-full p-0 overflow-hidden">
-          {/* Header */}
           <div className={`px-6 pt-6 pb-4 border-b border-white/10 flex items-center gap-3 ${dmAction === 'reset' ? 'bg-red-950/30' : 'bg-orange-950/20'}`}>
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${dmAction === 'reset' ? 'bg-red-500/20' : 'bg-orange-500/20'}`}>
-              {dmAction === 'reset'
-                ? <ShieldAlert size={20} className="text-red-400" />
-                : <AlertTriangle size={20} className="text-orange-400" />}
+              {dmAction === 'reset' ? <ShieldAlert size={20} className="text-red-400" /> : <AlertTriangle size={20} className="text-orange-400" />}
             </div>
             <div>
               <DialogTitle className="text-base font-black text-white">
@@ -1824,8 +1869,7 @@ const CompanyProfileSection = () => {
           </div>
 
           <div className="px-6 py-5 space-y-5">
-
-            {/* ── Step A: Warning ─────────────────────────────────────────── */}
+            {/* Step A */}
             {dmStep === 'warn' && (
               <div className="space-y-4">
                 <div className={`rounded-2xl p-4 border text-sm font-bold leading-relaxed ${dmAction === 'reset' ? 'bg-red-950/40 border-red-500/30 text-red-200' : 'bg-orange-950/30 border-orange-500/30 text-orange-200'}`}>
@@ -1848,66 +1892,45 @@ const CompanyProfileSection = () => {
                         <li>Menu, tables, customers, and staff will be replaced</li>
                         <li>Firebase-only data will re-sync after reload</li>
                       </ul>
-                      <p className="mt-3 text-xs font-black text-white/70">A safety backup of the current data will be downloaded automatically before the restore runs.</p>
+                      <p className="mt-3 text-xs font-black text-white/70">A safety backup of current data downloads automatically before restore runs.</p>
                     </>
                   )}
                 </div>
-                <button
-                  onClick={() => setDmStep('pin')}
-                  className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}
-                >
+                <button onClick={() => setDmStep('pin')} className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
                   I Understand — Continue
                 </button>
-                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">
-                  Cancel
-                </button>
+                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">Cancel</button>
               </div>
             )}
 
-            {/* ── Step B: Admin PIN ────────────────────────────────────────── */}
+            {/* Step B */}
             {dmStep === 'pin' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
-                    Enter Master Admin PIN
-                  </label>
+                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Enter Master Admin PIN</label>
                   <input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={8}
-                    autoFocus
+                    type="password" inputMode="numeric" maxLength={8} autoFocus
                     value={dmPin}
                     onChange={(e) => { setDmPin(e.target.value); setDmPinError(false); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleDMPinNext()}
                     placeholder="••••"
                     className={`w-full bg-[#181B26] border-2 rounded-xl px-4 py-3.5 text-white font-black text-center text-lg tracking-[0.4em] outline-none transition-all shadow-inner ${dmPinError ? 'border-red-500 placeholder:text-red-400' : 'border-white/20 focus:border-amber-400 placeholder:text-zinc-500'}`}
                   />
-                  {dmPinError && (
-                    <p className="text-xs font-black text-red-400 mt-2 text-center">Incorrect PIN — try again</p>
-                  )}
+                  {dmPinError && <p className="text-xs font-black text-red-400 mt-2 text-center">Incorrect PIN — try again</p>}
                 </div>
-                <button
-                  onClick={handleDMPinNext}
-                  disabled={dmPin.length < 4}
-                  className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm uppercase tracking-wider transition-all"
-                >
+                <button onClick={handleDMPinNext} disabled={dmPin.length < 4} className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm uppercase tracking-wider transition-all">
                   Verify PIN
                 </button>
-                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">
-                  Cancel
-                </button>
+                <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">Cancel</button>
               </div>
             )}
 
-            {/* ── Step C: Typed confirmation ───────────────────────────────── */}
+            {/* Step C */}
             {dmStep === 'confirm' && (
               <div className="space-y-4">
-                {/* File picker for restore */}
                 {dmAction === 'restore' && (
                   <div>
-                    <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
-                      Select Backup File
-                    </label>
+                    <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Select Backup File</label>
                     <button
                       type="button"
                       onClick={() => restoreFileRef.current?.click()}
@@ -1918,7 +1941,6 @@ const CompanyProfileSection = () => {
                     </button>
                   </div>
                 )}
-
                 <div>
                   <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
                     Type <span className={`font-black ${dmAction === 'reset' ? 'text-red-400' : 'text-orange-400'}`}>{dmConfirmWord}</span> to confirm
@@ -1932,7 +1954,6 @@ const CompanyProfileSection = () => {
                     className="w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-black rounded-xl px-4 py-3.5 text-sm text-center tracking-widest outline-none transition-all shadow-inner placeholder:text-zinc-600"
                   />
                 </div>
-
                 <button
                   onClick={handleDMExecute}
                   disabled={!dmReady || dmWorking}
@@ -1944,23 +1965,13 @@ const CompanyProfileSection = () => {
                       ? <><RotateCcw size={14} /> Execute Factory Reset</>
                       : <><FileJson size={14} /> Execute Restore</>}
                 </button>
-                <button onClick={closeDM} disabled={dmWorking} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
-                  Cancel
-                </button>
+                <button onClick={closeDM} disabled={dmWorking} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors disabled:opacity-40">Cancel</button>
               </div>
             )}
-
           </div>
         </DialogContent>
       </Dialog>
 
-      <button
-        onClick={saveAll}
-        data-testid="button-save-bill-design"
-        className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
-      >
-        <Save size={16} /> Save Changes
-      </button>
     </div>
   );
 };

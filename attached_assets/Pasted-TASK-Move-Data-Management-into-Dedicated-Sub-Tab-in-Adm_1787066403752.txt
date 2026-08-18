@@ -1,0 +1,35 @@
+TASK: Move Data Management into Dedicated Sub-Tab in Admin Settings
+
+TARGET FILE:
+- src/screens/AdminPanel.tsx
+
+OBJECTIVE:
+Relocate the "Data Management" card and its 4-step security modal out of the "Company Profile" tab into its own dedicated sub-tab titled "DATA MANAGEMENT" inside Admin Settings, situated immediately after "STAFF & USERS"[cite: 1, 2].
+
+SPECIFICATIONS:
+
+1. Settings Sub-Navigation:
+   - Update the settings sub-tabs list in AdminPanel.tsx to include:
+     `[ COMPANY PROFILE ] [ BILLING & RECEIPTS ] [ PAYMENTS ] [ PRINTERS ] [ STAFF & USERS ] [ DATA MANAGEMENT ]`
+   - Bind the new tab to state key: `'data-management'` (or matching naming convention used in the file).
+
+2. Company Profile Cleanup:
+   - Remove the Data Management card and associated triggers from `CompanyProfileSection` so that Company Profile only contains Business Information (Name, Address, Phone, Logo) and Tax Settings (PAN/VAT, VAT toggle), followed by the Save Changes button.
+
+3. Dedicated Data Management View (`DataManagementSection`):
+   - Render a dedicated management panel containing:
+     * Header & Information Box: High-contrast summary detailing what is included in the backup (all 22 operational domains: orders, tables, Khatta ledgers, inventory, staff, kitchen purchases, expenses).
+     * Security Safeguards Notice: Clear warning that Restore and Factory Reset require Admin PIN verification and typed text confirmation (`CONFIRM` or `RESET`).
+     * Hardware Protection Note: Reassurance that local Windows printer configurations (`printer_kitchen_device_name`, `printer_reception_device_name`, `pos_is_print_hub`) are strictly preserved during resets.
+     * Action Cards:
+       - 🟡 Download Full Backup (Instant JSON download with Schema v2 metadata)
+       - 🟠 Restore Backup (.json) (Triggers 4-step PIN and 'CONFIRM' modal)
+       - 🔴 Factory Reset POS (Triggers 4-step PIN and 'RESET' modal)
+   - Ensure the existing working 4-step confirmation modal and its handlers (`handleRestore`, `handleReset`, `handleDownload`) are connected and render seamlessly within this section.
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT alter or rewrite `exportFullBackup()`, `importFullBackup()`, or `completeFactoryReset()` in `src/storage/db.ts`[cite: 1, 2].
+- DO NOT touch Firebase synchronization listeners in `src/hooks/useFirebaseSync.ts` or `src/utils/firebaseSync.ts`.
+- DO NOT modify active table state, bill calculation (`src/utils/calcBill.ts`), or Electron silent printing pipelines (`electron/main.js`, `src/utils/silentPrint.ts`)
+- Maintain exact typed confirmation phrase requirements (`CONFIRM` and `RESET`).
+- Ensure no hardware/printer localStorage keys are ever wiped.
