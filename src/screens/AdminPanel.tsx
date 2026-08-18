@@ -591,7 +591,7 @@ const AdminPanel = () => {
                   {([
                     { id: 'sales',   label: '📊 Sales Reports' },
                     { id: 'kitchen', label: '🍳 Kitchen & Meat Analytics' },
-                    { id: 'shifts',  label: '📋 Z-Report History' },
+                    { id: 'shifts',  label: '📋 Closed Day History' },
                   ] as { id: 'sales' | 'kitchen' | 'shifts'; label: string }[]).map(({ id, label }) => (
                     <button
                       key={id}
@@ -2128,7 +2128,7 @@ const ReportsSection = () => {
   const [customEnd,   setCustomEnd]   = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const PAGE_SIZE = 8;
 
-  // Z-Report modal state
+  // End-of-day closing modal state
   const [zModal,      setZModal]      = useState(false);
   const [zPin,        setZPin]        = useState('');
   const [zStep,       setZStep]       = useState<'pin' | 'success'>('pin');
@@ -2195,7 +2195,7 @@ const ReportsSection = () => {
   const totalRevenue   = periodPayments.reduce((s, p) => s + p.total, 0);
   const totalVat       = periodPayments.reduce((s, p) => s + (p.vatAmount || 0), 0);
   const discountedCount = periodPayments.filter((p) => p.discount > 0).length;
-  // Check if today has already been closed (locked Z-Report)
+  // Check if today has already been closed
   const todaysClosed = period === 'today'
     ? (db.getClosedShifts().find((s) => s.date === todayDateStr) ?? null)
     : null;
@@ -2269,7 +2269,7 @@ const ReportsSection = () => {
     db.appendClosedShift(shift);
     setZSavedShift(shift);
     setZStep('success');
-    toast.success('Day-end register closed — Z-Report archived.');
+    toast.success('Business day closed — daily totals archived.');
   };
 
   const exportCSV = () => {
@@ -2329,14 +2329,14 @@ const ReportsSection = () => {
           {period === 'today' && (
             todaysClosed ? (
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider">
-                <Lock size={13} /> Locked {format(new Date(todaysClosed.closedAt), 'hh:mm a')}
+                <Lock size={13} /> Closed &amp; Locked at {format(new Date(todaysClosed.closedAt), 'hh:mm a')}
               </div>
             ) : (
               <button
                 onClick={openZModal}
                 className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm shadow-emerald-900/40"
               >
-                <ClipboardCheck size={14} /> Day-End Close
+                <ClipboardCheck size={14} /> CLOSE BUSINESS DAY
               </button>
             )
           )}
@@ -2371,13 +2371,13 @@ const ReportsSection = () => {
         </div>
       )}
 
-      {/* ── X-Report / Z-lock status banner ── */}
+      {/* ── Business day status banner ── */}
       {period === 'today' && (
         todaysClosed ? (
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25">
             <Lock size={15} className="text-emerald-400 flex-shrink-0" />
             <div>
-              <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">Day Closed — Z-Report Locked</p>
+              <p className="text-xs font-black text-emerald-400 uppercase tracking-wider">BUSINESS DAY CLOSED &amp; LOCKED</p>
               <p className="text-xs text-zinc-300">Totals locked at {format(new Date(todaysClosed.closedAt), 'hh:mm a')} by {todaysClosed.closedBy}. This is an audited snapshot — live order changes do not affect it.</p>
             </div>
           </div>
@@ -2385,8 +2385,8 @@ const ReportsSection = () => {
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/[0.07] border border-amber-500/20">
             <History size={15} className="text-amber-400 flex-shrink-0" />
             <div>
-              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">Live X-Report — Real-Time Preview</p>
-              <p className="text-xs text-zinc-300">Numbers update as orders are completed. Use "Day-End Close" to permanently lock today's totals into the Z-Report archive.</p>
+              <p className="text-xs font-black text-amber-400 uppercase tracking-wider">TODAY'S RUNNING SALES (LIVE)</p>
+              <p className="text-xs text-zinc-300">Numbers update in real-time as bills are settled. Use 'Close Business Day' to lock final revenue.</p>
             </div>
           </div>
         )
@@ -2608,20 +2608,20 @@ const ReportsSection = () => {
         )}
       </div>
 
-      {/* ── Z-Report / Day-End Close Modal ── */}
+      {/* ── End of day closing modal ── */}
       <Dialog open={zModal} onOpenChange={(o) => { if (!o) { setZModal(false); setZPin(''); setZStep('pin'); setZPinError(''); } }}>
         <DialogContent className="max-w-lg bg-[#0d0f1a] border border-white/15 text-white">
           <DialogHeader>
             <DialogTitle className="text-white font-black flex items-center gap-2">
               {zStep === 'success'
-                ? <><CheckCircle2 size={18} className="text-emerald-400" /> Day-End Closed — Z-Report Archived</>
-                : <><ClipboardCheck size={18} className="text-amber-400" /> Day-End Close (Z-Report)</>
+                ? <><CheckCircle2 size={18} className="text-emerald-400" /> Business Day Closed</>
+                : <><ClipboardCheck size={18} className="text-amber-400" /> End of Day Closing Summary</>
               }
             </DialogTitle>
             <DialogDescription className="text-zinc-300 text-xs">
               {zStep === 'success'
-                ? "Today's financial totals are permanently locked. View the full record in Z-Report History."
-                : "Lock today's financial totals into a tamper-proof archive. This cannot be undone."}
+                ? "Today's financial totals are permanently locked. View the full record in Closed Day History."
+                : "Review today's final totals before entering your Admin PIN to lock the day's records."}
             </DialogDescription>
           </DialogHeader>
 
@@ -2668,7 +2668,7 @@ const ReportsSection = () => {
               <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
                 <CheckCircle2 size={22} className="text-emerald-400 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-black text-white">Z-Report saved for {zSavedShift.date}</p>
+                  <p className="text-sm font-black text-white">Daily closing saved for {zSavedShift.date}</p>
                   <p className="text-xs text-emerald-300 mt-0.5">
                     Closed {format(new Date(zSavedShift.closedAt), 'hh:mm a')} · {zSavedShift.transactionCount} transaction{zSavedShift.transactionCount !== 1 ? 's' : ''} · Rs. {fmt(zSavedShift.totalRevenue)}
                   </p>
@@ -2709,7 +2709,7 @@ const ReportsSection = () => {
   );
 };
 
-// ── SHIFT HISTORY (Z-Report Archive) ─────────────────────────────────────────
+// ── CLOSED DAY HISTORY ───────────────────────────────────────────────────────
 const ShiftHistorySection = () => {
   const settings = usePOSStore((s) => s.settings);
   const [shifts]   = useState<ClosedShift[]>(() => db.getClosedShifts().slice().reverse());
@@ -2719,9 +2719,9 @@ const ShiftHistorySection = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/[0.02] mt-4">
         <History size={40} className="text-amber-400 mb-3" />
-        <p className="text-sm font-black text-white">No closed shifts yet</p>
+        <p className="text-sm font-black text-white">No closed business days yet</p>
         <p className="text-xs font-bold text-zinc-300 mt-2">
-          Use "Day-End Close" in Sales Reports to permanently lock and archive daily totals.
+          Use "Close Business Day" in Sales Reports to lock and archive daily totals.
         </p>
       </div>
     );
@@ -2732,7 +2732,7 @@ const ShiftHistorySection = () => {
       <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20">
         <ShieldAlert size={15} className="text-emerald-400 flex-shrink-0" />
         <p className="text-xs font-bold text-emerald-300">
-          These records are permanently locked snapshots. Subsequent order changes do not affect archived Z-Report totals.
+          <strong>Historical Audited Closings</strong> — These records are permanent and tamper-proof.
         </p>
       </div>
 

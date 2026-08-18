@@ -1,0 +1,37 @@
+TASK: Simplify X/Z Report Terminology to Plain-Language Staff Labels
+
+TARGET FILE:
+- src/screens/AdminPanel.tsx
+
+OBJECTIVE:
+Replace legacy register jargon ("X-Report", "Z-Report", "Shift") across the Reports UI with clear, intuitive labels tailored for restaurant floor staff and managers, while keeping the underlying data structures and PIN security logic unchanged[cite: 1, 2].
+
+SPECIFICATIONS:
+
+1. Reports Navigation Sub-Tab:
+   - Rename the third report tab pill from `📋 Z-Report History` to `📋 Closed Day History`.
+
+2. Sales Reports Banner & Toolbar:
+   - When viewing `today` and the day is open:
+     * Change banner title from `LIVE X-REPORT — REAL-TIME PREVIEW` to `TODAY'S RUNNING SALES (LIVE)`.
+     * Update banner description to: "Numbers update in real-time as bills are settled. Use 'Close Business Day' to lock final revenue."
+   - Change the primary toolbar action button from `DAY-END CLOSE` to `CLOSE BUSINESS DAY`.
+   - When the day is already closed:
+     * Change locked banner title to `BUSINESS DAY CLOSED & LOCKED`.
+     * Change badge text to `Closed & Locked at [Time]`.
+
+3. End of Day Closing Modal:
+   - Change modal title from `Z-Report Summary` (or Day-End Close) to `End of Day Closing Summary`.
+   - Update modal description: "Review today's final totals before entering your Admin PIN to lock the day's records."
+   - Keep the 2-step PIN check and confirmation screen identical.
+
+4. Closed Day History View (`ShiftHistorySection`):
+   - Update empty state title to: `No closed business days yet`.
+   - Update empty state subtitle to: `Use "Close Business Day" in Sales Reports to lock and archive daily totals.`
+   - Update info banner to: `Historical Audited Closings — These records are permanent and tamper-proof.`
+
+CRITICAL PRODUCTION GUARDRAILS:
+- DO NOT rename database keys or functions in `src/storage/db.ts` (`pos_closed_shifts`, `ClosedShift`, `getClosedShifts`, `appendClosedShift`, etc.)[cite: 1, 2].
+- DO NOT touch active billing calculations (`src/utils/calcBill.ts`), table states, or Electron printer bridge scripts[cite: 1, 2].
+- DO NOT alter Firebase synchronization hooks in `src/hooks/useFirebaseSync.ts`[cite: 1, 2].
+- Maintain existing 4-digit Master Admin PIN authorization logic.
