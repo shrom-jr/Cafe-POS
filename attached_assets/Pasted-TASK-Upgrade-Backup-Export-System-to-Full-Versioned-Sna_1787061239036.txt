@@ -1,0 +1,56 @@
+TASK: Upgrade Backup Export System to Full Versioned Snapshot (Schema v2)
+
+TARGET FILE:
+- src/storage/db.ts
+- (Reference stores: src/store/usePOSStore.ts, src/store/useStaffStore.ts, src/store/useCustomerStore.ts, src/store/useKitchenPurchasesStore.ts, src/store/useMeatTrackerStore.ts, src/store/useMaintenanceStore.ts, src/store/useInventoryStore.ts)
+
+OBJECTIVE:
+Expand the backup export utility in src/storage/db.ts so clicking "Download Backup" generates a complete, auditable JSON snapshot of all 15 operational domains, including Khatta credit ledgers, staff records, kitchen purchases, meat tracking, maintenance expenses, and inventory data.
+
+SPECIFICATIONS:
+1. Create a structured export payload with schema metadata:
+   - app: "Bamboo POS"
+   - version: 2
+   - exportedAt: new Date().toISOString()
+   - data: {
+       tables,
+       categories,
+       menuItems,
+       pillars,
+       areaOrder,
+       orders,
+       payments,
+       settings,
+       ingredients,
+       recipes,
+       stockMovements,
+       customers,
+       repayments,
+       staff,
+       groceryPurchases,
+       invMovements,
+       invMappings,
+       kitchenPurchases,
+       meatEntries,
+       maintenanceExpenses,
+       alcoholProducts,
+       beverageProducts,
+       cigaretteProducts
+     }
+
+2. Ensure export logic pulls both from db.ts persistence and from active Zustand stores / localStorage keys:
+   - Core POS: pos_tables, pos_categories, pos_menuItems, pos_orders, pos_payments, pos_settings, pos_pillars, pos_areaOrder
+   - Customer & Khatta: pos_customers, pos_customer_repayments (or from useCustomerStore)
+   - Staff: staff users list (from useStaffStore / localStorage)
+   - Specialized Kitchen & Ops: pos_kitchen_purchases, pos_meat_entries, pos_maintenance_expenses, pos_grocery_purchases, pos_inv_mappings, pos_inv_movements
+   - Inventory Collections: alcoholProducts, beverageProducts, cigaretteProducts
+
+3. File Naming & Download:
+   - The downloaded file must be named: `Bamboo_POS_Backup_YYYY-MM-DD_HH-mm.json`.
+   - Use a standard browser Blob download pipeline (`URL.createObjectURL(blob)`).
+
+CRITICAL PRODUCTION GUARDRAILS:
+- ZERO DESTRUCTIVE CHANGES: Do not modify or break the existing legacy `exportAll()` function; add `exportFullBackup()` cleanly alongside it or upgrade `exportAll()` with backward-compatible fallbacks.
+- DO NOT touch Firebase synchronization listeners in `src/hooks/useFirebaseSync.ts` or `src/utils/firebaseSync.ts`.
+- DO NOT alter table state machines, KOT/BOT ticket generation, bill calculations (`src/utils/calcBill.ts`), or Electron silent printer bridge scripts (`electron/main.js`, `src/utils/silentPrint.ts`).
+- Preserve hardware localStorage keys untouched (`printer_kitchen_device_name`, `printer_reception_device_name`, `pos_is_print_hub`).

@@ -13,6 +13,8 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
+import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
+import { db } from '@/storage/db';
 import { toast } from 'sonner';
 import {
   BarChart3, CreditCard, Table2, TrendingUp,
@@ -1518,6 +1520,39 @@ const CompanyProfileSection = () => {
   const settings = usePOSStore((s) => s.settings);
   const updateSettings = usePOSStore((s) => s.updateSettings);
 
+  // ── Full backup ──────────────────────────────────────────────────────────
+  const maintenanceExpenses = useMaintenanceStore((s) => s.expenses);
+  const alcoholProducts     = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts    = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts   = useInventoryStore((s) => s.cigaretteProducts);
+  const invMovements        = useInventoryStore((s) => s.invMovements);
+
+  const handleDownloadFullBackup = () => {
+    try {
+      const json = db.exportFullBackup({
+        maintenanceExpenses,
+        alcoholProducts,
+        beverageProducts,
+        cigaretteProducts,
+        invMovements,
+      });
+      const now  = new Date();
+      const pad  = (n: number) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      const blob = new Blob([json], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `Bamboo_POS_Backup_${stamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Full backup downloaded');
+    } catch (err) {
+      console.error('[Backup] Export failed:', err);
+      toast.error('Backup failed — please try again.');
+    }
+  };
+
   const [cafeName, setCafeName] = useState(settings.cafeName);
   const [cafeAddress, setCafeAddress] = useState(settings.cafeAddress || '');
   const [cafePhone, setCafePhone] = useState(settings.cafePhone || '');
@@ -1631,6 +1666,30 @@ const CompanyProfileSection = () => {
               : <ToggleLeft size={36} className="text-zinc-500" />}
           </button>
         </div>
+      </div>
+
+      {/* ── Data Management ─────────────────────────────────────────────── */}
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4">
+        <div>
+          <h3 className="text-base font-black text-white tracking-wide">Data Management</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">
+            Export a full snapshot of all POS data — orders, payments, inventory, customers, staff, and more.
+          </p>
+        </div>
+        <button
+          onClick={handleDownloadFullBackup}
+          className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#181B26] border border-white/20 hover:border-amber-400/60 hover:bg-[#1e2130] active:scale-[0.98] transition-all text-left"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+            <Download size={17} className="text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white">Download Full Backup</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">
+              JSON · Schema v2 · All 22 data domains
+            </p>
+          </div>
+        </button>
       </div>
 
       <button

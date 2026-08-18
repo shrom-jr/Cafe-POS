@@ -189,6 +189,69 @@ export const db = {
     return JSON.stringify(data, null, 2);
   },
 
+  /**
+   * Schema v2 full backup — structured JSON covering all 22 data domains.
+   * Caller must inject live Zustand / Firebase state for the four domains
+   * that have no localStorage representation (maintenanceExpenses,
+   * alcoholProducts, beverageProducts, cigaretteProducts, invMovements).
+   */
+  exportFullBackup: (opts: {
+    maintenanceExpenses?: unknown[];
+    alcoholProducts?:    unknown[];
+    beverageProducts?:   unknown[];
+    cigaretteProducts?:  unknown[];
+    invMovements?:       unknown[];
+  } = {}): string => {
+    const readLS = (key: string): unknown => {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const payload = {
+      app:        'Bamboo POS',
+      version:    2,
+      exportedAt: new Date().toISOString(),
+      data: {
+        // ── Core POS ─────────────────────────────────────────────────────────
+        tables:         readLS(KEYS.tables),
+        areaOrder:      readLS(KEYS.areaOrder),
+        pillars:        readLS(KEYS.pillars),
+        categories:     readLS(KEYS.categories),
+        menuItems:      readLS(KEYS.menuItems),
+        orders:         readLS(KEYS.orders),
+        payments:       readLS(KEYS.payments),
+        settings:       readLS(KEYS.settings),
+        // ── Kitchen inventory ─────────────────────────────────────────────────
+        ingredients:    readLS(KEYS.ingredients),
+        recipes:        readLS(KEYS.recipes),
+        stockMovements: readLS(KEYS.stockMovements),
+        // ── Customers & Khatta ledger ─────────────────────────────────────────
+        customers:      readLS('pos_customers'),
+        repayments:     readLS('pos_customer_repayments'),
+        // ── Staff ─────────────────────────────────────────────────────────────
+        staff:          readLS('pos_staff_users'),
+        // ── Kitchen purchases & meat tracker ──────────────────────────────────
+        kitchenPurchases: readLS('kitchen_purchases'),
+        meatEntries:      readLS('kitchen_meat_tracker'),
+        // ── Grocery & inv-mappings (localStorage cache) ───────────────────────
+        groceryPurchases: readLS('inv_grocery'),
+        invMappings:      readLS('inv_mappings'),
+        // ── Firebase / Zustand-only domains (injected by caller) ─────────────
+        maintenanceExpenses: opts.maintenanceExpenses ?? [],
+        alcoholProducts:     opts.alcoholProducts    ?? [],
+        beverageProducts:    opts.beverageProducts   ?? [],
+        cigaretteProducts:   opts.cigaretteProducts  ?? [],
+        invMovements:        opts.invMovements        ?? [],
+      },
+    };
+
+    return JSON.stringify(payload, null, 2);
+  },
+
   importAll: (json: string) => {
     const data = JSON.parse(json);
     Object.entries(KEYS).forEach(([k, v]) => {
