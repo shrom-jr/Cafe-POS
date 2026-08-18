@@ -120,7 +120,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 active:bg-amber-600 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center gap-1.5"
       >
         <LogOut size={13} />
-        <span className="hidden lg:inline">Switch User</span>
+        <span className="hidden 2xl:inline">Switch User</span>
       </button>
     </div>
   ) : null;
@@ -158,7 +158,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
       {/* ── Header ── */}
         <header className="flex-shrink-0 h-20 w-full bg-[#0A0B0E]/95 backdrop-blur-xl border-b border-white/15 px-6 flex items-center justify-between sticky top-0 z-40">
          {/* ── TABLET / DESKTOP: single row (lg+) ── */}
-         <div className="hidden h-full w-full items-center justify-between gap-6 lg:flex">
+         <div className="hidden h-full w-full items-center justify-between gap-6 2xl:flex">
           {/* Left: brand */}
           {brandBlock}
           {/* Center: nav */}
@@ -172,7 +172,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         </div>
 
         {/* ── MOBILE: compact bar + slide-over drawer (<lg) ── */}
-        <div className="sticky top-0 z-40 flex h-20 w-full items-center justify-between border-b border-white/15 bg-[#0A0B0E]/95 px-4 backdrop-blur-xl lg:hidden">
+        <div className="sticky top-0 z-40 flex h-20 w-full items-center justify-between border-b border-white/15 bg-[#0A0B0E]/95 px-4 backdrop-blur-xl 2xl:hidden">
           <div className="flex min-w-0 items-center gap-2">
              <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 rounded-2xl bg-white/[0.08] border-2 border-amber-500/40 p-1 flex items-center justify-center overflow-hidden shrink-0">
                <img src={logoSrc || '/logo.png'} alt="Restaurant Logo" className="w-full h-full rounded-xl object-contain drop-shadow-md" />
@@ -206,14 +206,14 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
       {/* ── MOBILE: animated navigation drawer ── */}
       <div
-        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 2xl:hidden ${
           isMobileMenuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden={!isMobileMenuOpen}
         onClick={() => setIsMobileMenuOpen(false)}
       />
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-[280px] flex-col justify-between border-l border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-in-out dark:border-white/10 dark:bg-[#12141D] sm:w-[320px] lg:hidden ${
+        className={`fixed right-0 top-0 z-50 flex h-full w-[280px] flex-col justify-between border-l border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-in-out dark:border-white/10 dark:bg-[#12141D] sm:w-[320px] 2xl:hidden ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-label="Mobile navigation"

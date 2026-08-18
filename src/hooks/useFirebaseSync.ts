@@ -36,6 +36,7 @@ import {
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
+  writeTableRecord,
 } from "@/utils/firebaseSync";
 import {
   DEFAULT_TABLES,
@@ -84,16 +85,62 @@ function mergeRemoteOrders(
  * Preserve a locally active table when Firebase briefly reports the same
  * table as free while the granular table write is still in flight.
  */
-function mergeRemoteTables(current: CafeTable[], remote: CafeTable[]): CafeTable[] {
+type POSOrder = ReturnType<typeof usePOSStore.getState>['orders'][number];
+
+function activeOrderForTable(orders: POSOrder[], tableId: string): POSOrder | undefined {
+  return orders.find(
+    (order) =>
+      order.tableId === tableId &&
+      (order.status === "active" || order.status === "billed"),
+  );
+}
+
+function promoteFreeTablesForActiveOrders(
+  tables: CafeTable[],
+  orders: POSOrder[],
+): CafeTable[] {
+  return tables.map((table) => {
+    if (table.status !== "free") return table;
+    const activeOrder = activeOrderForTable(orders, table.id);
+    if (!activeOrder) return table;
+
+    return {
+      ...table,
+      status: activeOrder.status === "billed" ? "billing" : "occupied",
+      orderId: activeOrder.id,
+      orderStartTime: table.orderStartTime ?? activeOrder.createdAt,
+    };
+  });
+}
+
+function mergeRemoteTables(
+  current: CafeTable[],
+  remote: CafeTable[],
+  currentOrders: POSOrder[],
+): CafeTable[] {
   return remote.map((remoteTable) => {
     const local = current.find((table) => table.id === remoteTable.id);
     if (!local) return remoteTable;
 
-    if (
-      remoteTable.status === "free" &&
-      (local.status === "occupied" || local.status === "billed" || local.status === "billing")
-    ) {
-      return local;
+    if (remoteTable.status === "free") {
+      const activeOrder = activeOrderForTable(currentOrders, remoteTable.id);
+
+      if (
+        local.status === "occupied" ||
+        local.status === "billed" ||
+        local.status === "billing"
+      ) {
+        return local;
+      }
+
+      if (activeOrder) {
+        return {
+          ...remoteTable,
+          status: activeOrder.status === "billed" ? "billing" : "occupied",
+          orderId: activeOrder.id,
+          orderStartTime: local.orderStartTime ?? activeOrder.createdAt,
+        };
+      }
     }
 
     return remoteTable;
@@ -167,17 +214,35 @@ export function useFirebaseSync() {
       const currentOrders = usePOSStore.getState().orders;
 
       // FIREWALL: never let an empty remote snapshot wipe non-empty local orders.
-      // Granular writeOrderRecord calls will re-sync on the next user action.
-      if (remoteOrders.length === 0 && currentOrders.length > 0) return;
-
-      const merged = mergeRemoteOrders(currentOrders, remoteOrders);
-      if (JSON.stringify(currentOrders) !== JSON.stringify(merged)) {
+      // Still run table repair below so an active local order cannot remain
+      // paired with a free table.
+      const preserveLocalOrders = remoteOrders.length === 0 && currentOrders.length > 0;
+      const merged = preserveLocalOrders
+        ? currentOrders
+        : mergeRemoteOrders(currentOrders, remoteOrders);
+      if (!preserveLocalOrders && JSON.stringify(currentOrders) !== JSON.stringify(merged)) {
         setOrders(merged);
+      }
+
+      // Orders and tables arrive through separate Firebase listeners. If an
+      // active order arrives before its table update, repair the local table
+      // immediately and persist only the affected table record.
+      const currentTables = usePOSStore.getState().tables;
+      const repairedTables = promoteFreeTablesForActiveOrders(currentTables, merged);
+      if (JSON.stringify(currentTables) !== JSON.stringify(repairedTables)) {
+        setTables(repairedTables);
+        repairedTables.forEach((table) => {
+          const previous = currentTables.find((candidate) => candidate.id === table.id);
+          if (previous?.status === "free" && table.status !== "free") {
+            writeTableRecord(table);
+          }
+        });
       }
     });
 
     const unsubscribeTables = subscribeToTables((remoteTables) => {
       const currentTables = usePOSStore.getState().tables;
+      const currentOrders = usePOSStore.getState().orders;
 
       if (remoteTables.length === 0) {
         if (currentTables.length > 0) {
@@ -191,9 +256,15 @@ export function useFirebaseSync() {
         return;
       }
 
-      const merged = mergeRemoteTables(currentTables, remoteTables);
+      const merged = mergeRemoteTables(currentTables, remoteTables, currentOrders);
       if (JSON.stringify(currentTables) !== JSON.stringify(merged)) {
         setTables(merged);
+        merged.forEach((table) => {
+          const remote = remoteTables.find((candidate) => candidate.id === table.id);
+          if (remote?.status === "free" && table.status !== "free") {
+            writeTableRecord(table);
+          }
+        });
       }
     });
 

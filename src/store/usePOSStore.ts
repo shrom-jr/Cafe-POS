@@ -438,6 +438,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { orders };
     });
+    const updatedOrder = get().orders.find((order) => order.id === orderId);
+    if (updatedOrder) {
+      writeOrderRecord(updatedOrder);
+      const table = get().tables.find((candidate) => candidate.id === updatedOrder.tableId);
+      if (table) writeTableRecord(table);
+    }
   },
 
   sendToKitchen: (orderId) => {
@@ -656,6 +662,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   moveOrder: (orderId, newTableId) => {
+    const orderBeforeMove = get().orders.find((order) => order.id === orderId);
+    const oldTableId = orderBeforeMove?.tableId;
     set((state) => {
       const order = state.orders.find((o) => o.id === orderId);
       const newTable = state.tables.find((t) => t.id === newTableId);
@@ -682,6 +690,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveTables(tables);
       return { orders, tables };
     });
+    const movedOrder = get().orders.find((order) => order.id === orderId);
+    if (movedOrder) writeOrderRecord(movedOrder);
+    if (oldTableId) {
+      const oldTable = get().tables.find((table) => table.id === oldTableId);
+      if (oldTable) writeTableRecord(oldTable);
+    }
+    const newTable = get().tables.find((table) => table.id === newTableId);
+    if (newTable) writeTableRecord(newTable);
   },
 
   attachCustomerToOrder: (orderId, customer) => {
