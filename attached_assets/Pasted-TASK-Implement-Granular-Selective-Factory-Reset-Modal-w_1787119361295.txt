@@ -1,0 +1,48 @@
+TASK: Implement Granular Selective Factory Reset Modal with "Select All" Option
+
+TARGET FILES:
+- src/screens/AdminPanel.tsx
+- src/storage/db.ts
+- src/store/usePOSStore.ts
+- src/store/useCustomerStore.ts
+- src/store/useKitchenPurchasesStore.ts
+- src/store/useMeatTrackerStore.ts
+- src/store/useMaintenanceStore.ts
+- src/store/useInventoryStore.ts
+- src/hooks/useFirebaseSync.ts
+
+OBJECTIVE:
+Replace the all-or-nothing Factory Reset with a granular, checkbox-driven Selective Reset modal. 
+
+STRICT PRESERVATION BOUNDARY (NEVER DELETE UNDER ANY CIRCUMSTANCE):
+- Master Tables & Floor Blueprints (tables array, table names, sections, pax, areaOrder)
+- Master Menu Catalog (menu items, categories, pillars, variants, pricing, KOT/BOT print routing tags)
+- Master Bar Product Definitions (Spirits, Wine, Beer, Soft Drinks, Cigarettes product entries & packaging sizes)
+- Staff Accounts & Permissions (users, PINs)
+- Hardware & Windows Printer Settings (printer_kitchen_device_name, printer_reception_device_name, pos_is_print_hub)
+
+FUNCTIONAL REQUIREMENTS:
+
+1. Reset Dialog UI in `AdminPanel.tsx`:
+   - Redesign the Reset modal into a 3-step secure wizard with clear checkbox selections.
+   - Master Toggle:
+     [ ] Select All (All 6 Transactional Modules)
+   - Individual Category Checkboxes:
+     [ ] Sales & Billing History (clears orders, payments, bill counters)
+     [ ] Active Floor & Cart State (resets all table statuses to 'free', clears running orders)
+     [ ] Customer Credit (Khatta / Udharo) (clears customer dues, repayment ledgers)
+     [ ] Kitchen Purchases & Meat Tracker (clears grocery logs, kitchen purchase records, meat entries)
+     [ ] Bar Inventory Logs & Stock Counts (clears purchases ledger, stock movements, bar restock audit, and resets stock to 0 while preserving product definitions)
+     [ ] Maintenance Expenses (clears maintenance expense logs)
+   - Prominent Safety Badge:
+     "Permanently Protected: Floor Layout & Tables, Menu Catalog, Bar Product Catalog, Staff PINs, and Windows Printers will NOT be erased."
+
+2. Security & Execution Sequence:
+   - Step 1: Checkbox selection with module descriptions.
+   - Step 2: Automatic full backup download (.json) triggered before deletion.
+   - Step 3: Admin PIN authentication and typing "RESET" in confirmation input.
+   - Dispatch atomic updates/deletions to Firebase and local Zustand stores strictly for the selected modules.
+   - Do NOT overwrite unselected nodes or protected master records.
+
+VERIFICATION:
+Ensure `npm run build` passes with zero TypeScript or runtime errors.
