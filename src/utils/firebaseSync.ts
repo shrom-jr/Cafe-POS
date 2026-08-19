@@ -9,6 +9,7 @@ import type {
   Category,
 } from "../types/pos";
 import type { StaffUser } from "../types/staff";
+import { hashPin } from "./cryptoPin";
 import type {
   AlcoholProduct,
   BeverageProduct,
@@ -1185,7 +1186,44 @@ export function subscribeToStaff(store: StaffSyncStore) {
         ...u,
       })) as StaffUser[];
 
-    store.setUsers(parsedUsers);
+    // ── Plaintext-PIN migration ──────────────────────────────────────────────
+    // If any record still carries a raw `pin` field (pre-migration), hash every
+    // straggler, strip the plaintext, and push the sanitised list back to
+    // Firebase atomically. The async work runs inside a fire-and-forget IIFE so
+    // we don't block the synchronous onValue callback.
+    const hasStragglers = parsedUsers.some((u) => u.pin && !u.pinHash);
+
+    if (hasStragglers) {
+      void (async () => {
+        let didMigrate = false;
+        const migratedUsers: StaffUser[] = await Promise.all(
+          parsedUsers.map(async (u) => {
+            if (u.pin && !u.pinHash) {
+              const { hash, salt } = await hashPin(u.pin);
+              const { pin: _removed, ...rest } = u;
+              void _removed;
+              didMigrate = true;
+              return {
+                ...rest,
+                pinHash: hash,
+                salt,
+                pinLength: u.pin.length,
+                // 4-digit legacy accounts must set a new 6-digit PIN on next login.
+                mustChangePin: u.pin.length === 4,
+              } as StaffUser;
+            }
+            return u;
+          }),
+        );
+        if (didMigrate) {
+          // Push sanitised records — zero plaintext pins remain in Firebase.
+          await pushStaffToFirebase(migratedUsers);
+        }
+        store.setUsers(migratedUsers);
+      })();
+    } else {
+      store.setUsers(parsedUsers);
+    }
   });
 }
 

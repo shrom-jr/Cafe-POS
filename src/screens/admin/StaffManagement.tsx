@@ -44,7 +44,7 @@ const StaffModal = ({
   const [name, setName]       = useState(existing?.name ?? '');
   const [email, setEmail]     = useState(existing?.email ?? '');
   const [role, setRole]       = useState<Role>(existing?.role ?? 'WAITER');
-  const [pin, setPin]         = useState(existing?.pin ?? '');
+  const [pin, setPin]         = useState('');
   const [showPin, setShowPin] = useState(false);
   const [active, setActive]   = useState(existing?.active ?? true);
   const [perms, setPerms]     = useState<StaffPermissions>(
@@ -62,18 +62,21 @@ const StaffModal = ({
   const togglePerm = (key: PermKey) =>
     setPerms((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return toast.error('Name is required');
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return toast.error('Email is required');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) return toast.error('Enter a valid email address');
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) return toast.error('PIN must be exactly 4 digits');
+    if (pin && (pin.length !== 6 || !/^\d{6}$/.test(pin))) return toast.error('PIN must be exactly 6 digits');
+    if (!isEdit && !pin) return toast.error('PIN is required for new staff');
 
     if (isEdit) {
-      updateUser(existing.id, { name: name.trim(), email: trimmedEmail, role, pin, active, permissions: perms });
+      const updates: Partial<Omit<typeof existing & object, 'id'>> = { name: name.trim(), email: trimmedEmail, role, active, permissions: perms } as any;
+      if (pin) (updates as any).pin = pin;
+      await updateUser(existing!.id, updates as any);
       toast.success('Staff member updated');
     } else {
-      addUser({ name: name.trim(), email: trimmedEmail, role, pin, active: true, permissions: perms });
+      await addUser({ name: name.trim(), email: trimmedEmail, role, pin: pin!, active: true, permissions: perms } as any);
       toast.success('Staff member added');
     }
     onClose();
@@ -184,15 +187,17 @@ const StaffModal = ({
 
           {/* PIN */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">4-Digit PIN</label>
+             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
+               6-Digit PIN{isEdit && <span className="text-white/30 font-normal ml-1">(leave blank to keep)</span>}
+             </label>
             <div className="relative">
               <input
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 type={showPin ? 'text' : 'password'}
                 inputMode="numeric"
-                placeholder="••••"
-                maxLength={4}
+                placeholder="••••••"
+                maxLength={6}
                 className={`${inputCls} pr-10 tracking-[0.4em] text-center`}
               />
               <button
@@ -252,9 +257,9 @@ const ResetPinModal = ({
   const [pin, setPin]         = useState('');
   const [showPin, setShowPin] = useState(false);
 
-  const handleReset = () => {
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) return toast.error('PIN must be exactly 4 digits');
-    updateUser(user.id, { pin });
+  const handleReset = async () => {
+    if (pin.length !== 6 || !/^\d{6}$/.test(pin)) return toast.error('PIN must be exactly 6 digits');
+    await updateUser(user.id, { pin } as any);
     toast.success(`PIN reset for ${user.name}`);
     onClose();
   };
@@ -273,15 +278,15 @@ const ResetPinModal = ({
         </div>
 
         <div>
-           <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">New 4-Digit PIN</label>
+           <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">New 6-Digit PIN</label>
           <div className="relative">
             <input
               value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               type={showPin ? 'text' : 'password'}
               inputMode="numeric"
-              placeholder="••••"
-              maxLength={4}
+              placeholder="••••••"
+              maxLength={6}
               className={`${inputCls} pr-10 tracking-[0.4em] text-center`}
               autoFocus
             />
@@ -406,7 +411,7 @@ const StaffRow = ({ user }: { user: StaffUser }) => {
             >
               {ROLE_LABEL[user.role]}
             </span>
-            <span className="text-xs text-white/25 font-mono tracking-[0.3em]">{'•'.repeat(4)}</span>
+            <span className="text-xs text-white/25 font-mono tracking-[0.3em]">{'•'.repeat(user.pinLength ?? 6)}</span>
           </div>
           <PermissionBadges user={user} />
         </div>

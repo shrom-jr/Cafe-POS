@@ -26,7 +26,35 @@ export interface StaffUser {
   name:        string;
   email:       string;
   role:        Role;
-  pin:         string;
+
+  /**
+   * Legacy plaintext PIN field.
+   * Present only on records that have **not yet been migrated** to the hashed
+   * schema. The migration engine (in `subscribeToStaff` / `login`) strips this
+   * field and replaces it with `pinHash` + `salt` on first encounter.
+   * @deprecated Use `pinHash` + `salt` instead.
+   */
+  pin?:           string;
+
+  /** SHA-256 hex hash of `salt + pin`. Present on all migrated records. */
+  pinHash?:       string;
+  /** Random 32-char hex salt (16 bytes) unique per user. */
+  salt?:          string;
+  /**
+   * Expected digit count for this account's PIN.
+   * - `4` — legacy account migrated from the 4-digit era; `mustChangePin` will
+   *   also be `true` so the user is prompted to set a new 6-digit PIN.
+   * - `6` — default for all new accounts.
+   * Absence should be treated as `6`.
+   */
+  pinLength?:     number;
+  /**
+   * When `true`, the staff member is prompted to set a new 6-digit PIN
+   * immediately after their next successful login.
+   * Set automatically when a 4-digit legacy PIN is migrated.
+   */
+  mustChangePin?: boolean;
+
   active:      boolean;
   permissions: StaffPermissions;
 }

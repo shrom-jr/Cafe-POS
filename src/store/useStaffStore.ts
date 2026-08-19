@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { StaffUser, DEFAULT_PERMISSIONS } from '@/types/staff';
+import { hashPin, verifyPin } from '@/utils/cryptoPin';
 
 const STAFF_KEY        = 'pos_staff_users';
 const SESSION_KEY      = 'pos_current_user_id';
@@ -63,12 +64,30 @@ interface StaffState {
   setUsers: (users: StaffUser[]) => void;
   currentUser: StaffUser | null;
 
-  /** Attempts login; returns true on success, false on wrong PIN. */
-  login: (userId: string, pin: string) => boolean;
+  /**
+   * Attempts login. Returns true on success, false on wrong PIN.
+   *
+   * For migrated accounts the stored `pinHash`+`salt` are used.
+   * For legacy accounts that still carry a plaintext `pin`, the comparison
+   * falls back to direct equality **and** performs an inline migration so that
+   * subsequent logins (including offline ones) use the hashed credential.
+   */
+  login: (userId: string, pin: string) => Promise<boolean>;
   logout: () => void;
 
-  addUser: (user: Omit<StaffUser, 'id'>) => void;
-  updateUser: (id: string, updates: Partial<Omit<StaffUser, 'id'>>) => void;
+  /**
+   * Create a new staff account. The plaintext `pin` in `userData` is hashed
+   * before being persisted; no plaintext ever reaches localStorage or Firebase.
+   */
+  addUser: (user: Omit<StaffUser, 'id'>) => Promise<void>;
+
+  /**
+   * Update an existing staff account.
+   * If `updates` contains a plaintext `pin`, it is hashed before storage and
+   * `mustChangePin` is cleared automatically.
+   */
+  updateUser: (id: string, updates: Partial<Omit<StaffUser, 'id'>>) => Promise<void>;
+
   deleteUser: (id: string) => void;
 }
 
@@ -90,11 +109,43 @@ export const useStaffStore = create<StaffState>((set, get) => {
     },
     currentUser,
 
-    login: (userId, pin) => {
+    login: async (userId, pin) => {
       const user = get().users.find((u) => u.id === userId && u.active);
-      if (!user || user.pin !== pin) return false;
-      saveCurrentUser(user);
-      set({ currentUser: user });
+      if (!user) return false;
+
+      let valid = false;
+      let userToSave = user;
+
+      if (user.pinHash && user.salt) {
+        // ── Hashed credential path (all migrated accounts) ────────────────
+        valid = await verifyPin(pin, user.pinHash, user.salt);
+      } else if (user.pin !== undefined) {
+        // ── Legacy plaintext path (pre-migration accounts) ─────────────────
+        valid = user.pin === pin;
+        if (valid) {
+          // Migrate locally so subsequent offline logins use the hash.
+          // Firebase-side migration is handled separately by subscribeToStaff.
+          const { hash, salt } = await hashPin(pin);
+          const { pin: _removed, ...rest } = user;
+          void _removed;
+          userToSave = {
+            ...rest,
+            pinHash: hash,
+            salt,
+            pinLength: pin.length,
+            mustChangePin: pin.length === 4,
+          };
+          const updatedUsers = get().users.map((u) =>
+            u.id === userId ? userToSave : u,
+          );
+          saveUsers(updatedUsers);
+          set({ users: updatedUsers });
+        }
+      }
+
+      if (!valid) return false;
+      saveCurrentUser(userToSave);
+      set({ currentUser: userToSave });
       return true;
     },
 
@@ -103,18 +154,40 @@ export const useStaffStore = create<StaffState>((set, get) => {
       set({ currentUser: null });
     },
 
-    addUser: (userData) => {
-      const user: StaffUser = { ...userData, id: crypto.randomUUID() };
+    addUser: async (userData) => {
+      // Hash the plaintext pin before any storage
+      let base = { ...userData };
+      if (base.pin) {
+        const { hash, salt } = await hashPin(base.pin);
+        const { pin: _removed, ...rest } = base;
+        void _removed;
+        base = { ...rest, pinHash: hash, salt, pinLength: 6 };
+      }
+      const user: StaffUser = { ...base, id: crypto.randomUUID() };
       const users = [...get().users, user];
       saveUsers(users);
       set({ users });
     },
 
-    updateUser: (id, updates) => {
-      const users = get().users.map((u) => (u.id === id ? { ...u, ...updates } : u));
+    updateUser: async (id, updates) => {
+      let processed = { ...updates };
+      if (processed.pin !== undefined) {
+        // Hash the new PIN and clear the mustChangePin flag
+        const { hash, salt } = await hashPin(processed.pin);
+        const { pin: _removed, ...rest } = processed;
+        void _removed;
+        processed = {
+          ...rest,
+          pinHash: hash,
+          salt,
+          pinLength: 6,
+          mustChangePin: false,
+        };
+      }
+      const users = get().users.map((u) => (u.id === id ? { ...u, ...processed } : u));
       saveUsers(users);
       const cu = get().currentUser;
-      const nextCu = cu?.id === id ? { ...cu, ...updates } as StaffUser : cu;
+      const nextCu = cu?.id === id ? ({ ...cu, ...processed } as StaffUser) : cu;
       // Keep session storage in sync if the logged-in user was edited
       if (nextCu && nextCu.id === id) saveCurrentUser(nextCu);
       set({ users, currentUser: nextCu });

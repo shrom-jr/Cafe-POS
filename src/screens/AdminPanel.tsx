@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
+import { verifyPin } from '@/utils/cryptoPin';
 import AppLayout from '@/components/ui/AppLayout';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import PrinterSettingsSection from '@/components/settings/PrinterSettingsModal';
@@ -400,8 +401,18 @@ const AdminPanel = () => {
     return null;
   }
 
-  const handlePinSubmit = () => {
-    if (staffUsers.some((u) => u.role === 'ADMIN' && u.pin === pin)) {
+  const handlePinSubmit = async () => {
+    const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN');
+    let valid = false;
+    for (const u of adminUsers) {
+      if (u.pinHash && u.salt) {
+        if (await verifyPin(pin, u.pinHash, u.salt)) { valid = true; break; }
+      } else if (u.pin !== undefined) {
+        // Legacy plaintext fallback for accounts not yet migrated
+        if (u.pin === pin) { valid = true; break; }
+      }
+    }
+    if (valid) {
       setAuthenticated(true);
       setPinError(false);
     } else {
@@ -446,7 +457,7 @@ const AdminPanel = () => {
             >
               Unlock
             </button>
-            <p className="text-xs text-muted-foreground text-center">Default PIN: 1234</p>
+            <p className="text-xs text-muted-foreground text-center">Enter your admin account PIN</p>
           </div>
         </div>
       </AppLayout>

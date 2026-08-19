@@ -1,0 +1,39 @@
+TASK: Implement 6-Digit Cryptographic PIN Hashing & Data Migration Engine
+
+TARGET FILES:
+- src/utils/cryptoPin.ts (New file: SHA-256 Salting & Verification)
+- src/types/staff.ts
+- src/store/useStaffStore.ts
+- src/utils/firebaseSync.ts
+
+OBJECTIVE:
+Upgrade staff authentication from plaintext numbers to salted SHA-256 cryptographic hashes and transition the PIN schema from 4 digits to 6 digits. Ensure zero plaintext PINs exist in Firebase (/users) or localStorage (pos_staff_users), while providing seamless backward compatibility for existing staff accounts.
+
+FUNCTIONAL REQUIREMENTS:
+
+1. Cryptographic Utility (`src/utils/cryptoPin.ts`):
+   - Implement `hashPin(pin: string, salt?: string): Promise<{ hash: string; salt: string }>` using the Web Crypto API (`crypto.subtle.digest('SHA-256', ...)`).
+   - Implement `verifyPin(inputPin: string, storedHash: string, salt: string): Promise<boolean>`.
+   - Ensure the utility operates synchronously or via fast lightweight promises with zero UI lag.
+
+2. Staff Data Model (`src/types/staff.ts`):
+   - Update `StaffUser`:
+     - Replace plaintext `pin: string` with:
+       - `pinHash: string` (SHA-256 hex string)
+       - `salt: string` (random unique salt per user)
+       - `pinLength?: number` (defaults to 6)
+       - `mustChangePin?: boolean` (flags legacy 4-digit accounts to update on next login)
+
+3. Migration & Store Logic (`src/store/useStaffStore.ts` & `src/utils/firebaseSync.ts`):
+   - In `useStaffStore.ts` and hydration from Firebase:
+     - On startup or snapshot read, detect any legacy user object with a plaintext `pin`.
+     - Automatically convert the plaintext PIN to a salted hash (`pinHash` + `salt`), strip the raw `pin` field, and persist the sanitized record to both localStorage and Firebase atomically.
+     - Ensure the primary Admin account is initialized with a hashed 6-digit default if no users exist.
+   - Update `verifyUserPin(userId, inputPin)` to validate against `pinHash` and `salt`.
+
+4. Zero Disruption Boundary:
+   - Do NOT modify active table orders, payment flows, printer configuration, or floor layouts.
+   - Run ONLY `npm run build` to verify clean compilation with 0 TypeScript errors.
+
+VERIFICATION:
+Run `npm run build` to confirm 0 TypeScript, compilation, or linting errors.

@@ -98,6 +98,11 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   confirmPinRef.current = confirmPin;
   newPinStepRef.current = newPinStep;
 
+  // PIN length for this account's login (4 for legacy migrated accounts, 6 for new ones)
+  const pinLength    = user.pinLength ?? 6;
+  // New/reset PINs are always 6 digits regardless of the account's current length
+  const newPinLength = 6;
+
   // OTP countdown
   useEffect(() => {
     if (view !== 'otp') return;
@@ -143,15 +148,21 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     setView('newpin');
   };
 
-  const handleDigit = (digit: string) => {
+  const handleDigit = async (digit: string) => {
     if (shakeRef.current) return;
     const current = pinRef.current;
-    if (current.length >= 4) return;
+    if (current.length >= pinLength) return;
     const next = current + digit;
     setPin(next);
-    if (next.length === 4) {
-      const ok = login(user.id, next);
+    if (next.length === pinLength) {
+      const ok = await login(user.id, next);
       if (ok) {
+        const freshUser = useStaffStore.getState().users.find((u) => u.id === user.id);
+        if (freshUser?.mustChangePin) {
+          setNewPin(''); setConfirmPin(''); setNewPinStep('enter'); setPin('');
+          setView('newpin');
+          return;
+        }
         window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
       } else {
         setShake(true); setShowError(true);
@@ -160,10 +171,16 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     }
   };
   const handleBackspace = () => { if (!shakeRef.current) setPin((p) => p.slice(0, -1)); };
-  const handleSubmit = () => {
-    if (pinRef.current.length !== 4) return;
-    const ok = login(user.id, pinRef.current);
+  const handleSubmit = async () => {
+    if (pinRef.current.length !== pinLength) return;
+    const ok = await login(user.id, pinRef.current);
     if (ok) {
+      const freshUser = useStaffStore.getState().users.find((u) => u.id === user.id);
+      if (freshUser?.mustChangePin) {
+        setNewPin(''); setConfirmPin(''); setNewPinStep('enter'); setPin('');
+        setView('newpin');
+        return;
+      }
       window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
     } else {
       setShake(true); setShowError(true);
@@ -172,24 +189,24 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   };
   const handleForgotPin = () => setView('email');
 
-  const handleNewPinDigit = (digit: string) => {
+  const handleNewPinDigit = async (digit: string) => {
     if (newPinStepRef.current === 'enter') {
       const cur = newPinRef.current;
-      if (cur.length >= 4) return;
+      if (cur.length >= newPinLength) return;
       const next = cur + digit;
       setNewPin(next);
-      if (next.length === 4) setTimeout(() => setNewPinStep('confirm'), 180);
+      if (next.length === newPinLength) setTimeout(() => setNewPinStep('confirm'), 180);
     } else {
       const cur = confirmPinRef.current;
-      if (cur.length >= 4) return;
+      if (cur.length >= newPinLength) return;
       const next = cur + digit;
       setConfirmPin(next);
-      if (next.length === 4) {
+      if (next.length === newPinLength) {
         if (next !== newPinRef.current) {
           setNewPinShake(true);
           setTimeout(() => { setNewPinShake(false); setConfirmPin(''); }, 600);
         } else {
-          updateUser(user.id, { pin: next });
+          await updateUser(user.id, { pin: next });
           toast.success('PIN updated successfully');
           onClose();
         }
@@ -209,12 +226,12 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       const isDigit = /^[0-9]$/.test(e.key) || /^Numpad[0-9]$/.test(e.code);
       const digit   = e.key.length === 1 ? e.key : e.code.replace('Numpad', '');
       if (v === 'pin') {
-        if (isDigit) { e.preventDefault(); if (pinRef.current.length < 4) handleDigit(digit); return; }
+        if (isDigit) { e.preventDefault(); if (pinRef.current.length < pinLength) void handleDigit(digit); return; }
         if (e.key === 'Backspace') { e.preventDefault(); handleBackspace(); return; }
-        if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); handleSubmit(); return; }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); void handleSubmit(); return; }
       }
       if (v === 'newpin') {
-        if (isDigit) { e.preventDefault(); handleNewPinDigit(digit); return; }
+        if (isDigit) { e.preventDefault(); void handleNewPinDigit(digit); return; }
         if (e.key === 'Backspace') { e.preventDefault(); handleNewPinBackspace(); return; }
       }
       if (e.key === 'Escape') { e.preventDefault(); onClose(); }
@@ -280,9 +297,9 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   );
 
   // ── Glowing PIN dots ──────────────────────────────────────────────────────
-  const PinDots = ({ filled, error }: { filled: number; error?: boolean }) => (
+  const PinDots = ({ filled, error, total = 4 }: { filled: number; error?: boolean; total?: number }) => (
     <div className="flex items-center justify-center gap-4 mb-6">
-      {[0,1,2,3].map((i) => (
+      {Array.from({ length: total }).map((_, i) => (
         <div
           key={i}
           className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${
@@ -333,7 +350,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
                 </span>
               </div>
             </div>
-            <PinDots filled={pin.length} error={shake} />
+            <PinDots filled={pin.length} error={shake} total={pinLength} />
             <p
               className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200 -mt-2"
               style={{ opacity: showError ? 1 : 0, minHeight: '1.25rem' }}
@@ -341,7 +358,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
               Invalid PIN
             </p>
             <Keypad
-              onDigit={(d) => { if (pin.length < 4) handleDigit(d); }}
+              onDigit={(d) => { if (pin.length < pinLength) void handleDigit(d); }}
               onBack={handleBackspace}
             />
             {user.email && (
@@ -460,14 +477,14 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
         {view === 'newpin' && (
           <>
             <ModalHeader label={newPinStep === 'enter' ? 'Set New PIN' : 'Confirm PIN'} />
-            <PinDots filled={newPinStep === 'enter' ? newPin.length : confirmPin.length} error={newPinShake} />
+            <PinDots filled={newPinStep === 'enter' ? newPin.length : confirmPin.length} error={newPinShake} total={newPinLength} />
             <p className="text-center text-xs text-white/40 -mt-2">
-              {newPinStep === 'enter' ? 'Enter a new 4-digit PIN' : 'Re-enter to confirm'}
+              {newPinStep === 'enter' ? 'Enter a new 6-digit PIN' : 'Re-enter to confirm'}
             </p>
             {newPinShake && (
               <p className="text-center text-xs font-semibold text-red-400 -mt-3">PINs don't match — try again</p>
             )}
-            <Keypad onDigit={handleNewPinDigit} onBack={handleNewPinBackspace} />
+            <Keypad onDigit={(d) => void handleNewPinDigit(d)} onBack={handleNewPinBackspace} />
           </>
         )}
 
