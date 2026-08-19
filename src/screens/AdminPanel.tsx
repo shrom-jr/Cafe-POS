@@ -1784,7 +1784,7 @@ const DataManagementSection = () => {
         <div className="grid sm:grid-cols-2 gap-2 text-xs font-bold text-zinc-300">
           {[
             'Orders & payments', 'Tables & floor layout', 'Menu, categories & pillars',
-            'Ingredients, recipes & stock', 'Customers & Khatta ledgers', 'Staff accounts',
+            'Bar & packaged stock, grocery purchases', 'Customers & Khatta ledgers', 'Staff accounts',
             'Kitchen purchases', 'Meat tracker entries', 'Maintenance expenses',
              'Grocery purchases', 'Inventory mappings', 'Bar restock audit', 'Alcohol / beverage / cigarettes',
           ].map((d) => (

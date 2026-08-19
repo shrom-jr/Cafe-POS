@@ -521,24 +521,15 @@ export async function applySelectiveResetToFirebase({
       }
 
       if (selection.customerCredit) {
-        const customers = toFirebaseRecordMap(root.customers);
-        const resetTombstones = toFirebaseRecordMap(root.customerCreditResetTombstones);
-        for (const [firebaseKey, customer] of Object.entries(customers)) {
-          const customerId = typeof customer.id === "string" ? customer.id : firebaseKey;
-          const {
-            repayments: _repayments,
-            ...profile
-          } = customer;
-          customers[firebaseKey] = {
-            ...profile,
-            currentDue: 0,
-            creditResetRevision: mutation.syncRevision,
-            creditResetMutationId: mutation.syncMutationId,
-          };
-          resetTombstones[customerId] = { id: customerId, ...mutation };
-        }
-        assignFirebaseCollection(root, "customers", customers);
-        assignFirebaseCollection(root, "customerCreditResetTombstones", resetTombstones);
+        // Approach A: complete wipe — delete the entire /customers collection
+        // so stale offline tabs cannot resurrect deleted profiles via re-sync.
+        delete root.customers;
+        // Also clear any credit-reset tombstones from the previous partial-reset era.
+        delete root.customerCreditResetTombstones;
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          customerCredit: mutation,
+        };
       }
 
       if (selection.kitchenOperations) {

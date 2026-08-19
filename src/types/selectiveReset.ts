@@ -11,8 +11,8 @@ export const SELECTIVE_RESET_MODULES = [
   },
   {
     id: 'customerCredit',
-    title: 'Customer credit',
-    description: 'Sets every outstanding due to zero and removes repayment ledgers without deleting customer profiles.',
+    title: 'Customer Directory & Credit Ledgers',
+    description: 'Completely wipes all saved customer profiles, phone numbers, visit histories, outstanding dues, and repayment ledgers.',
   },
   {
     id: 'kitchenOperations',

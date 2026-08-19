@@ -112,14 +112,12 @@ function applySelectiveResetLocally(selection: SelectiveResetSelection): void {
   }
 
   if (selection.customerCredit) {
-    const customerStore = useCustomerStore.getState();
-    const customers = customersAfterCreditReset(customerStore.customers);
-    customerStore.hydrateFromFirebase(
-      customers.map((customer) => ({
-        ...customer,
-        repayments: [],
-      })),
-    );
+    // Approach A: complete directory wipe — remove every profile, visit history,
+    // outstanding due, and repayment record from both the Zustand store and
+    // localStorage so no stale offline tab can resurrect deleted data.
+    localStorage.removeItem('pos_customers');
+    localStorage.removeItem('pos_customer_repayments');
+    useCustomerStore.setState({ customers: [], repayments: [] });
   }
 
   if (selection.kitchenOperations) {
