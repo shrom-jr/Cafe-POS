@@ -1,0 +1,38 @@
+TASK: Implement Complete Staff PIN & Permission Hardening (SHA-256 Hashing, 6-Digit PINs, Brute-Force Lockout, and Admin Override Gates)
+
+TARGET FILES:
+- src/utils/cryptoPin.ts (New file: SHA-256 Web Crypto hashing & verification)
+- src/types/staff.ts
+- src/store/useStaffStore.ts
+- src/utils/firebaseSync.ts
+- src/screens/PinLoginScreen.tsx
+- src/screens/AdminPanel.tsx
+- src/components/orders/VoidItemModal.tsx
+- src/screens/ReviewScreen.tsx
+
+OBJECTIVE:
+Secure the entire staff authentication and privilege model by replacing plaintext PINs with salted SHA-256 hashes, transitioning the system to mandatory 6-digit PINs with automatic legacy migration, adding a brute-force terminal lockout (5 failed attempts = 2-minute cooldown with Admin bypass), and gating restricted restaurant actions (item voids, custom discounts, and selective data resets) behind verified Admin PIN overrides.
+
+SPECIFIC REQUIREMENTS:
+
+1. Cryptographic Core (`src/utils/cryptoPin.ts`):
+   - Implement `hashPin(pin: string, salt?: string): Promise<{ hash: string; salt: string }>` using the Web Crypto API (`crypto.subtle.digest`).
+   - Implement constant-time string comparison for `verifyPin` to prevent timing attacks.
+
+2. Staff Data & Migration (`src/types/staff.ts`, `useStaffStore.ts`, `firebaseSync.ts`):
+   - Update `StaffUser` schema to use `pinHash` and `salt` instead of plaintext `pin`.
+   - On startup/hydration (`subscribeToStaff`), automatically convert any legacy plaintext PINs to hashed records in Firebase and localStorage.
+   - Ensure `login`, `addUser`, and `updateUser` handle async hashing and validation securely.
+
+3. 6-Digit Keypad & Brute-Force Lockout (`PinLoginScreen.tsx` & PIN Modals):
+   - Update keypad and dot displays to 6 slots (`○ ○ ○ ○ ○ ○`), auto-submitting on the 6th digit.
+   - Implement brute-force throttling: 5 consecutive incorrect PIN entries lock the terminal keypad for 2 minutes with an on-screen countdown timer. Provide an instant Admin emergency unlock option.
+
+4. Admin Override Gates for Sensitive Actions:
+   - Require verified Admin PIN authorization before executing high-risk operations:
+     - Voiding already-sent kitchen/bar items (`VoidItemModal.tsx`).
+     - Applying custom/manual bill discounts (`ReviewScreen.tsx`).
+     - Triggering data resets (`AdminPanel.tsx`).
+
+VERIFICATION:
+Run `npm run build` to confirm 0 TypeScript, compilation, or linting errors.

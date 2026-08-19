@@ -4,6 +4,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { StaffUser, Role } from '@/types/staff';
 import { getFirstPermittedRoute } from '@/utils/permissions';
 import { ArrowLeft, Mail, RotateCcw, Loader2, X, LockKeyhole } from 'lucide-react';
+import AdminPinGate from '@/components/ui/AdminPinGate';
 import { writePinReset } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
@@ -54,6 +55,25 @@ const ROLE_LABEL: Record<Role, string> = {
 const OTP_DURATION = 300;
 type ModalView = 'pin' | 'email' | 'otp' | 'newpin';
 
+// ── Per-user brute-force lockout helpers ─────────────────────────────────────
+const LOCKOUT_THRESHOLD   = 5;
+const LOCKOUT_DURATION_MS = 2 * 60 * 1000; // 2 minutes
+
+const lockoutKey = (id: string) => `pos_pin_fail_${id}`;
+
+function getLockout(userId: string): { failCount: number; lockedUntil: number } {
+  try {
+    const raw = localStorage.getItem(lockoutKey(userId));
+    return raw ? (JSON.parse(raw) as { failCount: number; lockedUntil: number }) : { failCount: 0, lockedUntil: 0 };
+  } catch { return { failCount: 0, lockedUntil: 0 }; }
+}
+function saveLockout(userId: string, data: { failCount: number; lockedUntil: number }) {
+  localStorage.setItem(lockoutKey(userId), JSON.stringify(data));
+}
+function clearLockout(userId: string) {
+  localStorage.removeItem(lockoutKey(userId));
+}
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -81,6 +101,16 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   const [confirmPin, setConfirmPin]   = useState('');
   const [newPinShake, setNewPinShake] = useState(false);
 
+  // ── Brute-force lockout state ───────────────────────────────────────────────
+  const initLock = getLockout(user.id);
+  const [failCount,       setFailCount]       = useState(initLock.failCount);
+  const [lockedUntil,     setLockedUntil]     = useState(initLock.lockedUntil);
+  const [lockCountdown,   setLockCountdown]   = useState(() => {
+    const r = Math.ceil((initLock.lockedUntil - Date.now()) / 1000);
+    return r > 0 ? r : 0;
+  });
+  const [showAdminBypass, setShowAdminBypass] = useState(false);
+
   const containerRef  = useRef<HTMLDivElement>(null);
   const pinRef        = useRef(pin);
   const shakeRef      = useRef(shake);
@@ -88,8 +118,10 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   const newPinRef     = useRef(newPin);
   const confirmPinRef = useRef(confirmPin);
   const newPinStepRef = useRef(newPinStep);
-  const generatedOtp  = useRef('');
-  const expiresAt     = useRef(0);
+  const generatedOtp      = useRef('');
+  const expiresAt         = useRef(0);
+  const lockCountdownRef  = useRef(lockCountdown);
+  lockCountdownRef.current = lockCountdown;
 
   pinRef.current        = pin;
   shakeRef.current      = shake;
@@ -102,6 +134,25 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   const pinLength    = user.pinLength ?? 6;
   // New/reset PINs are always 6 digits regardless of the account's current length
   const newPinLength = 6;
+
+  // ── Lockout countdown ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (lockedUntil <= Date.now()) return;
+    setLockCountdown(Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)));
+    const id = setInterval(() => {
+      const r = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (r <= 0) {
+        clearInterval(id);
+        setLockCountdown(0);
+        setFailCount(0);
+        saveLockout(user.id, { failCount: 0, lockedUntil: 0 });
+      } else {
+        setLockCountdown(r);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedUntil]);
 
   // OTP countdown
   useEffect(() => {
@@ -148,8 +199,26 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     setView('newpin');
   };
 
+  const recordFailure = () => {
+    const current = getLockout(user.id);
+    const newFail = current.failCount + 1;
+    if (newFail >= LOCKOUT_THRESHOLD) {
+      const until = Date.now() + LOCKOUT_DURATION_MS;
+      saveLockout(user.id, { failCount: newFail, lockedUntil: until });
+      setFailCount(newFail);
+      setLockedUntil(until);
+      setPin('');
+    } else {
+      saveLockout(user.id, { failCount: newFail, lockedUntil: 0 });
+      setFailCount(newFail);
+      setShake(true); setShowError(true);
+      setTimeout(() => { setShake(false); setPin(''); setTimeout(() => setShowError(false), 200); }, 600);
+    }
+  };
+
   const handleDigit = async (digit: string) => {
     if (shakeRef.current) return;
+    if (getLockout(user.id).lockedUntil > Date.now()) return; // locked out
     const current = pinRef.current;
     if (current.length >= pinLength) return;
     const next = current + digit;
@@ -157,6 +226,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
     if (next.length === pinLength) {
       const ok = await login(user.id, next);
       if (ok) {
+        clearLockout(user.id); setFailCount(0); setLockedUntil(0); setLockCountdown(0);
         const freshUser = useStaffStore.getState().users.find((u) => u.id === user.id);
         if (freshUser?.mustChangePin) {
           setNewPin(''); setConfirmPin(''); setNewPinStep('enter'); setPin('');
@@ -165,16 +235,17 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
         }
         window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
       } else {
-        setShake(true); setShowError(true);
-        setTimeout(() => { setShake(false); setPin(''); setTimeout(() => setShowError(false), 200); }, 600);
+        recordFailure();
       }
     }
   };
   const handleBackspace = () => { if (!shakeRef.current) setPin((p) => p.slice(0, -1)); };
   const handleSubmit = async () => {
     if (pinRef.current.length !== pinLength) return;
+    if (getLockout(user.id).lockedUntil > Date.now()) return;
     const ok = await login(user.id, pinRef.current);
     if (ok) {
+      clearLockout(user.id); setFailCount(0); setLockedUntil(0); setLockCountdown(0);
       const freshUser = useStaffStore.getState().users.find((u) => u.id === user.id);
       if (freshUser?.mustChangePin) {
         setNewPin(''); setConfirmPin(''); setNewPinStep('enter'); setPin('');
@@ -183,9 +254,17 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       }
       window.history.replaceState(null, '', getFirstPermittedRoute(user.permissions));
     } else {
-      setShake(true); setShowError(true);
-      setTimeout(() => { setShake(false); setPin(''); setTimeout(() => setShowError(false), 200); }, 600);
+      recordFailure();
     }
+  };
+
+  const handleAdminBypassUnlock = () => {
+    clearLockout(user.id);
+    setFailCount(0);
+    setLockedUntil(0);
+    setLockCountdown(0);
+    setShowAdminBypass(false);
+    setPin('');
   };
   const handleForgotPin = () => setView('email');
 
@@ -226,6 +305,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
       const isDigit = /^[0-9]$/.test(e.key) || /^Numpad[0-9]$/.test(e.code);
       const digit   = e.key.length === 1 ? e.key : e.code.replace('Numpad', '');
       if (v === 'pin') {
+        if (lockCountdownRef.current > 0) return; // ignore keystrokes while locked
         if (isDigit) { e.preventDefault(); if (pinRef.current.length < pinLength) void handleDigit(digit); return; }
         if (e.key === 'Backspace') { e.preventDefault(); handleBackspace(); return; }
         if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); void handleSubmit(); return; }
@@ -350,28 +430,80 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
                 </span>
               </div>
             </div>
-            <PinDots filled={pin.length} error={shake} total={pinLength} />
-            <p
-              className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200 -mt-2"
-              style={{ opacity: showError ? 1 : 0, minHeight: '1.25rem' }}
-            >
-              Invalid PIN
-            </p>
-            <Keypad
-              onDigit={(d) => { if (pin.length < pinLength) void handleDigit(d); }}
-              onBack={handleBackspace}
-            />
-            {user.email && (
-              <button
-                type="button"
-                onClick={handleForgotPin}
-                className="mt-6 px-5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-black tracking-wider uppercase transition-all duration-150 shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
-              >
-                <span>🔑</span>
-                <span>Forgot PIN?</span>
-              </button>
+
+            {/* ── Terminal locked screen ──────────────────────────────────── */}
+            {lockCountdown > 0 ? (
+              <div className="flex flex-col items-center gap-4 py-2 w-full">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(239,68,68,0.13)', border: '1px solid rgba(239,68,68,0.3)' }}
+                >
+                  <LockKeyhole size={28} style={{ color: '#f87171' }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-black text-white mb-1">Terminal Locked</p>
+                  <p className="text-[11px] font-semibold mb-3" style={{ color: 'rgba(148,163,184,0.65)' }}>
+                    {LOCKOUT_THRESHOLD} consecutive incorrect PINs entered
+                  </p>
+                  <div
+                    className="tabular-nums text-4xl font-black mb-4"
+                    style={{ color: '#f87171' }}
+                  >
+                    {fmtTime(lockCountdown)}
+                  </div>
+                  <button
+                    onClick={() => setShowAdminBypass(true)}
+                    className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95"
+                    style={{ background: 'rgba(168,85,247,0.18)', border: '1px solid rgba(168,85,247,0.4)', color: '#c084fc' }}
+                  >
+                    Admin Emergency Unlock
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Normal PIN entry ──────────────────────────────────────── */
+              <>
+                {failCount > 0 && (
+                  <p
+                    className="text-[11px] text-center font-semibold -mt-2 mb-1"
+                    style={{ color: 'rgba(251,146,60,0.9)' }}
+                  >
+                    {LOCKOUT_THRESHOLD - failCount} attempt{LOCKOUT_THRESHOLD - failCount !== 1 ? 's' : ''} remaining before lockout
+                  </p>
+                )}
+                <PinDots filled={pin.length} error={shake} total={pinLength} />
+                <p
+                  className="text-center text-sm font-semibold text-red-400 transition-opacity duration-200 -mt-2"
+                  style={{ opacity: showError ? 1 : 0, minHeight: '1.25rem' }}
+                >
+                  Invalid PIN
+                </p>
+                <Keypad
+                  onDigit={(d) => { if (pin.length < pinLength) void handleDigit(d); }}
+                  onBack={handleBackspace}
+                />
+                {user.email && (
+                  <button
+                    type="button"
+                    onClick={handleForgotPin}
+                    className="mt-6 px-5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-amber-200 text-xs font-black tracking-wider uppercase transition-all duration-150 shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <span>🔑</span>
+                    <span>Forgot PIN?</span>
+                  </button>
+                )}
+              </>
             )}
           </>
+        )}
+
+        {/* Admin emergency unlock (shown above the modal when locked) */}
+        {showAdminBypass && (
+          <AdminPinGate
+            prompt={`Unlock terminal for ${user.name}`}
+            onSuccess={handleAdminBypassUnlock}
+            onCancel={() => setShowAdminBypass(false)}
+          />
         )}
 
         {/* ═══════════════════════════ EMAIL VIEW ══════════════════════════════ */}

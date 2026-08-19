@@ -1736,8 +1736,18 @@ const DataManagementSection = () => {
 
   const closeDM = () => { if (!dmWorking) setDmAction(null); };
 
-  const handleDMPinNext = () => {
-    if (dmPin === settings.adminPin) { setDmPinError(false); setDmStep('confirm'); }
+  const handleDMPinNext = async () => {
+    // Verify against any active admin staff account (hashed + legacy plaintext fallback)
+    const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN' && u.active);
+    let valid = false;
+    for (const u of adminUsers) {
+      if (u.pinHash && u.salt) {
+        if (await verifyPin(dmPin, u.pinHash, u.salt)) { valid = true; break; }
+      } else if (u.pin !== undefined) {
+        if (u.pin === dmPin) { valid = true; break; }
+      }
+    }
+    if (valid) { setDmPinError(false); setDmStep('confirm'); }
     else setDmPinError(true);
   };
 
@@ -1757,9 +1767,17 @@ const DataManagementSection = () => {
   };
 
   const handleDMExecute = async () => {
-    if (dmAction === 'reset' && dmPin !== settings.adminPin) {
-      setDmPinError(true);
-      return;
+    if (dmAction === 'reset') {
+      const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN' && u.active);
+      let pinValid = false;
+      for (const u of adminUsers) {
+        if (u.pinHash && u.salt) {
+          if (await verifyPin(dmPin, u.pinHash, u.salt)) { pinValid = true; break; }
+        } else if (u.pin !== undefined) {
+          if (u.pin === dmPin) { pinValid = true; break; }
+        }
+      }
+      if (!pinValid) { setDmPinError(true); return; }
     }
     setDmWorking(true);
     try {
@@ -2039,13 +2057,13 @@ const DataManagementSection = () => {
                     type="password" inputMode="numeric" maxLength={8} autoFocus
                     value={dmPin}
                     onChange={(e) => { setDmPin(e.target.value); setDmPinError(false); }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleDMPinNext()}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void handleDMPinNext(); }}
                     placeholder="••••"
                     className={`w-full bg-[#181B26] border-2 rounded-xl px-4 py-3.5 text-white font-black text-center text-lg tracking-[0.4em] outline-none transition-all shadow-inner ${dmPinError ? 'border-red-500 placeholder:text-red-400' : 'border-white/20 focus:border-amber-400 placeholder:text-zinc-500'}`}
                   />
                   {dmPinError && <p className="text-xs font-black text-red-400 mt-2 text-center">Incorrect PIN — try again</p>}
                 </div>
-                <button onClick={handleDMPinNext} disabled={dmPin.length < 4} className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm uppercase tracking-wider transition-all">
+                <button onClick={() => void handleDMPinNext()} disabled={dmPin.length < 4} className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm uppercase tracking-wider transition-all">
                   Verify PIN
                 </button>
                 <button onClick={closeDM} className="w-full py-2.5 rounded-xl text-xs font-black text-zinc-400 hover:text-white transition-colors">Cancel</button>

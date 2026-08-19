@@ -17,8 +17,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronDown, ChevronUp, Banknote, Smartphone,
-  CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, FileText,
+  CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, FileText, Lock,
 } from 'lucide-react';
+import AdminPinGate from '@/components/ui/AdminPinGate';
 import { OrderItem, TablePayment } from '@/types/pos';
 import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 
@@ -57,6 +58,17 @@ const ReviewScreen = () => {
   const [discountMode, setDiscountMode] = useState<'percent' | 'fixed'>('percent');
   const [discountInput, setDiscountInput] = useState('');
   const [activePreset, setActivePreset] = useState<number | null>(0);
+
+  // ── Admin discount gate ────────────────────────────────────────────────────
+  const [discountUnlocked, setDiscountUnlocked]         = useState(useStaffStore.getState().currentUser?.role === 'ADMIN');
+  const [showDiscountGate, setShowDiscountGate]         = useState(false);
+  const [pendingDiscountAction, setPendingDiscountAction] = useState<(() => void) | null>(null);
+
+  const gateDiscount = (action: () => void) => {
+    if (discountUnlocked) { action(); return; }
+    setPendingDiscountAction(() => action);
+    setShowDiscountGate(true);
+  };
 
   const discountValue = useMemo(() => {
     const n = parseFloat(discountInput);
@@ -1104,14 +1116,27 @@ const ReviewScreen = () => {
 
         {/* ── Discount controls: single fitted row ── */}
         <div
-          className="rounded-xl"
+          className="relative rounded-xl"
           style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.06)',
             padding: compact ? '5px 6px' : '6px 8px',
           }}
         >
+          {!discountUnlocked && (
+            <button
+              onClick={() => setShowDiscountGate(true)}
+              className="absolute inset-0 z-10 rounded-xl flex items-center justify-center gap-1.5 hover:bg-white/5 transition-colors"
+              aria-label="Admin PIN required to apply discount"
+            >
+              <Lock size={11} style={{ color: '#c084fc' }} />
+              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#c084fc' }}>
+                Admin required
+              </span>
+            </button>
+          )}
           <div
+            className={!discountUnlocked ? 'opacity-25 pointer-events-none select-none' : ''}
             style={{
               display: 'flex',
               flexDirection: 'row',
@@ -1125,7 +1150,7 @@ const ReviewScreen = () => {
               return (
                 <button
                   key={pct}
-                  onClick={() => handlePreset(pct)}
+                  onClick={() => pct === 0 ? handlePreset(pct) : gateDiscount(() => handlePreset(pct))}
                   className="transition-all active:scale-[0.93]"
                   style={{
                     flex: 1,
@@ -1708,14 +1733,21 @@ const ReviewScreen = () => {
                         </span>
                       </div>
                       {/* Discount controls */}
-                      <div className="flex gap-1.5 items-center">
+                      <div className="relative">
+                        {!discountUnlocked && (
+                          <button onClick={() => setShowDiscountGate(true)} className="absolute inset-0 z-10 rounded flex items-center justify-center gap-1 hover:bg-white/5 transition-colors">
+                            <Lock size={10} style={{ color: '#c084fc' }} />
+                            <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: '#c084fc' }}>Admin required</span>
+                          </button>
+                        )}
+                      <div className={`flex gap-1.5 items-center${!discountUnlocked ? ' opacity-25 pointer-events-none select-none' : ''}`}>
                         <div className="flex gap-1">
                           {PRESETS.map((pct) => {
                             const isActive = activePreset === pct && discountMode === 'percent';
                             return (
                               <button
                                 key={pct}
-                                onClick={() => handlePreset(pct)}
+                                onClick={() => pct === 0 ? handlePreset(pct) : gateDiscount(() => handlePreset(pct))}
                                 className="px-1.5 py-0.5 rounded text-[10px] font-bold transition-all active:scale-95"
                                 style={
                                   isActive
@@ -1752,6 +1784,7 @@ const ReviewScreen = () => {
                           onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.5)'; }}
                           onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                         />
+                      </div>
                       </div>
                       {bill.vatEnabled && (
                         <div className="flex justify-between items-center">
@@ -1839,7 +1872,14 @@ const ReviewScreen = () => {
                         </div>
 
                         {/* Discount */}
-                         <div className="py-2 border-b border-white/10">
+                         <div className="relative py-2 border-b border-white/10">
+                            {!discountUnlocked && (
+                              <button onClick={() => setShowDiscountGate(true)} className="absolute inset-0 z-10 flex items-center justify-center gap-1.5 hover:bg-white/5 transition-colors rounded">
+                                <Lock size={12} style={{ color: '#c084fc' }} />
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#c084fc' }}>Admin required</span>
+                              </button>
+                            )}
+                            <div className={!discountUnlocked ? 'opacity-25 pointer-events-none select-none' : ''}>
                            <div className="flex items-center justify-between">
                              <span className="text-xs font-black uppercase tracking-wider text-zinc-200">Discount</span>
                              <span className="text-sm font-black text-rose-400 font-mono tabular-nums">
@@ -1880,7 +1920,7 @@ const ReviewScreen = () => {
                                return (
                                  <button
                                    key={value}
-                                   onClick={() => discountMode === 'fixed' ? handleFixedPreset(value) : handlePreset(value)}
+                                   onClick={() => gateDiscount(() => discountMode === 'fixed' ? handleFixedPreset(value) : handlePreset(value))}
                                     className={`px-3.5 py-1.5 rounded-xl border border-white/15 text-xs font-bold text-zinc-100 transition-all cursor-pointer ${isActive ? 'bg-amber-500 text-slate-950 hover:bg-amber-400' : 'bg-white/10 hover:bg-amber-500 hover:text-slate-950'}`}
                                  >
                                    {discountMode === 'fixed' ? `Rs. ${value}` : `${value}%`}
@@ -1894,6 +1934,7 @@ const ReviewScreen = () => {
                                 ✕ Clear
                              </button>
                            </div>
+                            </div>
                          </div>
 
                         {/* VAT */}
@@ -2319,6 +2360,20 @@ const ReviewScreen = () => {
           )}
 
         </div>
+      )}
+
+      {/* Admin discount gate */}
+      {showDiscountGate && (
+        <AdminPinGate
+          prompt="Authorize discount application"
+          onSuccess={() => {
+            setDiscountUnlocked(true);
+            pendingDiscountAction?.();
+            setPendingDiscountAction(null);
+            setShowDiscountGate(false);
+          }}
+          onCancel={() => { setPendingDiscountAction(null); setShowDiscountGate(false); }}
+        />
       )}
 
       {/* Partial payment success overlay */}
