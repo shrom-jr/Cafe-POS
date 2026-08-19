@@ -1,0 +1,54 @@
+TASK: Implement Durable Offline Mutation Queue Engine & Background Replay Worker
+
+TARGET FILES:
+- src/types/pos.ts (or create src/types/offlineQueue.ts)
+- src/utils/offlineQueue.ts (New file: Queue Manager & Storage)
+- src/store/usePOSStore.ts
+- src/store/useCustomerStore.ts
+- src/hooks/useFirebaseSync.ts
+- src/utils/firebaseSync.ts
+
+OBJECTIVE:
+Build a durable, persistent operation ledger (Outbox Queue) so that any order creation, item addition, table state change, customer credit entry, or payment settlement performed while offline is saved sequentially and automatically replayed to Firebase upon network reconnection without data loss or cloud snapshot overwrites.
+
+FUNCTIONAL REQUIREMENTS:
+
+1. Queue Data Model (`src/types/offlineQueue.ts` or `src/types/pos.ts`):
+   - Define `OfflineMutation`:
+     - `id`: string (UUID or nanoid)
+     - `domain`: 'orders' | 'tables' | 'payments' | 'customers'
+     - `action`: 'create_order' | 'update_table' | 'add_payment' | 'update_customer_due' | 'record_repayment'
+     - `payload`: Record<string, any>
+     - `timestamp`: number
+     - `resetGeneration`: number (bind to active reset generation)
+     - `retryCount`: number
+
+2. Persistent Outbox Storage (`src/utils/offlineQueue.ts`):
+   - Key: `pos_offline_mutation_queue` in localStorage.
+   - Methods:
+     - `enqueueMutation(mutation)`: Appends a new action to the queue.
+     - `peekQueue()`: Returns the oldest pending mutation (FIFO).
+     - `dequeueMutation(id)`: Removes a successfully processed mutation.
+     - `getPendingQueueCount()`: Returns total un-replayed mutations.
+     - `clearQueue()`: Clears queue during a selective factory reset.
+
+3. Store Interception:
+   - In `usePOSStore.ts` and `useCustomerStore.ts`:
+     - Ensure actions (`createOrder`, `sendToKitchen`, `addPayment`, `addToCustomerDue`, `receiveRepayment`) execute immediately in local state for zero UI latency.
+     - When offline or when direct cloud push fails, automatically enqueue the corresponding atomic mutation into the persistent queue.
+
+4. Background Sequential Replay Worker (`src/hooks/useFirebaseSync.ts` / `src/utils/firebaseSync.ts`):
+   - Listen to Firebase `.info/connected` and browser `online` events.
+   - When connection is restored:
+     - Acquire a singleton replay lock to prevent concurrent worker loops.
+     - Process mutations in strict chronological sequence (FIFO).
+     - Validate that each mutation's `resetGeneration` matches current Firebase metadata. If valid, dispatch the atomic update to Firebase; if stale, discard.
+     - Upon confirmation of Firebase write, dequeue the item.
+
+5. Critical Operational Boundaries:
+   - Zero UI freezing: cashier and waiter workflows must remain instant and optimistic.
+   - Dual-printer isolation: Electron native printing and WebUSB ESC/POS must continue firing immediately without waiting for queue replay.
+   - Master preservation: Table layouts, menu categories, bar inventory catalog, and staff PINs must never be touched or cleared by queue replay.
+
+VERIFICATION:
+Run `npm run build` to confirm 0 TypeScript, compilation, or linting errors.

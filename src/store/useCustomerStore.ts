@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { Customer, CustomerRepayment, StaffAttribution } from '@/types/pos';
-import { writeCustomer, deleteCustomerFirebase } from '@/utils/firebaseSync';
+import {
+  writeCustomer,
+  deleteCustomerFirebase,
+  getObservedResetGeneration,
+  BASELINE_RESET_GENERATION,
+} from '@/utils/firebaseSync';
+import { enqueueMutation } from '@/utils/offlineQueue';
 
 const CUSTOMERS_KEY = 'pos_customers';
 const REPAYMENTS_KEY = 'pos_customer_repayments';
@@ -114,7 +120,16 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const customers = [...get().customers, customer];
     persist(customers);
     set({ customers });
-    void writeCustomer(withLedger(customer, get().repayments));
+    if (navigator.onLine) {
+      void writeCustomer(withLedger(customer, get().repayments));
+    } else {
+      enqueueMutation(
+        'customers',
+        'write_customer',
+        { customer: withLedger(customer, get().repayments) } as unknown as Record<string, unknown>,
+        getObservedResetGeneration('customerCredit') ?? BASELINE_RESET_GENERATION,
+      );
+    }
     return customer;
   },
 
@@ -125,7 +140,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     persist(customers);
     set({ customers });
     const updatedCustomer = customers.find((customer) => customer.id === id);
-    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, get().repayments));
+    if (updatedCustomer) {
+      if (navigator.onLine) {
+        void writeCustomer(withLedger(updatedCustomer, get().repayments));
+      } else {
+        enqueueMutation(
+          'customers',
+          'write_customer',
+          { customer: withLedger(updatedCustomer, get().repayments) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('customerCredit') ?? BASELINE_RESET_GENERATION,
+        );
+      }
+    }
   },
 
   addToCustomerDue: (id, amount) => {
@@ -142,7 +168,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     persist(customers);
     set({ customers });
     const updatedCustomer = customers.find((customer) => customer.id === id);
-    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, get().repayments));
+    if (updatedCustomer) {
+      if (navigator.onLine) {
+        void writeCustomer(withLedger(updatedCustomer, get().repayments));
+      } else {
+        enqueueMutation(
+          'customers',
+          'update_customer_due',
+          { customer: withLedger(updatedCustomer, get().repayments) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('customerCredit') ?? BASELINE_RESET_GENERATION,
+        );
+      }
+    }
   },
 
   receiveRepayment: ({ customerId, amount, method, notes, receivedBy }) => {
@@ -175,7 +212,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     persistRepayments(repayments);
     set({ customers, repayments });
     const updatedCustomer = customers.find((entry) => entry.id === customerId);
-    if (updatedCustomer) void writeCustomer(withLedger(updatedCustomer, repayments));
+    if (updatedCustomer) {
+      if (navigator.onLine) {
+        void writeCustomer(withLedger(updatedCustomer, repayments));
+      } else {
+        enqueueMutation(
+          'customers',
+          'record_repayment',
+          { customer: withLedger(updatedCustomer, repayments) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('customerCredit') ?? BASELINE_RESET_GENERATION,
+        );
+      }
+    }
     return { ok: true, repayment };
   },
 

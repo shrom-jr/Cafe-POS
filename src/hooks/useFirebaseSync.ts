@@ -39,6 +39,8 @@ import {
   getPendingOrderWrite,
   getPendingTableWrite,
   subscribeToSelectiveResetMarkers,
+  subscribeToConnectivity,
+  replayOfflineMutations,
   type OrderTombstone,
 } from "@/utils/firebaseSync";
 import {
@@ -704,4 +706,35 @@ export function useFirebaseSync() {
     }
     pushMaintenanceExpensesToFirebase(maintenanceExpenses);
   }, [maintenanceExpenses]);
+
+  // 20. Offline mutation queue — drain on reconnect
+  //
+  // Two triggers fire a drain:
+  //   a) The browser `online` event (device-level network restoration)
+  //   b) Firebase `.info/connected` becoming true (Firebase-level reconnect,
+  //      which may lag the browser event on slow networks or reconnects)
+  //
+  // A module-level singleton lock inside replayOfflineMutations prevents
+  // concurrent drain loops when both signals fire in quick succession.
+  useEffect(() => {
+    async function drainQueue() {
+      await replayOfflineMutations();
+    }
+
+    const handleOnline = () => { void drainQueue(); };
+    window.addEventListener('online', handleOnline);
+
+    const unsubConn = subscribeToConnectivity((connected) => {
+      if (connected) void drainQueue();
+    });
+
+    // Drain on mount — catches items enqueued in a previous offline session
+    // that survived a page refresh.
+    void drainQueue();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      unsubConn();
+    };
+  }, []);
 }

@@ -16,7 +16,9 @@ import {
   writeOrderTableMutation,
   getObservedResetGeneration,
   isSelectiveResetMarkersHydrated,
+  BASELINE_RESET_GENERATION,
 } from '../utils/firebaseSync';
+import { enqueueMutation } from '../utils/offlineQueue';
 
 type DynamicPillar = string;
 
@@ -380,10 +382,19 @@ export const usePOSStore = create<POSState>((set, get) => ({
       return { orders, tables };
     });
     const occupiedTable = get().tables.find((t) => t.id === tableId);
-    if (occupiedTable) {
-      writeOrderTableMutation({ orders: [order], tables: [occupiedTable] });
+    if (navigator.onLine) {
+      if (occupiedTable) {
+        writeOrderTableMutation({ orders: [order], tables: [occupiedTable] });
+      } else {
+        writeOrderRecord(order);
+      }
     } else {
-      writeOrderRecord(order);
+      enqueueMutation(
+        'orders',
+        'create_order',
+        { order, ...(occupiedTable ? { table: occupiedTable } : {}) } as unknown as Record<string, unknown>,
+        getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION,
+      );
     }
 
     return order;
@@ -600,10 +611,19 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const updatedOrder = get().orders.find((o) => o.id === orderId);
     if (updatedOrder) {
       const updatedTable = get().tables.find((t) => t.id === updatedOrder.tableId);
-      if (updatedTable) {
-        writeOrderTableMutation({ orders: [updatedOrder], tables: [updatedTable] });
+      if (navigator.onLine) {
+        if (updatedTable) {
+          writeOrderTableMutation({ orders: [updatedOrder], tables: [updatedTable] });
+        } else {
+          writeOrderRecord(updatedOrder);
+        }
       } else {
-        writeOrderRecord(updatedOrder);
+        enqueueMutation(
+          'orders',
+          'update_order',
+          { order: updatedOrder, ...(updatedTable ? { table: updatedTable } : {}) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION,
+        );
       }
     }
   },
@@ -928,13 +948,30 @@ export const usePOSStore = create<POSState>((set, get) => ({
     // Granular Firebase sync: new payment record + settled order + associated table
     const allPayments = get().payments;
     const fbNewPayment = allPayments[allPayments.length - 1];
-    if (fbNewPayment) writePaymentRecord(fbNewPayment);
     const fbSettledOrder = get().orders.find((o) => o.id === payment.orderId);
     const fbSettledTable = fbSettledOrder ? get().tables.find((t) => t.id === fbSettledOrder.tableId) : undefined;
-    if (fbSettledOrder && fbSettledTable) {
-      writeOrderTableMutation({ orders: [fbSettledOrder], tables: [fbSettledTable] });
-    } else if (fbSettledOrder) {
-      writeOrderRecord(fbSettledOrder);
+    if (navigator.onLine) {
+      if (fbNewPayment) writePaymentRecord(fbNewPayment);
+      if (fbSettledOrder && fbSettledTable) {
+        writeOrderTableMutation({ orders: [fbSettledOrder], tables: [fbSettledTable] });
+      } else if (fbSettledOrder) {
+        writeOrderRecord(fbSettledOrder);
+      }
+    } else {
+      const salesGen = getObservedResetGeneration('salesHistory') ?? BASELINE_RESET_GENERATION;
+      const activeGen = getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION;
+      if (fbNewPayment) {
+        enqueueMutation('payments', 'add_payment',
+          { payment: fbNewPayment } as unknown as Record<string, unknown>,
+          salesGen,
+        );
+      }
+      if (fbSettledOrder) {
+        enqueueMutation('orders', 'update_order',
+          { order: fbSettledOrder, ...(fbSettledTable ? { table: fbSettledTable } : {}) } as unknown as Record<string, unknown>,
+          activeGen,
+        );
+      }
     }
 
     // ── Customer consumption metrics ─────────────────────────────────────────

@@ -9,6 +9,8 @@ import type {
 } from '@/types/pos';
 import type { SelectiveResetSelection } from '@/types/selectiveReset';
 import { applySelectiveResetToFirebase } from '@/utils/firebaseSync';
+import { clearQueueForDomains } from '@/utils/offlineQueue';
+import type { OfflineMutationDomain } from '@/types/offlineQueue';
 import { db } from '@/storage/db';
 import { usePOSStore } from '@/store/usePOSStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
@@ -92,6 +94,15 @@ export function cigarettesAfterStockReset(products: CigaretteProduct[]): Cigaret
 }
 
 function applySelectiveResetLocally(selection: SelectiveResetSelection): void {
+  // ── Drop queued offline mutations for any domain being reset ─────────────
+  // If the device had pending writes that haven't reached Firebase yet, they
+  // must not be replayed after the reset wipes that data.
+  const resetDomains = new Set<OfflineMutationDomain>();
+  if (selection.salesHistory)   { resetDomains.add('orders'); resetDomains.add('payments'); }
+  if (selection.activeFloor)    { resetDomains.add('orders'); resetDomains.add('tables'); }
+  if (selection.customerCredit) { resetDomains.add('customers'); }
+  if (resetDomains.size > 0) clearQueueForDomains(resetDomains);
+
   const pos = usePOSStore.getState();
   const nextOrders = ordersAfterSelectiveReset(pos.orders, selection);
 

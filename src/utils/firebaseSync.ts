@@ -22,6 +22,13 @@ import type { MeatEntry } from "../store/useMeatTrackerStore";
 import type { MaintenanceExpense } from "../types/pos";
 import type { Customer, CustomerRepayment } from "../types/pos";
 import type { SelectiveResetSelection } from "../types/selectiveReset";
+import type { OfflineMutation } from "../types/offlineQueue";
+import {
+  getAllPendingMutations,
+  dequeueMutation,
+  incrementRetry,
+  dropExhaustedMutations,
+} from "./offlineQueue";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[], exists?: boolean) => void;
@@ -325,12 +332,13 @@ type ResetMarkerModule =
   | "salesHistory"
   | "kitchenOperations"
   | "barInventory"
-  | "maintenanceExpenses";
+  | "maintenanceExpenses"
+  | "customerCredit";
 
 let observedResetMarkers: Partial<Record<ResetMarkerModule, SyncMutation>> | null = null;
 let resetMarkerHydration: Promise<void> | null = null;
 
-const BASELINE_RESET_GENERATION = "baseline";
+export const BASELINE_RESET_GENERATION = "baseline";
 
 function resetGeneration(marker: Partial<SyncMutation> | undefined): string {
   return marker?.syncMutationId ?? BASELINE_RESET_GENERATION;
@@ -1318,4 +1326,131 @@ export function subscribeToMaintenanceExpenses(
   return onValue(ref(db, "maintenanceExpenses"), (snapshot) => {
     callback(toArray(snapshot.val()) as MaintenanceExpense[], snapshot.exists());
   });
+}
+
+// ── Connectivity & offline mutation queue replay ───────────────────────────────
+
+/**
+ * Subscribe to Firebase's own connectivity indicator (`.info/connected`).
+ * Returns an unsubscribe function. The callback fires immediately with the
+ * current connected state and again whenever it changes.
+ */
+export function subscribeToConnectivity(
+  callback: (connected: boolean) => void,
+): () => void {
+  return onValue(ref(db, ".info/connected"), (snapshot) => {
+    callback(snapshot.val() === true);
+  });
+}
+
+/**
+ * Module-level singleton replay lock.
+ * Prevents concurrent drain loops when both the `online` window event and the
+ * Firebase `.info/connected` listener fire in quick succession.
+ */
+let isReplaying = false;
+
+/**
+ * Drain the offline mutation outbox in strict FIFO order.
+ *
+ * For each queued mutation:
+ *  - Orders / tables / payments: delegates to existing Firebase write functions
+ *    which validate reset generations inside their own transactions.
+ *  - Customers: checks the customerCredit reset generation before writing so
+ *    that a complete directory wipe (Approach A) cannot be resurrected by a
+ *    stale queued customer mutation.
+ *
+ * Always dequeues after calling the Firebase function. The Firebase SDK's own
+ * in-session retry handles transient network errors; this queue specifically
+ * covers the "page refreshed while offline" gap.
+ *
+ * Masters (menu, tables layout, bar product catalog, staff PINs, printer
+ * config) are never touched — the queue only covers the four transactional
+ * domains: orders, tables, payments, customers.
+ */
+export async function replayOfflineMutations(): Promise<void> {
+  if (isReplaying) return;
+  const mutations = getAllPendingMutations();
+  if (mutations.length === 0) return;
+
+  isReplaying = true;
+  try {
+    await ensureResetMarkersHydrated();
+
+    for (const mutation of mutations) {
+      try {
+        await dispatchMutation(mutation);
+        dequeueMutation(mutation.id);
+      } catch (error) {
+        // Stop on first error to preserve FIFO order; retry next reconnect.
+        incrementRetry(mutation.id);
+        console.warn(
+          `[Offline Queue] Replay failed for ${mutation.id} (${mutation.action}):`,
+          error,
+        );
+        break;
+      }
+    }
+
+    dropExhaustedMutations();
+  } finally {
+    isReplaying = false;
+  }
+}
+
+async function dispatchMutation(mutation: OfflineMutation): Promise<void> {
+  switch (mutation.action) {
+    case "create_order":
+    case "update_order": {
+      const order = mutation.payload.order as Order;
+      const table = mutation.payload.table as CafeTable | undefined;
+      await writeOrderTableMutation({
+        orders: [order],
+        tables: table ? [table] : [],
+      });
+      break;
+    }
+    case "delete_order": {
+      const orderId = mutation.payload.orderId as string;
+      await writeOrderTableMutation({ deletedOrderIds: [orderId] });
+      break;
+    }
+    case "update_table": {
+      const table = mutation.payload.table as CafeTable;
+      await writeOrderTableMutation({ tables: [table] });
+      break;
+    }
+    case "add_payment": {
+      const payment = mutation.payload.payment as Payment;
+      await writePaymentRecord(payment);
+      break;
+    }
+    case "write_customer":
+    case "update_customer_due":
+    case "record_repayment": {
+      // Validate against the current customer-credit reset generation.
+      // If a full directory wipe happened after this mutation was enqueued,
+      // discard it so deleted customer profiles cannot be resurrected.
+      const currentGen =
+        getObservedResetGeneration("customerCredit") ?? BASELINE_RESET_GENERATION;
+      if (mutation.resetGeneration !== currentGen) {
+        dequeueMutation(mutation.id);
+        console.info(
+          `[Offline Queue] Discarded stale customer mutation (${mutation.id}): ` +
+          `generation ${mutation.resetGeneration} → ${currentGen}`,
+        );
+        return;
+      }
+      const customer = mutation.payload.customer as Customer & {
+        repayments: CustomerRepayment[];
+      };
+      await writeCustomer(customer);
+      break;
+    }
+    default:
+      // Unknown action from a future schema version — discard safely.
+      console.warn(
+        `[Offline Queue] Unknown action "${(mutation as OfflineMutation).action}" — discarding.`,
+      );
+  }
 }
