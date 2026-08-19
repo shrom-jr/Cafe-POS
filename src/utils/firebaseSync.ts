@@ -321,7 +321,12 @@ export async function pushOrdersToFirebase(orders: Order[]) {
 // Push Tables Status
 export async function pushTablesToFirebase(tables: CafeTable[]) {
   try {
-    await set(ref(db, "tables"), JSON.parse(JSON.stringify(tables || [])));
+    // Write as a UUID-keyed object, not an array. Using an array causes Firebase
+    // to store records under integer keys (0, 1, 2…) which then coexist with the
+    // UUID-keyed records written by writeOrderTableMutation, creating duplicate
+    // entries per table that drive infinite repair loops in subscribeToTables.
+    const uuidKeyedMap = Object.fromEntries((tables || []).map((t) => [t.id, t]));
+    await set(ref(db, "tables"), JSON.parse(JSON.stringify(uuidKeyedMap)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Tables Push", error);
   }
@@ -1300,7 +1305,10 @@ export async function writePinReset(userId: string, otp: string, expiresAt: numb
 
 // Subscribe to Live Table Statuses
 export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
-  let tables: CafeTable[] = [];
+  // Track {firebaseKey, table} pairs so we can detect and delete orphaned
+  // integer-keyed records (created when pushTablesToFirebase used set() with an
+  // array) that coexist with UUID-keyed records from writeOrderTableMutation.
+  let tableEntries: Array<{ firebaseKey: string; table: CafeTable }> = [];
   let tombstonedOrderIds = new Set<string>();
   let activeFloorReset: SyncMutation | undefined;
   let tablesReady = false;
@@ -1310,15 +1318,45 @@ export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
   const emit = () => {
     if (!tablesReady || !tombstonesReady || !resetReady) return;
     const repairs: CafeTable[] = [];
-    const cleanTables = tables.map((table) => {
+    // Keys to delete: integer (or otherwise non-UUID) firebase keys that differ
+    // from the table's canonical UUID id.  These orphaned records are the root
+    // cause of the infinite repair loop: emit() sees them as occupied/stale,
+    // repairs them to the UUID-keyed path, but never removes the old key — so
+    // the next snapshot still contains the stale record and triggers another repair.
+    const staleKeyDeletions: Record<string, null> = {};
+
+    const seenIds = new Set<string>();
+    const cleanTables: CafeTable[] = [];
+
+    for (const { firebaseKey, table } of tableEntries) {
       acknowledgePendingWrite(pendingTableWrites, table.id, table);
+
+      // If this firebase key is not the table's canonical UUID key, schedule
+      // deletion.  Skip if a write is already in flight for this table (the
+      // pending write will settle the state; we'll clean up on the next emit).
+      if (firebaseKey !== table.id && !pendingTableWrites.has(table.id)) {
+        staleKeyDeletions[`tables/${firebaseKey}`] = null;
+      }
+
+      // Deduplicate: when both an integer-keyed and a UUID-keyed record exist
+      // for the same table.id, prefer the UUID-keyed one (processed first when
+      // Firebase returns keys in natural order, or use the free/newer one).
+      const isDuplicate = seenIds.has(table.id);
+      seenIds.add(table.id);
+
       const linkedOrderWasDeleted =
         Boolean(table.orderId) && tombstonedOrderIds.has(table.orderId as string);
       const occupancyHasStaleGeneration =
         table.status !== "free" &&
         table.activeFloorResetGeneration !== undefined &&
         table.activeFloorResetGeneration !== resetGeneration(activeFloorReset);
-      if (!linkedOrderWasDeleted && !occupancyHasStaleGeneration) return table;
+
+      if (!linkedOrderWasDeleted && !occupancyHasStaleGeneration) {
+        // Only add to the output array once per table id.
+        if (!isDuplicate) cleanTables.push(table);
+        continue;
+      }
+
       const {
         orderId: _orderId,
         orderStartTime: _orderStartTime,
@@ -1332,8 +1370,9 @@ export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
       if (!pendingTableWrites.has(table.id)) {
         repairs.push(repaired);
       }
-      return repaired;
-    });
+      if (!isDuplicate) cleanTables.push(repaired);
+    }
+
     callback(cleanTables);
 
     // This is not a guessed occupancy repair: the durable order tombstone is
@@ -1342,10 +1381,29 @@ export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
     if (repairs.length > 0) {
       void writeOrderTableMutation({ tables: repairs });
     }
+
+    // Remove orphaned integer-keyed (or other non-UUID-keyed) table records.
+    // Fire-and-forget: a failure is non-critical because the key will be
+    // re-attempted on the next emit() cycle until it is gone.
+    if (Object.keys(staleKeyDeletions).length > 0) {
+      void update(ref(db), staleKeyDeletions).catch((err: unknown) => {
+        logStructuredFirebaseError("Firebase stale table key cleanup", err);
+      });
+    }
   };
 
   const unsubscribeTables = onValue(ref(db, "tables"), (snapshot) => {
-    tables = toArray(snapshot.val()) as CafeTable[];
+    // Use toFirebaseEntries (not toArray) to preserve firebase keys alongside
+    // the table data — keys are needed to detect and delete integer-keyed orphans.
+    tableEntries = toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawTable]) => ({
+      firebaseKey,
+      table: {
+        ...rawTable,
+        // If the record lacks an id field (legacy integer-keyed record), fall
+        // back to the firebase key so table.id is always a non-empty string.
+        id: typeof rawTable.id === "string" && rawTable.id ? rawTable.id : firebaseKey,
+      } as CafeTable,
+    }));
     tablesReady = true;
     emit();
   });

@@ -15,3 +15,4 @@
 - [Firebase menu hard reset](firebase-menu-hard-reset.md) — stale connected clients can recreate deprecated menu nodes immediately after a DELETE
 - [Firebase cross-tab conflict protocol](firebase-cross-tab-conflict.md) — related order/table writes use shared metadata and atomic updates; order deletes require tombstones
 - [Selective reset concurrency](selective-reset-concurrency.md) — reset and eligible writes share atomic generations; never classify stale POS data by device timestamps
+- [Integer-keyed table loop](integer-key-table-loop.md) — pushTablesToFirebase used set(array) → integer keys; coexisting with UUID keys caused infinite repair loop in subscribeToTables
