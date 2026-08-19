@@ -1,0 +1,99 @@
+Perform a complete, evidence-based 360-degree audit of this entire Bamboo POS application.
+
+Read the whole repository before making conclusions. Audit the architecture, application lifecycle, routes, screens, components, Zustand stores, Firebase reads/writes, localStorage, IndexedDB, offline queues, Electron code, printer integrations, workflows, deployment configuration, tests, and documentation.
+
+Review all major business flows:
+- staff login, PIN hashing, migration, lockout, roles, and permissions
+- orders, tables, menu, kitchen/bar tickets, voids, discounts, VAT, payments, split payments, refunds, and customer credit
+- inventory deduction/restoration, bottle/glass quantities, packaged units, expenses, reports, profit, counters, and resets
+- receipts, KOT, BOT, void tickets, Electron printing, browser/WebUSB printing, Print Hub behavior, retries, failures, and duplicate printing
+
+Audit data integrity and synchronization:
+- Firebase schema and security rules if available
+- duplicate listeners
+- multiple writers for the same state
+- stale devices and stale localStorage
+- offline queue replay
+- cross-tab and multi-device conflicts
+- race conditions
+- lost updates
+- duplicate orders, payments, tickets, deductions, and counters
+- partial writes
+- startup seeding
+- empty/null Firebase snapshots
+- migrations, resets, tombstones, and recovery behavior
+
+Audit security:
+- authentication and authorization
+- privilege escalation
+- PIN exposure and legacy plaintext migration
+- brute-force and lockout bypasses
+- client-only permission checks
+- Firebase authorization
+- secrets and sensitive data in source, bundles, logs, storage, or errors
+- XSS, injection, unsafe HTML/URLs, input validation, Electron IPC, preload, nodeIntegration, context isolation, external navigation, and dependency vulnerabilities
+
+Audit UI/UX:
+- desktop, tablet, and mobile layouts
+- responsive behavior
+- typography, spacing, contrast, navigation, touch targets, keyboard access, focus states, modals, forms, loading, empty, success, and error states
+- accessibility and screen-reader concerns
+- confusing or dangerous workflows
+- duplicate-click protection
+- role-specific UI
+- printer setup and offline/reconnection feedback
+
+Audit quality and operations:
+- build, TypeScript, tests, lint, runtime/browser errors, and missing test coverage
+- performance with large Firebase collections
+- memory/listener/queue leaks
+- local Preview versus published web app versus Electron version drift
+- cache/service-worker behavior
+- environment separation
+- deployment, rollback, backups, disaster recovery, and documentation accuracy
+- privacy, data retention, and unnecessary sensitive-data exposure
+
+Run only safe, existing, read-only validation commands where available, such as build, tests, lint, type checks, and existing security checks. Do not install packages.
+
+IMPORTANT:
+- Do not modify source code, dependencies, workflows, configuration, deployment settings, secrets, or database data.
+- Do not perform Firebase/database writes, resets, seeds, migrations, deletes, or deployments.
+- Update only AUDIT_REPORT.md.
+- Never reveal secrets, credentials, tokens, PINs, hashes, or private data.
+- Do not call a risk confirmed without evidence.
+- Clearly separate confirmed findings, suspected findings, recommendations, and areas that could not be verified.
+
+For every finding include:
+- severity: Critical, High, Medium, Low, or Informational
+- confidence: High, Medium, or Low
+- affected area and environment
+- evidence with file paths and line numbers where possible
+- impact
+- reproduction or verification steps
+- recommended remediation
+- data and operational risk
+
+Organize AUDIT_REPORT.md as:
+
+1. Audit metadata and scope
+2. Executive summary
+3. Application architecture and data flow
+4. Functional and business-logic audit
+5. Firebase, database, and synchronization audit
+6. Security and vulnerability audit
+7. Electron and printing audit
+8. Offline and local-persistence audit
+9. Money, inventory, counters, and reset audit
+10. UI/UX and accessibility audit
+11. Performance audit
+12. Testing and code-quality audit
+13. Deployment, privacy, recovery, and documentation audit
+14. Confirmed findings
+15. Suspected findings requiring verification
+16. Positive findings and existing safeguards
+17. Bugs
+17. Prioritized remediation plan
+18. Audit coverage and limitations
+19. Final risk summary
+
+Before finishing, verify that every major route and workflow was reviewed, every important claim has evidence, no source or data was changed, and all unknown areas are explicitly documented.
