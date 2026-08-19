@@ -821,31 +821,49 @@ function acknowledgePendingWrite(
   }
 }
 
-/** Write (or overwrite) one payment record at `payments/${payment.id}`. */
-export async function writePaymentRecord(payment: Payment): Promise<void> {
+/**
+ * Write (or overwrite) one payment record at `payments/${payment.id}`.
+ *
+ * Uses a targeted `get("resetMarkers/salesHistory")` + `update()` instead of
+ * a root-level `runTransaction`. The root transaction required root read/write
+ * permission that production Firebase rules deny, causing every payment write
+ * to silently fail with an empty error object. This matches the pattern
+ * already applied to `writeOrderTableMutation`.
+ *
+ * Returns `{ success: true }` on success or silent skip, or
+ * `{ success: false, error }` when Firebase rejects the write. Existing
+ * callers that do not inspect the return value continue to work unchanged.
+ */
+export async function writePaymentRecord(payment: Payment): Promise<{ success: boolean; error?: unknown }> {
   try {
     const markersWereHydrated = isSelectiveResetMarkersHydrated();
     await ensureResetMarkersHydrated();
-    if (!markersWereHydrated && !payment.salesHistoryResetGeneration) return;
+    if (!markersWereHydrated && !payment.salesHistoryResetGeneration) return { success: true };
+
     const expectedGeneration =
       payment.salesHistoryResetGeneration ??
       getObservedResetGeneration("salesHistory") ??
       BASELINE_RESET_GENERATION;
-    await runTransaction(ref(db), (currentData) => {
-      const root = cloneFirebaseRoot(currentData);
-      const marker = root.resetMarkers?.salesHistory as SyncMutation | undefined;
-      const currentGeneration = resetGeneration(marker);
-      if (expectedGeneration !== currentGeneration) return root;
-      const payments = toFirebaseRecordMap(root.payments);
-      payments[recordKeyForId(payments, payment.id)] = recordData({
+
+    // Read only the marker we need — no root-level read required.
+    const markerSnap = await get(ref(db, "resetMarkers/salesHistory"));
+    const marker = markerSnap.val() as SyncMutation | null;
+    const currentGeneration = resetGeneration(marker ?? undefined);
+
+    // Generation mismatch means a selective reset happened after this payment
+    // was created — discard without writing to avoid polluting the new period.
+    if (expectedGeneration !== currentGeneration) return { success: true };
+
+    await update(ref(db), {
+      [`payments/${payment.id}`]: recordData({
         ...payment,
         salesHistoryResetGeneration: currentGeneration,
-      });
-      assignFirebaseCollection(root, "payments", payments);
-      return root;
-    }, { applyLocally: false });
+      }),
+    });
+    return { success: true };
   } catch (error) {
     logStructuredFirebaseError("Firebase Payment Write", error);
+    return { success: false, error };
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -964,6 +982,11 @@ export function subscribeToOrders(
 
       // Convergence guard for a legacy tab that does not use the transaction
       // writer: remove the stale record and add a permanent tombstone.
+      //
+      // Cross-tab dedup: if this tab already sent a delete for this order and
+      // the tombstone has not yet arrived, skip re-sending — another tab (or
+      // this one) already owns the repair.
+      if (pendingOrderDeletes.has(order.id)) continue;
       repairs[`orders/${firebaseKey}`] = null;
       if (!tombstoneById.has(order.id) && resetMarker) {
         repairs[`orderTombstones/${order.id}`] = {
@@ -1303,7 +1326,12 @@ export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
         ...definition
       } = table;
       const repaired = { ...definition, status: "free" as const };
-      repairs.push(repaired);
+      // Cross-tab dedup: if this tab already has a write in flight for this
+      // table, skip queueing another repair — the in-flight write will resolve
+      // the stale state when Firebase echoes it back.
+      if (!pendingTableWrites.has(table.id)) {
+        repairs.push(repaired);
+      }
       return repaired;
     });
     callback(cleanTables);

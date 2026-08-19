@@ -1,4 +1,21 @@
 import { useEffect, useRef } from "react";
+
+// ─── Per-tab FIREWALL debounce ────────────────────────────────────────────────
+// When Firebase delivers an empty snapshot for a collection that has local data,
+// every open tab fires a bulk push simultaneously. This module-level map ensures
+// each tab waits at least FIREWALL_DEBOUNCE_MS before re-firing a push for the
+// same collection key, preventing rapid-fire bursts within one tab on volatile
+// connectivity and reducing the window for duplicate cross-tab pushes.
+const firewallLastPush = new Map<string, number>();
+const FIREWALL_DEBOUNCE_MS = 5_000;
+
+function firewallPush(key: string, pushFn: () => void): void {
+  const now = Date.now();
+  if ((firewallLastPush.get(key) ?? 0) + FIREWALL_DEBOUNCE_MS > now) return;
+  firewallLastPush.set(key, now);
+  pushFn();
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { usePOSStore } from "@/store/usePOSStore";
 import { useStaffStore } from "@/store/useStaffStore";
 import { useInventoryStore } from "@/store/useInventoryStore";
@@ -302,7 +319,7 @@ export function useFirebaseSync() {
         }
         // Both sides empty — one-time bulk seed with restaurant defaults.
         setTables(DEFAULT_TABLES);
-        pushTablesToFirebase(DEFAULT_TABLES);
+        firewallPush("tables", () => pushTablesToFirebase(DEFAULT_TABLES));
         return;
       }
 
@@ -371,7 +388,7 @@ export function useFirebaseSync() {
         // FIREWALL: preserve local area order if remote is empty.
         // No default seeding needed — area order derives from sections.
         if (remoteAreaOrder.length === 0 && currentAreaOrder.length > 0) {
-          pushAreaOrderToFirebase(currentAreaOrder);
+          firewallPush("areaOrder", () => pushAreaOrderToFirebase(currentAreaOrder));
           return;
         }
 
@@ -419,7 +436,7 @@ export function useFirebaseSync() {
 
         // FIREWALL: preserve local purchase history if remote is empty
         if (remotePurchases.length === 0 && currentPurchases.length > 0) {
-          pushGroceryPurchasesToFirebase(currentPurchases);
+          firewallPush("groceryPurchases", () => pushGroceryPurchasesToFirebase(currentPurchases));
           return;
         }
 
@@ -447,7 +464,7 @@ export function useFirebaseSync() {
 
         // FIREWALL: preserve local movement history if remote is empty
         if (remoteMovements.length === 0 && currentMovements.length > 0) {
-          pushInvMovementsToFirebase(currentMovements);
+          firewallPush("invMovements", () => pushInvMovementsToFirebase(currentMovements));
           return;
         }
 
@@ -463,7 +480,7 @@ export function useFirebaseSync() {
 
         // FIREWALL: preserve local mappings if remote is empty
         if (remoteMappings.length === 0 && currentMappings.length > 0) {
-          pushInvMappingsToFirebase(currentMappings);
+          firewallPush("invMappings", () => pushInvMappingsToFirebase(currentMappings));
           return;
         }
 
@@ -486,7 +503,7 @@ export function useFirebaseSync() {
 
       // FIREWALL: preserve local purchase history if remote is empty
       if (remote.length === 0 && current.length > 0) {
-        pushKitchenPurchasesToFirebase(current);
+        firewallPush("kitchenPurchases", () => pushKitchenPurchasesToFirebase(current));
         return;
       }
 
@@ -508,7 +525,7 @@ export function useFirebaseSync() {
 
       // FIREWALL: preserve local meat tracker history if remote is empty
       if (remote.length === 0 && current.length > 0) {
-        pushMeatEntriesToFirebase(current);
+        firewallPush("meatEntries", () => pushMeatEntriesToFirebase(current));
         return;
       }
 
@@ -530,7 +547,7 @@ export function useFirebaseSync() {
 
       // FIREWALL: preserve local expense records if remote is empty
       if (remote.length === 0 && current.length > 0) {
-        pushMaintenanceExpensesToFirebase(current);
+        firewallPush("maintenanceExpenses", () => pushMaintenanceExpensesToFirebase(current));
         return;
       }
 
@@ -560,7 +577,7 @@ export function useFirebaseSync() {
         // FIREWALL: never wipe non-empty local staff with empty remote.
         // Staff are critical for login — if Firebase loses them, keep local cache.
         if (remoteUsers.length === 0 && currentUsers.length > 0) {
-          pushStaffToFirebase(currentUsers);
+          firewallPush("staff", () => pushStaffToFirebase(currentUsers));
           hasLoadedStaff.current = true;
           return;
         }
