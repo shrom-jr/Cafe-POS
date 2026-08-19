@@ -1,12 +1,14 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStaffStore } from '@/store/useStaffStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
-import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users, RefreshCw } from 'lucide-react';
+import { LogOut, LayoutGrid, ChefHat, GlassWater, ShieldCheck, Users, RefreshCw, CheckCircle2, WifiOff } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/Navigation';
-import { subscribeToLogo } from '@/utils/firebaseSync';
+import { subscribeToLogo, subscribeToConnectivity, replayOfflineMutations } from '@/utils/firebaseSync';
+import { getPendingQueueCount } from '@/utils/offlineQueue';
+import { useToast } from '@/hooks/use-toast';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
@@ -86,20 +88,117 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
     </div>
   );
 
-  // ── Sync button ─────────────────────────────────────────────────────────────
-  const [syncing, setSyncing] = useState(false);
-  const handleSync = () => {
-    if (syncing) return;
-    setSyncing(true);
-    setTimeout(() => setSyncing(false), 1200);
+  // ── Connectivity / offline-queue status badge ────────────────────────────────
+  const { toast } = useToast();
+  const [isOnline, setIsOnline]                   = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState(true);
+  const [pendingCount, setPendingCount]           = useState(getPendingQueueCount);
+  const [isSyncing, setIsSyncing]                 = useState(false);
+  // Track previous syncing state to detect the transition true → false
+  const prevSyncingRef = useRef(false);
+
+  useEffect(() => {
+    const handleOnline  = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    const handleQueueChange = () => setPendingCount(getPendingQueueCount());
+    const handleReplayStatus = (e: Event) => {
+      const active = (e as CustomEvent<{ active: boolean }>).detail.active;
+      setIsSyncing(active);
+    };
+    const handleSyncComplete = () => {
+      toast({
+        title: 'All synced',
+        description: 'Offline actions have been uploaded successfully.',
+        duration: 3000,
+      });
+    };
+
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('offline-queue-changed',  handleQueueChange);
+    window.addEventListener('offline-replay-status',  handleReplayStatus as EventListener);
+    window.addEventListener('offline-sync-complete',  handleSyncComplete);
+
+    const unsubConn = subscribeToConnectivity((connected) => {
+      setIsFirebaseConnected(connected);
+    });
+
+    return () => {
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('offline-queue-changed',  handleQueueChange);
+      window.removeEventListener('offline-replay-status',  handleReplayStatus as EventListener);
+      window.removeEventListener('offline-sync-complete',  handleSyncComplete);
+      unsubConn();
+    };
+  }, [toast]);
+
+  // Track syncing → done transition (not needed for toast — handled by event)
+  useEffect(() => { prevSyncingRef.current = isSyncing; }, [isSyncing]);
+
+  const effectivelyOnline = isOnline && isFirebaseConnected;
+
+  const handleManualSync = useCallback(() => {
+    if (isSyncing || !effectivelyOnline) return;
+    void replayOfflineMutations();
+  }, [isSyncing, effectivelyOnline]);
+
+  // Derive display state
+  type SyncStatus = 'online' | 'offline' | 'syncing';
+  const status: SyncStatus =
+    isSyncing          ? 'syncing' :
+    !effectivelyOnline ? 'offline' :
+    pendingCount > 0   ? 'offline' :
+    'online';
+
+  const statusConfig: Record<SyncStatus, { pill: string; label: string; title: string; dotClass: string }> = {
+    online: {
+      pill:     'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25',
+      dotClass: 'bg-emerald-400',
+      label:    'Synced',
+      title:    'All data is synced with the server',
+    },
+    offline: {
+      pill:     'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25',
+      dotClass: 'bg-amber-400 animate-pulse',
+      label:    pendingCount > 0 ? `${pendingCount} pending` : 'Offline',
+      title:    pendingCount > 0
+                  ? `${pendingCount} action${pendingCount !== 1 ? 's' : ''} queued — click to sync when online`
+                  : 'No connection to server',
+    },
+    syncing: {
+      pill:     'bg-blue-500/15 border-blue-500/30 text-blue-400 hover:bg-blue-500/25',
+      dotClass: 'bg-blue-400',
+      label:    pendingCount > 0 ? `${pendingCount} left…` : 'Syncing…',
+      title:    'Uploading offline actions…',
+    },
   };
+
+  const cfg = statusConfig[status];
+
   const syncButton = (
     <button
-      onClick={handleSync}
-      title="Sync data"
-      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-400 hover:text-white transition-all active:scale-95 flex items-center justify-center"
+      onClick={handleManualSync}
+      title={cfg.title}
+      aria-label={cfg.title}
+      className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold tracking-wide transition-all active:scale-95 select-none ${cfg.pill}`}
     >
-      <RefreshCw size={15} className={syncing ? 'animate-spin' : 'transition-transform'} />
+      {/* Leading indicator — spinner when syncing, coloured dot otherwise */}
+      {status === 'syncing' ? (
+        <RefreshCw size={11} className="animate-spin flex-shrink-0" />
+      ) : status === 'offline' && !effectivelyOnline ? (
+        <WifiOff size={11} className="flex-shrink-0" />
+      ) : status === 'online' ? (
+        <CheckCircle2 size={11} className="flex-shrink-0" />
+      ) : (
+        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dotClass}`} />
+      )}
+      {/* Label — hidden on very small screens */}
+      <span className="hidden sm:inline whitespace-nowrap">{cfg.label}</span>
+      {/* Manual-replay affordance when there are pending items and we're online */}
+      {status === 'offline' && effectivelyOnline && (
+        <RefreshCw size={10} className="flex-shrink-0 opacity-75" />
+      )}
     </button>
   );
 

@@ -1374,6 +1374,12 @@ export async function replayOfflineMutations(): Promise<void> {
   if (mutations.length === 0) return;
 
   isReplaying = true;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('offline-replay-status', { detail: { active: true } }),
+    );
+  }
+
   try {
     await ensureResetMarkersHydrated();
 
@@ -1395,6 +1401,15 @@ export async function replayOfflineMutations(): Promise<void> {
     dropExhaustedMutations();
   } finally {
     isReplaying = false;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('offline-replay-status', { detail: { active: false } }),
+      );
+      // Signal a clean drain so the UI can show a "synced" confirmation.
+      if (getAllPendingMutations().length === 0) {
+        window.dispatchEvent(new Event('offline-sync-complete'));
+      }
+    }
   }
 }
 

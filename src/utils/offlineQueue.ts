@@ -22,6 +22,16 @@ const MAX_RETRY = 5;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+/**
+ * Notify any listening UI components (e.g. the AppLayout status badge) that
+ * the queue contents have changed. Safe to call in non-browser environments.
+ */
+function dispatchQueueChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('offline-queue-changed'));
+  }
+}
+
 function readQueue(): OfflineMutation[] {
   try {
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
@@ -66,6 +76,7 @@ export function enqueueMutation(
   const queue = readQueue();
   queue.push(mutation);
   writeQueue(queue);
+  dispatchQueueChanged();
 }
 
 /** Returns the oldest pending mutation without removing it (FIFO head). */
@@ -76,6 +87,7 @@ export function peekQueue(): OfflineMutation | undefined {
 /** Permanently remove a successfully replayed mutation from the outbox. */
 export function dequeueMutation(id: string): void {
   writeQueue(readQueue().filter((m) => m.id !== id));
+  dispatchQueueChanged();
 }
 
 /** Increment the retry counter for a mutation that failed to replay. */
@@ -103,6 +115,7 @@ export function getPendingQueueCount(): number {
  */
 export function clearQueue(): void {
   localStorage.removeItem(OFFLINE_QUEUE_KEY);
+  dispatchQueueChanged();
 }
 
 /**
@@ -117,6 +130,7 @@ export function clearQueueForDomains(domains: Set<OfflineMutationDomain>): void 
   } else {
     writeQueue(remaining);
   }
+  dispatchQueueChanged();
 }
 
 /** Return a snapshot of all pending mutations, oldest first (FIFO order). */
