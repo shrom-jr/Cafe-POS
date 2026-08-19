@@ -14,6 +14,7 @@ All production printing is silent raw ESC/POS over direct WebUSB. No window.prin
 - **The `storage` event never fires in the tab that wrote it** — any localStorage-backed toggle (like the auto-print hub flag) needs a same-tab notification or it stays stale until reload.
 - Ticket routing precedence: item-level print route > category print route > legacy send-to-kitchen boolean.
 - Unpaired/offline printer = silent skip (warn + resolve false). Never throw or open a dialog from the print path.
+- Exactly one device must have the local auto-print hub flag enabled. Multiple active hubs can each consume the same Firebase ticket and print duplicate KOT/BOT copies; disabling the flag on every non-printer device fixes this operationally.
 
 **How to apply:**
 - The legacy iframe/HTML print pipeline exists only for typing and the admin receipt preview — no screen may dispatch through it.
