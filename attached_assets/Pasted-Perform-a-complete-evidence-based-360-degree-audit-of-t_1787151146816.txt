@@ -1,0 +1,146 @@
+Perform a complete, evidence-based 360-degree audit of this entire Bamboo POS application and update AUDIT_REPORT.md.
+
+Inspect the whole repository strategically before making conclusions. Prioritize application code, routes, screens, components, Zustand stores, Firebase reads/writes, localStorage, IndexedDB, offline queues, Electron code, printer integrations, workflows, deployment configuration, tests, and documentation. Do not waste time reading irrelevant generated files or dependency contents.
+
+AUDIT ALL FUNCTIONAL AND BUSINESS FLOWS, WHERE IMPLEMENTED:
+
+- Staff login/logout, PIN hashing, six-digit PINs, legacy PIN migration, forced PIN change, lockout, reset, admin override, roles, and permissions
+- Orders, tables, menu, categories, pillars, kitchen/bar tickets, KOT, BOT, voids, discounts, VAT, payments, split payments, refunds if implemented, receipts, customer credit, and repayments
+- Inventory deduction/restoration, inventory mappings, bottle/glass quantities, milliliters, packaged units, expenses, reports, profit, counters, numbering, and resets
+- Electron printing, browser printing, WebUSB, printer routing, Print Hub behavior, retries, failures, reprints, and duplicate printing
+- Offline behavior, reconnect behavior, stale devices, multiple browser tabs, multiple Electron windows, and multi-device synchronization
+
+For every major workflow, consider normal, empty, invalid, interrupted, duplicate-click, refresh, browser-close, network-loss, Firebase-delay, Firebase-error, permission-denied, retry, partial-success, and concurrent-device scenarios.
+
+AUDIT DATA INTEGRITY AND SYNCHRONIZATION:
+
+- Firebase schema, readers, writers, deletes, resets, migrations, and security rules if available
+- Duplicate Firebase listeners and missing unsubscribe cleanup
+- Multiple writers for the same state
+- Whole-collection overwrite risks
+- Race conditions, lost updates, stale-device overwrites, and partial writes
+- Duplicate orders, payments, tickets, deductions, restorations, and counters
+- Offline queue replay, retry, ordering, and duplicate replay
+- Cross-tab and cross-device conflicts
+- Empty/null Firebase snapshots wiping valid data
+- Startup seeding and deleted-data resurrection
+- Tombstones, reset generations, migrations, and recovery behavior
+- LocalStorage/IndexedDB corruption, stale schemas, malformed cached data, and storage errors
+- Development versus production Firebase/environment separation
+
+AUDIT SECURITY:
+
+- Authentication, session handling, authorization, role checks, privilege escalation, and direct-route access
+- PIN exposure, plaintext remnants, hashing, salts, lockout bypasses, and admin-gate bypasses
+- Client-only authorization versus Firebase security-rule enforcement
+- Unauthorized Firebase reads/writes and user-role manipulation
+- Secrets or sensitive data in source, bundles, logs, storage, error messages, receipts, or exports
+- XSS, unsafe HTML, injection, unsafe URLs, missing input validation, and unsafe numeric/date values
+- Electron nodeIntegration, contextIsolation, preload exposure, IPC validation, external navigation, remote content loading, and printer payload handling
+- Existing dependency vulnerabilities and supply-chain concerns
+
+AUDIT UI/UX AND ACCESSIBILITY:
+
+Review desktop, tablet landscape, tablet portrait, mobile portrait, and mobile landscape layouts.
+
+Check:
+
+- Navigation and visual hierarchy
+- Typography, spacing, contrast, and readability
+- Responsive behavior and overflow
+- Touch targets and keyboard/numpad input
+- Focus states, modal behavior, escape handling, and focus trapping
+- Forms, validation, loading, empty, error, success, and disabled states
+- Duplicate-click protection and destructive-action confirmation
+- Role-specific UI and permission explanations
+- Offline/reconnection feedback
+- Printer setup usability
+- Accessibility labels, semantic HTML, screen-reader behavior, color-only indicators, and keyboard navigation
+- Confusing or dangerous workflows that could cause restaurant staff to make mistakes
+
+AUDIT QUALITY, PERFORMANCE, AND OPERATIONS:
+
+- Build, TypeScript, tests, lint, runtime errors, browser console errors, and missing test coverage
+- Performance with large Firebase collections, orders, customers, inventory, and reports
+- Memory leaks, listener leaks, render problems, and print/offline queue growth
+- Local Preview versus published web app versus Electron version drift
+- PWA/service-worker and Electron cache behavior
+- Environment variables and secrets references
+- Deployment, rollback, backups, recovery, and disaster-recovery procedures
+- Privacy, data retention, and unnecessary sensitive-data exposure
+- README, setup, printer, PIN, deployment, and reset documentation accuracy
+- Whether documented behavior matches the current implementation
+
+Run only safe, existing, read-only validation commands where available, such as build, tests, lint, type checks, and existing security checks. Do not install packages.
+
+IMPORTANT RESTRICTIONS:
+
+- Do not modify source code, dependencies, lockfiles, workflows, configuration, deployment settings, secrets, or database data.
+- Do not perform Firebase/database writes, resets, seeds, migrations, deletes, or deployments.
+- Update only AUDIT_REPORT.md.
+- Never reveal secrets, credentials, tokens, PINs, hashes, or private data.
+- Do not call a risk confirmed without evidence.
+- Clearly separate confirmed findings, suspected findings, recommendations, positive findings, and areas that could not be verified.
+
+For every finding include:
+
+- Title
+- Status: Confirmed, Likely, Possible, Informational, or Unable to Verify
+- Severity: Critical, High, Medium, Low, or Informational
+- Confidence: High, Medium, or Low
+- Affected area, role, and environment
+- Evidence with file paths, line numbers, function names, or runtime output where possible
+- Impact
+- Reproduction or verification steps
+- Recommended remediation
+- Data risk
+- Operational risk
+- Regression risk
+
+Use this report structure:
+
+# Bamboo POS 360-Degree Audit
+
+## 1. Audit Metadata and Scope
+## 2. Executive Summary
+## 3. Application Architecture and Data Flow
+## 4. Functional and Business-Logic Audit
+## 5. Firebase, Database, and Synchronization Audit
+## 6. Security and Vulnerability Audit
+## 7. Electron and Printing Audit
+## 8. Offline and Local-Persistence Audit
+## 9. Money, Inventory, Counters, and Reset Audit
+## 10. UI/UX and Accessibility Audit
+## 11. Performance and Scale Audit
+## 12. Testing and Code-Quality Audit
+## 13. Deployment, Privacy, Recovery, and Documentation Audit
+## 14. Confirmed Findings
+## 15. Suspected Findings Requiring Verification
+## 16. Bugs
+## 17. Positive Findings and Existing Safeguards
+## 18. Prioritized Remediation Plan
+## 19. Audit Coverage and Limitations
+## 20. Final Risk Summary
+
+In the final risk summary, include a table with:
+
+- Finding
+- Severity
+- Confidence
+- Affected area
+- Affected environment
+- Recommended priority
+- Required action: code, configuration, data, deployment, documentation, or verification
+
+Before finishing:
+
+1. Verify that every major route and workflow was reviewed.
+2. Verify that Firebase reads, writes, listeners, resets, and migrations were mapped.
+3. Verify that authentication, permissions, printing, payments, inventory, synchronization, UI/UX, and deployment were covered.
+4. Verify that every important claim has evidence.
+5. Verify that unknown areas are explicitly documented.
+6. Verify that no source code or data was changed.
+7. Verify that no package was installed.
+8. Verify that no secret value was exposed.
+9. State exactly which commands ran and whether they passed or failed.
+10. Update only AUDIT_REPORT.md.
