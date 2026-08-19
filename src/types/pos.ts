@@ -11,6 +11,8 @@ export interface CafeTable {
   /** Firebase conflict-resolution metadata. */
   syncRevision?: number;
   syncMutationId?: string;
+  /** Opaque active-floor reset generation acknowledged by this occupancy. */
+  activeFloorResetGeneration?: string;
 }
 
 export type CategoryPillar = string;
@@ -168,6 +170,9 @@ export interface Order {
   /** Firebase conflict-resolution metadata. */
   syncRevision?: number;
   syncMutationId?: string;
+  /** Opaque reset generations acknowledged by this order lifecycle. */
+  activeFloorResetGeneration?: string;
+  salesHistoryResetGeneration?: string;
 }
 
 export interface Payment {
@@ -188,6 +193,8 @@ export interface Payment {
   createdAt: number;
   cafeName: string;
   billNumber: number;
+  /** Opaque sales-history reset generation acknowledged by this payment. */
+  salesHistoryResetGeneration?: string;
   /** Staff member who took the original order */
   takenBy?: StaffAttribution;
   /** Staff member who processed the payment */
@@ -370,6 +377,9 @@ export interface Customer {
   lastVisit?: string;
   /** Running per-item consumption tally used to rank favorite orders */
   topOrders?: Array<{ itemId: string; name: string; quantity: number; category: string }>;
+  /** Durable marker proving this profile has acknowledged the latest credit reset. */
+  creditResetRevision?: number;
+  creditResetMutationId?: string;
 }
 
 /** A standalone payment received against a customer's outstanding Khatta balance. */

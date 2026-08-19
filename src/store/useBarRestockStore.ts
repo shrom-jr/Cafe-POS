@@ -31,20 +31,21 @@ export interface BarRestockEntry {
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'bar_restock_entries';
+export const BAR_RESTOCK_STORAGE_KEY = 'bar_restock_entries';
 
 const load = (): BarRestockEntry[] => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  try { return JSON.parse(localStorage.getItem(BAR_RESTOCK_STORAGE_KEY) || '[]'); }
   catch { return []; }
 };
 
 const persist = (data: BarRestockEntry[]) =>
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(BAR_RESTOCK_STORAGE_KEY, JSON.stringify(data));
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 interface BarRestockStoreState {
   entries: BarRestockEntry[];
+  setEntries:   (entries: BarRestockEntry[]) => void;
   addEntry:    (entry: BarRestockEntry) => void;
   updateEntry: (id: string, patch: Partial<Omit<BarRestockEntry, 'id'>>) => void;
   deleteEntry: (id: string) => void;
@@ -52,6 +53,11 @@ interface BarRestockStoreState {
 
 export const useBarRestockStore = create<BarRestockStoreState>((set, get) => ({
   entries: load(),
+
+  setEntries: (entries) => {
+    persist(entries);
+    set({ entries });
+  },
 
   addEntry: (entry) => {
     const updated = [entry, ...get().entries];

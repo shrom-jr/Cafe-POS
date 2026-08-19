@@ -14,6 +14,8 @@ import {
   writePaymentRecord,
   deleteTableRecord,
   writeOrderTableMutation,
+  getObservedResetGeneration,
+  isSelectiveResetMarkersHydrated,
 } from '../utils/firebaseSync';
 
 type DynamicPillar = string;
@@ -56,7 +58,7 @@ interface POSState {
   deleteMenuItem: (id: string) => void;
 
   getActiveOrder: (tableId: string) => Order | undefined;
-  createOrder: (tableId: string, tableNumber: string, takenBy?: StaffAttribution) => Order;
+  createOrder: (tableId: string, tableNumber: string, takenBy?: StaffAttribution) => Order | undefined;
   addItemToOrder: (orderId: string, item: MenuItem) => void;
   updateItemQuantity: (orderId: string, menuItemId: string, delta: number) => void;
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
@@ -137,10 +139,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set({ orders });
   },
   payments: db.getPayments(),
-  setPayments: (payments) => set({ payments }),
+  setPayments: (payments) => {
+    db.savePayments(payments);
+    set({ payments });
+  },
   settings: db.getSettings(),
-  setSettings: (settings) => set((state) => ({
-    settings: {
+  setSettings: (settings) => set((state) => {
+    const mergedSettings = {
       ...state.settings,
       ...settings,
       wallets: {
@@ -148,8 +153,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
         ...settings.wallets,
       },
       customWallets: settings.customWallets ?? state.settings.customWallets ?? [],
-    },
-  })),
+    };
+    db.saveSettings(mergedSettings);
+    return { settings: mergedSettings };
+  }),
   ingredients: db.getIngredients(),
   setIngredients: (ingredients) => set({ ingredients }),
   recipes: db.getRecipes(),
@@ -332,6 +339,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   createOrder: (tableId, tableNumber, takenBy) => {
     const existing = get().getActiveOrder(tableId);
     if (existing) return existing;
+    if (!isSelectiveResetMarkersHydrated()) return undefined;
 
     let resolvedTakenBy: StaffAttribution | undefined = takenBy;
     if (!resolvedTakenBy) {
@@ -342,6 +350,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       }
     }
 
+    const resetGeneration = getObservedResetGeneration('activeFloor');
     const order: Order = {
       id: crypto.randomUUID(),
       tableId,
@@ -349,6 +358,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       items: [],
       status: 'active',
       createdAt: Date.now(),
+      ...(resetGeneration ? { activeFloorResetGeneration: resetGeneration } : {}),
       ...(resolvedTakenBy ? { takenBy: resolvedTakenBy } : {}),
     };
 
@@ -356,7 +366,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
       const orders = [...state.orders, order];
       const tables = state.tables.map((t) =>
         t.id === tableId
-          ? { ...t, status: 'occupied' as const, orderId: order.id, orderStartTime: Date.now() }
+          ? {
+              ...t,
+              status: 'occupied' as const,
+              orderId: order.id,
+              orderStartTime: Date.now(),
+              activeFloorResetGeneration: order.activeFloorResetGeneration,
+            }
           : t
       );
       db.saveOrders(orders);
@@ -741,6 +757,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   attachCustomerToTable: (tableId, tableNumber, customer) => {
+    const existing = get().orders.find(
+      (order) =>
+        order.tableId === tableId &&
+        (order.status === 'active' || order.status === 'billed'),
+    );
+    if (!existing && customer && !isSelectiveResetMarkersHydrated()) return;
+    const resetGeneration = getObservedResetGeneration('activeFloor');
     set((state) => {
       const existingOrder = state.orders.find(
         (o) => o.tableId === tableId && (o.status === 'active' || o.status === 'billed')
@@ -773,13 +796,20 @@ export const usePOSStore = create<POSState>((set, get) => ({
         items: [],
         status: 'active',
         createdAt: Date.now(),
+        ...(resetGeneration ? { activeFloorResetGeneration: resetGeneration } : {}),
         ...(takenBy ? { takenBy } : {}),
         attachedCustomer,
       };
       const orders = [...state.orders, order];
       const tables = state.tables.map((table) =>
         table.id === tableId
-          ? { ...table, status: 'occupied' as const, orderId: order.id, orderStartTime: order.createdAt }
+          ? {
+              ...table,
+              status: 'occupied' as const,
+              orderId: order.id,
+              orderStartTime: order.createdAt,
+              activeFloorResetGeneration: order.activeFloorResetGeneration,
+            }
           : table
       );
       db.saveOrders(orders);
@@ -870,6 +900,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   addPayment: (payment) => {
+    if (!isSelectiveResetMarkersHydrated()) return;
+    const salesHistoryResetGeneration = getObservedResetGeneration('salesHistory');
     const { currentUser, users } = useStaffStore.getState();
     const activeUser = currentUser ?? users.find((u) => u.active);
     const autoAttrib: StaffAttribution | undefined = activeUser
@@ -882,7 +914,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
       const takenBy = originalOrder?.takenBy ?? payment.takenBy ?? processedBy;
       const payments = [
         ...state.payments,
-        { ...payment, processedBy, takenBy, id: crypto.randomUUID() },
+        {
+          ...payment,
+          processedBy,
+          takenBy,
+          id: crypto.randomUUID(),
+          ...(salesHistoryResetGeneration ? { salesHistoryResetGeneration } : {}),
+        },
       ];
       db.savePayments(payments);
       return { payments };

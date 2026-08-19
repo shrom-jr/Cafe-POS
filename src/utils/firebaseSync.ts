@@ -1,4 +1,4 @@
-import { ref, onValue, set, update } from "firebase/database";
+import { get, ref, onValue, runTransaction, set, update } from "firebase/database";
 import { db } from "../firebase";
 import type {
   Order,
@@ -21,9 +21,10 @@ import type { PurchaseEntry } from "../store/useKitchenPurchasesStore";
 import type { MeatEntry } from "../store/useMeatTrackerStore";
 import type { MaintenanceExpense } from "../types/pos";
 import type { Customer, CustomerRepayment } from "../types/pos";
+import type { SelectiveResetSelection } from "../types/selectiveReset";
 
 type FirebaseSyncStore = {
-  setPayments: (payments: Payment[]) => void;
+  setPayments: (payments: Payment[], exists?: boolean) => void;
   setSettings: (settings: Settings) => void;
   setMenuItems: (menuItems: MenuItem[]) => void;
   setCategories: (categories: Category[]) => void;
@@ -33,7 +34,7 @@ type FirebaseSyncStore = {
   setBeverageProducts: (products: BeverageProduct[]) => void;
   setCigaretteProducts: (products: CigaretteProduct[]) => void;
   setGroceryPurchases: (purchases: GroceryPurchase[], exists?: boolean) => void;
-  setInvMovements: (movements: InventoryMovement[]) => void;
+  setInvMovements: (movements: InventoryMovement[], exists?: boolean) => void;
   setInvMappings: (mappings: InvMenuMapping[]) => void;
 };
 
@@ -54,10 +55,70 @@ const toArray = (data: any) => {
   return [];
 };
 
+type FirebaseEntry = [key: string, value: Record<string, unknown>];
+
+function toFirebaseEntries(data: unknown): FirebaseEntry[] {
+  if (!data || typeof data !== "object") return [];
+  return Object.entries(data as Record<string, unknown>)
+    .filter(([, value]) => Boolean(value) && typeof value === "object")
+    .map(([key, value]) => [key, value as Record<string, unknown>]);
+}
+
+function cloneFirebaseRoot(data: unknown): Record<string, any> {
+  if (!data || typeof data !== "object") return {};
+  return JSON.parse(JSON.stringify(data)) as Record<string, any>;
+}
+
+function toFirebaseRecordMap(data: unknown): Record<string, Record<string, any>> {
+  return Object.fromEntries(toFirebaseEntries(data));
+}
+
+function recordKeyForId(
+  records: Record<string, Record<string, any>>,
+  id: string,
+): string {
+  return Object.entries(records).find(([, record]) => record.id === id)?.[0] ?? id;
+}
+
+function assignFirebaseCollection(
+  root: Record<string, any>,
+  path: string,
+  records: Record<string, Record<string, any>>,
+): void {
+  if (Object.keys(records).length === 0) {
+    delete root[path];
+  } else {
+    root[path] = records;
+  }
+}
+
+function isRunningOrderRecord(order: Record<string, unknown>): boolean {
+  return order.status === "active" || order.status === "billed";
+}
+
 const toFirebaseCustomerRecord = (customer: FirebaseCustomerRecord): FirebaseCustomerRecord => ({
   ...customer,
   repayments: Array.isArray(customer.repayments) ? customer.repayments : [],
 });
+
+function customerAfterCreditResetMarker(
+  customer: FirebaseCustomerRecord,
+  marker: SyncMutation | undefined,
+): FirebaseCustomerRecord {
+  const normalized = Array.isArray(customer.repayments)
+    ? customer
+    : { ...customer, repayments: [] };
+  if (!marker || normalized.creditResetMutationId === marker.syncMutationId) {
+    return normalized;
+  }
+  return {
+    ...normalized,
+    currentDue: 0,
+    repayments: [],
+    creditResetRevision: marker.syncRevision,
+    creditResetMutationId: marker.syncMutationId,
+  };
+}
 
 /**
  * Write one customer and its complete repayment ledger.
@@ -68,10 +129,17 @@ const toFirebaseCustomerRecord = (customer: FirebaseCustomerRecord): FirebaseCus
  */
 export async function writeCustomer(customerData: FirebaseCustomerRecord) {
   try {
-    await set(
-      ref(db, `customers/${customerData.id}`),
-      JSON.parse(JSON.stringify(toFirebaseCustomerRecord(customerData))),
-    );
+    await runTransaction(ref(db), (currentData) => {
+      const root = cloneFirebaseRoot(currentData);
+      const marker = root.customerCreditResetTombstones?.[customerData.id] as
+        | SyncMutation
+        | undefined;
+      const safeCustomer = customerAfterCreditResetMarker(customerData, marker);
+      const customers = toFirebaseRecordMap(root.customers);
+      customers[recordKeyForId(customers, customerData.id)] = recordData(safeCustomer);
+      assignFirebaseCollection(root, "customers", customers);
+      return root;
+    }, { applyLocally: false });
   } catch (error) {
     console.error("❌ [Firebase Customer Write FAILED]:", error);
   }
@@ -80,11 +148,19 @@ export async function writeCustomer(customerData: FirebaseCustomerRecord) {
 /** Seed or replace the complete customer collection during initial sync. */
 export async function writeCustomersToFirebase(customers: FirebaseCustomerRecord[]) {
   try {
-    const records = customers.reduce<Record<string, FirebaseCustomerRecord>>((result, customer) => {
-      result[customer.id] = toFirebaseCustomerRecord(customer);
-      return result;
-    }, {});
-    await set(ref(db, "customers"), JSON.parse(JSON.stringify(records)));
+    await runTransaction(ref(db), (currentData) => {
+      const root = cloneFirebaseRoot(currentData);
+      const markers = (root.customerCreditResetTombstones ?? {}) as Record<string, SyncMutation>;
+      const records = customers.reduce<Record<string, FirebaseCustomerRecord>>((result, customer) => {
+        result[customer.id] = customerAfterCreditResetMarker(
+          customer,
+          markers[customer.id],
+        );
+        return result;
+      }, {});
+      assignFirebaseCollection(root, "customers", records);
+      return root;
+    }, { applyLocally: false });
   } catch (error) {
     console.error("❌ [Firebase Customers Write FAILED]:", error);
   }
@@ -107,28 +183,53 @@ export function subscribeToCustomers(
   onError?: (error: unknown) => void,
 ) {
   try {
-    return onValue(
+    let rawCustomers: unknown = null;
+    let resetMarkers: Record<string, SyncMutation> = {};
+    let customersReady = false;
+    let markersReady = false;
+
+    const emit = () => {
+      if (!customersReady || !markersReady) return;
+      const records = toFirebaseEntries(rawCustomers).map(([firebaseKey, record]) => {
+        const id = typeof record.id === "string" ? record.id : firebaseKey;
+        return {
+          firebaseKey,
+          record: {
+            ...record,
+            id,
+            repayments: Array.isArray(record.repayments) ? record.repayments : [],
+          } as FirebaseCustomerRecord,
+        };
+      });
+
+      const repairs: Record<string, unknown> = {};
+      const safeRecords = records.map(({ firebaseKey, record }) => {
+        const marker = resetMarkers[record.id];
+        const safeRecord = customerAfterCreditResetMarker(record, marker);
+        if (safeRecord !== record && marker) {
+          repairs[`customers/${firebaseKey}/currentDue`] = 0;
+          repairs[`customers/${firebaseKey}/repayments`] = null;
+          repairs[`customers/${firebaseKey}/creditResetRevision`] = marker.syncRevision;
+          repairs[`customers/${firebaseKey}/creditResetMutationId`] = marker.syncMutationId;
+        }
+        return safeRecord;
+      });
+
+      callback(safeRecords);
+      if (Object.keys(repairs).length > 0) {
+        void update(ref(db), repairs).catch((error) => {
+          console.error("❌ [Firebase Customer Credit Repair FAILED]:", error);
+        });
+      }
+    };
+
+    const unsubscribeCustomers = onValue(
       ref(db, "customers"),
       (snapshot) => {
         try {
-          const rawData = snapshot.val();
-          const records: FirebaseCustomerRecord[] = Array.isArray(rawData)
-            ? rawData.filter(Boolean).map((record: any) => ({
-                ...record,
-                repayments: Array.isArray(record.repayments) ? record.repayments : [],
-              }))
-            : rawData && typeof rawData === "object"
-              ? Object.entries(rawData)
-                  .filter(([, record]) => Boolean(record))
-                  .map(([id, record]) => ({
-                    id,
-                    ...(record as Omit<FirebaseCustomerRecord, "id">),
-                    repayments: Array.isArray((record as any).repayments)
-                      ? (record as any).repayments
-                      : [],
-                  }))
-              : [];
-          callback(records);
+          rawCustomers = snapshot.val();
+          customersReady = true;
+          emit();
         } catch (error) {
           console.error("❌ [Firebase Customer Snapshot FAILED]:", error);
           onError?.(error);
@@ -139,6 +240,22 @@ export function subscribeToCustomers(
         onError?.(error);
       },
     );
+    const unsubscribeMarkers = onValue(
+      ref(db, "customerCreditResetTombstones"),
+      (snapshot) => {
+        resetMarkers = snapshot.val() ?? {};
+        markersReady = true;
+        emit();
+      },
+      (error) => {
+        console.error("❌ [Firebase Customer Credit Marker Listener FAILED]:", error);
+        onError?.(error);
+      },
+    );
+    return () => {
+      unsubscribeCustomers();
+      unsubscribeMarkers();
+    };
   } catch (error) {
     console.error("❌ [Firebase Customer Subscription FAILED]:", error);
     onError?.(error);
@@ -203,14 +320,76 @@ export type OrderTombstone = SyncMutation & {
   id: string;
 };
 
-function compareSyncMutation(
-  left: Partial<SyncMutation> | undefined,
-  right: Partial<SyncMutation> | undefined,
-): number {
-  const leftRevision = left?.syncRevision ?? 0;
-  const rightRevision = right?.syncRevision ?? 0;
-  if (leftRevision !== rightRevision) return leftRevision - rightRevision;
-  return (left?.syncMutationId ?? "").localeCompare(right?.syncMutationId ?? "");
+type ResetMarkerModule =
+  | "activeFloor"
+  | "salesHistory"
+  | "kitchenOperations"
+  | "barInventory"
+  | "maintenanceExpenses";
+
+let observedResetMarkers: Partial<Record<ResetMarkerModule, SyncMutation>> | null = null;
+let resetMarkerHydration: Promise<void> | null = null;
+
+const BASELINE_RESET_GENERATION = "baseline";
+
+function resetGeneration(marker: Partial<SyncMutation> | undefined): string {
+  return marker?.syncMutationId ?? BASELINE_RESET_GENERATION;
+}
+
+export function getObservedResetGeneration(module: ResetMarkerModule): string | undefined {
+  if (!observedResetMarkers) return undefined;
+  return resetGeneration(observedResetMarkers[module]);
+}
+
+export function isSelectiveResetMarkersHydrated(): boolean {
+  return observedResetMarkers !== null;
+}
+
+async function ensureResetMarkersHydrated(): Promise<void> {
+  if (observedResetMarkers) return;
+  if (!resetMarkerHydration) {
+    resetMarkerHydration = get(ref(db, "resetMarkers"))
+      .then((snapshot) => {
+        // A realtime listener may have delivered a newer snapshot while this
+        // one-off read was in flight. Never overwrite that newer observation.
+        if (!observedResetMarkers) {
+          observedResetMarkers = snapshot.val() ?? {};
+        }
+      })
+      .finally(() => {
+        resetMarkerHydration = null;
+      });
+  }
+  await resetMarkerHydration;
+}
+
+export function subscribeToSelectiveResetMarkers(): () => void {
+  return onValue(ref(db, "resetMarkers"), (snapshot) => {
+    observedResetMarkers = snapshot.val() ?? {};
+  });
+}
+
+async function pushCollectionWithResetGuard(
+  path: string,
+  value: unknown[],
+  module: ResetMarkerModule,
+): Promise<void> {
+  await ensureResetMarkersHydrated();
+  const expectedMarker = observedResetMarkers?.[module];
+  await runTransaction(ref(db), (currentData) => {
+    const root = cloneFirebaseRoot(currentData);
+    const currentMarker = root.resetMarkers?.[module] as SyncMutation | undefined;
+    if (resetGeneration(expectedMarker) !== resetGeneration(currentMarker)) {
+      // This write was queued before the reset marker reached this tab.
+      return root;
+    }
+    if (value.length === 0) {
+      delete root[path];
+    } else {
+      root[path] = recordData(value);
+    }
+    return root;
+  }, { applyLocally: false });
 }
 
 const pendingOrderWrites = new Map<string, SyncMutation>();
@@ -245,6 +424,176 @@ function recordData<T>(record: T): T {
   return JSON.parse(JSON.stringify(record));
 }
 
+function shouldDeleteOrderForReset(
+  order: Pick<Order, "status"> | Record<string, unknown>,
+  selection: Pick<SelectiveResetSelection, "salesHistory" | "activeFloor">,
+): boolean {
+  const running = isRunningOrderRecord(order as Record<string, unknown>);
+  return (selection.activeFloor && running) || (selection.salesHistory && !running);
+}
+
+/**
+ * Apply one selective reset as an allowlisted Firebase multi-location update.
+ *
+ * Protected master records are never replaced. Tables keep their identity and
+ * layout fields, customer profiles keep their identity/lifetime metrics, and
+ * bar products keep their definitions; only transactional child fields are
+ * normalized.
+ */
+export async function applySelectiveResetToFirebase({
+  selection,
+  localOrders = [],
+}: {
+  selection: SelectiveResetSelection;
+  localOrders?: Order[];
+}): Promise<void> {
+  const mutation = newSyncMutation();
+  const deletedOrderIds = new Set<string>();
+  const resetTableIds = new Set<string>();
+
+  try {
+    await runTransaction(ref(db), (currentData) => {
+      const root = cloneFirebaseRoot(currentData);
+
+      if (selection.salesHistory || selection.activeFloor) {
+        const orders = toFirebaseRecordMap(root.orders);
+        for (const [firebaseKey, order] of Object.entries(orders)) {
+          if (!shouldDeleteOrderForReset(order, selection)) continue;
+          const orderId = typeof order.id === "string" ? order.id : firebaseKey;
+          deletedOrderIds.add(orderId);
+          delete orders[firebaseKey];
+        }
+        for (const order of localOrders) {
+          if (!shouldDeleteOrderForReset(order, selection)) continue;
+          deletedOrderIds.add(order.id);
+          delete orders[recordKeyForId(orders, order.id)];
+        }
+        assignFirebaseCollection(root, "orders", orders);
+
+        const tombstones = toFirebaseRecordMap(root.orderTombstones);
+        for (const orderId of deletedOrderIds) {
+          pendingOrderWrites.delete(orderId);
+          pendingOrderDeletes.set(orderId, mutation);
+          tombstones[orderId] = { id: orderId, ...mutation };
+        }
+        assignFirebaseCollection(root, "orderTombstones", tombstones);
+      }
+
+      if (selection.salesHistory) {
+        delete root.payments;
+        root.settings = {
+          ...(root.settings ?? {}),
+          billCounter: 1000,
+          kotCounter: 100,
+        };
+        delete root.settings.kotLastResetDate;
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          salesHistory: mutation,
+        };
+      }
+
+      if (selection.activeFloor) {
+        const tables = toFirebaseRecordMap(root.tables);
+        for (const [firebaseKey, table] of Object.entries(tables)) {
+          const tableId = typeof table.id === "string" ? table.id : firebaseKey;
+          resetTableIds.add(tableId);
+          pendingTableWrites.delete(tableId);
+          pendingTableWrites.set(tableId, mutation);
+          const {
+            orderId: _orderId,
+            orderStartTime: _orderStartTime,
+            pax: _pax,
+            ...definition
+          } = table;
+          tables[firebaseKey] = {
+            ...definition,
+            status: "free",
+            activeFloorResetGeneration: mutation.syncMutationId,
+            ...mutation,
+          };
+        }
+        assignFirebaseCollection(root, "tables", tables);
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          activeFloor: mutation,
+        };
+      }
+
+      if (selection.customerCredit) {
+        const customers = toFirebaseRecordMap(root.customers);
+        const resetTombstones = toFirebaseRecordMap(root.customerCreditResetTombstones);
+        for (const [firebaseKey, customer] of Object.entries(customers)) {
+          const customerId = typeof customer.id === "string" ? customer.id : firebaseKey;
+          const {
+            repayments: _repayments,
+            ...profile
+          } = customer;
+          customers[firebaseKey] = {
+            ...profile,
+            currentDue: 0,
+            creditResetRevision: mutation.syncRevision,
+            creditResetMutationId: mutation.syncMutationId,
+          };
+          resetTombstones[customerId] = { id: customerId, ...mutation };
+        }
+        assignFirebaseCollection(root, "customers", customers);
+        assignFirebaseCollection(root, "customerCreditResetTombstones", resetTombstones);
+      }
+
+      if (selection.kitchenOperations) {
+        delete root.kitchenPurchases;
+        delete root.meatEntries;
+        delete root.groceryPurchases;
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          kitchenOperations: mutation,
+        };
+      }
+
+      if (selection.barInventory) {
+        const alcoholProducts = toFirebaseRecordMap(root.alcoholProducts);
+        const beverageProducts = toFirebaseRecordMap(root.beverageProducts);
+        const cigaretteProducts = toFirebaseRecordMap(root.cigaretteProducts);
+        for (const product of Object.values(alcoholProducts)) product.currentStockMl = 0;
+        for (const product of Object.values(beverageProducts)) product.currentStock = 0;
+        for (const product of Object.values(cigaretteProducts)) product.currentSticks = 0;
+        assignFirebaseCollection(root, "alcoholProducts", alcoholProducts);
+        assignFirebaseCollection(root, "beverageProducts", beverageProducts);
+        assignFirebaseCollection(root, "cigaretteProducts", cigaretteProducts);
+        delete root.invMovements;
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          barInventory: mutation,
+        };
+      }
+
+      if (selection.maintenanceExpenses) {
+        delete root.maintenanceExpenses;
+        root.resetMarkers = {
+          ...(root.resetMarkers ?? {}),
+          maintenanceExpenses: mutation,
+        };
+      }
+
+      return root;
+    }, { applyLocally: false });
+  } catch (error) {
+    for (const orderId of deletedOrderIds) {
+      if (sameMutation(pendingOrderDeletes.get(orderId), mutation)) {
+        pendingOrderDeletes.delete(orderId);
+      }
+    }
+    for (const tableId of resetTableIds) {
+      if (sameMutation(pendingTableWrites.get(tableId), mutation)) {
+        pendingTableWrites.delete(tableId);
+      }
+    }
+    console.error("❌ [Firebase Selective Reset FAILED]:", error);
+    throw error;
+  }
+}
+
 /**
  * Write related order/table records in one Firebase multi-location update.
  * Every record in a logical POS mutation receives the same mutation metadata.
@@ -260,41 +609,117 @@ export async function writeOrderTableMutation({
 }): Promise<void> {
   if (!orders.length && !tables.length && !deletedOrderIds.length) return;
 
+  const markersWereHydrated = isSelectiveResetMarkersHydrated();
+  await ensureResetMarkersHydrated();
+  const hasAmbiguousUngeneratedWrite =
+    !markersWereHydrated &&
+    (orders.some((order) =>
+      isRunningOrderRecord(order as unknown as Record<string, unknown>)
+        ? !order.activeFloorResetGeneration
+        : !order.salesHistoryResetGeneration,
+    ) ||
+      tables.some((table) =>
+        table.status !== "free" && !table.activeFloorResetGeneration,
+      ));
+  if (hasAmbiguousUngeneratedWrite) return;
+
   const mutation = newSyncMutation();
-  const updates: Record<string, unknown> = {};
-
-  for (const order of orders) {
-    const record = withSyncMutation(order, mutation);
-    pendingOrderWrites.set(order.id, mutation);
-    updates[`orders/${order.id}`] = recordData(record);
-  }
-
-  for (const table of tables) {
-    const record = withSyncMutation(table, mutation);
-    pendingTableWrites.set(table.id, mutation);
-    updates[`tables/${table.id}`] = recordData(record);
-  }
-
-  for (const orderId of deletedOrderIds) {
-    pendingOrderDeletes.set(orderId, mutation);
-    updates[`orders/${orderId}`] = null;
-    updates[`orderTombstones/${orderId}`] = {
-      id: orderId,
-      ...mutation,
-    };
-  }
+  const expectedActiveFloorGeneration =
+    getObservedResetGeneration("activeFloor") ?? BASELINE_RESET_GENERATION;
+  const expectedSalesHistoryGeneration =
+    getObservedResetGeneration("salesHistory") ?? BASELINE_RESET_GENERATION;
+  const writtenOrderIds = new Set<string>();
+  const writtenTableIds = new Set<string>();
 
   try {
-    await update(ref(db), updates);
+    await runTransaction(ref(db), (currentData) => {
+      const root = cloneFirebaseRoot(currentData);
+      const orderRecords = toFirebaseRecordMap(root.orders);
+      const tableRecords = toFirebaseRecordMap(root.tables);
+      const tombstones = toFirebaseRecordMap(root.orderTombstones);
+      const resetMarkers = (root.resetMarkers ?? {}) as {
+        activeFloor?: SyncMutation;
+        salesHistory?: SyncMutation;
+      };
+      const currentActiveFloorGeneration = resetGeneration(resetMarkers.activeFloor);
+      const currentSalesHistoryGeneration = resetGeneration(resetMarkers.salesHistory);
+      const tombstonedOrderIds = new Set(Object.keys(tombstones));
+      const blockedOrderIds = new Set<string>();
+
+      for (const order of orders) {
+        const running = isRunningOrderRecord(order as unknown as Record<string, unknown>);
+        const incomingGeneration = running
+          ? order.activeFloorResetGeneration ?? expectedActiveFloorGeneration
+          : order.salesHistoryResetGeneration ?? expectedSalesHistoryGeneration;
+        const currentGeneration = running
+          ? currentActiveFloorGeneration
+          : currentSalesHistoryGeneration;
+        const blocked =
+          tombstonedOrderIds.has(order.id) ||
+          incomingGeneration !== currentGeneration;
+        if (blocked) {
+          blockedOrderIds.add(order.id);
+          continue;
+        }
+        pendingOrderWrites.set(order.id, mutation);
+        writtenOrderIds.add(order.id);
+        const generationFields = running
+          ? { activeFloorResetGeneration: currentActiveFloorGeneration }
+          : { salesHistoryResetGeneration: currentSalesHistoryGeneration };
+        orderRecords[recordKeyForId(orderRecords, order.id)] =
+          recordData(withSyncMutation({ ...order, ...generationFields }, mutation));
+      }
+
+      for (const table of tables) {
+        const linkedOrderWasReset =
+          Boolean(table.orderId) &&
+          (tombstonedOrderIds.has(table.orderId as string) ||
+            blockedOrderIds.has(table.orderId as string));
+        const occupancyHasStaleGeneration =
+          table.status !== "free" &&
+          (table.activeFloorResetGeneration ?? expectedActiveFloorGeneration) !==
+            currentActiveFloorGeneration;
+        const safeTable = linkedOrderWasReset || occupancyHasStaleGeneration
+          ? (() => {
+              const {
+                orderId: _orderId,
+                orderStartTime: _orderStartTime,
+                pax: _pax,
+                ...definition
+              } = table;
+              return { ...definition, status: "free" as const };
+            })()
+          : {
+              ...table,
+              activeFloorResetGeneration: currentActiveFloorGeneration,
+            };
+        pendingTableWrites.set(table.id, mutation);
+        writtenTableIds.add(table.id);
+        tableRecords[recordKeyForId(tableRecords, table.id)] =
+          recordData(withSyncMutation(safeTable, mutation));
+      }
+
+      for (const orderId of deletedOrderIds) {
+        pendingOrderWrites.delete(orderId);
+        pendingOrderDeletes.set(orderId, mutation);
+        delete orderRecords[recordKeyForId(orderRecords, orderId)];
+        tombstones[orderId] = { id: orderId, ...mutation };
+      }
+
+      assignFirebaseCollection(root, "orders", orderRecords);
+      assignFirebaseCollection(root, "tables", tableRecords);
+      assignFirebaseCollection(root, "orderTombstones", tombstones);
+      return root;
+    }, { applyLocally: false });
   } catch (error) {
-    for (const order of orders) {
-      if (sameMutation(pendingOrderWrites.get(order.id), mutation)) {
-        pendingOrderWrites.delete(order.id);
+    for (const orderId of writtenOrderIds) {
+      if (sameMutation(pendingOrderWrites.get(orderId), mutation)) {
+        pendingOrderWrites.delete(orderId);
       }
     }
-    for (const table of tables) {
-      if (sameMutation(pendingTableWrites.get(table.id), mutation)) {
-        pendingTableWrites.delete(table.id);
+    for (const tableId of writtenTableIds) {
+      if (sameMutation(pendingTableWrites.get(tableId), mutation)) {
+        pendingTableWrites.delete(tableId);
       }
     }
     for (const orderId of deletedOrderIds) {
@@ -360,10 +785,26 @@ function acknowledgePendingWrite(
 /** Write (or overwrite) one payment record at `payments/${payment.id}`. */
 export async function writePaymentRecord(payment: Payment): Promise<void> {
   try {
-    await set(
-      ref(db, `payments/${payment.id}`),
-      JSON.parse(JSON.stringify(payment)),
-    );
+    const markersWereHydrated = isSelectiveResetMarkersHydrated();
+    await ensureResetMarkersHydrated();
+    if (!markersWereHydrated && !payment.salesHistoryResetGeneration) return;
+    const expectedGeneration =
+      payment.salesHistoryResetGeneration ??
+      getObservedResetGeneration("salesHistory") ??
+      BASELINE_RESET_GENERATION;
+    await runTransaction(ref(db), (currentData) => {
+      const root = cloneFirebaseRoot(currentData);
+      const marker = root.resetMarkers?.salesHistory as SyncMutation | undefined;
+      const currentGeneration = resetGeneration(marker);
+      if (expectedGeneration !== currentGeneration) return root;
+      const payments = toFirebaseRecordMap(root.payments);
+      payments[recordKeyForId(payments, payment.id)] = recordData({
+        ...payment,
+        salesHistoryResetGeneration: currentGeneration,
+      });
+      assignFirebaseCollection(root, "payments", payments);
+      return root;
+    }, { applyLocally: false });
   } catch (error) {
     console.error("❌ [Firebase Payment Write FAILED]:", error);
   }
@@ -401,7 +842,11 @@ export async function pushAreaOrderToFirebase(areaOrder: string[]) {
 // Push Grocery Purchases
 export async function pushGroceryPurchasesToFirebase(purchases: GroceryPurchase[]) {
   try {
-    await set(ref(db, "groceryPurchases"), JSON.parse(JSON.stringify(purchases || [])));
+    await pushCollectionWithResetGuard(
+      "groceryPurchases",
+      purchases || [],
+      "kitchenOperations",
+    );
   } catch (error) {
     console.error("❌ [Firebase Grocery Purchases Push FAILED]:", error);
   }
@@ -410,7 +855,11 @@ export async function pushGroceryPurchasesToFirebase(purchases: GroceryPurchase[
 // Push Inventory Movements
 export async function pushInvMovementsToFirebase(movements: InventoryMovement[]) {
   try {
-    await set(ref(db, "invMovements"), JSON.parse(JSON.stringify(movements || [])));
+    await pushCollectionWithResetGuard(
+      "invMovements",
+      movements || [],
+      "barInventory",
+    );
   } catch (error) {
     console.error("❌ [Firebase Inventory Movements Push FAILED]:", error);
   }
@@ -438,37 +887,73 @@ export async function pushStaffToFirebase(users: StaffUser[]) {
 export function subscribeToOrders(
   callback: (orders: Order[], tombstones: OrderTombstone[]) => void,
 ) {
-  let remoteOrders: Order[] = [];
+  let remoteOrderEntries: Array<{ firebaseKey: string; order: Order }> = [];
   let tombstones: OrderTombstone[] = [];
   let ordersReady = false;
   let tombstonesReady = false;
+  let resetMarkersReady = false;
+  let resetMarkers: {
+    activeFloor?: SyncMutation;
+    salesHistory?: SyncMutation;
+  } = {};
 
   const emit = () => {
-    if (!ordersReady || !tombstonesReady) return;
+    if (!ordersReady || !tombstonesReady || !resetMarkersReady) return;
 
-    for (const order of remoteOrders) {
+    for (const { order } of remoteOrderEntries) {
       acknowledgePendingWrite(pendingOrderWrites, order.id, order);
     }
 
     const tombstoneById = new Map(tombstones.map((tombstone) => [tombstone.id, tombstone]));
-    const cleanOrders = remoteOrders
-      .filter((order) => {
-        const tombstone = tombstoneById.get(order.id);
-        if (!tombstone) return true;
-        // A later rewrite of the same order supersedes an older tombstone.
-        return compareSyncMutation(order, tombstone) > 0;
-      })
-      .map(sanitizeOrder);
+    const repairs: Record<string, unknown> = {};
+    const cleanOrders: Order[] = [];
+    for (const { firebaseKey, order } of remoteOrderEntries) {
+      const resetMarker = isRunningOrderRecord(order as unknown as Record<string, unknown>)
+        ? resetMarkers.activeFloor
+        : resetMarkers.salesHistory;
+      const recordGeneration = isRunningOrderRecord(order as unknown as Record<string, unknown>)
+        ? order.activeFloorResetGeneration
+        : order.salesHistoryResetGeneration;
+      const wasReset =
+        tombstoneById.has(order.id) ||
+        (recordGeneration !== undefined &&
+          recordGeneration !== resetGeneration(resetMarker));
+      if (!wasReset) {
+        cleanOrders.push(sanitizeOrder(order));
+        continue;
+      }
+
+      // Convergence guard for a legacy tab that does not use the transaction
+      // writer: remove the stale record and add a permanent tombstone.
+      repairs[`orders/${firebaseKey}`] = null;
+      if (!tombstoneById.has(order.id) && resetMarker) {
+        repairs[`orderTombstones/${order.id}`] = {
+          id: order.id,
+          ...resetMarker,
+        };
+      }
+    }
 
     for (const tombstone of tombstones) {
       acknowledgePendingWrite(pendingOrderDeletes, tombstone.id, tombstone);
     }
 
     callback(cleanOrders, tombstones);
+    if (Object.keys(repairs).length > 0) {
+      void update(ref(db), repairs).catch((error) => {
+        console.error("❌ [Firebase Stale Order Repair FAILED]:", error);
+      });
+    }
   };
 
   const unsubscribeOrders = onValue(ref(db, "orders"), (snapshot) => {
-    remoteOrders = toArray(snapshot.val()).map(sanitizeOrder);
+    remoteOrderEntries = toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawOrder]) => ({
+      firebaseKey,
+      order: sanitizeOrder({
+        ...rawOrder,
+        id: typeof rawOrder.id === "string" ? rawOrder.id : firebaseKey,
+      }),
+    }));
     ordersReady = true;
     emit();
   });
@@ -483,18 +968,75 @@ export function subscribeToOrders(
     tombstonesReady = true;
     emit();
   });
+  const unsubscribeResetMarkers = onValue(ref(db, "resetMarkers"), (snapshot) => {
+    resetMarkers = snapshot.val() ?? {};
+    resetMarkersReady = true;
+    emit();
+  });
 
   return () => {
     unsubscribeOrders();
     unsubscribeTombstones();
+    unsubscribeResetMarkers();
   };
 }
 
 // Subscribe to Live Payments
 export function subscribeToPayments(store: FirebaseSyncStore) {
-  return onValue(ref(db, "payments"), (snapshot) => {
-    store.setPayments(toArray(snapshot.val()) as Payment[]);
+  let paymentEntries: Array<{ firebaseKey: string; payment: Payment }> = [];
+  let paymentsExist = false;
+  let salesReset: SyncMutation | undefined;
+  let paymentsReady = false;
+  let resetReady = false;
+
+  const emit = () => {
+    if (!paymentsReady || !resetReady) return;
+    const currentGeneration = resetGeneration(salesReset);
+    const staleEntries = paymentEntries.filter(({ payment }) =>
+      payment.salesHistoryResetGeneration !== undefined &&
+      payment.salesHistoryResetGeneration !== currentGeneration,
+    );
+    const cleanPayments = paymentEntries
+      .filter(({ payment }) =>
+        payment.salesHistoryResetGeneration === undefined ||
+        payment.salesHistoryResetGeneration === currentGeneration,
+      )
+      .map(({ payment }) => payment);
+    const authoritativeExists =
+      paymentsExist && (cleanPayments.length > 0 || !salesReset);
+    store.setPayments(cleanPayments, authoritativeExists);
+    if (staleEntries.length > 0) {
+      const repairs = Object.fromEntries(
+        staleEntries.map(({ firebaseKey }) => [`payments/${firebaseKey}`, null]),
+      );
+      void update(ref(db), repairs).catch((error) => {
+        console.error("❌ [Firebase Stale Payment Repair FAILED]:", error);
+      });
+    }
+  };
+
+  const unsubscribePayments = onValue(ref(db, "payments"), (snapshot) => {
+    paymentEntries = toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawPayment]) => ({
+      firebaseKey,
+      payment: {
+        ...rawPayment,
+        id: typeof rawPayment.id === "string" ? rawPayment.id : firebaseKey,
+      } as unknown as Payment,
+    }));
+    paymentsExist = snapshot.exists();
+    paymentsReady = true;
+    emit();
   });
+  const unsubscribeReset = onValue(ref(db, "resetMarkers/salesHistory"), (snapshot) => {
+    salesReset = snapshot.val() ?? undefined;
+    resetReady = true;
+    emit();
+  });
+
+  return () => {
+    unsubscribePayments();
+    unsubscribeReset();
+  };
 }
 
 // Subscribe to Live Settings
@@ -602,7 +1144,10 @@ export function subscribeToGroceryPurchases(store: FirebaseSyncStore) {
 // Subscribe to Live Inventory Movements
 export function subscribeToInvMovements(store: FirebaseSyncStore) {
   return onValue(ref(db, "invMovements"), (snapshot) => {
-    store.setInvMovements(toArray(snapshot.val()) as InventoryMovement[]);
+    store.setInvMovements(
+      toArray(snapshot.val()) as InventoryMovement[],
+      snapshot.exists(),
+    );
   });
 }
 
@@ -656,19 +1201,76 @@ export async function writePinReset(userId: string, otp: string, expiresAt: numb
 
 // Subscribe to Live Table Statuses
 export function subscribeToTables(callback: (tables: CafeTable[]) => void) {
-  return onValue(ref(db, "tables"), (snapshot) => {
-    const cleanTables = toArray(snapshot.val()) as CafeTable[];
-    for (const table of cleanTables) {
+  let tables: CafeTable[] = [];
+  let tombstonedOrderIds = new Set<string>();
+  let activeFloorReset: SyncMutation | undefined;
+  let tablesReady = false;
+  let tombstonesReady = false;
+  let resetReady = false;
+
+  const emit = () => {
+    if (!tablesReady || !tombstonesReady || !resetReady) return;
+    const repairs: CafeTable[] = [];
+    const cleanTables = tables.map((table) => {
       acknowledgePendingWrite(pendingTableWrites, table.id, table);
-    }
+      const linkedOrderWasDeleted =
+        Boolean(table.orderId) && tombstonedOrderIds.has(table.orderId as string);
+      const occupancyHasStaleGeneration =
+        table.status !== "free" &&
+        table.activeFloorResetGeneration !== undefined &&
+        table.activeFloorResetGeneration !== resetGeneration(activeFloorReset);
+      if (!linkedOrderWasDeleted && !occupancyHasStaleGeneration) return table;
+      const {
+        orderId: _orderId,
+        orderStartTime: _orderStartTime,
+        pax: _pax,
+        ...definition
+      } = table;
+      const repaired = { ...definition, status: "free" as const };
+      repairs.push(repaired);
+      return repaired;
+    });
     callback(cleanTables);
+
+    // This is not a guessed occupancy repair: the durable order tombstone is
+    // authoritative. Persisting the free state makes stale legacy tabs
+    // converge instead of leaving Firebase occupied after the order is gone.
+    if (repairs.length > 0) {
+      void writeOrderTableMutation({ tables: repairs });
+    }
+  };
+
+  const unsubscribeTables = onValue(ref(db, "tables"), (snapshot) => {
+    tables = toArray(snapshot.val()) as CafeTable[];
+    tablesReady = true;
+    emit();
   });
+  const unsubscribeTombstones = onValue(ref(db, "orderTombstones"), (snapshot) => {
+    tombstonedOrderIds = new Set(Object.keys(snapshot.val() ?? {}));
+    tombstonesReady = true;
+    emit();
+  });
+  const unsubscribeReset = onValue(ref(db, "resetMarkers/activeFloor"), (snapshot) => {
+    activeFloorReset = snapshot.val() ?? undefined;
+    resetReady = true;
+    emit();
+  });
+
+  return () => {
+    unsubscribeTables();
+    unsubscribeTombstones();
+    unsubscribeReset();
+  };
 }
 
 // Push Kitchen Purchases
 export async function pushKitchenPurchasesToFirebase(purchases: PurchaseEntry[]) {
   try {
-    await set(ref(db, "kitchenPurchases"), JSON.parse(JSON.stringify(purchases || [])));
+    await pushCollectionWithResetGuard(
+      "kitchenPurchases",
+      purchases || [],
+      "kitchenOperations",
+    );
   } catch (error) {
     console.error("❌ [Firebase Kitchen Purchases Push FAILED]:", error);
   }
@@ -686,7 +1288,11 @@ export function subscribeToKitchenPurchases(
 // Push Meat Entries
 export async function pushMeatEntriesToFirebase(entries: MeatEntry[]) {
   try {
-    await set(ref(db, "meatEntries"), JSON.parse(JSON.stringify(entries || [])));
+    await pushCollectionWithResetGuard(
+      "meatEntries",
+      entries || [],
+      "kitchenOperations",
+    );
   } catch (error) {
     console.error("❌ [Firebase Meat Entries Push FAILED]:", error);
   }
@@ -704,7 +1310,11 @@ export function subscribeToMeatEntries(
 // Push Maintenance Expenses
 export async function pushMaintenanceExpensesToFirebase(expenses: MaintenanceExpense[]) {
   try {
-    await set(ref(db, "maintenanceExpenses"), JSON.parse(JSON.stringify(expenses || [])));
+    await pushCollectionWithResetGuard(
+      "maintenanceExpenses",
+      expenses || [],
+      "maintenanceExpenses",
+    );
   } catch (error) {
     console.error("❌ [Firebase Maintenance Expenses Push FAILED]:", error);
   }

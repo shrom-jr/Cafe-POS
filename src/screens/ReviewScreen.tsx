@@ -20,6 +20,7 @@ import {
   CheckCircle2, Home, X, Loader2, Printer, Check, UserCircle, FileText,
 } from 'lucide-react';
 import { OrderItem, TablePayment } from '@/types/pos';
+import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 
 const PRESETS = [0, 5, 10, 15];
 
@@ -318,6 +319,10 @@ const ReviewScreen = () => {
         };
 
   const handleConfirmPayment = async (method: string) => {
+    if (!isSelectiveResetMarkersHydrated()) {
+      toast.info('Syncing reset status. Please try payment again in a moment.');
+      return;
+    }
     if (confirmingRef.current) return;
     confirmingRef.current = true;
     setConfirming(true);

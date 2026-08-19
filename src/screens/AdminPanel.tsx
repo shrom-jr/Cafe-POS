@@ -42,6 +42,14 @@ import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
 import { pushLogoToFirebase } from '@/utils/firebaseSync';
+import {
+  EMPTY_SELECTIVE_RESET_SELECTION,
+  SELECTIVE_RESET_MODULES,
+  hasSelectedResetModule,
+  type SelectiveResetModuleId,
+  type SelectiveResetSelection,
+} from '@/types/selectiveReset';
+import { executeSelectiveReset } from '@/utils/selectiveReset';
 
 type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff' | 'data-management';
@@ -1664,7 +1672,7 @@ const DataManagementSection = () => {
   const invMovements        = useInventoryStore((s) => s.invMovements);
 
   // ── Backup download ───────────────────────────────────────────────────────
-  const handleDownloadFullBackup = () => {
+  const handleDownloadFullBackup = (): boolean => {
     try {
       const json = db.exportFullBackup({
         maintenanceExpenses,
@@ -1684,29 +1692,35 @@ const DataManagementSection = () => {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Full backup downloaded');
+      return true;
     } catch (err) {
       console.error('[Backup] Export failed:', err);
       toast.error('Backup failed — please try again.');
+      return false;
     }
   };
 
   // ── Safeguard modal state ─────────────────────────────────────────────────
   const restoreFileRef  = useRef<HTMLInputElement>(null);
   const [dmAction,      setDmAction]      = useState<null | 'restore' | 'reset'>(null);
-  const [dmStep,        setDmStep]        = useState<'warn' | 'pin' | 'confirm'>('warn');
+  const [dmStep,        setDmStep]        = useState<'select' | 'backup' | 'warn' | 'pin' | 'confirm'>('warn');
   const [dmPin,         setDmPin]         = useState('');
   const [dmPinError,    setDmPinError]    = useState(false);
   const [dmConfirmText, setDmConfirmText] = useState('');
   const [dmFile,        setDmFile]        = useState<File | null>(null);
+  const [dmSelection,   setDmSelection]   = useState<SelectiveResetSelection>(EMPTY_SELECTIVE_RESET_SELECTION);
+  const [dmBackupSucceeded, setDmBackupSucceeded] = useState(false);
   const [dmWorking,     setDmWorking]     = useState(false);
 
   const openDM = (action: 'restore' | 'reset') => {
     setDmAction(action);
-    setDmStep('warn');
+    setDmStep(action === 'reset' ? 'select' : 'warn');
     setDmPin('');
     setDmPinError(false);
     setDmConfirmText('');
     setDmFile(null);
+    setDmSelection({ ...EMPTY_SELECTIVE_RESET_SELECTION });
+    setDmBackupSucceeded(false);
   };
 
   const closeDM = () => { if (!dmWorking) setDmAction(null); };
@@ -1717,24 +1731,38 @@ const DataManagementSection = () => {
   };
 
   const dmConfirmWord = dmAction === 'reset' ? 'RESET' : 'CONFIRM';
+  const allResetModulesSelected = SELECTIVE_RESET_MODULES.every((module) => dmSelection[module.id]);
   const dmReady = dmAction === 'reset'
-    ? dmConfirmText === 'RESET'
+    ? dmBackupSucceeded && hasSelectedResetModule(dmSelection) && dmPin.length > 0 && dmConfirmText === 'RESET'
     : dmConfirmText === 'CONFIRM' && dmFile !== null;
 
+  const handleResetSelectionContinue = () => {
+    if (!hasSelectedResetModule(dmSelection)) return;
+    const succeeded = handleDownloadFullBackup();
+    if (succeeded) {
+      setDmBackupSucceeded(true);
+      setDmStep('backup');
+    }
+  };
+
   const handleDMExecute = async () => {
+    if (dmAction === 'reset' && dmPin !== settings.adminPin) {
+      setDmPinError(true);
+      return;
+    }
     setDmWorking(true);
     try {
-      handleDownloadFullBackup();
-      await new Promise<void>((r) => setTimeout(r, 500));
       if (dmAction === 'restore') {
+        const backupSucceeded = handleDownloadFullBackup();
+        if (!backupSucceeded) { setDmWorking(false); return; }
         if (!dmFile) { toast.error('No backup file selected.'); setDmWorking(false); return; }
         const text   = await dmFile.text();
         const result = db.importFullBackup(text);
         if (!result.success) { toast.error(`Restore failed: ${result.error ?? 'Unknown error'}`); setDmWorking(false); return; }
         toast.success(`Backup restored (Schema v${result.version}). Reloading…`);
       } else {
-        db.completeFactoryReset();
-        toast.success('Factory reset complete. Reloading…');
+        await executeSelectiveReset(dmSelection);
+        toast.success('Selected transaction data cleared. Reloading…');
       }
       setTimeout(() => window.location.reload(), 1400);
     } catch (err) {
@@ -1751,14 +1779,14 @@ const DataManagementSection = () => {
       <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Backup Coverage</h3>
-          <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 22 operational data domains in a single JSON file.</p>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 23 operational data domains in a single JSON file.</p>
         </div>
         <div className="grid sm:grid-cols-2 gap-2 text-xs font-bold text-zinc-300">
           {[
             'Orders & payments', 'Tables & floor layout', 'Menu, categories & pillars',
             'Ingredients, recipes & stock', 'Customers & Khatta ledgers', 'Staff accounts',
             'Kitchen purchases', 'Meat tracker entries', 'Maintenance expenses',
-            'Grocery purchases', 'Inventory mappings', 'Alcohol / beverage / cigarettes',
+             'Grocery purchases', 'Inventory mappings', 'Bar restock audit', 'Alcohol / beverage / cigarettes',
           ].map((d) => (
             <div key={d} className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
@@ -1813,7 +1841,7 @@ const DataManagementSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Download Full Backup</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">JSON · Schema v2 · All 22 data domains · Instant download</p>
+            <p className="text-xs font-bold text-zinc-400 mt-0.5">JSON · Schema v2 · All 23 data domains · Instant download</p>
           </div>
         </button>
 
@@ -1841,7 +1869,7 @@ const DataManagementSection = () => {
           </div>
           <div>
             <p className="text-sm font-black text-white">Factory Reset POS</p>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">Clears all data · Printer config preserved · Admin PIN + RESET required</p>
+           <p className="text-xs font-bold text-zinc-400 mt-0.5">Clears selected transaction data · Masters stay protected · Admin PIN + RESET required</p>
           </div>
         </button>
       </div>
@@ -1855,9 +1883,9 @@ const DataManagementSection = () => {
         onChange={(e) => { setDmFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
       />
 
-      {/* ── 4-Step Safeguard Modal ───────────────────────────────────────── */}
+      {/* ── Deliberate reset / restore safeguard modal ───────────────────── */}
       <Dialog open={dmAction !== null} onOpenChange={(open) => { if (!open) closeDM(); }}>
-        <DialogContent className="bg-[#0e1120] border border-white/10 rounded-3xl shadow-2xl max-w-md w-full p-0 overflow-hidden">
+        <DialogContent className="bg-[#0e1120] border border-white/10 rounded-3xl shadow-2xl max-w-lg w-[calc(100%-1.5rem)] max-h-[calc(100dvh-1.5rem)] p-0 overflow-hidden flex flex-col">
           <div className={`px-6 pt-6 pb-4 border-b border-white/10 flex items-center gap-3 ${dmAction === 'reset' ? 'bg-red-950/30' : 'bg-orange-950/20'}`}>
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${dmAction === 'reset' ? 'bg-red-500/20' : 'bg-orange-500/20'}`}>
               {dmAction === 'reset' ? <ShieldAlert size={20} className="text-red-400" /> : <AlertTriangle size={20} className="text-orange-400" />}
@@ -1867,30 +1895,112 @@ const DataManagementSection = () => {
                 {dmAction === 'reset' ? 'Factory Reset POS' : 'Restore Backup'}
               </DialogTitle>
               <DialogDescription className="text-xs text-zinc-400 mt-0.5">
-                Step {dmStep === 'warn' ? '1' : dmStep === 'pin' ? '2' : '3'} of 3
+                 {dmAction === 'reset'
+                   ? `Step ${dmStep === 'select' ? '1' : dmStep === 'backup' ? '2' : '3'} of 3`
+                   : `Step ${dmStep === 'warn' ? '1' : dmStep === 'pin' ? '2' : '3'} of 3`}
               </DialogDescription>
             </div>
           </div>
 
-          <div className="px-6 py-5 space-y-5">
-            {/* Step A */}
+           <div className="px-6 py-5 space-y-5 overflow-y-auto">
+             {/* Reset step 1: module selection */}
+             {dmAction === 'reset' && dmStep === 'select' && (
+               <div className="space-y-4">
+                 <div className="rounded-2xl border border-red-500/30 bg-red-950/35 p-4">
+                   <div className="flex items-start gap-3">
+                     <ShieldAlert size={18} className="mt-0.5 flex-shrink-0 text-red-300" />
+                     <div>
+                       <p className="text-sm font-black text-white">Choose exactly what to clear</p>
+                       <p className="mt-1 text-xs font-bold leading-relaxed text-red-100/75">
+                         This is a selective reset of transaction data. Your operating masters stay intact.
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+                 <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#181B26] px-4 py-3">
+                   <div>
+                     <p className="text-sm font-black text-white">Select all transaction modules</p>
+                     <p className="text-[11px] font-bold text-zinc-500">Six selectable areas</p>
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => {
+                       setDmSelection(allResetModulesSelected ? { ...EMPTY_SELECTIVE_RESET_SELECTION } : Object.fromEntries(
+                         SELECTIVE_RESET_MODULES.map((module) => [module.id, true]),
+                       ) as SelectiveResetSelection);
+                     }}
+                     className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors ${allResetModulesSelected ? 'border-red-400/50 text-red-200 hover:bg-red-500/10' : 'border-amber-400/60 text-amber-300 hover:bg-amber-500/10'}`}
+                   >
+                      {allResetModulesSelected ? 'Deselect all' : 'Select all'}
+                   </button>
+                 </div>
+                 <div className="space-y-2">
+                   {SELECTIVE_RESET_MODULES.map((module) => {
+                     const checked = dmSelection[module.id];
+                     return (
+                       <label key={module.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${checked ? 'border-red-400/45 bg-red-500/[0.07]' : 'border-white/10 bg-[#181B26] hover:border-white/25'}`}>
+                         <input
+                           type="checkbox"
+                           checked={checked}
+                           onChange={() => setDmSelection((current) => ({ ...current, [module.id as SelectiveResetModuleId]: !current[module.id] }))}
+                           className="mt-0.5 h-4 w-4 accent-red-500"
+                         />
+                         <span className="min-w-0">
+                           <span className="block text-sm font-black text-white">{module.title}</span>
+                           <span className="mt-0.5 block text-xs font-bold leading-relaxed text-zinc-400">{module.description}</span>
+                         </span>
+                       </label>
+                     );
+                   })}
+                 </div>
+                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-3">
+                   <p className="text-[11px] font-black uppercase tracking-wider text-emerald-300">Always protected</p>
+                   <p className="mt-1 text-xs font-bold leading-relaxed text-emerald-100/75">
+                     Table/floor layout, menu catalog, bar product definitions and mappings, staff accounts/PINs, Windows printer/print-hub settings, payment configuration, and immutable closed-shift archives.
+                   </p>
+                 </div>
+                 <button onClick={handleResetSelectionContinue} disabled={!hasSelectedResetModule(dmSelection)} className="w-full rounded-2xl bg-red-600 py-3.5 text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40">
+                   Back up and review reset
+                 </button>
+                 <button onClick={closeDM} className="w-full py-2.5 text-xs font-black text-zinc-400 transition-colors hover:text-white">Cancel</button>
+               </div>
+             )}
+
+             {/* Reset step 2: automatic backup confirmation */}
+             {dmAction === 'reset' && dmStep === 'backup' && (
+               <div className="space-y-4">
+                 <div className="rounded-2xl border border-emerald-500/35 bg-emerald-950/25 p-5">
+                   <div className="flex items-center gap-3">
+                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15"><CheckCircle2 size={21} className="text-emerald-300" /></div>
+                     <div>
+                       <p className="text-sm font-black text-emerald-200">Safety backup downloaded</p>
+                       <p className="mt-0.5 text-xs font-bold text-emerald-100/65">The full JSON export completed before this reset.</p>
+                     </div>
+                   </div>
+                 </div>
+                 <div>
+                   <p className="mb-2 text-xs font-black uppercase tracking-wider text-zinc-400">Selected modules</p>
+                   <div className="flex flex-wrap gap-2">
+                     {SELECTIVE_RESET_MODULES.filter((module) => dmSelection[module.id]).map((module) => (
+                       <span key={module.id} className="rounded-lg border border-red-400/25 bg-red-500/10 px-2.5 py-1.5 text-xs font-black text-red-200">{module.title}</span>
+                     ))}
+                   </div>
+                 </div>
+                 <p className="rounded-xl border border-white/10 bg-[#181B26] p-3 text-xs font-bold leading-relaxed text-zinc-300">
+                   Nothing has been cleared yet. Continue only when this selection matches the intended service reset.
+                 </p>
+                 <button onClick={() => setDmStep('confirm')} className="w-full rounded-2xl bg-red-600 py-3.5 text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-red-500">Continue to final confirmation</button>
+                 <button onClick={() => setDmStep('select')} className="w-full py-2.5 text-xs font-black text-zinc-400 transition-colors hover:text-white">Back to module selection</button>
+               </div>
+             )}
+
+             {/* Restore step A / existing warning */}
             {dmStep === 'warn' && (
               <div className="space-y-4">
                 <div className={`rounded-2xl p-4 border text-sm font-bold leading-relaxed ${dmAction === 'reset' ? 'bg-red-950/40 border-red-500/30 text-red-200' : 'bg-orange-950/30 border-orange-500/30 text-orange-200'}`}>
-                  {dmAction === 'reset' ? (
+                   {dmAction === 'restore' ? (
                     <>
-                      <p className="font-black text-white mb-2">⚠ This will permanently erase all POS data:</p>
-                      <ul className="space-y-1 text-xs list-disc list-inside text-red-200/80">
-                        <li>All orders, payments and transaction history</li>
-                        <li>Menu, categories, tables, and ingredients</li>
-                        <li>Customers, staff accounts, and inventory records</li>
-                        <li>Kitchen purchases, expenses, and meat tracker data</li>
-                      </ul>
-                      <p className="mt-3 text-xs font-black text-white/70">Printer hardware settings will be preserved.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-black text-white mb-2">⚠ Restoring a backup will overwrite your current data:</p>
+                       <p className="font-black text-white mb-2">Restoring a backup will overwrite your current data:</p>
                       <ul className="space-y-1 text-xs list-disc list-inside text-orange-200/80">
                         <li>All current orders and payment history will be replaced</li>
                         <li>Menu, tables, customers, and staff will be replaced</li>
@@ -1898,7 +2008,7 @@ const DataManagementSection = () => {
                       </ul>
                       <p className="mt-3 text-xs font-black text-white/70">A safety backup of current data downloads automatically before restore runs.</p>
                     </>
-                  )}
+                   ) : null}
                 </div>
                 <button onClick={() => setDmStep('pin')} className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
                   I Understand — Continue
@@ -1907,8 +2017,8 @@ const DataManagementSection = () => {
               </div>
             )}
 
-            {/* Step B */}
-            {dmStep === 'pin' && (
+             {/* Restore step B: PIN */}
+             {dmAction === 'restore' && dmStep === 'pin' && (
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Enter Master Admin PIN</label>
@@ -1929,9 +2039,15 @@ const DataManagementSection = () => {
               </div>
             )}
 
-            {/* Step C */}
-            {dmStep === 'confirm' && (
+             {/* Final confirmation */}
+             {dmStep === 'confirm' && (
               <div className="space-y-4">
+                 {dmAction === 'reset' && (
+                   <div className="rounded-2xl border border-red-500/30 bg-red-950/30 p-4">
+                     <p className="text-sm font-black text-white">Final authorization</p>
+                     <p className="mt-1 text-xs font-bold leading-relaxed text-red-100/75">This clears only the selected modules. Protected masters and closed-shift archives remain untouched.</p>
+                   </div>
+                 )}
                 {dmAction === 'restore' && (
                   <div>
                     <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Select Backup File</label>
@@ -1945,6 +2061,18 @@ const DataManagementSection = () => {
                     </button>
                   </div>
                 )}
+                 {dmAction === 'reset' && (
+                   <div>
+                     <label className="mb-2 block text-xs font-black uppercase tracking-wider text-amber-400">Master Admin PIN</label>
+                     <input
+                       type="password" inputMode="numeric" maxLength={8} value={dmPin}
+                       onChange={(e) => { setDmPin(e.target.value); setDmPinError(false); }}
+                       placeholder="Enter PIN"
+                       className={`w-full rounded-xl border-2 bg-[#181B26] px-4 py-3.5 text-center text-lg font-black tracking-[0.4em] text-white outline-none transition-all shadow-inner ${dmPinError ? 'border-red-500' : 'border-white/20 focus:border-amber-400'}`}
+                     />
+                     {dmPinError && <p className="mt-2 text-center text-xs font-black text-red-400">Incorrect PIN — try again</p>}
+                   </div>
+                 )}
                 <div>
                   <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">
                     Type <span className={`font-black ${dmAction === 'reset' ? 'text-red-400' : 'text-orange-400'}`}>{dmConfirmWord}</span> to confirm

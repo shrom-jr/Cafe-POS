@@ -14,6 +14,8 @@ import { resolvePaymentLabel } from '@/utils/format';
 import { OrderItem } from '@/types/pos';
 import { playBillSettled } from '@/utils/sounds';
 import { tableDisplayName } from '@/utils/tableName';
+import { toast } from 'sonner';
+import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 
 const PaymentScreen = () => {
   const { tableId } = useParams<{ tableId: string }>();
@@ -116,6 +118,10 @@ const PaymentScreen = () => {
   };
 
   const handleConfirmPayment = async (method: string) => {
+    if (!isSelectiveResetMarkersHydrated()) {
+      toast.info('Syncing reset status. Please try payment again in a moment.');
+      return;
+    }
     const bn = getNextBillNumber();
     const now = Date.now();
     setBillNum(bn);

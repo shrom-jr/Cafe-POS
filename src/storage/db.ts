@@ -218,7 +218,7 @@ export const db = {
   },
 
   /**
-   * Schema v2 full backup — structured JSON covering all 22 data domains.
+   * Schema v2 full backup — structured JSON covering all 23 data domains.
    * Caller must inject live Zustand / Firebase state for the four domains
    * that have no localStorage representation (maintenanceExpenses,
    * alcoholProducts, beverageProducts, cigaretteProducts, invMovements).
@@ -268,6 +268,7 @@ export const db = {
         // ── Grocery & inv-mappings (localStorage cache) ───────────────────────
         groceryPurchases: readLS('inv_grocery'),
         invMappings:      readLS('inv_mappings'),
+        barRestockEntries: readLS('bar_restock_entries'),
         // ── Closed shift archive (immutable day-end snapshots) ────────────────
         closedShifts:     readLS(KEYS.closedShifts),
         // ── Firebase / Zustand-only domains (injected by caller) ─────────────
@@ -332,6 +333,7 @@ export const db = {
         // Grocery & inv-mappings cache
         writeIf('inv_grocery',   d.groceryPurchases);
         writeIf('inv_mappings',  d.invMappings);
+        writeIf('bar_restock_entries', d.barRestockEntries);
         // Closed shift archive
         writeIf(KEYS.closedShifts, d.closedShifts);
         // Firebase-only domains are intentionally skipped;

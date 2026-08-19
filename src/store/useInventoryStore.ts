@@ -138,9 +138,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   setInvMovements:   (movements) => set({ invMovements: movements }),
   // Grocery purchases and mappings use localStorage as a secondary cache.
   groceryPurchases:  getLS(INV_KEYS.grocery,  []),
-  setGroceryPurchases: (purchases) => set({ groceryPurchases: purchases }),
+  setGroceryPurchases: (purchases) => {
+    setLS(INV_KEYS.grocery, purchases);
+    set({ groceryPurchases: purchases });
+  },
   invMappings:       getLS(INV_KEYS.mappings, []),
-  setInvMappings:    (mappings) => set({ invMappings: mappings }),
+  setInvMappings:    (mappings) => {
+    setLS(INV_KEYS.mappings, mappings);
+    set({ invMappings: mappings });
+  },
 
   // ── ALCOHOL ──────────────────────────────────────────────────────────────
   // NOTE: No localStorage writes here. Firebase is the single source of truth

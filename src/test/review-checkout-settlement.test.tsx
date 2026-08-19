@@ -13,7 +13,23 @@ import { fireSilentPrintJob } from '@/utils/silentPrint';
 vi.mock('@/utils/silentPrint', () => ({
   fireSilentPrintJob: vi.fn().mockResolvedValue(true),
 }));
-vi.mock('@/utils/sounds', () => ({ playSuccess: vi.fn(), playError: vi.fn(), playClick: vi.fn() }));
+vi.mock('@/utils/sounds', () => ({
+  playSuccess: vi.fn(),
+  playError: vi.fn(),
+  playClick: vi.fn(),
+  playBillSettled: vi.fn(),
+}));
+vi.mock('@/utils/firebaseSync', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/firebaseSync')>();
+  return {
+    ...actual,
+    // This component harness does not mount useFirebaseSync. Declare the
+    // reset-generation bootstrap complete so checkout behavior is tested
+    // independently from application startup synchronization.
+    isSelectiveResetMarkersHydrated: () => true,
+    getObservedResetGeneration: () => 'baseline',
+  };
+});
 
 const TABLE: CafeTable = { id: 'table-1', number: '1', status: 'occupied', section: 'Ground Floor' } as CafeTable;
 

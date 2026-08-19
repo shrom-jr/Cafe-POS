@@ -38,6 +38,7 @@ import {
   pushMaintenanceExpensesToFirebase,
   getPendingOrderWrite,
   getPendingTableWrite,
+  subscribeToSelectiveResetMarkers,
   type OrderTombstone,
 } from "@/utils/firebaseSync";
 import {
@@ -96,7 +97,7 @@ function mergeRemoteOrders(
     const pendingWrite = getPendingOrderWrite(local.id);
     const tombstone = tombstoneById.get(local.id);
     const pendingCreateIsNewer =
-      Boolean(pendingWrite) && (!tombstone || compare(pendingWrite, tombstone) > 0);
+      Boolean(pendingWrite) && !tombstone;
 
     if (
       pendingCreateIsNewer &&
@@ -310,11 +311,19 @@ export function useFirebaseSync() {
     });
 
     const store = {
-      setPayments: (remotePayments: Parameters<typeof setPayments>[0]) => {
+      setPayments: (
+        remotePayments: Parameters<typeof setPayments>[0],
+        remoteExists = true,
+      ) => {
         const currentPayments = usePOSStore.getState().payments;
 
-        // FIREWALL: never wipe local payment history with an empty remote snapshot.
-        // Granular writePaymentRecord writers keep Firebase current.
+        // An absent node is the authoritative result of a selective reset.
+        if (!remoteExists) {
+          setPayments([]);
+          return;
+        }
+
+        // Preserve a local offline cache for a present-but-empty legacy node.
         if (remotePayments.length === 0 && currentPayments.length > 0) return;
 
         if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
@@ -418,9 +427,21 @@ export function useFirebaseSync() {
         }
       },
 
-      setInvMovements: (remoteMovements: typeof invMovements) => {
+      setInvMovements: (
+        remoteMovements: typeof invMovements,
+        remoteExists = true,
+      ) => {
         hasLoadedInvMovements.current = true;
         const currentMovements = useInventoryStore.getState().invMovements;
+
+        // An absent node is the authoritative result of a selective reset.
+        // Apply it locally and mark it as remote so the push effect cannot
+        // immediately recreate the deleted movement history.
+        if (!remoteExists) {
+          isRemoteInvMovementsUpdate.current = true;
+          setInvMovements([]);
+          return;
+        }
 
         // FIREWALL: preserve local movement history if remote is empty
         if (remoteMovements.length === 0 && currentMovements.length > 0) {
@@ -518,6 +539,7 @@ export function useFirebaseSync() {
     });
 
     const unsubscribePayments = subscribeToPayments(store);
+    const unsubscribeResetMarkers = subscribeToSelectiveResetMarkers();
     const unsubscribeSettings = subscribeToSettings(store);
     const unsubscribeMenuItems = subscribeToMenuItems(store);
     const unsubscribeCategories = subscribeToCategories(store);
@@ -553,6 +575,7 @@ export function useFirebaseSync() {
       unsubscribeOrders();
       unsubscribeTables();
       unsubscribePayments();
+      unsubscribeResetMarkers();
       unsubscribeSettings();
       unsubscribeMenuItems();
       unsubscribeCategories();

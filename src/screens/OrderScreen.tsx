@@ -18,6 +18,7 @@ import { getStaffName } from '@/utils/staffName';
 import { filterMenuItems } from '@/utils/menuFilter';
 import { compareTableNames, tableDisplayName } from '@/utils/tableName';
 import { toast } from 'sonner';
+import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 
 const formatTime = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -170,6 +171,10 @@ const OrderScreen = () => {
   const handleAddItem = (item: typeof menuItems[0]) => {
     const takenBy = currentUser ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role } : undefined;
     const currentOrder = order || createOrder(tableId, table.number, takenBy);
+    if (!currentOrder) {
+      toast.info('Syncing reset status. Please try again in a moment.');
+      return;
+    }
     addItemToOrder(currentOrder.id, item);
     playClick();
   };
@@ -185,6 +190,10 @@ const OrderScreen = () => {
     if (order) {
       attachCustomerToOrder(order.id, customer);
     } else if (customer && table) {
+      if (!isSelectiveResetMarkersHydrated()) {
+        toast.info('Syncing reset status. Please try again in a moment.');
+        return;
+      }
       attachCustomerToTable(table.id, table.number, customer);
     }
   };
@@ -311,6 +320,10 @@ const OrderScreen = () => {
     const lastPayment = tablePayments[0];
     const reorderTakenBy = currentUser ? { id: currentUser.id, name: getStaffName(currentUser), role: currentUser.role } : undefined;
     const currentOrder = order || createOrder(tableId, table.number, reorderTakenBy);
+    if (!currentOrder) {
+      toast.info('Syncing reset status. Please try again in a moment.');
+      return;
+    }
 
     lastPayment.items.forEach((orderItem) => {
       const menuItem = menuItems.find((m) => m.id === orderItem.menuItemId);
