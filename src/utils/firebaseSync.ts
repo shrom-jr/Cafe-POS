@@ -100,6 +100,27 @@ function assignFirebaseCollection(
   }
 }
 
+/**
+ * Log a structured Firebase error so that `code`, `message`, and `name` are
+ * always visible in the console instead of collapsing to `{}` when the browser
+ * serialises the Error object.
+ *
+ * @param context - A short human-readable label for where the error occurred
+ *   (e.g. "Firebase Order/Table Mutation"). Do NOT include leading "❌ [" — the
+ *   helper adds that formatting.
+ * @param error - The caught value (may be any type).
+ */
+function logStructuredFirebaseError(context: string, error: unknown): void {
+  const e = error as Record<string, unknown> | null | undefined;
+  console.error(`❌ [${context} FAILED]:`, {
+    code: e?.code,
+    message: e?.message,
+    name: e?.name,
+    serverMessage: e?.serverMessage,
+    details: e?.details,
+  });
+}
+
 function isRunningOrderRecord(order: Record<string, unknown>): boolean {
   return order.status === "active" || order.status === "billed";
 }
@@ -149,7 +170,7 @@ export async function writeCustomer(customerData: FirebaseCustomerRecord) {
       return root;
     }, { applyLocally: false });
   } catch (error) {
-    console.error("❌ [Firebase Customer Write FAILED]:", error);
+    logStructuredFirebaseError("Firebase Customer Write", error);
   }
 }
 
@@ -170,7 +191,7 @@ export async function writeCustomersToFirebase(customers: FirebaseCustomerRecord
       return root;
     }, { applyLocally: false });
   } catch (error) {
-    console.error("❌ [Firebase Customers Write FAILED]:", error);
+    logStructuredFirebaseError("Firebase Customers Write", error);
   }
 }
 
@@ -178,7 +199,7 @@ export async function deleteCustomerFirebase(customerId: string) {
   try {
     await set(ref(db, `customers/${customerId}`), null);
   } catch (error) {
-    console.error("❌ [Firebase Customer Delete FAILED]:", error);
+    logStructuredFirebaseError("Firebase Customer Delete", error);
   }
 }
 
@@ -226,7 +247,7 @@ export function subscribeToCustomers(
       callback(safeRecords);
       if (Object.keys(repairs).length > 0) {
         void update(ref(db), repairs).catch((error) => {
-          console.error("❌ [Firebase Customer Credit Repair FAILED]:", error);
+          logStructuredFirebaseError("Firebase Customer Credit Repair", error);
         });
       }
     };
@@ -239,12 +260,12 @@ export function subscribeToCustomers(
           customersReady = true;
           emit();
         } catch (error) {
-          console.error("❌ [Firebase Customer Snapshot FAILED]:", error);
+          logStructuredFirebaseError("Firebase Customer Snapshot", error);
           onError?.(error);
         }
       },
       (error) => {
-        console.error("❌ [Firebase Customer Listener FAILED]:", error);
+        logStructuredFirebaseError("Firebase Customer Listener", error);
         onError?.(error);
       },
     );
@@ -256,7 +277,7 @@ export function subscribeToCustomers(
         emit();
       },
       (error) => {
-        console.error("❌ [Firebase Customer Credit Marker Listener FAILED]:", error);
+        logStructuredFirebaseError("Firebase Customer Credit Marker Listener", error);
         onError?.(error);
       },
     );
@@ -265,7 +286,7 @@ export function subscribeToCustomers(
       unsubscribeMarkers();
     };
   } catch (error) {
-    console.error("❌ [Firebase Customer Subscription FAILED]:", error);
+    logStructuredFirebaseError("Firebase Customer Subscription", error);
     onError?.(error);
     return () => {};
   }
@@ -293,7 +314,7 @@ export async function pushOrdersToFirebase(orders: Order[]) {
   try {
     await set(ref(db, "orders"), JSON.parse(JSON.stringify(orders || [])));
   } catch (error) {
-    console.error("❌ [Firebase Orders Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Orders Push", error);
   }
 }
 
@@ -302,7 +323,7 @@ export async function pushTablesToFirebase(tables: CafeTable[]) {
   try {
     await set(ref(db, "tables"), JSON.parse(JSON.stringify(tables || [])));
   } catch (error) {
-    console.error("❌ [Firebase Tables Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Tables Push", error);
   }
 }
 
@@ -311,7 +332,7 @@ export async function pushPaymentsToFirebase(payments: Payment[]) {
   try {
     await set(ref(db, "payments"), JSON.parse(JSON.stringify(payments || [])));
   } catch (error) {
-    console.error("❌ [Firebase Payments Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Payments Push", error);
   }
 }
 
@@ -589,14 +610,28 @@ export async function applySelectiveResetToFirebase({
         pendingTableWrites.delete(tableId);
       }
     }
-    console.error("❌ [Firebase Selective Reset FAILED]:", error);
+    logStructuredFirebaseError("Firebase Selective Reset", error);
     throw error;
   }
 }
 
 /**
- * Write related order/table records in one Firebase multi-location update.
- * Every record in a logical POS mutation receives the same mutation metadata.
+ * Write related order/table records as an atomic multi-location update.
+ *
+ * Uses `update(ref(db), paths)` targeting only the affected record paths
+ * (`orders/{id}`, `tables/{id}`, `orderTombstones/{id}`) instead of a
+ * root-level `runTransaction`. This avoids the root-read permission requirement
+ * that caused the repeated "Firebase Order/Table Mutation FAILED" errors, while
+ * preserving reset-generation filtering, tombstone awareness, sync-revision
+ * metadata, and pending-write tracking.
+ *
+ * Generation checks use the locally-observed reset markers kept up to date by
+ * `subscribeToSelectiveResetMarkers()`. A one-off `get("orderTombstones")` is
+ * used to resolve tombstoned order IDs without touching the database root.
+ *
+ * Returns `{ success: true }` when the write is confirmed or silently skipped,
+ * or `{ success: false, error }` when Firebase rejects the write. Existing
+ * callers that do not inspect the return value continue to work unchanged.
  */
 export async function writeOrderTableMutation({
   orders = [],
@@ -606,8 +641,10 @@ export async function writeOrderTableMutation({
   orders?: Order[];
   tables?: CafeTable[];
   deletedOrderIds?: string[];
-}): Promise<void> {
-  if (!orders.length && !tables.length && !deletedOrderIds.length) return;
+}): Promise<{ success: boolean; error?: unknown }> {
+  if (!orders.length && !tables.length && !deletedOrderIds.length) {
+    return { success: true };
+  }
 
   const markersWereHydrated = isSelectiveResetMarkersHydrated();
   await ensureResetMarkersHydrated();
@@ -621,7 +658,7 @@ export async function writeOrderTableMutation({
       tables.some((table) =>
         table.status !== "free" && !table.activeFloorResetGeneration,
       ));
-  if (hasAmbiguousUngeneratedWrite) return;
+  if (hasAmbiguousUngeneratedWrite) return { success: true };
 
   const mutation = newSyncMutation();
   const expectedActiveFloorGeneration =
@@ -632,54 +669,52 @@ export async function writeOrderTableMutation({
   const writtenTableIds = new Set<string>();
 
   try {
-    await runTransaction(ref(db), (currentData) => {
-      const root = cloneFirebaseRoot(currentData);
-      const orderRecords = toFirebaseRecordMap(root.orders);
-      const tableRecords = toFirebaseRecordMap(root.tables);
-      const tombstones = toFirebaseRecordMap(root.orderTombstones);
-      const resetMarkers = (root.resetMarkers ?? {}) as {
-        activeFloor?: SyncMutation;
-        salesHistory?: SyncMutation;
-      };
-      const currentActiveFloorGeneration = resetGeneration(resetMarkers.activeFloor);
-      const currentSalesHistoryGeneration = resetGeneration(resetMarkers.salesHistory);
-      const tombstonedOrderIds = new Set(Object.keys(tombstones));
-      const blockedOrderIds = new Set<string>();
+    // Fetch only the tombstones collection — this avoids the root-level read
+    // that the previous runTransaction required and works within narrower rules.
+    const tombstoneSnap = await get(ref(db, "orderTombstones"));
+    const tombstonedOrderIds = new Set(
+      Object.keys((tombstoneSnap.val() ?? {}) as Record<string, unknown>),
+    );
 
-      for (const order of orders) {
-        const running = isRunningOrderRecord(order as unknown as Record<string, unknown>);
-        const incomingGeneration = running
-          ? order.activeFloorResetGeneration ?? expectedActiveFloorGeneration
-          : order.salesHistoryResetGeneration ?? expectedSalesHistoryGeneration;
-        const currentGeneration = running
-          ? currentActiveFloorGeneration
-          : currentSalesHistoryGeneration;
-        const blocked =
-          tombstonedOrderIds.has(order.id) ||
-          incomingGeneration !== currentGeneration;
-        if (blocked) {
-          blockedOrderIds.add(order.id);
-          continue;
-        }
-        pendingOrderWrites.set(order.id, mutation);
-        writtenOrderIds.add(order.id);
-        const generationFields = running
-          ? { activeFloorResetGeneration: currentActiveFloorGeneration }
-          : { salesHistoryResetGeneration: currentSalesHistoryGeneration };
-        orderRecords[recordKeyForId(orderRecords, order.id)] =
-          recordData(withSyncMutation({ ...order, ...generationFields }, mutation));
+    const updates: Record<string, unknown> = {};
+    const blockedOrderIds = new Set<string>();
+
+    for (const order of orders) {
+      const running = isRunningOrderRecord(order as unknown as Record<string, unknown>);
+      const incomingGeneration = running
+        ? order.activeFloorResetGeneration ?? expectedActiveFloorGeneration
+        : order.salesHistoryResetGeneration ?? expectedSalesHistoryGeneration;
+      const currentGeneration = running
+        ? expectedActiveFloorGeneration
+        : expectedSalesHistoryGeneration;
+      const blocked =
+        tombstonedOrderIds.has(order.id) ||
+        incomingGeneration !== currentGeneration;
+      if (blocked) {
+        blockedOrderIds.add(order.id);
+        continue;
       }
+      pendingOrderWrites.set(order.id, mutation);
+      writtenOrderIds.add(order.id);
+      const generationFields = running
+        ? { activeFloorResetGeneration: expectedActiveFloorGeneration }
+        : { salesHistoryResetGeneration: expectedSalesHistoryGeneration };
+      updates[`orders/${order.id}`] = recordData(
+        withSyncMutation({ ...order, ...generationFields }, mutation),
+      );
+    }
 
-      for (const table of tables) {
-        const linkedOrderWasReset =
-          Boolean(table.orderId) &&
-          (tombstonedOrderIds.has(table.orderId as string) ||
-            blockedOrderIds.has(table.orderId as string));
-        const occupancyHasStaleGeneration =
-          table.status !== "free" &&
-          (table.activeFloorResetGeneration ?? expectedActiveFloorGeneration) !==
-            currentActiveFloorGeneration;
-        const safeTable = linkedOrderWasReset || occupancyHasStaleGeneration
+    for (const table of tables) {
+      const linkedOrderWasReset =
+        Boolean(table.orderId) &&
+        (tombstonedOrderIds.has(table.orderId as string) ||
+          blockedOrderIds.has(table.orderId as string));
+      const occupancyHasStaleGeneration =
+        table.status !== "free" &&
+        (table.activeFloorResetGeneration ?? expectedActiveFloorGeneration) !==
+          expectedActiveFloorGeneration;
+      const safeTable =
+        linkedOrderWasReset || occupancyHasStaleGeneration
           ? (() => {
               const {
                 orderId: _orderId,
@@ -691,26 +726,29 @@ export async function writeOrderTableMutation({
             })()
           : {
               ...table,
-              activeFloorResetGeneration: currentActiveFloorGeneration,
+              activeFloorResetGeneration: expectedActiveFloorGeneration,
             };
-        pendingTableWrites.set(table.id, mutation);
-        writtenTableIds.add(table.id);
-        tableRecords[recordKeyForId(tableRecords, table.id)] =
-          recordData(withSyncMutation(safeTable, mutation));
-      }
+      pendingTableWrites.set(table.id, mutation);
+      writtenTableIds.add(table.id);
+      updates[`tables/${table.id}`] = recordData(
+        withSyncMutation(safeTable, mutation),
+      );
+    }
 
-      for (const orderId of deletedOrderIds) {
-        pendingOrderWrites.delete(orderId);
-        pendingOrderDeletes.set(orderId, mutation);
-        delete orderRecords[recordKeyForId(orderRecords, orderId)];
-        tombstones[orderId] = { id: orderId, ...mutation };
-      }
+    for (const orderId of deletedOrderIds) {
+      pendingOrderWrites.delete(orderId);
+      pendingOrderDeletes.set(orderId, mutation);
+      updates[`orders/${orderId}`] = null;
+      updates[`orderTombstones/${orderId}`] = recordData({ id: orderId, ...mutation });
+    }
 
-      assignFirebaseCollection(root, "orders", orderRecords);
-      assignFirebaseCollection(root, "tables", tableRecords);
-      assignFirebaseCollection(root, "orderTombstones", tombstones);
-      return root;
-    }, { applyLocally: false });
+    // Nothing to write — all orders were blocked by generation/tombstone guards.
+    if (Object.keys(updates).length === 0) {
+      return { success: true };
+    }
+
+    await update(ref(db), updates);
+    return { success: true };
   } catch (error) {
     for (const orderId of writtenOrderIds) {
       if (sameMutation(pendingOrderWrites.get(orderId), mutation)) {
@@ -727,7 +765,8 @@ export async function writeOrderTableMutation({
         pendingOrderDeletes.delete(orderId);
       }
     }
-    console.error("❌ [Firebase Order/Table Mutation FAILED]:", error);
+    logStructuredFirebaseError("Firebase Order/Table Mutation", error);
+    return { success: false, error };
   }
 }
 
@@ -741,7 +780,7 @@ export async function deleteTableRecord(tableId: string): Promise<void> {
   try {
     await update(ref(db), { [`tables/${tableId}`]: null });
   } catch (error) {
-    console.error("❌ [Firebase Table Delete FAILED]:", error);
+    logStructuredFirebaseError("Firebase Table Delete", error);
   }
 }
 
@@ -806,7 +845,7 @@ export async function writePaymentRecord(payment: Payment): Promise<void> {
       return root;
     }, { applyLocally: false });
   } catch (error) {
-    console.error("❌ [Firebase Payment Write FAILED]:", error);
+    logStructuredFirebaseError("Firebase Payment Write", error);
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -816,7 +855,7 @@ export async function pushSettingsToFirebase(settings: Settings) {
   try {
     await set(ref(db, "settings"), JSON.parse(JSON.stringify(settings || {})));
   } catch (error) {
-    console.error("❌ [Firebase Settings Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Settings Push", error);
   }
 }
 
@@ -825,7 +864,7 @@ export async function pushLogoToFirebase(logo: string | null) {
   try {
     await set(ref(db, "settings/logo"), logo || null);
   } catch (error) {
-    console.error("❌ [Firebase Logo Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Logo Push", error);
   }
 }
 
@@ -834,7 +873,7 @@ export async function pushAreaOrderToFirebase(areaOrder: string[]) {
   try {
     await set(ref(db, "areaOrder"), JSON.parse(JSON.stringify(areaOrder || [])));
   } catch (error) {
-    console.error("❌ [Firebase Area Order Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Area Order Push", error);
   }
 }
 
@@ -848,7 +887,7 @@ export async function pushGroceryPurchasesToFirebase(purchases: GroceryPurchase[
       "kitchenOperations",
     );
   } catch (error) {
-    console.error("❌ [Firebase Grocery Purchases Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Grocery Purchases Push", error);
   }
 }
 
@@ -861,7 +900,7 @@ export async function pushInvMovementsToFirebase(movements: InventoryMovement[])
       "barInventory",
     );
   } catch (error) {
-    console.error("❌ [Firebase Inventory Movements Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Inventory Movements Push", error);
   }
 }
 
@@ -870,7 +909,7 @@ export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
   try {
     await set(ref(db, "invMappings"), JSON.parse(JSON.stringify(mappings || [])));
   } catch (error) {
-    console.error("❌ [Firebase Inventory Mappings Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Inventory Mappings Push", error);
   }
 }
 
@@ -879,7 +918,7 @@ export async function pushStaffToFirebase(users: StaffUser[]) {
   try {
     await set(ref(db, "users"), JSON.parse(JSON.stringify(users || [])));
   } catch (error) {
-    console.error("❌ [Firebase Staff Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Staff Push", error);
   }
 }
 
@@ -941,7 +980,7 @@ export function subscribeToOrders(
     callback(cleanOrders, tombstones);
     if (Object.keys(repairs).length > 0) {
       void update(ref(db), repairs).catch((error) => {
-        console.error("❌ [Firebase Stale Order Repair FAILED]:", error);
+        logStructuredFirebaseError("Firebase Stale Order Repair", error);
       });
     }
   };
@@ -1010,7 +1049,7 @@ export function subscribeToPayments(store: FirebaseSyncStore) {
         staleEntries.map(({ firebaseKey }) => [`payments/${firebaseKey}`, null]),
       );
       void update(ref(db), repairs).catch((error) => {
-        console.error("❌ [Firebase Stale Payment Repair FAILED]:", error);
+        logStructuredFirebaseError("Firebase Stale Payment Repair", error);
       });
     }
   };
@@ -1067,7 +1106,7 @@ export async function pushMenuItemsToFirebase(items: MenuItem[]) {
   try {
     await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(items || [])));
   } catch (error) {
-    console.error("❌ [Firebase Menu Items Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Menu Items Push", error);
   }
 }
 
@@ -1083,7 +1122,7 @@ export async function pushCategoriesToFirebase(categories: Category[]) {
   try {
     await set(ref(db, "menu/categories"), JSON.parse(JSON.stringify(categories || [])));
   } catch (error) {
-    console.error("❌ [Firebase Categories Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Categories Push", error);
   }
 }
 
@@ -1232,7 +1271,7 @@ export async function writePinReset(userId: string, otp: string, expiresAt: numb
   try {
     await set(ref(db, `pinResets/${userId}`), { otp, expiresAt });
   } catch (error) {
-    console.error("❌ [Firebase PIN Reset Write FAILED]:", error);
+    logStructuredFirebaseError("Firebase PIN Reset Write", error);
   }
 }
 
@@ -1309,7 +1348,7 @@ export async function pushKitchenPurchasesToFirebase(purchases: PurchaseEntry[])
       "kitchenOperations",
     );
   } catch (error) {
-    console.error("❌ [Firebase Kitchen Purchases Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Kitchen Purchases Push", error);
   }
 }
 
@@ -1331,7 +1370,7 @@ export async function pushMeatEntriesToFirebase(entries: MeatEntry[]) {
       "kitchenOperations",
     );
   } catch (error) {
-    console.error("❌ [Firebase Meat Entries Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Meat Entries Push", error);
   }
 }
 
@@ -1353,7 +1392,7 @@ export async function pushMaintenanceExpensesToFirebase(expenses: MaintenanceExp
       "maintenanceExpenses",
     );
   } catch (error) {
-    console.error("❌ [Firebase Maintenance Expenses Push FAILED]:", error);
+    logStructuredFirebaseError("Firebase Maintenance Expenses Push", error);
   }
 }
 
