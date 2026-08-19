@@ -377,7 +377,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
   );
 
   // ── Glowing PIN dots ──────────────────────────────────────────────────────
-  const PinDots = ({ filled, error, total = 4 }: { filled: number; error?: boolean; total?: number }) => (
+  const PinDots = ({ filled, error, total = 6 }: { filled: number; error?: boolean; total?: number }) => (
     <div className="flex items-center justify-center gap-4 mb-6">
       {Array.from({ length: total }).map((_, i) => (
         <div
