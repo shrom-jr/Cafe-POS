@@ -1779,14 +1779,16 @@ const DataManagementSection = () => {
       <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Backup Coverage</h3>
-          <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 23 operational data domains in a single JSON file.</p>
+          <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 25 data domains in a single JSON file.</p>
         </div>
         <div className="grid sm:grid-cols-2 gap-2 text-xs font-bold text-zinc-300">
           {[
-            'Orders & payments', 'Tables & floor layout', 'Menu, categories & pillars',
-            'Bar & packaged stock, grocery purchases', 'Customers & Khatta ledgers', 'Staff accounts',
-            'Kitchen purchases', 'Meat tracker entries', 'Maintenance expenses',
-             'Grocery purchases', 'Inventory mappings', 'Bar restock audit', 'Alcohol / beverage / cigarettes',
+            'Tables', 'Floor area order', 'Menu pillars', 'Menu categories', 'Menu items',
+            'Orders', 'Payments', 'POS settings', 'Ingredients', 'Recipes',
+            'Kitchen stock movements', 'Customer profiles', 'Repayment ledgers', 'Staff accounts',
+            'Kitchen purchases', 'Meat tracker entries', 'Grocery purchases', 'Inventory mappings',
+            'Bar restock entries', 'Closed-shift archives', 'Maintenance expenses',
+            'Alcohol product stock', 'Packaged beverage stock', 'Cigarette stock', 'Bar inventory movements',
           ].map((d) => (
             <div key={d} className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
