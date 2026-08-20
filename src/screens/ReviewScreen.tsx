@@ -376,7 +376,7 @@ const ReviewScreen = () => {
       const processedBy = liveUser
         ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
         : undefined;
-      addPayment({
+      const settlementSucceeded = addPayment({
         orderId: orderIdRef.current,
         tableNumber,
         items: [...unpaidItems],
@@ -397,6 +397,12 @@ const ReviewScreen = () => {
         processedBy,
         customerId: attachedCustomer.id,
       });
+      if (!settlementSucceeded) {
+        toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
+        confirmingRef.current = false;
+        setConfirming(false);
+        return;
+      }
       const khattaItemIds = unpaidItems.map((i) => i.menuItemId);
       const khattaTablePayment: TablePayment = {
         id: crypto.randomUUID(),
@@ -548,7 +554,7 @@ const ReviewScreen = () => {
     const settledAmount = dueSettlement?.amount ?? 0;
     const tenderedTotal = payBill.total + settledAmount;
 
-    addPayment({
+    const settlementSucceeded = addPayment({
       orderId: orderIdRef.current,
       tableNumber,
       items: [...payItems],
@@ -571,6 +577,12 @@ const ReviewScreen = () => {
       processedBy,
       ...(dueSettlement ? { dueSettlement, amountTendered: tenderedTotal } : {}),
     });
+    if (!settlementSucceeded) {
+      toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
+      confirmingRef.current = false;
+      setConfirming(false);
+      return;
+    }
 
     // Build payItemIds — split item in store when only a partial quantity is being paid
     const payItemIds: string[] = [];

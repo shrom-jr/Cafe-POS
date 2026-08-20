@@ -141,7 +141,7 @@ const PaymentScreen = () => {
     const resolvedTakenBy = snap.takenBy;
     const resolvedProcessedBy = processedBy;
 
-    addPayment({
+    const settlementSucceeded = addPayment({
       orderId: snap.id,
       tableNumber: snap.tableNumber,
       items: [...snap.items],
@@ -161,6 +161,10 @@ const PaymentScreen = () => {
       takenBy:    resolvedTakenBy,
       processedBy: resolvedProcessedBy,
     });
+    if (!settlementSucceeded) {
+      toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
+      return;
+    }
 
     updateOrderStatus(snap.id, 'paid');
     if (tableId) resetTable(tableId);

@@ -39,6 +39,7 @@ interface POSState {
   setOrders: (orders: Order[]) => void;
   payments: Payment[];
   setPayments: (payments: Payment[]) => void;
+  settlingOrderIds: Record<string, boolean>;
   settings: Settings;
   setSettings: (settings: Settings) => void;
 
@@ -77,7 +78,7 @@ interface POSState {
   splitOrderItem: (orderId: string, menuItemId: string, qty: number) => string;
   markItemsPaid: (orderId: string, menuItemIds: string[], tablePayment: TablePayment) => void;
 
-  addPayment: (payment: Omit<Payment, 'id'>) => void;
+  addPayment: (payment: Omit<Payment, 'id'>) => boolean;
   /** Attach or detach a customer (for Khatta tracking) from an active order. */
   attachCustomerToOrder: (orderId: string, customer: Customer | null) => void;
   /** Attach a customer to a table, creating its empty draft order when needed. */
@@ -148,6 +149,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     db.savePayments(payments);
     set({ payments });
   },
+  settlingOrderIds: {},
   settings: db.getSettings(),
   setSettings: (settings) => set((state) => {
     const mergedSettings = {
@@ -966,98 +968,132 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   addPayment: (payment) => {
-    if (!isSelectiveResetMarkersHydrated()) return;
-    const salesHistoryResetGeneration = getObservedResetGeneration('salesHistory');
-    const { currentUser, users } = useStaffStore.getState();
-    const activeUser = currentUser ?? users.find((u) => u.active);
-    const autoAttrib: StaffAttribution | undefined = activeUser
-      ? { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role }
-      : undefined;
+    if (!isSelectiveResetMarkersHydrated()) return false;
 
-    set((state) => {
-      const originalOrder = state.orders.find((order) => order.id === payment.orderId);
-      const processedBy = payment.processedBy ?? autoAttrib;
-      const takenBy = originalOrder?.takenBy ?? payment.takenBy ?? processedBy;
-      const payments = [
-        ...state.payments,
-        {
-          ...payment,
-          processedBy,
-          takenBy,
-          id: crypto.randomUUID(),
-          ...(salesHistoryResetGeneration ? { salesHistoryResetGeneration } : {}),
-        },
-      ];
-      db.savePayments(payments);
-      return { payments };
-    });
-    // Granular Firebase sync: new payment record + settled order + associated table
-    const allPayments = get().payments;
-    const fbNewPayment = allPayments[allPayments.length - 1];
-    const fbSettledOrder = get().orders.find((o) => o.id === payment.orderId);
-    const fbSettledTable = fbSettledOrder ? get().tables.find((t) => t.id === fbSettledOrder.tableId) : undefined;
-    if (navigator.onLine) {
-      if (fbNewPayment) writePaymentRecord(fbNewPayment);
-      if (fbSettledOrder && fbSettledTable) {
-        writeOrderTableMutation({ orders: [fbSettledOrder], tables: [fbSettledTable] });
-      } else if (fbSettledOrder) {
-        writeOrderRecord(fbSettledOrder);
-      }
-    } else {
-      const salesGen = getObservedResetGeneration('salesHistory') ?? BASELINE_RESET_GENERATION;
-      const activeGen = getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION;
-      if (fbNewPayment) {
-        enqueueMutation('payments', 'add_payment',
-          { payment: fbNewPayment } as unknown as Record<string, unknown>,
-          salesGen,
-        );
-      }
-      if (fbSettledOrder) {
-        enqueueMutation('orders', 'update_order',
-          { order: fbSettledOrder, ...(fbSettledTable ? { table: fbSettledTable } : {}) } as unknown as Record<string, unknown>,
-          activeGen,
-        );
-      }
+    const initialState = get();
+    const originalOrder = initialState.orders.find((order) => order.id === payment.orderId);
+    if (!originalOrder || originalOrder.status === 'paid' || initialState.settlingOrderIds[payment.orderId]) {
+      return false;
     }
 
-    // ── Customer consumption metrics ─────────────────────────────────────────
-    // When the settled order has an attached customer, record the visit,
-    // spend, food/beverage tallies, and top-order ranking. Pay Later (khatta)
-    // settlements skip visit/spend because addToCustomerDue already counts them.
-    const settledOrder = get().orders.find((o) => o.id === payment.orderId);
-    const attached = settledOrder?.attachedCustomer;
-    if (attached) {
-      const { menuItems, categories } = get();
-      const isBeverageCategory = (categoryId: string): boolean => {
-        const category = categories.find((c) => c.id === categoryId);
-        const pillar = category?.parentCategory ?? '';
-        const name = category?.name ?? '';
-        return /beverage|drink|bar|alcohol|liquor|beer|wine|cocktail|juice|coffee|tea/i.test(
-          `${pillar} ${name}`,
-        );
-      };
-      let foodItems = 0;
-      let beverageItems = 0;
-      const consumedItems: Array<{ itemId: string; name: string; quantity: number; category: string }> = [];
-      for (const item of payment.items ?? []) {
-        const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-        const category = menuItem ? categories.find((c) => c.id === menuItem.categoryId) : undefined;
-        const beverage = menuItem ? isBeverageCategory(menuItem.categoryId) : false;
-        if (beverage) beverageItems += item.quantity;
-        else foodItems += item.quantity;
-        consumedItems.push({
-          itemId: item.menuItemId,
-          name: item.name,
-          quantity: item.quantity,
-          category: category?.parentCategory ?? category?.name ?? (beverage ? 'Beverage' : 'Food'),
+    const salesHistoryResetGeneration = getObservedResetGeneration('salesHistory');
+    const activeSalesGeneration = salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION;
+    const duplicatePayment = initialState.payments.some((existing) =>
+      existing.orderId === payment.orderId &&
+      existing.total === payment.total &&
+      existing.method === payment.method &&
+      (existing.salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION) === activeSalesGeneration,
+    );
+    if (duplicatePayment) return false;
+
+    set((state) => ({
+      settlingOrderIds: { ...state.settlingOrderIds, [payment.orderId]: true },
+    }));
+
+    let newPaymentId = '';
+    try {
+      const { currentUser, users } = useStaffStore.getState();
+      const activeUser = currentUser ?? users.find((u) => u.active);
+      const autoAttrib: StaffAttribution | undefined = activeUser
+        ? { id: activeUser.id, name: getStaffName(activeUser), role: activeUser.role }
+        : undefined;
+
+      set((state) => {
+        const liveOrder = state.orders.find((order) => order.id === payment.orderId);
+        const processedBy = payment.processedBy ?? autoAttrib;
+        const takenBy = liveOrder?.takenBy ?? payment.takenBy ?? processedBy;
+        newPaymentId = crypto.randomUUID();
+        const payments = [
+          ...state.payments,
+          {
+            ...payment,
+            processedBy,
+            takenBy,
+            id: newPaymentId,
+            ...(salesHistoryResetGeneration ? { salesHistoryResetGeneration } : {}),
+          },
+        ];
+        db.savePayments(payments);
+        return { payments };
+      });
+
+      // Granular Firebase sync: new payment record + settled order + associated table.
+      const fbNewPayment = get().payments.find((candidate) => candidate.id === newPaymentId);
+      const fbSettledOrder = get().orders.find((o) => o.id === payment.orderId);
+      const fbSettledTable = fbSettledOrder ? get().tables.find((t) => t.id === fbSettledOrder.tableId) : undefined;
+      if (navigator.onLine) {
+        if (fbNewPayment) void writePaymentRecord(fbNewPayment);
+        if (fbSettledOrder && fbSettledTable) {
+          void writeOrderTableMutation({ orders: [fbSettledOrder], tables: [fbSettledTable] });
+        } else if (fbSettledOrder) {
+          void writeOrderRecord(fbSettledOrder);
+        }
+      } else {
+        const salesGen = getObservedResetGeneration('salesHistory') ?? BASELINE_RESET_GENERATION;
+        const activeGen = getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION;
+        if (fbNewPayment) {
+          enqueueMutation('payments', 'add_payment',
+            { payment: fbNewPayment } as unknown as Record<string, unknown>,
+            salesGen,
+          );
+        }
+        if (fbSettledOrder) {
+          enqueueMutation('orders', 'update_order',
+            { order: fbSettledOrder, ...(fbSettledTable ? { table: fbSettledTable } : {}) } as unknown as Record<string, unknown>,
+            activeGen,
+          );
+        }
+      }
+
+      // ── Customer consumption metrics ─────────────────────────────────────────
+      // When the settled order has an attached customer, record the visit,
+      // spend, food/beverage tallies, and top-order ranking. Pay Later (khatta)
+      // settlements skip visit/spend because addToCustomerDue already counts them.
+      const settledOrder = get().orders.find((o) => o.id === payment.orderId);
+      const attached = settledOrder?.attachedCustomer;
+      if (attached) {
+        const { menuItems, categories } = get();
+        const isBeverageCategory = (categoryId: string): boolean => {
+          const category = categories.find((c) => c.id === categoryId);
+          const pillar = category?.parentCategory ?? '';
+          const name = category?.name ?? '';
+          return /beverage|drink|bar|alcohol|liquor|beer|wine|cocktail|juice|coffee|tea/i.test(
+            `${pillar} ${name}`,
+          );
+        };
+        let foodItems = 0;
+        let beverageItems = 0;
+        const consumedItems: Array<{ itemId: string; name: string; quantity: number; category: string }> = [];
+        for (const item of payment.items ?? []) {
+          const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+          const category = menuItem ? categories.find((c) => c.id === menuItem.categoryId) : undefined;
+          const beverage = menuItem ? isBeverageCategory(menuItem.categoryId) : false;
+          if (beverage) beverageItems += item.quantity;
+          else foodItems += item.quantity;
+          consumedItems.push({
+            itemId: item.menuItemId,
+            name: item.name,
+            quantity: item.quantity,
+            category: category?.parentCategory ?? category?.name ?? (beverage ? 'Beverage' : 'Food'),
+          });
+        }
+        useCustomerStore.getState().recordOrderConsumption(attached.id, {
+          orderTotal: payment.total,
+          countVisitAndSpend: payment.method !== 'khatta',
+          foodItems,
+          beverageItems,
+          items: consumedItems,
         });
       }
-      useCustomerStore.getState().recordOrderConsumption(attached.id, {
-        orderTotal: payment.total,
-        countVisitAndSpend: payment.method !== 'khatta',
-        foodItems,
-        beverageItems,
-        items: consumedItems,
+      return true;
+    } catch (error) {
+      console.error('[POS] Payment settlement failed:', error);
+      return false;
+    } finally {
+      set((state) => {
+        const settlingOrderIds = { ...state.settlingOrderIds };
+        delete settlingOrderIds[payment.orderId];
+        return { settlingOrderIds };
       });
     }
   },
