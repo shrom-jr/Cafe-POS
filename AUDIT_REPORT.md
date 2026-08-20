@@ -1078,7 +1078,7 @@ The following original findings remain open and must not be considered solved by
 - End-to-end atomicity across order, table, payment, inventory, customer due, and printing.
 - Inventory overselling and stock/order reconciliation.
 - Complete offline mutation coverage and dead-letter recovery.
-- Settlement idempotency and server-side uniqueness.
+- Full server-side settlement finalization and reconciliation beyond the client/Firebase claim lease.
 - Electron/dependency security findings.
 - Printer delivery confirmation and centralized print-hub leases.
 - Accessibility, bundle-size, backup/recovery, and immutable audit-event improvements.
@@ -1093,3 +1093,83 @@ When using this report for future planning, treat the original sections as the b
 4. Offline/reconnect and reset interactions.
 5. Automated regression coverage.
 6. Recovery behavior after partial failure or power loss.
+
+---
+
+# Post-audit implementation update 2
+
+**Update date:** 2026-08-21  
+**Purpose:** Record the inventory, customer-ledger, settlement, and multi-terminal safeguards implemented after the previous addendum. The original audit findings remain historical; this section records current implementation status and remaining boundaries.
+
+## G. Inventory enforcement and deficit visibility
+
+The POS now supports an explicit stock-enforcement policy in Admin settings:
+
+- **Flexible mode** remains the default and allows a sale to create negative stock.
+- **Strict mode** blocks sending mapped items to the kitchen when the projected stock is insufficient.
+- Strict-mode overrides require an Admin or Manager PIN authorization.
+- Deficits are calculated across alcohol millilitres, packaged beverage units, and cigarette sticks using the configured menu-to-inventory mappings.
+- Inventory dashboard and packaged-stock views display negative balances and deficit/low-stock states.
+- Stock arithmetic is rounded at the inventory boundary rather than relying on floating-point accumulation.
+
+This materially mitigates the original silent-overselling finding. Flexible mode is an intentional business choice, not an unreported clamp-to-zero behavior. Inventory/order durability and server-side atomicity remain open.
+
+## H. Customer-ledger validation and financial rounding
+
+Customer credit creation now rejects non-finite and non-positive amounts and rounds accepted values to two decimal places before updating balances and spend metrics. Existing repayment safeguards remain in place, including positive finite amounts, no repayment above current due, ledger rows, and receiver attribution.
+
+The customer ledger remains a client/Firebase distributed workflow and still requires production-rule and multi-terminal verification for authoritative accounting.
+
+## I. Settlement lifecycle and duplicate-payment protection
+
+Settlement behavior was strengthened across `ReviewScreen`, `PaymentScreen`, and `usePOSStore`:
+
+- An in-flight `settlingOrderIds` mutex prevents duplicate confirmations within one running terminal.
+- Each checkout confirmation carries an idempotency key persisted per order in localStorage so retries/reloads can reuse the same business-event key.
+- Bill numbers are allocated inside successful `addPayment` finalization; previewing the next bill number no longer increments the counter.
+- `addPayment` validates that the order exists, contains payable items, the submitted payment lines are current unpaid lines with valid quantities, and the payment total is finite and positive.
+- Empty orders, empty payment-line payloads, already-paid active lines, zero-value settlements, and invalid line quantities are rejected before payment rows, bill-counter changes, or printing.
+- Successful final settlement owns order-paid state, table release, payment persistence, local settings updates, and Firebase/offline synchronization.
+- Split payments continue to use `finalizeOrder: false`; paid item/table-payment state is re-synchronized after partial allocation.
+- A paid-order retry returns the existing success path so a stale checkout does not consume another bill number or print a duplicate invoice.
+
+For online final settlement, the store claims `settlementClaims/{orderId}` with a Firebase transaction before creating the payment. The claim accepts the same idempotency key on retry, rejects a competing active claim, and has a short lease to recover from a browser/process failure. Partial split allocations do not take the final-settlement claim, so sequential split payments remain supported.
+
+This materially mitigates the original payment-idempotency finding for online final settlement. It is not a substitute for server-authoritative payment processing: Firebase rules, claim permissions, lease observability, and atomic reconciliation of payment/order/customer/inventory/printing still require production validation.
+
+## J. Live multi-terminal checkout handoff
+
+While the review or payment screen is open, both payment UIs watch the current order/table state. If another terminal changes the order to paid or frees the table:
+
+- Open QR, credit, and payment modal state is closed.
+- Confirmation state is cancelled.
+- The operator sees: `Table [Table ID] was settled on another terminal.`
+- The screen navigates back to `/`.
+- Empty, zero-value, already-paid, and freed-table payment/proceed actions are disabled.
+
+This prevents a stale terminal from continuing to collect or print after a remote settlement is observed. The prevention window begins when Firebase state reaches the client; it does not replace the Firebase settlement claim.
+
+## K. Current verification after these changes
+
+| Check | Result | Notes |
+|---|---|---|
+| `npm test` | Passed: 54 of 54 tests | 11 test files passed |
+| `npm run build` | Passed | Vite production build completed |
+| `git diff --check` | Passed | No whitespace errors |
+| Online final settlement claim | Implemented | Firebase order-scoped transaction with recoverable lease |
+| Split settlement compatibility | Preserved | Partial payments bypass final claim and re-sync paid item state |
+| Stale checkout handoff | Implemented | Review and Payment screens close and navigate after remote settlement |
+| Workflow | Running | `Start application` / `npm run dev` |
+
+## L. Findings that remain open after update 2
+
+- Firebase Authentication, server-verifiable staff authorization, and production RTDB rule verification.
+- Complete server-side atomicity across payment, order/table, customer due, inventory, and printing.
+- Production observability and reconciliation for settlement claims, including lease expiry and failed downstream writes.
+- Full offline mutation coverage and dead-letter recovery.
+- Table reservation races and other multi-terminal operations outside final settlement.
+- Electron/package dependency advisories and remote-content trust.
+- Central print-hub exclusivity, delivery confirmation, accessibility, bundle size, backup integrity, and immutable audit-event controls.
+- Production-mode integration coverage for two-terminal settlement races and claim recovery after process failure.
+
+The implemented changes should therefore be treated as material risk reduction and improved operational integrity, not as evidence that the POS is a server-authoritative accounting system.

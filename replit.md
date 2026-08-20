@@ -2,7 +2,7 @@
 
 **Document purpose:** This file is the current project brief for collaborators and external AI tools. Use it as the source of context when brainstorming, planning enhancements, reviewing architecture, or proposing product changes.
 
-**Last verified:** August 20, 2026  
+**Last verified:** August 21, 2026  
 **Product:** S Bamboo Cottage / Bamboo POS  
 **Primary environment:** Replit development workspace  
 **Business context:** A café/restaurant POS for dine-in operations, kitchen and bar workflows, customer credit ledgers, inventory, reporting, and multi-terminal synchronization.
@@ -124,6 +124,13 @@ Orders have UUID IDs and include:
 - Amount actually tendered.
 
 The system supports cash and configured wallets such as eSewa, Khalti, Fonepay, and custom wallets. Payment records are separate from order records and are used for reports and bill history.
+
+Settlement safeguards now include:
+
+- Final online settlements claim `/settlementClaims/{orderId}` in Firebase before payment creation.
+- Claims use a persisted per-order idempotency key, accept safe retries, reject competing active claims, and expire after a short recovery lease.
+- Split payments use `finalizeOrder: false` until the final allocation; partial item-payment state and `tablePayments` are re-synchronized after allocation.
+- Empty/zero-value settlements and payment lines that do not match current unpaid order lines are rejected before bill-counter, payment-row, or print side effects.
 
 ### 4.4 Khatta customer credit
 
@@ -265,6 +272,14 @@ POS inventory deduction behavior:
 - Inventory movement records are retained for audit/history.
 - `scripts/seedInventory.mjs` seeds the inventory master with categorized products, zero stock, and minimum stock values, then clears inventory logs.
 
+Stock enforcement behavior:
+
+- Admin settings expose `flexible` and `strict` stock-enforcement modes.
+- Flexible mode permits negative inventory and surfaces deficits for reconciliation.
+- Strict mode blocks mapped sales whose projected stock is insufficient.
+- Admin/Manager PIN authorization can override a strict-mode deficit at the order-send boundary.
+- Deficit calculations use mapped alcohol millilitres, beverage package units, and cigarette sticks, with sequential deductions across the current send batch.
+
 ---
 
 ## 9. Administration
@@ -347,6 +362,7 @@ Never introduce a second source of truth for a Firebase-owned collection without
 /meatEntries
 /groceryPurchases
 /maintenanceExpenses
+/settlementClaims/{orderId}       # online final-settlement claim/lease
 ```
 
 ---
@@ -396,6 +412,13 @@ Selective reset and eligible order/payment/table writes share opaque reset gener
 
 Use the configured singleton database instance from `src/firebase.js`. Do not initialize another Firebase database instance for telemetry, probes, or feature code.
 
+### Settlement claim discipline
+
+- Only final settlements claim `/settlementClaims/{orderId}`; partial split allocations must remain sequentially payable.
+- Claims are Firebase transactions, not unconditional updates.
+- The persisted per-order idempotency key must be reused for retries; competing keys are rejected while the claim lease is active.
+- A claim is a short recovery lease, not a complete accounting transaction. Payment/order/customer/inventory/print reconciliation still needs explicit failure handling.
+
 ---
 
 ## 12. Offline and Multi-Terminal Behavior
@@ -418,6 +441,13 @@ When designing offline features, explicitly define:
 6. What the user sees when the operation is pending or rejected.
 
 The app is expected to run on several open terminals simultaneously. A feature that works on one tab but produces duplicate writes, stale resurrection, or repeated full-collection broadcasts on four tabs is not complete.
+
+Settlement-specific behavior:
+
+- Online final settlements claim the order before local payment finalization.
+- Offline settlements use the existing outbox/local synchronous path and cannot provide cross-device claim protection until reconnect.
+- Review and Payment screens detect a remote paid order or freed table, close payment state, notify the operator, and return to `/`.
+- A final settlement retry reuses its localStorage idempotency key; split allocations do not consume the final claim.
 
 ---
 
@@ -544,6 +574,7 @@ These constraints should be treated as non-negotiable unless a migration plan is
 These are planning topics, not commitments:
 
 - Improve observability for Firebase write failures, retry state, sync health, and stale-key cleanup.
+- Add production monitoring and reconciliation for settlement claim leases and downstream payment/order writes.
 - Reduce bandwidth from large collection snapshots and bulk `set()` operations where safe.
 - Add stronger automated multi-tab simulations for reset and conflict scenarios.
 - Formalize data migration/versioning for legacy Firebase paths and records.
@@ -554,6 +585,7 @@ These are planning topics, not commitments:
 - Improve staff activity/audit reporting and permission administration.
 - Review PWA/service-worker behavior for long-lived restaurant terminals.
 - Consider splitting large frontend bundles only if startup performance becomes a real operational issue.
+- Add a production-mode two-terminal race test covering sequential split payments, competing final claims, and claim recovery after a crashed terminal.
 
 External AI planning should treat these as hypotheses to investigate, not as approved scope. Any proposal should identify affected data paths, source-of-truth changes, offline behavior, reset implications, multi-terminal conflict behavior, migration needs, tests, and rollback strategy.
 
