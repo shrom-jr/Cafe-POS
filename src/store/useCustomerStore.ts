@@ -55,7 +55,7 @@ interface CustomerState {
    * Credit today's order amount to the customer's Khatta (Pay Later).
    * Increments currentDue, totalSpend, and visits.
    */
-  addToCustomerDue: (id: string, amount: number) => void;
+  addToCustomerDue: (id: string, amount: number) => boolean;
   /**
    * Record a validated partial or full repayment against a customer's Khatta.
    * This is the ONLY way a balance may decrease — it always writes a ledger
@@ -155,12 +155,20 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   },
 
   addToCustomerDue: (id, amount) => {
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+      return false;
+    }
+
+    const customer = get().customers.find((entry) => entry.id === id);
+    if (!customer) return false;
+
+    const cleanAmount = Math.round(amount * 100) / 100;
     const customers = get().customers.map((c) =>
       c.id === id
         ? {
             ...c,
-            currentDue: c.currentDue + amount,
-            totalSpend: c.totalSpend + amount,
+            currentDue: Math.round((c.currentDue + cleanAmount) * 100) / 100,
+            totalSpend: Math.round((c.totalSpend + cleanAmount) * 100) / 100,
             visits: c.visits + 1,
           }
         : c
@@ -180,6 +188,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         );
       }
     }
+    return true;
   },
 
   receiveRepayment: ({ customerId, amount, method, notes, receivedBy }) => {
