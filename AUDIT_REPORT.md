@@ -957,3 +957,139 @@ This audit could not verify:
 - Actual user procedures and staff training.
 
 Those require a controlled security review, production configuration review, multi-device test plan, and hardware acceptance test.
+
+---
+
+# Post-audit implementation update
+
+**Update period:** 2026-08-19 through 2026-08-20  
+**Purpose:** Record changes made after the original read-only audit. The original findings above remain a historical snapshot; this addendum identifies which findings were addressed and what still requires follow-up.
+
+## A. Firebase sync and legacy-key convergence
+
+### A.1 Table integer-key repair loop resolved
+
+The reported overnight table-write loop was traced to duplicate Firebase records created by writing `/tables` as an array. Firebase stored the array under integer keys such as `tables/20`, while granular table writes used the table UUID path such as `tables/<table-id>`.
+
+This created two records for the same table:
+
+- An integer-keyed legacy record containing stale occupancy/reset data.
+- A UUID-keyed current record containing the corrected table state.
+
+The table subscription repeatedly saw the stale integer-keyed record, repaired the UUID-keyed record, and left the original integer key in place.
+
+Implemented changes:
+
+- `pushTablesToFirebase` now serializes tables as an object keyed by `table.id`.
+- `subscribeToTables` preserves each Firebase storage key through `toFirebaseEntries`.
+- Mismatched/integer-keyed table paths are queued for deletion through a batched multi-location update.
+- Duplicate table IDs are deduplicated before local callbacks.
+- Existing pending-write guards remain in place to avoid duplicate repair writes.
+
+This addresses the specific “free table receives a new `syncMutationId` every few seconds” loop. It does not by itself resolve the broader security, authorization, or financial-transaction findings in the original audit.
+
+### A.2 Order storage standardized and legacy keys pruned
+
+Orders received the same collection-storage protection:
+
+- `pushOrdersToFirebase` now creates a UUID-keyed order dictionary.
+- The outbound collection write uses a targeted root `update` rather than writing a plain array with `set`.
+- `subscribeToOrders` tracks the actual Firebase storage key.
+- Integer or mismatched order keys are deleted in a background batch update.
+- The in-memory callback list is deduplicated by canonical `order.id`.
+- When both a legacy and UUID-keyed record exist, the canonical UUID-keyed record is preferred.
+
+This prevents future array-key creation and allows existing legacy integer-keyed order records to converge away.
+
+### A.3 Earlier sync-writer hardening now reflected in the implementation
+
+The Firebase sync layer also includes the following changes made during the sync investigation:
+
+- Order/table related writes use targeted reads and multi-location updates instead of the denied root-read transaction pattern.
+- Payment writes use the sales-history reset marker and targeted update behavior.
+- Firebase errors are normalized into structured log output instead of opaque `{}` console errors.
+- Table and order repair paths skip duplicate work when the local tab already has a pending mutation.
+- Empty-remote preservation writes are debounced to limit multi-terminal firewall bursts.
+- Reset generations, pending mutation metadata, and tombstones continue to protect against stale writes and post-reset resurrection.
+
+These changes improve convergence and observability, but production Firebase rules and authentication still require independent verification.
+
+## B. Void quantity boundary guard resolved
+
+The original audit listed over-void quantity as a high-risk issue. `voidOrderItem` now validates the requested quantity immediately after resolving the target order item and before any side effects:
+
+```text
+Number.isInteger(voidQuantity)
+voidQuantity > 0
+voidQuantity <= targetItem.quantity
+```
+
+Invalid input returns `false` immediately. No inventory restoration, order mutation, LocalStorage save, void-ticket creation, or Firebase write occurs on the rejected path.
+
+The existing UI already limits the normal quantity selector to `1..item.quantity`, so the new store-level guard protects non-UI callers, future UI changes, stale clients, and malformed inputs. The current UI does not yet display a dedicated error message for a rejected programmatic call; callers currently ignore the boolean return.
+
+This closes the specific boundary-integrity finding. Inventory/order atomicity and the broader lifecycle transaction finding remain open.
+
+## C. Selective customer reset contract aligned
+
+Customer-directory and credit-ledger reset behavior is now documented and tested as a complete wipe:
+
+- Firebase `/customers` is deleted.
+- Customer repayment/reset ledger data is deleted.
+- Local customer profiles and repayments are cleared.
+- Stale customer mutations for the reset domain are removed from the offline queue.
+- Tables, menu configuration, and staff accounts remain preserved.
+
+The selective-reset Firebase test was updated from the obsolete “retain profile with zero due” contract to the complete-wipe contract. Related assertions were also aligned with the current targeted-update writers rather than expecting old root transaction snapshots.
+
+## D. Verification after the updates
+
+The post-update test/build state is:
+
+| Check | Result | Notes |
+|---|---|---|
+| `npm test` | Passed: 54 of 54 tests | 11 test files passed |
+| `npm run build` | Passed | Vite production build completed |
+| Firebase table/order key handling | Implemented | UUID-keyed writes plus legacy-key pruning |
+| Void quantity guard | Implemented | Rejects non-integer, non-positive, and over-available quantities before side effects |
+| Customer selective reset contract | Implemented/tested | Complete Firebase and local directory/ledger wipe |
+
+The build still emits the existing large JavaScript bundle warning. This is a performance concern, not a build failure.
+
+## E. Updated status of original findings
+
+The following original findings are now **addressed or materially mitigated**:
+
+1. Over-void quantity validation boundary — addressed by the store-level guard.
+2. Table integer-key duplication and the confirmed repeating table repair loop — addressed by UUID-keyed writes, inbound key tracking, deduplication, and stale-key deletion.
+3. Order integer-key duplication risk — addressed by UUID-keyed order writes and legacy-key pruning.
+4. Selective customer reset test-contract mismatch — addressed; tests now reflect complete directory/ledger deletion.
+5. Opaque Firebase mutation error reporting — improved with structured error extraction.
+6. Some cross-tab repair duplication and empty-remote firewall bursts — mitigated with pending-write checks and debounce protection.
+7. Documentation drift — `replit.md` was rewritten as a current product and technical specification for future planning.
+
+The following original findings remain open and must not be considered solved by these updates:
+
+- Firebase Authentication and server-verifiable authorization.
+- Verification and tightening of production RTDB rules.
+- Client-controlled staff identity/permissions.
+- Client-side PIN-reset OTP security.
+- Pre-login data subscription exposure.
+- End-to-end atomicity across order, table, payment, inventory, customer due, and printing.
+- Inventory overselling and stock/order reconciliation.
+- Complete offline mutation coverage and dead-letter recovery.
+- Settlement idempotency and server-side uniqueness.
+- Electron/dependency security findings.
+- Printer delivery confirmation and centralized print-hub leases.
+- Accessibility, bundle-size, backup/recovery, and immutable audit-event improvements.
+
+## F. Recommended interpretation for future reviews
+
+When using this report for future planning, treat the original sections as the baseline audit and this addendum as the current implementation delta. Before closing any remaining high/critical finding, verify:
+
+1. The behavior in the actual running app.
+2. Firebase rules and production data paths.
+3. Multi-terminal behavior with at least two concurrent clients.
+4. Offline/reconnect and reset interactions.
+5. Automated regression coverage.
+6. Recovery behavior after partial failure or power loss.
