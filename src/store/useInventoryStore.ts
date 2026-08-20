@@ -207,7 +207,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return {};
     const products = s.alcoholProducts.map((p) =>
       p.id === productId
-        ? { ...p, currentStockMl: Math.max(0, p.currentStockMl + changeMl) }
+          ? { ...p, currentStockMl: Math.round((p.currentStockMl + changeMl) * 100) / 100 }
         : p
     );
     const movement: InventoryMovement = {
@@ -283,7 +283,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return {};
     const products = s.beverageProducts.map((p) =>
       p.id === productId
-        ? { ...p, currentStock: Math.max(0, p.currentStock + changePieces) }
+          ? { ...p, currentStock: Math.round((p.currentStock + changePieces) * 100) / 100 }
         : p
     );
     const movement: InventoryMovement = {
@@ -370,7 +370,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return {};
     const products = s.cigaretteProducts.map((p) =>
       p.id === productId
-        ? { ...p, currentSticks: Math.max(0, p.currentSticks + changeSticks) }
+        ? { ...p, currentSticks: Math.round((p.currentSticks + changeSticks) * 100) / 100 }
         : p
     );
     const movement: InventoryMovement = {
@@ -427,7 +427,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (productType === 'alcohol') {
       updatedAlcohol = s.alcoholProducts.map((p) => {
         if (p.id !== productId) return p;
-        const newStockMl = Math.max(0, p.currentStockMl + baseUnitChange);
+        const newStockMl = Math.round((p.currentStockMl + baseUnitChange) * 100) / 100;
         // Weighted-average master cost — only on Restock with a valid invoice total.
         // Formula: ((existingStock × existingCostPerBottle) + invoiceTotal)
         //          / (existingStock + restockStock)   [both in bottle equivalents]
@@ -447,7 +447,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     } else if (productType === 'beverage') {
       updatedBeverages = s.beverageProducts.map((p) => {
         if (p.id !== productId) return p;
-        const newStock = Math.max(0, p.currentStock + baseUnitChange);
+        const newStock = Math.round((p.currentStock + baseUnitChange) * 100) / 100;
         // Weighted-average master cost in individual unit units.
         let costPatch: Partial<BeverageProduct> = {};
         if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0) {
@@ -462,7 +462,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     } else {
       updatedCigarettes = s.cigaretteProducts.map((p) => {
         if (p.id !== productId) return p;
-        const newSticks = Math.max(0, p.currentSticks + baseUnitChange);
+        const newSticks = Math.round((p.currentSticks + baseUnitChange) * 100) / 100;
         // Weighted-average master cost in stick units, converted back to per-packet.
         let costPatch: Partial<CigaretteProduct> = {};
         if (entryType === 'Restock' && totalCost > 0 && baseUnitChange > 0 && p.sticksPerPacket > 0) {
@@ -522,7 +522,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         if (p.id !== existing.productId) return p;
         const patch: Partial<AlcoholProduct> = {};
         if (Math.abs(delta) > 0.001) {
-          patch.currentStockMl = Math.max(0, p.currentStockMl + delta);
+          patch.currentStockMl = Math.round((p.currentStockMl + delta) * 100) / 100;
         }
         // Only update cost for restocks (positive quantity) when cost is provided
         if (existing.quantity > 0 && totalCost > 0 && containerQty > 0 && p.bottleSizeMl > 0) {
@@ -539,12 +539,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (existing.productType === 'beverage') {
         updatedBeverages = s.beverageProducts.map((p) =>
           p.id === existing.productId
-            ? { ...p, currentStock: Math.max(0, p.currentStock + delta) } : p
+            ? { ...p, currentStock: Math.round((p.currentStock + delta) * 100) / 100 } : p
         );
       } else {
         updatedCigarettes = s.cigaretteProducts.map((p) =>
           p.id === existing.productId
-            ? { ...p, currentSticks: Math.max(0, p.currentSticks + delta) } : p
+            ? { ...p, currentSticks: Math.round((p.currentSticks + delta) * 100) / 100 } : p
         );
       }
     }
@@ -575,17 +575,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (existing.productType === 'alcohol') {
       updatedAlcohol = s.alcoholProducts.map((p) =>
         p.id === existing.productId
-          ? { ...p, currentStockMl: Math.max(0, p.currentStockMl - existing.quantity) } : p
+          ? { ...p, currentStockMl: Math.round((p.currentStockMl - existing.quantity) * 100) / 100 } : p
       );
     } else if (existing.productType === 'beverage') {
       updatedBeverages = s.beverageProducts.map((p) =>
         p.id === existing.productId
-          ? { ...p, currentStock: Math.max(0, p.currentStock - existing.quantity) } : p
+          ? { ...p, currentStock: Math.round((p.currentStock - existing.quantity) * 100) / 100 } : p
       );
     } else {
       updatedCigarettes = s.cigaretteProducts.map((p) =>
         p.id === existing.productId
-          ? { ...p, currentSticks: Math.max(0, p.currentSticks - existing.quantity) } : p
+          ? { ...p, currentSticks: Math.round((p.currentSticks - existing.quantity) * 100) / 100 } : p
       );
     }
 
@@ -616,7 +616,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (product) {
             updatedAlcohol = updatedAlcohol.map((p) =>
               p.id === mapping.productId
-                ? { ...p, currentStockMl: Math.max(0, p.currentStockMl - totalDeduct) }
+                ? { ...p, currentStockMl: Math.round((p.currentStockMl - totalDeduct) * 100) / 100 }
                 : p
             );
             newMovements.push({
@@ -637,7 +637,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (product) {
             updatedBeverages = updatedBeverages.map((p) =>
               p.id === mapping.productId
-                ? { ...p, currentStock: Math.max(0, p.currentStock - totalDeduct) }
+                ? { ...p, currentStock: Math.round((p.currentStock - totalDeduct) * 100) / 100 }
                 : p
             );
             newMovements.push({
@@ -658,7 +658,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (product) {
             updatedCigarettes = updatedCigarettes.map((p) =>
               p.id === mapping.productId
-                ? { ...p, currentSticks: Math.max(0, p.currentSticks - totalDeduct) }
+                ? { ...p, currentSticks: Math.round((p.currentSticks - totalDeduct) * 100) / 100 }
                 : p
             );
             newMovements.push({
