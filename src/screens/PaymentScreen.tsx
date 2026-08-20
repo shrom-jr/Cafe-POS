@@ -66,7 +66,38 @@ const PaymentScreen = () => {
   const [reprinting, setReprinting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const confirmingRef = useRef(false);
+  const localSettlementRef = useRef(false);
   const lastPrintJobRef = useRef<PrintJob | null>(null);
+  const settlementKeyRef = useRef<string | null>(null);
+  const getSettlementKey = () => {
+    const storageKey = `bamboo:settlement-key:${snap?.id ?? order?.id ?? ''}`;
+    const key = settlementKeyRef.current ?? localStorage.getItem(storageKey) ?? crypto.randomUUID();
+    settlementKeyRef.current = key;
+    localStorage.setItem(storageKey, key);
+    return key;
+  };
+  const clearSettlementKey = () => {
+    localStorage.removeItem(`bamboo:settlement-key:${snap?.id ?? order?.id ?? ''}`);
+    settlementKeyRef.current = null;
+  };
+
+  const settlementStateRef = useRef<{ tableStatus?: string; orderStatus?: string } | null>(null);
+  useEffect(() => {
+    const current = { tableStatus: table?.status, orderStatus: order?.status };
+    const previous = settlementStateRef.current;
+    settlementStateRef.current = current;
+    if (!previous) return;
+    const settledElsewhere =
+      (previous.tableStatus !== 'free' && current.tableStatus === 'free') ||
+      (previous.orderStatus !== 'paid' && current.orderStatus === 'paid');
+    if (!settledElsewhere || paid || localSettlementRef.current) return;
+    setShowQRModal(false);
+    setSelectedMethod(null);
+    setConfirming(false);
+    confirmingRef.current = false;
+    toast.info(`Table ${tableId ?? 'unknown'} was settled on another terminal.`);
+    navigate('/');
+  }, [table?.status, order?.status, paid, tableId, navigate]);
 
   const subtotal = rawState?.subtotal ?? 0;
   const discountAmount = rawState?.discountAmount ?? 0;
@@ -77,6 +108,14 @@ const PaymentScreen = () => {
   const vatMode = rawState?.vatMode ?? 'excluded';
   const vatEnabled = rawState?.vatEnabled ?? false;
   const finalTotal = rawState?.total ?? 0;
+  const settlementBlocked =
+    !order ||
+    order.status === 'paid' ||
+    table?.status === 'free' ||
+    !snap ||
+    snap.items.length === 0 ||
+    !Number.isFinite(finalTotal) ||
+    finalTotal <= 0;
 
   if (!table || !snap || !rawState?.total) {
     return (
@@ -161,8 +200,9 @@ const PaymentScreen = () => {
     const resolvedTakenBy = snap.takenBy;
     const resolvedProcessedBy = processedBy;
 
-    const settlementSucceeded = addPayment({
-      idempotencyKey: crypto.randomUUID(),
+    localSettlementRef.current = true;
+    const settlementResult = addPayment({
+      idempotencyKey: getSettlementKey(),
       orderId: snap.id,
       tableNumber: snap.tableNumber,
       items: [...snap.items],
@@ -183,12 +223,17 @@ const PaymentScreen = () => {
       takenBy:    resolvedTakenBy,
       processedBy: resolvedProcessedBy,
     });
+    const settlementSucceeded = settlementResult instanceof Promise
+      ? await settlementResult
+      : settlementResult;
     if (!settlementSucceeded) {
+      localSettlementRef.current = false;
       toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
       confirmingRef.current = false;
       setConfirming(false);
       return;
     }
+    clearSettlementKey();
 
     playBillSettled();
     setShowQRModal(false);
@@ -403,6 +448,7 @@ const PaymentScreen = () => {
 
           <button
             onClick={() => handleConfirmPayment('cash')}
+            disabled={settlementBlocked || confirming}
             data-testid="button-payment-method-cash"
             className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-black transition-all cursor-pointer shadow-lg active:scale-[0.97]"
           >
@@ -422,6 +468,7 @@ const PaymentScreen = () => {
                 <button
                   key={id}
                   onClick={() => { setSelectedMethod(id); setShowQRModal(true); }}
+                  disabled={settlementBlocked || confirming}
                   data-testid={`button-payment-method-${id}`}
                    className={`flex items-center gap-3 p-4 rounded-2xl font-black transition-all cursor-pointer shadow-lg active:scale-[0.97] ${
                      id === 'khalti'
@@ -501,7 +548,7 @@ const PaymentScreen = () => {
                   setConfirming(true);
                   await handleConfirmPayment(selectedMethod);
                 }}
-                disabled={confirming}
+                disabled={settlementBlocked || confirming}
                 data-testid="button-confirm-payment"
                  className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-80 flex items-center justify-center gap-2"
                 style={{

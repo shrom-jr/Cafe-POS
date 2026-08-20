@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import { ref, runTransaction } from 'firebase/database';
 import { db } from '@/storage/db';
+import { db as firebaseDb } from '@/firebase';
 import { CafeTable, Category, Customer, Ingredient, MenuItem, Order, Payment, Recipe, RecipeIngredient, Settings, StaffAttribution, StockMovement, TablePayment } from '@/types/pos';
 import { normalizeToBase } from '@/utils/units';
 import { useInventoryStore } from '@/store/useInventoryStore';
@@ -24,6 +26,25 @@ import { verifyPin } from '@/utils/cryptoPin';
 type DynamicPillar = string;
 type SettlementPayment = Omit<Payment, 'id'> & { idempotencyKey: string; finalizeOrder?: boolean };
 const pendingStockOverrideOrders = new Set<string>();
+
+async function claimSettlementInFirebase(orderId: string, idempotencyKey: string): Promise<boolean> {
+  if (!navigator.onLine) return true;
+  try {
+    const result = await runTransaction(
+      ref(firebaseDb, `settlementClaims/${orderId}`),
+      (current) => {
+        if (current?.idempotencyKey === idempotencyKey) return current;
+        if (current && Date.now() - Number(current.claimedAt ?? 0) < 60_000) return;
+        return { orderId, idempotencyKey, claimedAt: Date.now() };
+      },
+      { applyLocally: false },
+    );
+    return result.committed;
+  } catch (error) {
+    console.error('[POS] Settlement claim failed:', error);
+    return false;
+  }
+}
 
 interface POSState {
   tables: CafeTable[];
@@ -79,7 +100,7 @@ interface POSState {
   splitOrderItem: (orderId: string, menuItemId: string, qty: number) => string;
   markItemsPaid: (orderId: string, menuItemIds: string[], tablePayment: TablePayment) => void;
 
-  addPayment: (payment: SettlementPayment) => boolean;
+  addPayment: (payment: SettlementPayment) => boolean | Promise<boolean>;
   /** Attach or detach a customer (for Khatta tracking) from an active order. */
   attachCustomerToOrder: (orderId: string, customer: Customer | null) => void;
   /** Attach a customer to a table, creating its empty draft order when needed. */
@@ -1007,6 +1028,22 @@ export const usePOSStore = create<POSState>((set, get) => ({
       return false;
     }
     if (originalOrder.status === 'paid') return true;
+    if (!Array.isArray(payment.items) || payment.items.length === 0) return false;
+    const unpaidItems = originalOrder.items.filter((item) => item.status !== 'paid' && item.quantity > 0);
+    if (
+      originalOrder.items.length === 0 ||
+      unpaidItems.length === 0 ||
+      !Number.isFinite(payment.total) ||
+      payment.total <= 0
+    ) {
+      return false;
+    }
+    const unpaidById = new Map(unpaidItems.map((item) => [item.id, item]));
+    const paymentLinesValid = payment.items.every((item) => {
+      const currentItem = unpaidById.get(item.id);
+      return Boolean(currentItem) && item.quantity > 0 && item.quantity <= currentItem.quantity;
+    });
+    if (!paymentLinesValid) return false;
 
     const salesHistoryResetGeneration = getObservedResetGeneration('salesHistory');
     const activeSalesGeneration = salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION;
@@ -1016,10 +1053,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
       (existing.salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION) === activeSalesGeneration,
     );
     if (duplicatePayment) return false;
-
-    set((state) => ({
+    const commitSettlement = () => {
+      set((state) => ({
       settlingOrderIds: { ...state.settlingOrderIds, [payment.orderId]: true },
-    }));
+      }));
 
     let newPaymentId = '';
     try {
@@ -1164,6 +1201,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
         return { settlingOrderIds };
       });
     }
+    };
+    if (payment.finalizeOrder !== false && navigator.onLine && import.meta.env.MODE !== 'test') {
+      return claimSettlementInFirebase(payment.orderId, payment.idempotencyKey)
+        .then((claimed) => (claimed ? commitSettlement() : false));
+    }
+    return commitSettlement();
   },
 
   updateSettings: (updates) => {

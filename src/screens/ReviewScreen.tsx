@@ -141,6 +141,14 @@ const ReviewScreen = () => {
   const prevDueAmount = canIncludePrevDue && includePrevDue ? outstandingDue : 0;
   /** What the customer actually hands over: this bill plus any due being settled. */
   const chargeTotal = activeBill.total + prevDueAmount;
+  const settlementBlocked =
+    !order ||
+    order.status === 'paid' ||
+    table?.status === 'free' ||
+    items.length === 0 ||
+    unpaidItems.length === 0 ||
+    !Number.isFinite(chargeTotal) ||
+    chargeTotal <= 0;
 
   // ── Payment state ─────────────────────────────────────────────
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -154,11 +162,43 @@ const ReviewScreen = () => {
   const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
   const lastPrintJobRef = useRef<PrintJob | null>(null);
   const confirmingRef = useRef(false);
+  const localSettlementRef = useRef(false);
+  const settlementKeyRef = useRef<string | null>(null);
+  const getSettlementKey = () => {
+    const storageKey = `bamboo:settlement-key:${orderIdRef.current}`;
+    const key = settlementKeyRef.current ?? localStorage.getItem(storageKey) ?? crypto.randomUUID();
+    settlementKeyRef.current = key;
+    localStorage.setItem(storageKey, key);
+    return key;
+  };
+  const clearSettlementKey = () => {
+    localStorage.removeItem(`bamboo:settlement-key:${orderIdRef.current}`);
+    settlementKeyRef.current = null;
+  };
   const [billDetailsOpen, setBillDetailsOpen] = useState(false);
   /** Previous due actually collected in the completed transaction. */
   const [settledDue, setSettledDue] = useState(0);
   /** Cash collected alongside a Credit (khatta) booking — Option D split. */
   const [creditAmountReceived, setCreditAmountReceived] = useState('0');
+
+  const settlementStateRef = useRef<{ tableStatus?: string; orderStatus?: string } | null>(null);
+  useEffect(() => {
+    const current = { tableStatus: table?.status, orderStatus: order?.status };
+    const previous = settlementStateRef.current;
+    settlementStateRef.current = current;
+    if (!previous) return;
+    const settledElsewhere =
+      (previous.tableStatus !== 'free' && current.tableStatus === 'free') ||
+      (previous.orderStatus !== 'paid' && current.orderStatus === 'paid');
+    if (!settledElsewhere || paid || localSettlementRef.current) return;
+    setShowQRModal(false);
+    setShowCreditConfirmation(false);
+    setSelectedMethod(null);
+    setConfirming(false);
+    confirmingRef.current = false;
+    toast.info(`Table ${tableId ?? 'unknown'} was settled on another terminal.`);
+    navigate('/');
+  }, [table?.status, order?.status, paid, tableId, navigate]);
 
   const creditCashCollected = Math.min(
     Math.max(0, Math.round((Number(creditAmountReceived) || 0) * 100) / 100),
@@ -391,8 +431,9 @@ const ReviewScreen = () => {
       const processedBy = liveUser
         ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
         : undefined;
-      const settlementSucceeded = addPayment({
-        idempotencyKey: crypto.randomUUID(),
+      localSettlementRef.current = true;
+      const settlementResult = addPayment({
+        idempotencyKey: getSettlementKey(),
         orderId: orderIdRef.current,
         tableNumber,
         items: [...unpaidItems],
@@ -414,12 +455,17 @@ const ReviewScreen = () => {
         processedBy,
         customerId: attachedCustomer.id,
       });
+      const settlementSucceeded = settlementResult instanceof Promise
+        ? await settlementResult
+        : settlementResult;
       if (!settlementSucceeded) {
+        localSettlementRef.current = false;
         toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
         confirmingRef.current = false;
         setConfirming(false);
         return;
       }
+      clearSettlementKey();
       const khattaItemIds = unpaidItems.map((i) => i.menuItemId);
       const khattaTablePayment: TablePayment = {
         id: crypto.randomUUID(),
@@ -578,8 +624,9 @@ const ReviewScreen = () => {
     const settledAmount = dueSettlement?.amount ?? 0;
     const tenderedTotal = payBill.total + settledAmount;
 
-    const settlementSucceeded = addPayment({
-      idempotencyKey: crypto.randomUUID(),
+    localSettlementRef.current = true;
+    const settlementResult = addPayment({
+      idempotencyKey: getSettlementKey(),
       orderId: orderIdRef.current,
       tableNumber,
       items: [...payItems],
@@ -603,13 +650,17 @@ const ReviewScreen = () => {
       processedBy,
       ...(dueSettlement ? { dueSettlement, amountTendered: tenderedTotal } : {}),
     });
+    const settlementSucceeded = settlementResult instanceof Promise
+      ? await settlementResult
+      : settlementResult;
     if (!settlementSucceeded) {
+      localSettlementRef.current = false;
       toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
       confirmingRef.current = false;
       setConfirming(false);
       return;
     }
-
+    if (allDone) clearSettlementKey();
     // Build payItemIds — split item in store when only a partial quantity is being paid
     const payItemIds: string[] = [];
     if (isSplit) {
@@ -1422,7 +1473,7 @@ const ReviewScreen = () => {
         {/* Cash */}
         <button
           onClick={() => handleConfirmPayment('cash')}
-          disabled={confirming || quotedDueStale}
+          disabled={settlementBlocked || confirming || quotedDueStale}
           data-testid="button-payment-method-cash"
           className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
           style={{
@@ -1448,7 +1499,7 @@ const ReviewScreen = () => {
             <button
               onClick={openCreditConfirmation}
               data-testid="button-payment-method-khatta"
-              disabled={confirming || quotedDueStale}
+              disabled={settlementBlocked || confirming || quotedDueStale}
               className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40`}
               style={{
                 background: 'rgba(251,191,36,0.08)',
@@ -1493,7 +1544,7 @@ const ReviewScreen = () => {
               key={id}
               onClick={() => { if (!confirming) openQRModal(id); }}
               data-testid={`button-payment-method-${id}`}
-              disabled={confirming || quotedDueStale}
+              disabled={settlementBlocked || confirming || quotedDueStale}
               className={`flex items-center gap-[10px] px-3 ${compact ? 'py-2' : 'py-2.5'} rounded-xl transition-all duration-100 active:scale-[0.97] hover:scale-[1.015] disabled:opacity-40`}
               style={{
                 background: 'rgba(255,255,255,0.045)',
@@ -1621,7 +1672,7 @@ const ReviewScreen = () => {
                       {/* Cash */}
                       <button
                         onClick={() => handleConfirmPayment('cash')}
-                        disabled={confirming || quotedDueStale}
+                        disabled={settlementBlocked || confirming || quotedDueStale}
                         data-testid="button-payment-method-cash"
                         className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
                         style={{
@@ -1645,7 +1696,7 @@ const ReviewScreen = () => {
                           <button
                             onClick={openCreditConfirmation}
                             data-testid="button-payment-method-khatta"
-                            disabled={confirming || quotedDueStale}
+                            disabled={settlementBlocked || confirming || quotedDueStale}
                             className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:brightness-110 disabled:opacity-40"
                             style={{
                               background: 'rgba(251,191,36,0.08)',
@@ -1687,7 +1738,7 @@ const ReviewScreen = () => {
                             key={id}
                             onClick={() => { if (!confirming) openQRModal(id); }}
                             data-testid={`button-payment-method-${id}`}
-                            disabled={confirming || quotedDueStale}
+                            disabled={settlementBlocked || confirming || quotedDueStale}
                             className="flex items-center gap-[10px] px-3 py-2 rounded-lg transition-all duration-100 active:scale-[0.97] hover:scale-[1.015] disabled:opacity-40"
                             style={{
                               background: 'rgba(255,255,255,0.045)',
@@ -2026,7 +2077,7 @@ const ReviewScreen = () => {
                           {/* Cash */}
                           <button
                             onClick={() => handleConfirmPayment('cash')}
-                            disabled={confirming || quotedDueStale}
+                            disabled={settlementBlocked || confirming || quotedDueStale}
                             data-testid="button-payment-method-cash"
                              className="p-3 rounded-2xl bg-[#0F1916] border-2 border-emerald-500/40 hover:border-emerald-400 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md shadow-emerald-500/5 disabled:opacity-40"
                             style={{
@@ -2051,7 +2102,7 @@ const ReviewScreen = () => {
                                 <button
                                   onClick={openCreditConfirmation}
                                   data-testid="button-payment-method-khatta"
-                                  disabled={confirming || quotedDueStale}
+                                  disabled={settlementBlocked || confirming || quotedDueStale}
                                     className="p-3 rounded-2xl bg-[#181510] border-2 border-amber-500/40 hover:border-amber-400 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md shadow-amber-500/5 disabled:opacity-40"
                                   style={{
                                     minHeight: 54,
@@ -2093,7 +2144,7 @@ const ReviewScreen = () => {
                                 key={id}
                                 onClick={() => { if (!confirming) openQRModal(id); }}
                                 data-testid={`button-payment-method-${id}`}
-                                disabled={confirming || quotedDueStale}
+                                disabled={settlementBlocked || confirming || quotedDueStale}
                                   className={`p-3 rounded-2xl border-2 flex items-center gap-2.5 transition-all cursor-pointer group shadow-md disabled:opacity-40 ${
                                    id === 'esewa'
                                          ? 'bg-[#0F1916] border-emerald-500/40 hover:border-emerald-400 shadow-emerald-500/5'
@@ -2227,7 +2278,7 @@ const ReviewScreen = () => {
                 </button>
                 <button
                   onClick={() => handleConfirmPayment('khatta')}
-                  disabled={confirming || quotedDueStale}
+                  disabled={settlementBlocked || confirming || quotedDueStale}
                   className="flex-1 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                 >
                   {confirming ? <><Loader2 size={15} className="animate-spin" /> Processing...</> : 'Confirm Credit & Settle'}
@@ -2309,7 +2360,7 @@ const ReviewScreen = () => {
                     setConfirming(true);
                     await handleConfirmPayment(selectedMethod);
                   }}
-                  disabled={confirming || quotedDueStale}
+                    disabled={settlementBlocked || confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
                     className={`${qrProviderTheme.button} disabled:opacity-70 flex items-center justify-center gap-2`}
                 >
@@ -2370,7 +2421,7 @@ const ReviewScreen = () => {
                     setConfirming(true);
                     await handleConfirmPayment(selectedMethod);
                   }}
-                  disabled={confirming || quotedDueStale}
+                    disabled={settlementBlocked || confirming || quotedDueStale}
                   data-testid="button-confirm-payment"
                     className={`${qrProviderTheme.button} disabled:opacity-70 flex items-center justify-center gap-2`}
                 >
