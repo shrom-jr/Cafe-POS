@@ -1098,7 +1098,7 @@ When using this report for future planning, treat the original sections as the b
 
 # Post-audit implementation update 2
 
-**Update date:** 2026-08-21  
+**Update date:** 2026-08-21
 **Purpose:** Record the inventory, customer-ledger, settlement, and multi-terminal safeguards implemented after the previous addendum. The original audit findings remain historical; this section records current implementation status and remaining boundaries.
 
 ## G. Inventory enforcement and deficit visibility

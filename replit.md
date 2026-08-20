@@ -2,7 +2,7 @@
 
 **Document purpose:** This file is the current project brief for collaborators and external AI tools. Use it as the source of context when brainstorming, planning enhancements, reviewing architecture, or proposing product changes.
 
-**Last verified:** August 21, 2026  
+**Last verified:** August 21, 2026
 **Product:** S Bamboo Cottage / Bamboo POS  
 **Primary environment:** Replit development workspace  
 **Business context:** A café/restaurant POS for dine-in operations, kitchen and bar workflows, customer credit ledgers, inventory, reporting, and multi-terminal synchronization.
@@ -145,6 +145,8 @@ The customer system supports:
 - Including previous due during settlement.
 - Recording a repayment through supported repayment methods.
 - Customer financials, visits, consumption/top items, and audit-oriented views.
+
+Credit creation rejects non-finite and non-positive amounts and rounds accepted amounts to two decimal places before updating due and spend metrics. Repayment validation separately prevents non-positive amounts and repayment above the current due.
 
 Important current reset rule: **customer-directory and credit-ledger reset is a complete wipe.** It removes customer profiles, repayment records, and customer reset tombstone data from Firebase and clears local customer state/localStorage. It must not preserve customer profiles with a zero balance.
 
