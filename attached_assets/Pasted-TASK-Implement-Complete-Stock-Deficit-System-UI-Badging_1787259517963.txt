@@ -1,0 +1,43 @@
+TASK: Implement Complete Stock Deficit System: UI Badging & Configurable Stock Enforcement Mode
+
+TARGET FILES:
+- `src/types/index.ts` (or relevant settings/inventory type definitions)
+- `src/store/useSettingsStore.ts` (or settings state manager)
+- `src/store/usePOSStore.ts`
+- `src/screens/admin/tabs/PosSettingsTab.tsx` (or `src/screens/admin/SettingsTab.tsx`)
+- Inventory UI components (e.g., `src/screens/admin/InventoryTab.tsx`, `src/screens/admin/tabs/PackagedStockTab.tsx`, or `src/screens/admin/InventoryScreen.tsx`)
+
+OBJECTIVES:
+
+1. Settings Schema & Defaults:
+   - Add `stockEnforcementMode: 'flexible' | 'strict'` to POS Settings.
+   - Set the default value to `'flexible'`.
+   - Ensure hydration and persistence safely preserve this setting across restarts and Firebase sync.
+
+2. Admin POS UI:
+   - In the POS Inventory tab, add a setting section for "Stock Mode" with two options:
+     - Flexible Mode (Default): "Allows negative stock during peak dining rush. Floor orders proceed without interruption, and deficits are highlighted on the Inventory dashboard for reconciliation."
+     - Strict Mode: "Blocks orders that exceed digital stock counts unless authorized by an Admin/Manager PIN override."
+
+3. Floor Order Guard (Strict vs Flexible):
+   - In `usePOSStore.ts` (or where `sendToKitchen` / order validation runs):
+     - Check `stockEnforcementMode`.
+     - When `flexible`: Allow all order deductions to proceed smoothly into negative numbers without blocking staff or displaying disruptive popups.
+     - When `strict`: Verify mapped inventory quantities before sending. If available stock is insufficient, trigger the Admin/Manager PIN verification dialog before allowing the order submission.
+
+4. Inventory UI Deficit Badging & Scannability:
+   - In the Inventory product tables (Spirits, Wine, Beer, Soft Drinks, Cigarettes):
+     - When a product's current stock is negative (`currentStock < 0`):
+       - Render a `DEFICIT` badge styled with an amber/rose pill background (`bg-rose-500/20 text-rose-400 border border-rose-500/30` or `bg-amber-500/20 text-amber-400 border border-amber-500/30`).
+       - Highlight the stock count text in amber/rose.
+     - Ensure negative bottle/portion formatting renders cleanly without NaN (e.g., `-240 ml · -0.32 btl`, `-3 pcs`).
+     - When `currentStock >= 0`, preserve existing status logic (`ACTIVE`, `LOW STOCK`, `OUT OF STOCK`).
+   - Top Summary Metrics:
+     - Ensure the `LOW STOCK` summary card includes all products where `currentStock <= minAlert` OR `currentStock < 0`.
+
+STRICT BOUNDARY CONSTRAINTS:
+- Do NOT alter bill calculation (`calcBill.ts`), silent printing pipelines (KOT/BOT/Receipt), customer Khatta repayment logic, or table floor layouts.
+- Ensure `npm run build` passes cleanly with zero TypeScript errors.
+
+FAIL-SAFE DIRECTIVE:
+- If file paths, setting interfaces, or component structures differ from expected, halt execution immediately without modifying code and report the relevant component hierarchy.
