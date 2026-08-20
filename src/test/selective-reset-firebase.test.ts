@@ -142,14 +142,14 @@ describe('Firebase selective reset allowlist', () => {
       status: 'free',
     });
     expect(root.tables.tableKey.orderId).toBeUndefined();
-    expect(root.customers.customerKey).toMatchObject({
-      id: 'customer-1',
-      name: 'Ramesh',
-      currentDue: 0,
-      creditResetRevision: expect.any(Number),
-    });
-    expect(root.customers.customerKey.repayments).toBeUndefined();
-    expect(root.customerCreditResetTombstones['customer-1']).toMatchObject({ id: 'customer-1' });
+    // Customer-directory reset is a complete wipe: profiles and repayment
+    // ledgers must not survive the reset or be resurrected by stale clients.
+    expect(root.customers).toBeUndefined();
+    expect(root.customerCreditResetTombstones).toBeUndefined();
+
+    // Master configuration remains protected by the selective-reset allowlist.
+    expect(root.menu).toEqual(firebaseMocks.data.menu);
+    expect(root.users).toEqual(firebaseMocks.data.users);
     expect(root.kitchenPurchases).toBeUndefined();
     expect(root.meatEntries).toBeUndefined();
     expect(root.groceryPurchases).toBeUndefined();
@@ -276,14 +276,14 @@ describe('Firebase selective reset allowlist', () => {
       }],
     });
 
-    const root = firebaseMocks.transactionRoots[0] as Record<string, any>;
-    expect(root.orders?.['old-order']).toBeUndefined();
-    expect(root.tables.tableKey).toMatchObject({
+    const updates = firebaseMocks.update.mock.calls[0]?.[1] as Record<string, any>;
+    expect(updates?.['orders/old-order']).toBeUndefined();
+    expect(updates['tables/table-1']).toMatchObject({
       id: 'table-1',
       number: '1',
       status: 'free',
     });
-    expect(root.tables.tableKey.orderId).toBeUndefined();
+    expect(updates['tables/table-1'].orderId).toBeUndefined();
   });
 
   it('blocks a stale payment write after sales history was reset', async () => {
@@ -312,7 +312,7 @@ describe('Firebase selective reset allowlist', () => {
       salesHistoryResetGeneration: 'older-reset',
     });
 
-    expect(firebaseMocks.transactionRoots[0].payments).toBeUndefined();
+    expect(firebaseMocks.update).not.toHaveBeenCalled();
   });
 
   it('accepts a post-reset payment even when its device clock is behind', async () => {
@@ -341,8 +341,8 @@ describe('Firebase selective reset allowlist', () => {
       salesHistoryResetGeneration: 'reset',
     });
 
-    expect((firebaseMocks.transactionRoots[0] as Record<string, any>)
-      .payments['payment-after-reset']).toMatchObject({
+    const updates = firebaseMocks.update.mock.calls[0]?.[1] as Record<string, any>;
+    expect(updates['payments/payment-after-reset']).toMatchObject({
         id: 'payment-after-reset',
         createdAt: 1000,
         salesHistoryResetGeneration: 'reset',
@@ -377,13 +377,13 @@ describe('Firebase selective reset allowlist', () => {
       }],
     });
 
-    const root = firebaseMocks.transactionRoots[0] as Record<string, any>;
-    expect(root.orders['new-order']).toMatchObject({
+    const updates = firebaseMocks.update.mock.calls[0]?.[1] as Record<string, any>;
+    expect(updates['orders/new-order']).toMatchObject({
       status: 'active',
       createdAt: 1000,
       activeFloorResetGeneration: 'reset',
     });
-    expect(root.tables['table-2']).toMatchObject({
+    expect(updates['tables/table-2']).toMatchObject({
       status: 'occupied',
       orderId: 'new-order',
       activeFloorResetGeneration: 'reset',
@@ -391,24 +391,10 @@ describe('Firebase selective reset allowlist', () => {
   });
 
   it('rejects a write when Firebase retries it after a concurrent reset commits', async () => {
-    let optimisticWriteIncludedPayment = false;
-    firebaseMocks.runTransaction.mockImplementationOnce(async (
-      _path: string,
-      updater: (root: unknown) => unknown,
-    ) => {
-      const optimistic = updater({ payments: {}, resetMarkers: {} }) as Record<string, any>;
-      optimisticWriteIncludedPayment = Boolean(optimistic.payments?.['payment-race']);
-
-      // Firebase retries a root transaction when the reset transaction commits
-      // to a descendant between this writer's first read and commit.
-      const retried = updater({
-        resetMarkers: {
-          salesHistory: { syncRevision: 2000, syncMutationId: 'reset' },
-        },
-      }) as Record<string, unknown>;
-      firebaseMocks.transactionRoots.push(retried);
-      return { committed: true, snapshot: { val: () => retried } };
-    });
+    firebaseMocks.data['resetMarkers/salesHistory'] = {
+      syncRevision: 2000,
+      syncMutationId: 'reset',
+    };
 
     await writePaymentRecord({
       id: 'payment-race',
@@ -430,8 +416,7 @@ describe('Firebase selective reset allowlist', () => {
       salesHistoryResetGeneration: 'baseline',
     });
 
-    expect(optimisticWriteIncludedPayment).toBe(true);
-    expect(firebaseMocks.transactionRoots[0].payments).toBeUndefined();
+    expect(firebaseMocks.update).not.toHaveBeenCalled();
   });
 
   it('sanitizes a stale customer-credit write against its durable reset marker', async () => {
@@ -458,15 +443,6 @@ describe('Firebase selective reset allowlist', () => {
       }],
     });
 
-    const customer = (firebaseMocks.transactionRoots[0] as Record<string, any>)
-      .customers.customerKey as Record<string, unknown>;
-    expect(customer).toMatchObject({
-      id: 'customer-1',
-      name: 'Ramesh',
-      currentDue: 0,
-      repayments: [],
-      creditResetRevision: 2000,
-      creditResetMutationId: 'reset',
-    });
+    expect(firebaseMocks.update).not.toHaveBeenCalled();
   });
 });
