@@ -66,7 +66,7 @@ interface POSState {
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   sendToKitchen: (orderId: string) => void;
-  voidOrderItem: (orderId: string, itemId: string, qty: number, reason: string, cancelledBy: string) => void;
+  voidOrderItem: (orderId: string, itemId: string, qty: number, reason: string, cancelledBy: string) => boolean;
 
   moveOrder: (orderId: string, newTableId: string) => void;
   clearOrder: (orderId: string) => void;
@@ -631,9 +631,20 @@ export const usePOSStore = create<POSState>((set, get) => ({
   voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {
     const state0 = get();
 
-    // Restore inventory for already-sent bar/beverage items before modifying order state
+    // Boundary guard: reject invalid quantities before any inventory restore,
+    // local persistence, ticket generation, or Firebase write can occur.
     const targetOrder = state0.orders.find((o) => o.id === orderId);
-    const targetItem  = targetOrder?.items.find((i) => i.id === itemId);
+    const targetItem = targetOrder?.items.find((i) => i.id === itemId);
+    if (
+      !targetItem ||
+      !Number.isInteger(qty) ||
+      qty <= 0 ||
+      qty > targetItem.quantity
+    ) {
+      return false;
+    }
+
+    // Restore inventory for already-sent bar/beverage items before modifying order state
     if (targetItem && (targetItem.kitchenStatus === 'sent' || targetItem.sentToKitchen)) {
       useInventoryStore.getState().restoreInventoryForVoid([{
         menuItemId: targetItem.menuItemId,
@@ -713,6 +724,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     // Granular Firebase sync: voided order
     const voidedOrder = get().orders.find((o) => o.id === orderId);
     if (voidedOrder) writeOrderRecord(voidedOrder);
+    return true;
   },
 
   moveOrder: (orderId, newTableId) => {
