@@ -178,6 +178,8 @@ export interface Order {
 export interface Payment {
   id: string;
   orderId: string;
+  /** Stable token for one checkout confirmation attempt; retries must reuse it. */
+  idempotencyKey?: string;
   tableNumber: string;
   items: OrderItem[];
   subtotal: number;

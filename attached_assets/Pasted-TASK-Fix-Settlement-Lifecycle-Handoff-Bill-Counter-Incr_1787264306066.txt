@@ -1,0 +1,40 @@
+TASK: Fix Settlement Lifecycle Handoff, Bill Counter Increment, and Success Screen Transition
+
+TARGET FILES:
+- `src/store/usePOSStore.ts`
+- `src/screens/ReviewScreen.tsx`
+- `src/screens/PaymentScreen.tsx` (if active)
+- Any modal components handling QR payment confirmation (e.g. `src/components/payment/QRModal.tsx` or inline QR handlers in `ReviewScreen.tsx`)
+
+OBJECTIVES:
+
+1. Atomic Bill Counter Increment in `usePOSStore.ts`:
+   - Inspect `addPayment` and the invoice numbering logic (`billCounter`).
+   - Ensure `billCounter` is ONLY incremented inside `addPayment` AFTER all validation, mutex locks, and duplicate checks pass.
+   - Never increment `billCounter` on UI button clicks, modal triggers, or rejected duplicate payment attempts.
+
+2. Complete Settlement Execution & Table Freeing:
+   - In `addPayment`:
+     - When payment recording succeeds:
+       - Update the active order status to `'paid'`.
+       - Update the table status to `'free'` (or remove active order association).
+       - Persist the cleared table and finalized order locally and to Firebase.
+       - Return `true`.
+     - When an order is already marked `'paid'`, safely return `true` so the calling UI knows the settlement is complete.
+
+3. Restore Payment Success Transition in UI:
+   - In `ReviewScreen.tsx` and `PaymentScreen.tsx` (and their QR payment modals):
+     - In the payment confirmation handlers (Cash, eSewa, Khalti, Fonepay):
+       - Await the `addPayment` result.
+       - If `true`:
+         - Close the QR modal immediately.
+         - Transition the screen state to the "Payment Successful" confirmation view (showing amount paid, item breakdown, "Reprint Receipt", and "Back to Tables").
+       - If `false`:
+         - Display the rejection error message and keep the order intact.
+
+STRICT BOUNDARY CONSTRAINTS:
+- Do NOT alter bill calculation math (`calcBill.ts`), silent dual printing pipelines (KOT/BOT/Receipt), Khatta customer repayment logic, or table floor layouts.
+- Ensure `npm run build` passes cleanly with zero TypeScript errors.
+
+FAIL-SAFE DIRECTIVE:
+- If payment handler names or modal components differ from expected, halt execution immediately without editing code and report the existing file structure.

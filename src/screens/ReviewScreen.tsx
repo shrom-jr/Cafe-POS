@@ -30,9 +30,8 @@ const ReviewScreen = () => {
   const navigate = useNavigate();
 
   const { tables } = useTables();
-  const { getActiveOrder, updateOrderStatus, addPayment } = useOrders();
+  const { getActiveOrder, addPayment } = useOrders();
   const settings = usePOSStore((s) => s.settings);
-  const resetTable = usePOSStore((s) => s.resetTable);
   const getNextBillNumber = usePOSStore((s) => s.getNextBillNumber);
   const markItemsPaid = usePOSStore((s) => s.markItemsPaid);
   const splitOrderItem = usePOSStore((s) => s.splitOrderItem);
@@ -339,6 +338,22 @@ const ReviewScreen = () => {
     confirmingRef.current = true;
     setConfirming(true);
 
+    const liveOrder = usePOSStore.getState().orders.find((candidate) => candidate.id === orderIdRef.current);
+    if (liveOrder?.status === 'paid') {
+      const existingPayment = usePOSStore.getState().payments
+        .filter((payment) => payment.orderId === liveOrder.id)
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+      setBillNum(existingPayment?.billNumber ?? usePOSStore.getState().settings.billCounter);
+      setPaidAt(existingPayment?.createdAt ?? Date.now());
+      setPaidMethod(existingPayment ? resolvePaymentLabel(existingPayment.method, settings) : 'Paid');
+      setShowQRModal(false);
+      setSelectedMethod(null);
+      setPaid(true);
+      confirmingRef.current = false;
+      setConfirming(false);
+      return;
+    }
+
     // Hard guard: the customer's balance moved after they were quoted, so no
     // money changes hands on any payment path until the cashier acknowledges the
     // new figure. Covers the case where the due was cleared entirely elsewhere.
@@ -377,6 +392,7 @@ const ReviewScreen = () => {
         ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
         : undefined;
       const settlementSucceeded = addPayment({
+        idempotencyKey: crypto.randomUUID(),
         orderId: orderIdRef.current,
         tableNumber,
         items: [...unpaidItems],
@@ -393,6 +409,7 @@ const ReviewScreen = () => {
         createdAt: now,
         cafeName: settings.cafeName,
         billNumber: bn,
+        finalizeOrder: true,
         takenBy: order?.takenBy,
         processedBy,
         customerId: attachedCustomer.id,
@@ -473,7 +490,6 @@ const ReviewScreen = () => {
         },
       };
       lastPrintJobRef.current = creditTaxJob;
-      updateOrderStatus(orderIdRef.current, 'paid');
       playBillSettled();
       setBillNum(bn);
       setPaidAt(now);
@@ -483,7 +499,6 @@ const ReviewScreen = () => {
       setConfirming(false);
       confirmingRef.current = false;
       setPaid(true);
-      if (tableId) resetTable(tableId);
       void fireSilentPrintJob(creditTaxJob);
       return;
     }
@@ -497,6 +512,15 @@ const ReviewScreen = () => {
       ? { id: liveUser.id, name: getStaffName(liveUser), role: liveUser.role }
       : undefined;
     const takenBy = order?.takenBy;
+    const allDone = isSplit
+      ? items.every(
+          (item) =>
+            item.status === 'paid' ||
+            (item.id !== undefined &&
+              selectedQty.has(item.id) &&
+              (selectedQty.get(item.id) ?? 0) >= item.quantity)
+        )
+      : true;
 
     const bn = getNextBillNumber();
     const now = Date.now();
@@ -555,6 +579,7 @@ const ReviewScreen = () => {
     const tenderedTotal = payBill.total + settledAmount;
 
     const settlementSucceeded = addPayment({
+      idempotencyKey: crypto.randomUUID(),
       orderId: orderIdRef.current,
       tableNumber,
       items: [...payItems],
@@ -573,6 +598,7 @@ const ReviewScreen = () => {
       createdAt: now,
       cafeName: settings.cafeName,
       billNumber: bn,
+      finalizeOrder: allDone,
       takenBy,
       processedBy,
       ...(dueSettlement ? { dueSettlement, amountTendered: tenderedTotal } : {}),
@@ -625,17 +651,6 @@ const ReviewScreen = () => {
     };
     setPrintSession(session);
 
-    // allDone: true when every unpaid item's full quantity is being paid in this transaction
-    const allDone = isSplit
-      ? items.every(
-          (item) =>
-            item.status === 'paid' ||
-            (item.id !== undefined &&
-              selectedQty.has(item.id) &&
-              (selectedQty.get(item.id) ?? 0) >= item.quantity)
-        )
-      : true;
-
     // Trigger C: TAX_INVOICE — build structured job immediately, no polling needed
     const taxJob: PrintJob = {
       type: 'TAX_INVOICE',
@@ -673,13 +688,11 @@ const ReviewScreen = () => {
     setShowQRModal(false);
 
     if (allDone) {
-      updateOrderStatus(orderIdRef.current, 'paid');
       setBillNum(bn);
       setPaidAt(now);
       setPaidMethod(resolvedMethod);
       setQuotedDue(null);
       setPaid(true);
-      if (tableId) resetTable(tableId);
       if (payItems.length > 0) void fireSilentPrintJob(taxJob);
       if (settledAmount > 0) {
         setSettledDue(settledAmount);

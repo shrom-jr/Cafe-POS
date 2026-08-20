@@ -22,6 +22,7 @@ import { enqueueMutation } from '../utils/offlineQueue';
 import { verifyPin } from '@/utils/cryptoPin';
 
 type DynamicPillar = string;
+type SettlementPayment = Omit<Payment, 'id'> & { idempotencyKey: string; finalizeOrder?: boolean };
 const pendingStockOverrideOrders = new Set<string>();
 
 interface POSState {
@@ -78,7 +79,7 @@ interface POSState {
   splitOrderItem: (orderId: string, menuItemId: string, qty: number) => string;
   markItemsPaid: (orderId: string, menuItemIds: string[], tablePayment: TablePayment) => void;
 
-  addPayment: (payment: Omit<Payment, 'id'>) => boolean;
+  addPayment: (payment: SettlementPayment) => boolean;
   /** Attach or detach a customer (for Khatta tracking) from an active order. */
   attachCustomerToOrder: (orderId: string, customer: Customer | null) => void;
   /** Attach a customer to a table, creating its empty draft order when needed. */
@@ -943,6 +944,21 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { orders };
     });
+    const splitOrder = get().orders.find((order) => order.id === orderId);
+    const splitTable = splitOrder ? get().tables.find((table) => table.id === splitOrder.tableId) : undefined;
+    if (splitOrder) {
+      if (navigator.onLine) {
+        if (splitTable) void writeOrderTableMutation({ orders: [splitOrder], tables: [splitTable] });
+        else void writeOrderRecord(splitOrder);
+      } else {
+        enqueueMutation(
+          'orders',
+          'update_order',
+          { order: splitOrder, ...(splitTable ? { table: splitTable } : {}) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION,
+        );
+      }
+    }
     return splitKey;
   },
 
@@ -965,6 +981,21 @@ export const usePOSStore = create<POSState>((set, get) => ({
       db.saveOrders(orders);
       return { orders };
     });
+    const paidOrder = get().orders.find((order) => order.id === orderId);
+    const paidTable = paidOrder ? get().tables.find((table) => table.id === paidOrder.tableId) : undefined;
+    if (paidOrder) {
+      if (navigator.onLine) {
+        if (paidTable) void writeOrderTableMutation({ orders: [paidOrder], tables: [paidTable] });
+        else void writeOrderRecord(paidOrder);
+      } else {
+        enqueueMutation(
+          'orders',
+          'update_order',
+          { order: paidOrder, ...(paidTable ? { table: paidTable } : {}) } as unknown as Record<string, unknown>,
+          getObservedResetGeneration('activeFloor') ?? BASELINE_RESET_GENERATION,
+        );
+      }
+    }
   },
 
   addPayment: (payment) => {
@@ -972,16 +1003,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
     const initialState = get();
     const originalOrder = initialState.orders.find((order) => order.id === payment.orderId);
-    if (!originalOrder || originalOrder.status === 'paid' || initialState.settlingOrderIds[payment.orderId]) {
+    if (!originalOrder || initialState.settlingOrderIds[payment.orderId]) {
       return false;
     }
+    if (originalOrder.status === 'paid') return true;
 
     const salesHistoryResetGeneration = getObservedResetGeneration('salesHistory');
     const activeSalesGeneration = salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION;
     const duplicatePayment = initialState.payments.some((existing) =>
       existing.orderId === payment.orderId &&
-      existing.total === payment.total &&
-      existing.method === payment.method &&
+      existing.idempotencyKey === payment.idempotencyKey &&
       (existing.salesHistoryResetGeneration ?? BASELINE_RESET_GENERATION) === activeSalesGeneration,
     );
     if (duplicatePayment) return false;
@@ -992,6 +1023,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
     let newPaymentId = '';
     try {
+      const { finalizeOrder = true, ...paymentData } = payment;
       const { currentUser, users } = useStaffStore.getState();
       const activeUser = currentUser ?? users.find((u) => u.active);
       const autoAttrib: StaffAttribution | undefined = activeUser
@@ -1002,19 +1034,55 @@ export const usePOSStore = create<POSState>((set, get) => ({
         const liveOrder = state.orders.find((order) => order.id === payment.orderId);
         const processedBy = payment.processedBy ?? autoAttrib;
         const takenBy = liveOrder?.takenBy ?? payment.takenBy ?? processedBy;
+        const billNumber = state.settings.billCounter + 1;
         newPaymentId = crypto.randomUUID();
         const payments = [
           ...state.payments,
           {
-            ...payment,
+            ...paymentData,
+            billNumber,
             processedBy,
             takenBy,
             id: newPaymentId,
             ...(salesHistoryResetGeneration ? { salesHistoryResetGeneration } : {}),
           },
         ];
+        const orders = finalizeOrder
+          ? state.orders.map((order) =>
+              order.id === payment.orderId
+                ? {
+                    ...order,
+                    status: 'paid' as const,
+                    items: order.items.map((item) =>
+                      payment.items.some((paidItem) => paidItem.id === item.id)
+                        ? { ...item, status: 'paid' as const, paidAt: Date.now() }
+                        : item,
+                    ),
+                  }
+                : order,
+            )
+          : state.orders;
+        const tables = finalizeOrder && liveOrder
+          ? state.tables.map((table) =>
+              table.id === liveOrder.tableId
+                ? {
+                    ...table,
+                    status: 'free' as const,
+                    orderId: undefined,
+                    orderStartTime: undefined,
+                    pax: undefined,
+                  }
+                : table,
+            )
+          : state.tables;
+        const settings = { ...state.settings, billCounter: billNumber };
         db.savePayments(payments);
-        return { payments };
+        db.saveSettings(settings);
+        if (finalizeOrder) {
+          db.saveOrders(orders);
+          db.saveTables(tables);
+        }
+        return { payments, settings, ...(finalizeOrder ? { orders, tables } : {}) };
       });
 
       // Granular Firebase sync: new payment record + settled order + associated table.
@@ -1107,13 +1175,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   getNextBillNumber: () => {
-    const next = get().settings.billCounter + 1;
-    set((state) => {
-      const settings = { ...state.settings, billCounter: next };
-      db.saveSettings(settings);
-      return { settings };
-    });
-    return next;
+    return get().settings.billCounter + 1;
   },
 
   getNextKotNumber: () => {

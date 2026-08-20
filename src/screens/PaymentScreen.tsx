@@ -23,8 +23,7 @@ const PaymentScreen = () => {
   const location = useLocation();
 
   const { tables } = useTables();
-  const { getActiveOrder, updateOrderStatus, addPayment } = useOrders();
-  const resetTable = usePOSStore((s) => s.resetTable);
+  const { getActiveOrder, addPayment } = useOrders();
   const getNextBillNumber = usePOSStore((s) => s.getNextBillNumber);
   const settings = usePOSStore((s) => s.settings);
   // Subscribed for reactivity; we also read .getState() inside the handler to
@@ -66,6 +65,7 @@ const PaymentScreen = () => {
   const [paidMethod, setPaidMethod] = useState<string>('');
   const [reprinting, setReprinting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false);
   const lastPrintJobRef = useRef<PrintJob | null>(null);
 
   const subtotal = rawState?.subtotal ?? 0;
@@ -122,6 +122,26 @@ const PaymentScreen = () => {
       toast.info('Syncing reset status. Please try payment again in a moment.');
       return;
     }
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    setConfirming(true);
+
+    const liveOrder = usePOSStore.getState().orders.find((candidate) => candidate.id === snap?.id);
+    if (liveOrder?.status === 'paid') {
+      const existingPayment = usePOSStore.getState().payments
+        .filter((payment) => payment.orderId === liveOrder.id)
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+      setBillNum(existingPayment?.billNumber ?? usePOSStore.getState().settings.billCounter);
+      setPaidAt(existingPayment?.createdAt ?? Date.now());
+      setPaidMethod(existingPayment ? resolvePaymentLabel(existingPayment.method, settings) : 'Paid');
+      setShowQRModal(false);
+      setSelectedMethod(null);
+      setPaid(true);
+      confirmingRef.current = false;
+      setConfirming(false);
+      return;
+    }
+
     const bn = getNextBillNumber();
     const now = Date.now();
     setBillNum(bn);
@@ -142,6 +162,7 @@ const PaymentScreen = () => {
     const resolvedProcessedBy = processedBy;
 
     const settlementSucceeded = addPayment({
+      idempotencyKey: crypto.randomUUID(),
       orderId: snap.id,
       tableNumber: snap.tableNumber,
       items: [...snap.items],
@@ -158,18 +179,20 @@ const PaymentScreen = () => {
       createdAt: now,
       cafeName: settings.cafeName,
       billNumber: bn,
+      finalizeOrder: true,
       takenBy:    resolvedTakenBy,
       processedBy: resolvedProcessedBy,
     });
     if (!settlementSucceeded) {
       toast.error('This payment was already submitted or the order is being settled. Please check the order status.');
+      confirmingRef.current = false;
+      setConfirming(false);
       return;
     }
 
-    updateOrderStatus(snap.id, 'paid');
-    if (tableId) resetTable(tableId);
     playBillSettled();
     setShowQRModal(false);
+    setSelectedMethod(null);
     setPaid(true);
 
     // Trigger C: TAX_INVOICE — build structured job and fire immediately
