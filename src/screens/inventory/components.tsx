@@ -35,6 +35,12 @@ export const LowBadge = () => (
   </span>
 );
 
+export const DeficitBadge = () => (
+  <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[11px] font-black uppercase tracking-wider leading-none">
+    DEFICIT
+  </span>
+);
+
 // ── StatusBadge ─────────────────────────────────────────────────────────────
 export const StatusBadge = ({ status }: { status: 'active' | 'inactive' }) =>
   status === 'active' ? (

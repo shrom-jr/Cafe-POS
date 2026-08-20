@@ -19,8 +19,10 @@ import {
   BASELINE_RESET_GENERATION,
 } from '../utils/firebaseSync';
 import { enqueueMutation } from '../utils/offlineQueue';
+import { verifyPin } from '@/utils/cryptoPin';
 
 type DynamicPillar = string;
+const pendingStockOverrideOrders = new Set<string>();
 
 interface POSState {
   tables: CafeTable[];
@@ -65,7 +67,8 @@ interface POSState {
   updateItemQuantity: (orderId: string, menuItemId: string, delta: number) => void;
   removeItemFromOrder: (orderId: string, menuItemId: string) => void;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
-  sendToKitchen: (orderId: string) => void;
+  sendToKitchen: (orderId: string) => boolean;
+  authorizeStockOverride: (orderId: string, pin: string) => Promise<boolean>;
   voidOrderItem: (orderId: string, itemId: string, qty: number, reason: string, cancelledBy: string) => boolean;
 
   moveOrder: (orderId: string, newTableId: string) => void;
@@ -155,6 +158,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         ...settings.wallets,
       },
       customWallets: settings.customWallets ?? state.settings.customWallets ?? [],
+      stockEnforcementMode: settings.stockEnforcementMode === 'strict' ? 'strict' : state.settings.stockEnforcementMode ?? 'flexible',
     };
     db.saveSettings(mergedSettings);
     return { settings: mergedSettings };
@@ -491,20 +495,29 @@ export const usePOSStore = create<POSState>((set, get) => ({
   sendToKitchen: (orderId) => {
     const state0 = get();
     const order = state0.orders.find((o) => o.id === orderId);
-    if (!order) return;
+    if (!order) return false;
 
     // Collect draft items for inventory deduction (snapshot before marking sent)
     const draftItems = order.items.filter(
       (i) => i.kitchenStatus !== 'sent' && !i.sentToKitchen && i.status !== 'paid',
     );
-    if (draftItems.length === 0) return;
+    if (draftItems.length === 0) return false;
 
     const unsentForInventory = draftItems.map((i) => ({
       menuItemId: i.menuItemId,
       quantity: i.quantity,
       name: i.name,
     }));
-    useInventoryStore.getState().deductInventoryForSale(unsentForInventory);
+    const inventory = useInventoryStore.getState();
+    if (
+      state0.settings.stockEnforcementMode === 'strict' &&
+      !pendingStockOverrideOrders.has(orderId) &&
+      inventory.getStockDeficitsForSale(unsentForInventory).length > 0
+    ) {
+      return false;
+    }
+    pendingStockOverrideOrders.delete(orderId);
+    inventory.deductInventoryForSale(unsentForInventory);
 
     // Build lookup maps for ticket splitting (printRoute-aware)
     const menuItemMap = new Map<string, MenuItem>(
@@ -626,6 +639,27 @@ export const usePOSStore = create<POSState>((set, get) => ({
         );
       }
     }
+    return true;
+  },
+
+  authorizeStockOverride: async (orderId, pin) => {
+    const order = get().orders.find((entry) => entry.id === orderId);
+    if (!order || !pin) return false;
+    const eligibleUsers = useStaffStore.getState().users.filter(
+      (user) => user.active && (user.role === 'ADMIN' || user.permissions?.admin === true),
+    );
+    for (const user of eligibleUsers) {
+      if (user.pinHash && user.salt) {
+        if (await verifyPin(pin, user.pinHash, user.salt)) {
+          pendingStockOverrideOrders.add(orderId);
+          return true;
+        }
+      } else if (user.pin !== undefined && user.pin === pin) {
+        pendingStockOverrideOrders.add(orderId);
+        return true;
+      }
+    }
+    return false;
   },
 
   voidOrderItem: (orderId, itemId, qty, reason, cancelledBy) => {

@@ -5,6 +5,15 @@ import {
   InventoryMovement, InvProductType,
 } from '@/types/pos';
 
+export interface InventoryDeficit {
+  productType: InvProductType;
+  productId: string;
+  productName: string;
+  available: number;
+  required: number;
+  unit: 'ml' | 'pcs' | 'sticks';
+}
+
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
 function getLS<T>(key: string, fallback: T): T {
   try {
@@ -117,6 +126,9 @@ interface InventoryState {
   deductInventoryForSale: (
     items: Array<{ menuItemId: string; quantity: number; name: string }>
   ) => void;
+  getStockDeficitsForSale: (
+    items: Array<{ menuItemId: string; quantity: number; name: string }>
+  ) => InventoryDeficit[];
   /** Reverse a prior deduction when a sent item is voided. Logs a 'Correction' movement. */
   restoreInventoryForVoid: (
     items: Array<{ menuItemId: string; quantity: number; name: string }>
@@ -598,6 +610,47 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   }),
 
   // ── POS INTEGRATION ──────────────────────────────────────────────────────
+  getStockDeficitsForSale: (items) => {
+    const s = get();
+    const alcohol = new Map(s.alcoholProducts.map((p) => [p.id, p.currentStockMl]));
+    const beverages = new Map(s.beverageProducts.map((p) => [p.id, p.currentStock]));
+    const cigarettes = new Map(s.cigaretteProducts.map((p) => [p.id, p.currentSticks]));
+    const deficits: InventoryDeficit[] = [];
+
+    for (const item of items) {
+      for (const mapping of s.invMappings.filter((m) => m.menuItemId === item.menuItemId)) {
+        const required = mapping.deductQty * item.quantity;
+        const unit = mapping.productType === 'alcohol' ? 'ml' : mapping.productType === 'beverage' ? 'pcs' : 'sticks';
+        const product = mapping.productType === 'alcohol'
+          ? s.alcoholProducts.find((p) => p.id === mapping.productId)
+          : mapping.productType === 'beverage'
+          ? s.beverageProducts.find((p) => p.id === mapping.productId)
+          : s.cigaretteProducts.find((p) => p.id === mapping.productId);
+        if (!product) continue;
+        const available = mapping.productType === 'alcohol'
+          ? alcohol.get(mapping.productId) ?? 0
+          : mapping.productType === 'beverage'
+          ? beverages.get(mapping.productId) ?? 0
+          : cigarettes.get(mapping.productId) ?? 0;
+        if (available < required) {
+          deficits.push({
+            productType: mapping.productType,
+            productId: mapping.productId,
+            productName: product.name,
+            available,
+            required,
+            unit,
+          });
+        }
+        const next = Math.round((available - required) * 100) / 100;
+        if (mapping.productType === 'alcohol') alcohol.set(mapping.productId, next);
+        else if (mapping.productType === 'beverage') beverages.set(mapping.productId, next);
+        else cigarettes.set(mapping.productId, next);
+      }
+    }
+    return deficits;
+  },
+
   deductInventoryForSale: (items) => {
     const s = get();
     let updatedAlcohol    = [...s.alcoholProducts];

@@ -53,7 +53,7 @@ import {
 import { executeSelectiveReset } from '@/utils/selectiveReset';
 
 type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
-type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'printers' | 'staff' | 'data-management';
+type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'stock' | 'printers' | 'staff' | 'data-management';
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -640,6 +640,7 @@ const AdminPanel = () => {
                     { id: 'bill',            label: 'Company Profile' },
                     { id: 'billing',         label: 'Billing & Receipts' },
                     { id: 'payments',        label: 'Payments' },
+                    { id: 'stock',           label: 'Stock Mode' },
                     { id: 'printers',        label: 'Printers' },
                     { id: 'staff',           label: 'Staff & Users' },
                     { id: 'data-management', label: 'Data Management' },
@@ -661,6 +662,7 @@ const AdminPanel = () => {
                 {settingsSubTab === 'bill'            && <CompanyProfileSection />}
                 {settingsSubTab === 'billing'         && <BillingReceiptsSection />}
                 {settingsSubTab === 'payments'        && <PaymentsSection />}
+                {settingsSubTab === 'stock'           && <StockModeSection />}
                 {settingsSubTab === 'printers'        && <PrinterSettingsSection />}
                 {settingsSubTab === 'staff'           && <StaffManagement />}
                 {settingsSubTab === 'data-management' && <DataManagementSection />}
@@ -1325,6 +1327,57 @@ const TablesSection = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+};
+
+// ── PAYMENT SETTINGS ──────────────────────────────────────────────────────
+const StockModeSection = () => {
+  const settings = usePOSStore((s) => s.settings);
+  const updateSettings = usePOSStore((s) => s.updateSettings);
+  const mode = settings.stockEnforcementMode ?? 'flexible';
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl">
+        <div className="mb-5">
+          <h3 className="text-base font-black text-white tracking-wide">Stock Enforcement Mode</h3>
+          <p className="text-xs font-bold text-zinc-300 mt-1">
+            Choose whether floor orders can create inventory deficits or require authorization before sending.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {([
+            {
+              id: 'flexible' as const,
+              title: 'Flexible Mode (Default)',
+              description: 'Allows negative stock during peak dining rush. Floor orders proceed without interruption, and deficits are highlighted on the Inventory dashboard for reconciliation.',
+            },
+            {
+              id: 'strict' as const,
+              title: 'Strict Mode',
+              description: 'Blocks orders that exceed digital stock counts unless authorized by an Admin/Manager PIN override.',
+            },
+          ]).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => updateSettings({ stockEnforcementMode: option.id })}
+              className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                mode === option.id
+                  ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/10'
+                  : 'border-white/10 bg-white/[0.03] hover:border-white/25'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-black text-white">{option.title}</span>
+                <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${mode === option.id ? 'border-amber-400 bg-amber-400' : 'border-zinc-500'}`} />
+              </div>
+              <p className="text-xs leading-relaxed font-bold text-zinc-300 mt-3">{option.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

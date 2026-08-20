@@ -6,6 +6,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import { useOrders } from '@/hooks/useOrders';
 import { useTables } from '@/hooks/useTables';
+import { useInventoryStore, InventoryDeficit } from '@/store/useInventoryStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import MenuItemCard from '@/components/orders/MenuItemCard';
 import OrderPanel from '@/components/orders/OrderPanel';
@@ -53,6 +54,8 @@ const OrderScreen = () => {
   const payments = usePOSStore((s) => s.payments);
   const settings   = usePOSStore((s) => s.settings);
   const currentUser = useStaffStore((s) => s.currentUser);
+  const inventory = useInventoryStore();
+  const authorizeStockOverride = usePOSStore((s) => s.authorizeStockOverride);
   const canPay = currentUser?.role !== 'WAITER';
   const pillars = usePOSStore((s) => s.pillars);
 
@@ -68,6 +71,10 @@ const OrderScreen = () => {
   const [drawerSentAt, setDrawerSentAt] = useState<number | null>(null);
   const [drawerFlashingIds, setDrawerFlashingIds] = useState<Set<string>>(new Set());
   const [showKitchenWarning, setShowKitchenWarning] = useState(false);
+  const [stockOverrideOpen, setStockOverrideOpen] = useState(false);
+  const [stockOverridePin, setStockOverridePin] = useState('');
+  const [stockOverrideError, setStockOverrideError] = useState('');
+  const [stockDeficits, setStockDeficits] = useState<InventoryDeficit[]>([]);
   const [now, setNow] = useState(Date.now());
   const [movePhase, setMovePhase] = useState<null | 'picker' | 'confirm'>(null);
   const [moveTargetTableId, setMoveTargetTableId] = useState<string | null>(null);
@@ -233,7 +240,7 @@ const OrderScreen = () => {
     : drawerSendPhase === 'sent' ? 'Sent ✓'
     : drawerPrimaryLabel;
 
-  const handleSendToKitchen = () => {
+  const completeSendToKitchen = () => {
     if (!order || drawerSendPhase !== 'idle') return; // race condition guard
 
     // Snapshot unsent IDs at click time — stable for flash
@@ -257,7 +264,11 @@ const OrderScreen = () => {
     setNow(ts);
     setShowKitchenWarning(false);
 
-    sendToKitchen(order.id);
+    const sent = sendToKitchen(order.id);
+    if (!sent) {
+      setDrawerSendPhase('idle');
+      return;
+    }
     playOrderSent();
     // Tickets are now written to Firebase by sendToKitchen; the designated
     // print-hub device (pos_is_print_hub === 'true') picks them up via
@@ -267,6 +278,35 @@ const OrderScreen = () => {
     const t1 = setTimeout(() => setDrawerSendPhase('sent'), SEND_DELAY);
     const t2 = setTimeout(() => setDrawerSendPhase('idle'), SEND_DELAY + SUCCESS_DURATION);
     sendTimers.current.push(t1, t2);
+  };
+
+  const handleSendToKitchen = () => {
+    if (!order || drawerSendPhase !== 'idle') return;
+    const draftForInventory = order.items
+      .filter((i) => !isSentToKitchen(i) && i.status !== 'paid')
+      .map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, name: i.name }));
+    if (
+      settings.stockEnforcementMode === 'strict' &&
+      inventory.getStockDeficitsForSale(draftForInventory).length > 0
+    ) {
+      setStockDeficits(inventory.getStockDeficitsForSale(draftForInventory));
+      setStockOverridePin('');
+      setStockOverrideError('');
+      setStockOverrideOpen(true);
+      return;
+    }
+    completeSendToKitchen();
+  };
+
+  const handleStockOverride = async () => {
+    if (!(await authorizeStockOverride(order?.id ?? '', stockOverridePin))) {
+      setStockOverrideError('Admin or Manager PIN required.');
+      setStockOverridePin('');
+      return;
+    }
+    setStockOverrideOpen(false);
+    setStockDeficits([]);
+    completeSendToKitchen();
   };
 
   const handleDrawerPrimary = () => {
@@ -923,6 +963,64 @@ const OrderScreen = () => {
           onConfirm={handleVoidConfirm}
           onClose={() => setVoidTarget(null)}
         />
+      )}
+
+      {stockOverrideOpen && (
+        <>
+          <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm" />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-md mx-auto rounded-2xl border border-rose-400/30 bg-[#0f1929] p-5 shadow-2xl shadow-black/70">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-rose-500/15 p-2 text-rose-300"><Lock size={18} /></div>
+              <div>
+                <h2 className="font-black text-white text-base">Stock Override Required</h2>
+                <p className="text-xs text-zinc-300 mt-1">
+                  This order exceeds digital stock counts. An Admin or Manager must authorize the deficit.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] p-3 space-y-1.5">
+              {stockDeficits.map((deficit) => (
+                <div key={`${deficit.productType}-${deficit.productId}`} className="flex justify-between gap-3 text-xs">
+                  <span className="font-bold text-white">{deficit.productName}</span>
+                  <span className="font-mono font-black text-rose-300">
+                    {deficit.available.toLocaleString()} → {deficit.required.toLocaleString()} {deficit.unit}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <label className="block text-xs font-black uppercase tracking-wider text-amber-400 mt-4 mb-1.5">
+              Admin / Manager PIN
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              autoFocus
+              maxLength={6}
+              value={stockOverridePin}
+              onChange={(event) => { setStockOverridePin(event.target.value); setStockOverrideError(''); }}
+              onKeyDown={(event) => { if (event.key === 'Enter') void handleStockOverride(); }}
+              placeholder="Enter PIN"
+              className="w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-center text-lg tracking-[0.35em] text-white outline-none focus:border-amber-400"
+            />
+            {stockOverrideError && <p className="text-xs font-bold text-rose-300 mt-2">{stockOverrideError}</p>}
+            <div className="flex gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => { setStockOverrideOpen(false); setStockDeficits([]); setStockOverridePin(''); }}
+                className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/15"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleStockOverride()}
+                className="flex-1 rounded-xl bg-amber-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-950 hover:bg-amber-400"
+              >
+                Authorize &amp; Send
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Move Table Modal ── */}

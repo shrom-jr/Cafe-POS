@@ -8,7 +8,7 @@ import {
   CARD, BTN_PRIMARY, BTN_SM_PRIMARY, BTN_GHOST, BTN_DANGER, BTN_EDIT, BTN_BUY, BTN_ADJUST,
   INPUT, SELECT, LABEL, TH, TD,
 } from './styles';
-import { LowBadge, StatusBadge } from './components';
+import { DeficitBadge, LowBadge, StatusBadge } from './components';
 import { toast } from 'sonner';
 import {
   Plus, Save, X, ShoppingCart, SlidersHorizontal, Edit3, Trash2,
@@ -221,15 +221,15 @@ export const PackagedStockTab = () => {
   const close = () => setForm(null);
 
   const products = useMemo(() => {
-    const rows: Array<{ p: Product; kind: 'alcohol' | 'beverage' | 'cigarette'; category: InventoryCategory; primary: string; secondary: string; min: string; low: boolean }> = [];
-    alcohol.forEach((p) => rows.push({ p, kind: 'alcohol', category: categoryForAlcohol(p), primary: mlDisplay(p.currentStockMl, p.bottleSizeMl), secondary: `${p.currentStockMl.toLocaleString()} ml total`, min: mlDisplay(p.minStockMl, p.bottleSizeMl), low: p.status === 'active' && p.minStockMl > 0 && p.currentStockMl <= p.minStockMl }));
-    beverages.forEach((p) => rows.push({ p, kind: 'beverage', category: categoryForBeverage(p), primary: unitDisplay(p, p.currentStock), secondary: p.sizeLabel ? `Size ${p.sizeLabel}` : 'Unit stock', min: unitDisplay(p, p.minStock), low: p.status === 'active' && p.minStock > 0 && p.currentStock <= p.minStock }));
-    cigarettes.forEach((p) => rows.push({ p, kind: 'cigarette', category: 'cigarettes', primary: cigaretteDisplay(p.currentSticks, p.sticksPerPacket), secondary: `${p.currentSticks.toLocaleString()} sticks total`, min: cigaretteDisplay(p.minSticks, p.sticksPerPacket), low: p.status === 'active' && p.minSticks > 0 && p.currentSticks <= p.minSticks }));
+    const rows: Array<{ p: Product; kind: 'alcohol' | 'beverage' | 'cigarette'; category: InventoryCategory; primary: string; secondary: string; min: string; low: boolean; deficit: boolean }> = [];
+    alcohol.forEach((p) => rows.push({ p, kind: 'alcohol', category: categoryForAlcohol(p), primary: mlDisplay(p.currentStockMl, p.bottleSizeMl), secondary: `${p.currentStockMl.toLocaleString()} ml total`, min: mlDisplay(p.minStockMl, p.bottleSizeMl), low: p.status === 'active' && (p.currentStockMl < 0 || (p.minStockMl > 0 && p.currentStockMl <= p.minStockMl)), deficit: p.currentStockMl < 0 }));
+    beverages.forEach((p) => rows.push({ p, kind: 'beverage', category: categoryForBeverage(p), primary: unitDisplay(p, p.currentStock), secondary: p.sizeLabel ? `Size ${p.sizeLabel}` : 'Unit stock', min: unitDisplay(p, p.minStock), low: p.status === 'active' && (p.currentStock < 0 || (p.minStock > 0 && p.currentStock <= p.minStock)), deficit: p.currentStock < 0 }));
+    cigarettes.forEach((p) => rows.push({ p, kind: 'cigarette', category: 'cigarettes', primary: cigaretteDisplay(p.currentSticks, p.sticksPerPacket), secondary: `${p.currentSticks.toLocaleString()} sticks total`, min: cigaretteDisplay(p.minSticks, p.sticksPerPacket), low: p.status === 'active' && (p.currentSticks < 0 || (p.minSticks > 0 && p.currentSticks <= p.minSticks)), deficit: p.currentSticks < 0 }));
     return rows.filter((r) => r.category === activeTab).sort((a, b) => Number(b.low) - Number(a.low) || a.p.name.localeCompare(b.p.name));
   }, [alcohol, beverages, cigarettes, activeTab]);
 
   const totalValue = useMemo(() => alcohol.reduce((s, p) => s + p.currentStockMl / p.bottleSizeMl * (p.costPerBottle ?? 0), 0) + beverages.reduce((s, p) => s + p.currentStock * (p.costPerUnit ?? (p.costPerCarton && p.piecesPerCarton ? p.costPerCarton / p.piecesPerCarton : 0)), 0) + cigarettes.reduce((s, p) => s + p.currentSticks / p.sticksPerPacket * (p.costPerPacket ?? 0), 0), [alcohol, beverages, cigarettes]);
-  const lowCount = [...alcohol.filter((p) => p.minStockMl > 0 && p.currentStockMl <= p.minStockMl), ...beverages.filter((p) => p.minStock > 0 && p.currentStock <= p.minStock), ...cigarettes.filter((p) => p.minSticks > 0 && p.currentSticks <= p.minSticks)].length;
+   const lowCount = [...alcohol.filter((p) => p.status === 'active' && (p.currentStockMl < 0 || (p.minStockMl > 0 && p.currentStockMl <= p.minStockMl))), ...beverages.filter((p) => p.status === 'active' && (p.currentStock < 0 || (p.minStock > 0 && p.currentStock <= p.minStock))), ...cigarettes.filter((p) => p.status === 'active' && (p.currentSticks < 0 || (p.minSticks > 0 && p.currentSticks <= p.minSticks)))].length;
   const todaySales = movements.filter((m) => m.type === 'Sale' && m.timestamp >= new Date().setHours(0, 0, 0, 0)).length;
   const selected = form && 'p' in form ? form.p : undefined;
 
@@ -299,7 +299,7 @@ export const PackagedStockTab = () => {
                  <td className={TD}>
                    <div className="flex items-center gap-2">
                      <span className={`text-base font-black tracking-wide ${row.low ? 'text-rose-300' : 'text-white'}`}>{row.p.name}</span>
-                     {row.low && <LowBadge />}
+                      {row.deficit ? <DeficitBadge /> : row.low && <LowBadge />}
                    </div>
                  </td>
                  <td className={`${TD} hidden sm:table-cell`}>
@@ -308,10 +308,10 @@ export const PackagedStockTab = () => {
                    </span>
                  </td>
                  <td className={TD}>
-                   <p className={`text-sm font-black font-mono tracking-wide ${row.low ? 'text-rose-400' : 'text-zinc-100'}`}>{row.primary}</p>
+                    <p className={`text-sm font-black font-mono tracking-wide ${row.deficit ? 'text-amber-400' : row.low ? 'text-rose-400' : 'text-zinc-100'}`}>{row.primary}</p>
                  </td>
                  <td className={`${TD} hidden md:table-cell text-xs font-bold text-zinc-300 font-mono`}>{row.min}</td>
-                 <td className={`${TD} hidden sm:table-cell`}><StatusBadge status={row.p.status} /></td>
+                  <td className={`${TD} hidden sm:table-cell`}>{row.deficit ? <DeficitBadge /> : <StatusBadge status={row.p.status} />}</td>
                  <td className={TD}>
                    <div className="flex items-center gap-1.5">
                      <button className={BTN_BUY} title="Restock" onClick={() => edit(row.p, row.kind === 'alcohol' ? 'buy-alcohol' : row.kind === 'beverage' ? 'buy-beverage' : 'buy-cigarette')}><ShoppingCart size={14} /></button>

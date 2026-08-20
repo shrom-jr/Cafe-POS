@@ -432,4 +432,5 @@ export interface Settings {
   showLogoOnBill: boolean;
   receiptFontSize: number;
   receiptFontFamily: string;
+  stockEnforcementMode: 'flexible' | 'strict';
 }

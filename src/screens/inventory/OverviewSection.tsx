@@ -33,9 +33,9 @@ export const OverviewSection = () => {
     }, 0);
 
     // ── Low stock ───────────────────────────────────────────────────────
-    const lowAlcohol    = alcohol.filter((p) => p.status === 'active' && p.minStockMl > 0 && p.currentStockMl   <= p.minStockMl);
-    const lowBeverage   = beverages.filter((p) => p.status === 'active' && p.minStock   > 0 && p.currentStock    <= p.minStock);
-    const lowCigarette  = cigarettes.filter((p) => p.status === 'active' && p.minSticks  > 0 && p.currentSticks  <= p.minSticks);
+    const lowAlcohol    = alcohol.filter((p) => p.status === 'active' && (p.currentStockMl < 0 || (p.minStockMl > 0 && p.currentStockMl <= p.minStockMl)));
+    const lowBeverage   = beverages.filter((p) => p.status === 'active' && (p.currentStock < 0 || (p.minStock > 0 && p.currentStock <= p.minStock)));
+    const lowCigarette  = cigarettes.filter((p) => p.status === 'active' && (p.currentSticks < 0 || (p.minSticks > 0 && p.currentSticks <= p.minSticks)));
     const allLow = [
       ...lowAlcohol.map((p)   => ({ name: p.name, type: 'alcohol'   as const })),
       ...lowBeverage.map((p)  => ({ name: p.name, type: 'beverage'  as const })),

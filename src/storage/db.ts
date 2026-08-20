@@ -68,6 +68,7 @@ const defaultSettings: Settings = {
   showLogoOnBill: true,
   receiptFontSize: 10,
   receiptFontFamily: 'sans-serif',
+  stockEnforcementMode: 'flexible',
 };
 
 const SETTINGS_VERSION = 2;
