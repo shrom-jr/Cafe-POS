@@ -312,7 +312,14 @@ export function sanitizeOrder(rawOrder: any): Order {
 // Push Orders
 export async function pushOrdersToFirebase(orders: Order[]) {
   try {
-    await set(ref(db, "orders"), JSON.parse(JSON.stringify(orders || [])));
+    const uuidKeyedOrders = Object.fromEntries(
+      (orders || [])
+        .filter((order) => order && order.id)
+        .map((order) => [order.id, order]),
+    );
+    await update(ref(db), {
+      orders: JSON.parse(JSON.stringify(uuidKeyedOrders)),
+    });
   } catch (error) {
     logStructuredFirebaseError("Firebase Orders Push", error);
   }
@@ -968,8 +975,17 @@ export function subscribeToOrders(
 
     const tombstoneById = new Map(tombstones.map((tombstone) => [tombstone.id, tombstone]));
     const repairs: Record<string, unknown> = {};
-    const cleanOrders: Order[] = [];
+    const cleanOrdersById = new Map<string, Order>();
     for (const { firebaseKey, order } of remoteOrderEntries) {
+      const isIntegerKey = /^\d+$/.test(firebaseKey);
+      const isLegacyKey = isIntegerKey || firebaseKey !== order.id;
+      if (isLegacyKey) {
+        // Keep the order data in memory under its canonical id, but remove the
+        // legacy storage key so it cannot create duplicate records or trigger
+        // repeated stale-order repairs.
+        repairs[`orders/${firebaseKey}`] = null;
+      }
+
       const resetMarker = isRunningOrderRecord(order as unknown as Record<string, unknown>)
         ? resetMarkers.activeFloor
         : resetMarkers.salesHistory;
@@ -981,7 +997,11 @@ export function subscribeToOrders(
         (recordGeneration !== undefined &&
           recordGeneration !== resetGeneration(resetMarker));
       if (!wasReset) {
-        cleanOrders.push(sanitizeOrder(order));
+        // Prefer the canonical UUID-keyed record when a legacy duplicate and
+        // its UUID-keyed counterpart are both present.
+        if (!cleanOrdersById.has(order.id) || !isLegacyKey) {
+          cleanOrdersById.set(order.id, sanitizeOrder(order));
+        }
         continue;
       }
 
@@ -1001,6 +1021,7 @@ export function subscribeToOrders(
       }
     }
 
+    const cleanOrders = Array.from(cleanOrdersById.values());
     for (const tombstone of tombstones) {
       acknowledgePendingWrite(pendingOrderDeletes, tombstone.id, tombstone);
     }
