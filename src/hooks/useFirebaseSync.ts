@@ -53,6 +53,9 @@ import {
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
+  pushAlcoholProductsToFirebase,
+  pushBeverageProductsToFirebase,
+  pushCigaretteProductsToFirebase,
   getPendingOrderWrite,
   getPendingTableWrite,
   subscribeToSelectiveResetMarkers,
@@ -266,6 +269,9 @@ export function useFirebaseSync() {
   const isRemoteGroceryPurchasesUpdate = useRef(false);
   const isRemoteInvMovementsUpdate = useRef(false);
   const isRemoteInvMappingsUpdate = useRef(false);
+  const isRemoteAlcoholProductsUpdate = useRef(false);
+  const isRemoteBeverageProductsUpdate = useRef(false);
+  const isRemoteCigaretteProductsUpdate = useRef(false);
   const isRemoteKitchenPurchasesUpdate = useRef(false);
   const isRemoteMeatEntriesUpdate = useRef(false);
   const isRemoteMaintenanceExpensesUpdate = useRef(false);
@@ -275,6 +281,9 @@ export function useFirebaseSync() {
   const hasLoadedGroceryPurchases = useRef(false);
   const hasLoadedInvMovements = useRef(false);
   const hasLoadedInvMappings = useRef(false);
+  const hasLoadedAlcoholProducts = useRef(false);
+  const hasLoadedBeverageProducts = useRef(false);
+  const hasLoadedCigaretteProducts = useRef(false);
   const hasLoadedKitchenPurchases = useRef(false);
   const hasLoadedMeatEntries = useRef(false);
   const hasLoadedMaintenanceExpenses = useRef(false);
@@ -399,22 +408,28 @@ export function useFirebaseSync() {
       },
 
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
+        hasLoadedAlcoholProducts.current = true;
         const currentProducts = useInventoryStore.getState().alcoholProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteAlcoholProductsUpdate.current = true;
           setAlcoholProducts(remoteProducts);
         }
       },
 
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
+        hasLoadedBeverageProducts.current = true;
         const currentProducts = useInventoryStore.getState().beverageProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteBeverageProductsUpdate.current = true;
           setBeverageProducts(remoteProducts);
         }
       },
 
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
+        hasLoadedCigaretteProducts.current = true;
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
+          isRemoteCigaretteProductsUpdate.current = true;
           setCigaretteProducts(remoteProducts);
         }
       },
@@ -474,13 +489,15 @@ export function useFirebaseSync() {
         }
       },
 
-      setInvMappings: (remoteMappings: typeof invMappings) => {
+      setInvMappings: (remoteMappings: typeof invMappings, remoteExists = true) => {
         hasLoadedInvMappings.current = true;
         const currentMappings = useInventoryStore.getState().invMappings;
 
-        // FIREWALL: preserve local mappings if remote is empty
-        if (remoteMappings.length === 0 && currentMappings.length > 0) {
-          firewallPush("invMappings", () => pushInvMappingsToFirebase(currentMappings));
+        // Firebase owns mappings during migration. An absent or intentionally
+        // empty remote node must not be recreated from a stale browser cache.
+        if (!remoteExists) {
+          isRemoteInvMappingsUpdate.current = true;
+          setInvMappings([]);
           return;
         }
 
@@ -641,6 +658,35 @@ export function useFirebaseSync() {
     }
     pushSettingsToFirebase(settings);
   }, [settings]);
+
+  // Firebase is the authority for product catalogs. Remote hydration is marked
+  // so this tab never echoes a legacy array snapshot back into the database.
+  useEffect(() => {
+    if (!hasLoadedAlcoholProducts.current) return;
+    if (isRemoteAlcoholProductsUpdate.current) {
+      isRemoteAlcoholProductsUpdate.current = false;
+      return;
+    }
+    pushAlcoholProductsToFirebase(alcoholProducts);
+  }, [alcoholProducts]);
+
+  useEffect(() => {
+    if (!hasLoadedBeverageProducts.current) return;
+    if (isRemoteBeverageProductsUpdate.current) {
+      isRemoteBeverageProductsUpdate.current = false;
+      return;
+    }
+    pushBeverageProductsToFirebase(beverageProducts);
+  }, [beverageProducts]);
+
+  useEffect(() => {
+    if (!hasLoadedCigaretteProducts.current) return;
+    if (isRemoteCigaretteProductsUpdate.current) {
+      isRemoteCigaretteProductsUpdate.current = false;
+      return;
+    }
+    pushCigaretteProductsToFirebase(cigaretteProducts);
+  }, [cigaretteProducts]);
 
   // 6. Push Local Area Order Changes to Cloud
   useEffect(() => {

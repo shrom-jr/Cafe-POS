@@ -28,3 +28,6 @@ package-lock.json
 dist-electron/
 electron/node_modules/
 electron/out/
+
+# Firebase migration exports contain live operational data.
+backups/

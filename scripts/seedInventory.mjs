@@ -42,6 +42,17 @@ async function get(path) {
   return res.json();
 }
 
+function idKeyed(records) {
+  const keyed = {};
+  for (const record of records) {
+    if (!record?.id || keyed[record.id]) {
+      throw new Error('Seed data contains a missing or duplicate id.');
+    }
+    keyed[record.id] = record;
+  }
+  return keyed;
+}
+
 // Spirits and wines — ml-tracked (wine shares the ml schema for bottle/glass deductions)
 const alc = (id, name, bottleSizeMl = 750, category = 'spirits') => ({
   id, name, category, bottleSizeMl,
@@ -254,13 +265,13 @@ async function main() {
   console.log('──────────────────────────────────────────────────────────\n');
 
   // 1. Seed inventory products (all start at 0 stock)
-  await put('alcoholProducts', alcoholProducts);
+  await put('alcoholProducts', idKeyed(alcoholProducts));
   console.log(`✅  alcoholProducts    written (${alcoholProducts.length} — spirits + wines)`);
 
-  await put('beverageProducts', beverageProducts);
+  await put('beverageProducts', idKeyed(beverageProducts));
   console.log(`✅  beverageProducts   written (${beverageProducts.length} — beers + soft drinks)`);
 
-  await put('cigaretteProducts', cigaretteProducts);
+  await put('cigaretteProducts', idKeyed(cigaretteProducts));
   console.log(`✅  cigaretteProducts  written (${cigaretteProducts.length})`);
 
   // 2. Clear invMovements to zero-baseline
@@ -276,7 +287,7 @@ async function main() {
   console.log(`    Found ${menuItems.length} menu items`);
 
   const invMappings = buildMappings(menuItems);
-  await put('invMappings', invMappings);
+  await put('invMappings', idKeyed(invMappings));
   console.log(`✅  invMappings        written (${invMappings.length} POS ↔ inventory links)`);
 
   // ── Summary ────────────────────────────────────────────────────────────────

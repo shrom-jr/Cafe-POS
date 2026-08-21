@@ -30,6 +30,11 @@ import {
   incrementRetry,
   dropExhaustedMutations,
 } from "./offlineQueue";
+import {
+  BAR_INVENTORY_RESET_META_KEY,
+  readFirebaseIdRecords,
+  toFirebaseIdRecordMap,
+} from "./firebaseSchema";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[], exists?: boolean) => void;
@@ -43,7 +48,7 @@ type FirebaseSyncStore = {
   setCigaretteProducts: (products: CigaretteProduct[]) => void;
   setGroceryPurchases: (purchases: GroceryPurchase[], exists?: boolean) => void;
   setInvMovements: (movements: InventoryMovement[], exists?: boolean) => void;
-  setInvMappings: (mappings: InvMenuMapping[]) => void;
+  setInvMappings: (mappings: InvMenuMapping[], exists?: boolean) => void;
 };
 
 type StaffSyncStore = {
@@ -342,7 +347,13 @@ export async function pushTablesToFirebase(tables: CafeTable[]) {
 // Push Payments
 export async function pushPaymentsToFirebase(payments: Payment[]) {
   try {
-    await set(ref(db, "payments"), JSON.parse(JSON.stringify(payments || [])));
+    // Kept for compatibility with legacy callers. Never replace /payments as an
+    // array: individual payment writes retain concurrent settlements and apply
+    // sales-history reset generation checks.
+    const canonicalPayments = Object.values(
+      toFirebaseIdRecordMap(payments || [], "payments"),
+    );
+    await Promise.all(canonicalPayments.map((payment) => writePaymentRecord(payment)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Payments Push", error);
   }
@@ -371,6 +382,24 @@ type ResetMarkerModule =
 
 let observedResetMarkers: Partial<Record<ResetMarkerModule, SyncMutation>> | null = null;
 let resetMarkerHydration: Promise<void> | null = null;
+const unsafeFirebaseCollections = new Set<string>();
+
+export function setFirebaseCollectionSchemaSafety(path: string, isSafe: boolean): void {
+  if (isSafe) unsafeFirebaseCollections.delete(path);
+  else unsafeFirebaseCollections.add(path);
+}
+
+export function canWriteFirebaseCollection(path: string): boolean {
+  return !unsafeFirebaseCollections.has(path);
+}
+
+function assertFirebaseCollectionIsSafeToWrite(path: string): void {
+  if (!canWriteFirebaseCollection(path)) {
+    throw new Error(
+      `Firebase ${path} contains malformed or duplicate IDs. Run the schema migration before writing this collection.`,
+    );
+  }
+}
 
 export const BASELINE_RESET_GENERATION = "baseline";
 
@@ -413,24 +442,54 @@ export function subscribeToSelectiveResetMarkers(): () => void {
 
 async function pushCollectionWithResetGuard(
   path: string,
-  value: unknown[],
+  value: Array<{ id?: unknown }>,
   module: ResetMarkerModule,
 ): Promise<void> {
   await ensureResetMarkersHydrated();
+  assertFirebaseCollectionIsSafeToWrite(path);
   const expectedMarker = observedResetMarkers?.[module];
-  await runTransaction(ref(db), (currentData) => {
-    const root = cloneFirebaseRoot(currentData);
-    const currentMarker = root.resetMarkers?.[module] as SyncMutation | undefined;
-    if (resetGeneration(expectedMarker) !== resetGeneration(currentMarker)) {
-      // This write was queued before the reset marker reached this tab.
-      return root;
+  const canonical = value.length > 0 ? recordData(toFirebaseIdRecordMap(value, path)) : null;
+
+  const latestMarker = (await get(ref(db, `resetMarkers/${module}`))).val() as SyncMutation | undefined;
+  if (resetGeneration(expectedMarker) !== resetGeneration(latestMarker)) return;
+  await runTransaction(ref(db, path), () => canonical, { applyLocally: false });
+}
+
+function currentBarInventoryGeneration(value: unknown): string {
+  if (!value || typeof value !== "object") return BASELINE_RESET_GENERATION;
+  const sentinel = (value as Record<string, unknown>)[BAR_INVENTORY_RESET_META_KEY];
+  if (!sentinel || typeof sentinel !== "object") return BASELINE_RESET_GENERATION;
+  const generation = (sentinel as Record<string, unknown>).generation;
+  return typeof generation === "string" ? generation : BASELINE_RESET_GENERATION;
+}
+
+/**
+ * Product catalogs and menu mappings are reset-sensitive. The reset writes its
+ * generation into every surviving record, so this transaction can compare that
+ * generation atomically at the collection path without requiring root write
+ * permission. A stale client cannot restore pre-reset stock or mappings.
+ */
+async function pushBarCatalogCollection(
+  path: "alcoholProducts" | "beverageProducts" | "cigaretteProducts" | "invMappings",
+  value: Array<{ id?: unknown }>,
+): Promise<void> {
+  await ensureResetMarkersHydrated();
+  assertFirebaseCollectionIsSafeToWrite(path);
+  const expectedGeneration = getObservedResetGeneration("barInventory") ?? BASELINE_RESET_GENERATION;
+  const records = toFirebaseIdRecordMap(value, path);
+  const canonical = Object.fromEntries(
+    [
+      ...Object.entries(records),
+      [BAR_INVENTORY_RESET_META_KEY, { generation: expectedGeneration }],
+    ],
+  );
+
+  await runTransaction(ref(db, path), (currentValue) => {
+    const currentGeneration = currentBarInventoryGeneration(currentValue);
+    if (currentGeneration !== expectedGeneration) {
+      return currentValue;
     }
-    if (value.length === 0) {
-      delete root[path];
-    } else {
-      root[path] = recordData(value);
-    }
-    return root;
+    return recordData(canonical);
   }, { applyLocally: false });
 }
 
@@ -588,12 +647,28 @@ export async function applySelectiveResetToFirebase({
         const alcoholProducts = toFirebaseRecordMap(root.alcoholProducts);
         const beverageProducts = toFirebaseRecordMap(root.beverageProducts);
         const cigaretteProducts = toFirebaseRecordMap(root.cigaretteProducts);
-        for (const product of Object.values(alcoholProducts)) product.currentStockMl = 0;
-        for (const product of Object.values(beverageProducts)) product.currentStock = 0;
-        for (const product of Object.values(cigaretteProducts)) product.currentSticks = 0;
+        const invMappings = toFirebaseRecordMap(root.invMappings);
+        delete alcoholProducts[BAR_INVENTORY_RESET_META_KEY];
+        delete beverageProducts[BAR_INVENTORY_RESET_META_KEY];
+        delete cigaretteProducts[BAR_INVENTORY_RESET_META_KEY];
+        delete invMappings[BAR_INVENTORY_RESET_META_KEY];
+        for (const product of Object.values(alcoholProducts)) {
+          product.currentStockMl = 0;
+        }
+        for (const product of Object.values(beverageProducts)) {
+          product.currentStock = 0;
+        }
+        for (const product of Object.values(cigaretteProducts)) {
+          product.currentSticks = 0;
+        }
+        alcoholProducts[BAR_INVENTORY_RESET_META_KEY] = { generation: mutation.syncMutationId };
+        beverageProducts[BAR_INVENTORY_RESET_META_KEY] = { generation: mutation.syncMutationId };
+        cigaretteProducts[BAR_INVENTORY_RESET_META_KEY] = { generation: mutation.syncMutationId };
+        invMappings[BAR_INVENTORY_RESET_META_KEY] = { generation: mutation.syncMutationId };
         assignFirebaseCollection(root, "alcoholProducts", alcoholProducts);
         assignFirebaseCollection(root, "beverageProducts", beverageProducts);
         assignFirebaseCollection(root, "cigaretteProducts", cigaretteProducts);
+        assignFirebaseCollection(root, "invMappings", invMappings);
         delete root.invMovements;
         root.resetMarkers = {
           ...(root.resetMarkers ?? {}),
@@ -848,6 +923,8 @@ function acknowledgePendingWrite(
  */
 export async function writePaymentRecord(payment: Payment): Promise<{ success: boolean; error?: unknown }> {
   try {
+    assertFirebaseCollectionIsSafeToWrite("payments");
+    toFirebaseIdRecordMap([payment], "payments");
     const markersWereHydrated = isSelectiveResetMarkersHydrated();
     await ensureResetMarkersHydrated();
     if (!markersWereHydrated && !payment.salesHistoryResetGeneration) return { success: true };
@@ -937,9 +1014,33 @@ export async function pushInvMovementsToFirebase(movements: InventoryMovement[])
 // Push Inventory Mappings
 export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
   try {
-    await set(ref(db, "invMappings"), JSON.parse(JSON.stringify(mappings || [])));
+    await pushBarCatalogCollection("invMappings", mappings || []);
   } catch (error) {
     logStructuredFirebaseError("Firebase Inventory Mappings Push", error);
+  }
+}
+
+export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
+  try {
+    await pushBarCatalogCollection("alcoholProducts", products || []);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Alcohol Products Push", error);
+  }
+}
+
+export async function pushBeverageProductsToFirebase(products: BeverageProduct[]) {
+  try {
+    await pushBarCatalogCollection("beverageProducts", products || []);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Beverage Products Push", error);
+  }
+}
+
+export async function pushCigaretteProductsToFirebase(products: CigaretteProduct[]) {
+  try {
+    await pushBarCatalogCollection("cigaretteProducts", products || []);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Cigarette Products Push", error);
   }
 }
 
@@ -1104,11 +1205,16 @@ export function subscribeToPayments(store: FirebaseSyncStore) {
   };
 
   const unsubscribePayments = onValue(ref(db, "payments"), (snapshot) => {
-    paymentEntries = toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawPayment]) => ({
+    const normalized = readFirebaseIdRecords<Payment>(snapshot.val(), "payments");
+    setFirebaseCollectionSchemaSafety("payments", normalized.isSafe);
+    if (!normalized.isSafe) {
+      console.error("[Firebase Payments] Migration required before duplicate or malformed records can be repaired.", normalized.issues);
+    }
+    paymentEntries = normalized.entries.map(({ firebaseKey, record: rawPayment }) => ({
       firebaseKey,
       payment: {
         ...rawPayment,
-        id: typeof rawPayment.id === "string" ? rawPayment.id : firebaseKey,
+        id: rawPayment.id,
       } as unknown as Payment,
     }));
     paymentsExist = snapshot.exists();
@@ -1192,30 +1298,30 @@ export function subscribeToAreaOrder(store: FirebaseSyncStore) {
 // Subscribe to Live Alcohol Products
 export function subscribeToAlcoholProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "alcoholProducts"), (snapshot) => {
-    // When Firebase node is absent we pass [] so the hook marks hasLoaded=true
-    // and the push-to-Firebase effect can fire, seeding the remote node.
-    // The hook handler guards against overwriting non-empty local state with [].
-    store.setAlcoholProducts(
-      snapshot.exists() ? (toArray(snapshot.val()) as AlcoholProduct[]) : []
-    );
+    const normalized = readFirebaseIdRecords<AlcoholProduct>(snapshot.val(), "alcoholProducts");
+    setFirebaseCollectionSchemaSafety("alcoholProducts", normalized.isSafe);
+    if (!normalized.isSafe) console.error("[Firebase Inventory] Alcohol migration required.", normalized.issues);
+    store.setAlcoholProducts(normalized.entries.map(({ record }) => record));
   });
 }
 
 // Subscribe to Live Beverage Products
 export function subscribeToBeverageProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "beverageProducts"), (snapshot) => {
-    store.setBeverageProducts(
-      snapshot.exists() ? (toArray(snapshot.val()) as BeverageProduct[]) : []
-    );
+    const normalized = readFirebaseIdRecords<BeverageProduct>(snapshot.val(), "beverageProducts");
+    setFirebaseCollectionSchemaSafety("beverageProducts", normalized.isSafe);
+    if (!normalized.isSafe) console.error("[Firebase Inventory] Beverage migration required.", normalized.issues);
+    store.setBeverageProducts(normalized.entries.map(({ record }) => record));
   });
 }
 
 // Subscribe to Live Cigarette Products
 export function subscribeToCigaretteProducts(store: FirebaseSyncStore) {
   return onValue(ref(db, "cigaretteProducts"), (snapshot) => {
-    store.setCigaretteProducts(
-      snapshot.exists() ? (toArray(snapshot.val()) as CigaretteProduct[]) : []
-    );
+    const normalized = readFirebaseIdRecords<CigaretteProduct>(snapshot.val(), "cigaretteProducts");
+    setFirebaseCollectionSchemaSafety("cigaretteProducts", normalized.isSafe);
+    if (!normalized.isSafe) console.error("[Firebase Inventory] Cigarette migration required.", normalized.issues);
+    store.setCigaretteProducts(normalized.entries.map(({ record }) => record));
   });
 }
 
@@ -1242,7 +1348,10 @@ export function subscribeToInvMovements(store: FirebaseSyncStore) {
 // Subscribe to Live Inventory Mappings
 export function subscribeToInvMappings(store: FirebaseSyncStore) {
   return onValue(ref(db, "invMappings"), (snapshot) => {
-    store.setInvMappings(toArray(snapshot.val()) as InvMenuMapping[]);
+    const normalized = readFirebaseIdRecords<InvMenuMapping>(snapshot.val(), "invMappings");
+    setFirebaseCollectionSchemaSafety("invMappings", normalized.isSafe);
+    if (!normalized.isSafe) console.error("[Firebase Inventory] Mapping migration required.", normalized.issues);
+    store.setInvMappings(normalized.entries.map(({ record }) => record), snapshot.exists());
   });
 }
 

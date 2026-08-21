@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "migrate:firebase-schema": "node scripts/fixDatabaseSchema.mjs --dry-run",
     "build:electron": "cd electron && npm install && npm run build",
     "electron:start": "cd electron && npm install && npm start"
   },

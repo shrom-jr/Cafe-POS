@@ -17,3 +17,4 @@
 - [Selective reset concurrency](selective-reset-concurrency.md) — reset and eligible writes share atomic generations; never classify stale POS data by device timestamps
 - [Integer-keyed table loop](integer-key-table-loop.md) — pushTablesToFirebase used set(array) → integer keys; coexisting with UUID keys caused infinite repair loop in subscribeToTables
 - [Settlement synchronization guard](settlement-sync-guard.md) — online production settlements claim the order in Firebase before payment mutation; local/offline paths stay synchronous
+- [Firebase schema migration safety](firebase-schema-migration-safety.md) — ID-keyed migration is opt-in/dry-run; malformed snapshots lock writes and bar resets use a scoped generation sentinel

@@ -31,8 +31,9 @@ const firebaseMocks = vi.hoisted(() => {
     update: vi.fn(() => Promise.resolve()),
     set: vi.fn(() => Promise.resolve()),
     onValue: vi.fn(() => () => undefined),
-    runTransaction: vi.fn(async (_path: string, updater: (root: unknown) => unknown) => {
-      const result = updater(buildRoot()) as Record<string, unknown>;
+    runTransaction: vi.fn(async (path: string, updater: (root: unknown) => unknown) => {
+      const currentValue = path === '__root__' ? buildRoot() : structuredClone(data[path] ?? null);
+      const result = updater(currentValue) as Record<string, unknown>;
       transactionRoots.push(result);
       return { committed: true, snapshot: { val: () => result } };
     }),
@@ -53,6 +54,9 @@ vi.mock('../firebase', () => ({ db: {} }));
 
 import {
   applySelectiveResetToFirebase,
+  canWriteFirebaseCollection,
+  pushInvMappingsToFirebase,
+  setFirebaseCollectionSchemaSafety,
   writeCustomer,
   writeOrderTableMutation,
   writePaymentRecord,
@@ -115,6 +119,9 @@ describe('Firebase selective reset allowlist', () => {
     firebaseMocks.data.users = { admin: { id: 'admin', pin: '1234' } };
     firebaseMocks.data.areaOrder = ['Garden'];
     firebaseMocks.data.invMappings = { map1: { id: 'map1', productId: 'a1' } };
+    for (const path of ['payments', 'alcoholProducts', 'beverageProducts', 'cigaretteProducts', 'invMappings']) {
+      setFirebaseCollectionSchemaSafety(path, true);
+    }
   });
 
   it('updates all selected transactional fields in one atomic root transaction', async () => {
@@ -197,7 +204,8 @@ describe('Firebase selective reset allowlist', () => {
     expect(root.menu).toEqual(firebaseMocks.data.menu);
     expect(root.users).toEqual(firebaseMocks.data.users);
     expect(root.areaOrder).toEqual(firebaseMocks.data.areaOrder);
-    expect(root.invMappings).toEqual(firebaseMocks.data.invMappings);
+    expect(root.invMappings).toMatchObject(firebaseMocks.data.invMappings);
+    expect(root.invMappings.__barInventoryReset.generation).toEqual(expect.any(String));
   });
 
   it('propagates Firebase failures instead of clearing local state silently', async () => {
@@ -444,5 +452,17 @@ describe('Firebase selective reset allowlist', () => {
     });
 
     expect(firebaseMocks.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a full collection write after a malformed snapshot is detected', async () => {
+    setFirebaseCollectionSchemaSafety('invMappings', false);
+
+    await pushInvMappingsToFirebase([
+      { id: 'map-safe', menuItemId: 'menu-1', productType: 'alcohol', productId: 'a1', deductQty: 30 },
+    ]);
+
+    expect(canWriteFirebaseCollection('invMappings')).toBe(false);
+    expect(firebaseMocks.runTransaction).not.toHaveBeenCalled();
+    expect(firebaseMocks.data.invMappings).toEqual({ map1: { id: 'map1', productId: 'a1' } });
   });
 });

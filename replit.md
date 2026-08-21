@@ -620,3 +620,58 @@ When planning the next update, describe it using this structure:
 - Keep print output operationally predictable on 80mm thermal hardware.
 - Favor small, testable changes over broad rewrites.
 - Confirm current code and live data shape before relying on historical documentation.
+
+---
+
+## 20. Firebase Schema Migration Safety
+
+The canonical Firebase collections below are **ID-keyed objects**, never root
+arrays:
+
+```text
+/payments/{paymentId}
+/alcoholProducts/{productId}
+/beverageProducts/{productId}
+/cigaretteProducts/{productId}
+/invMappings/{mappingId}
+```
+
+Readers remain compatible with legacy arrays and numeric-key maps, but report
+missing or duplicate IDs rather than trying to overwrite records in a running
+POS terminal. Browser writers fail closed on malformed/duplicate IDs and write
+only the canonical object shape. Payment updates remain granular at
+`/payments/{paymentId}` so concurrent settlements are not replaced wholesale.
+Inventory product and mapping collections also carry a reserved, reader-ignored
+`__barInventoryReset` generation sentinel. It lets scoped collection
+transactions reject a stale terminal after a selective bar-inventory reset,
+including when a collection has no product records.
+
+### Controlled migration procedure
+
+`scripts/fixDatabaseSchema.mjs` is the only operational cleanup command for
+these paths and for the deprecated menu roots:
+
+```text
+/pillars
+/categories
+/menuItems
+```
+
+1. Store a short-lived Firebase database auth token in Replit Secrets as
+   `FIREBASE_DATABASE_AUTH_TOKEN`; never place it in source, docs, or shell
+   history.
+2. Run `npm run migrate:firebase-schema` (the default is read-only dry-run).
+   It authenticates, exports only the affected records into an ignored backup
+   directory, and writes a detailed comparison report.
+3. Resolve every malformed/duplicate ID and any menu mismatch from the report.
+   The script will not write data when either condition exists.
+4. Review the backup and report. Only then run
+   `node scripts/fixDatabaseSchema.mjs --confirm`.
+5. The confirmed run first creates a backup, atomically writes the normalized
+   ID-keyed collections, removes legacy menu roots only when they match the
+   complete canonical `/menu/*` data, and rereads the database to verify every
+   affected path.
+
+The retired `scripts/wipeMenu.mjs` deliberately performs no deletion. Do not
+use it to reset menu or inventory data. The migration script never touches
+orders, tables, customers, staff, settings, expenses, or inventory movements.
