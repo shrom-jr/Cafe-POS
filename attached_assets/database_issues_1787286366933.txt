@@ -1,0 +1,19 @@
+Please fix the following database structure issues found in our Firebase Realtime Database and update our app code so these problems do not occur again:
+
+1. Integer Keys in Payments:
+- In `/payments`, older records are saved under numeric array indexes ("0", "1", "2" ... "40"), while newer ones use UUIDs.
+- Fix: Write and execute a script to convert all integer-keyed payment entries into UUID-keyed entries using their internal `id` (`/payments/{id}`). Ensure all payment writes in the app strictly use `payment.id` as the key.
+
+2. Legacy Duplicate Root Menu Collections:
+- The root contains deprecated collections `/categories` and `/menuItems` alongside canonical `/menu/pillars`, `/menu/categories`, and `/menu/items`.
+- Fix: Confirm that `/menu` is complete, update any code still reading the root collections to use `/menu`, and delete the deprecated root `/categories` and `/menuItems` from Firebase.
+
+3. Array Storage in Inventory Collections:
+- `/alcoholProducts`, `/beverageProducts`, `/cigaretteProducts`, and `/invMappings` are currently stored as numeric JSON arrays `[...]` instead of ID-keyed objects.
+- Fix: Convert these inventory nodes in Firebase to ID-keyed objects (`{ [productId]: productData }`) and ensure `src/store/useInventoryStore.ts` and `src/utils/firebaseSync.ts` read and write them as objects.
+
+4. Cleanup & Codebase Hardening:
+- Create and run an automated Node.js migration script (e.g., `scripts/fixDatabaseSchema.mjs`) using our existing Firebase config (`src/firebase.js`) to apply these changes directly to the live database.
+- Update `src/utils/firebaseSync.ts` and all store files so they normalize data properly, avoid array writes to Firebase, and strictly follow the UUID-keyed structure.
+- Run `npm test` and `npm run build` to verify that all tests pass with zero errors.
+
