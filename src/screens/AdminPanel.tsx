@@ -1779,10 +1779,11 @@ const DataManagementSection = () => {
   };
 
   const dmConfirmWord = dmAction === 'reset' ? 'RESET' : 'CONFIRM';
+  const normalizedDmConfirmText = dmConfirmText.trim().toUpperCase();
   const allResetModulesSelected = SELECTIVE_RESET_MODULES.every((module) => dmSelection[module.id]);
   const dmReady = dmAction === 'reset'
-    ? dmBackupSucceeded && hasSelectedResetModule(dmSelection) && dmPin.length > 0 && dmConfirmText === 'RESET'
-    : dmConfirmText === 'CONFIRM' && dmFile !== null;
+    ? dmBackupSucceeded && hasSelectedResetModule(dmSelection) && dmPin.trim().length > 0 && normalizedDmConfirmText === 'RESET'
+    : normalizedDmConfirmText === 'CONFIRM' && dmFile !== null;
 
   const handleResetSelectionContinue = () => {
     if (!hasSelectedResetModule(dmSelection)) return;
@@ -1794,6 +1795,13 @@ const DataManagementSection = () => {
   };
 
   const handleDMExecute = async () => {
+    if (!dmReady) {
+      toast.error(dmAction === 'reset'
+        ? 'Select a reset module, complete the backup, enter the admin PIN, and type RESET.'
+        : 'Choose a backup file and type CONFIRM.');
+      return;
+    }
+
     if (dmAction === 'reset') {
       const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN' && u.active);
       let pinValid = false;
@@ -1823,7 +1831,8 @@ const DataManagementSection = () => {
       setTimeout(() => window.location.reload(), 1400);
     } catch (err) {
       console.error('[DataManagement] Execute failed:', err);
-      toast.error('Action failed — please try again.');
+      const reason = err instanceof Error ? err.message : String(err);
+      toast.error(`Action failed: ${reason || 'unknown error'}`);
       setDmWorking(false);
     }
   };
@@ -2145,7 +2154,8 @@ const DataManagementSection = () => {
                   />
                 </div>
                 <button
-                  onClick={handleDMExecute}
+                  type="button"
+                  onClick={() => void handleDMExecute()}
                   disabled={!dmReady || dmWorking}
                   className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${dmAction === 'reset' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}
                 >
