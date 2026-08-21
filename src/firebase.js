@@ -3,13 +3,13 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAhXBrsdEEgQj3XOAFA_MyVV_EWMeZGdko",
-  authDomain: "sbamboosekuwa.firebaseapp.com",
-  databaseURL: "https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "sbamboosekuwa",
-  storageBucket: "sbamboosekuwa.firebasestorage.app",
-  messagingSenderId: "3718010989",
-  appId: "1:3718010989:web:482a5009f898c6537bc764"
+  apiKey: "AIzaSyB8TE_Iz1CcgE1UopHJGYbPCtsx2_xaTh8",
+  authDomain: "sanjibcottage.firebaseapp.com",
+  databaseURL: "https://sanjibcottage-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sanjibcottage",
+  storageBucket: "sanjibcottage.firebasestorage.app",
+  messagingSenderId: "90981516338",
+  appId: "1:90981516338:web:565c3e4e0d281375f5a82b"
 };
 
 const app = initializeApp(firebaseConfig);
