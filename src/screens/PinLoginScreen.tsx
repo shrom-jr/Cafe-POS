@@ -9,6 +9,7 @@ import { writePinReset } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
 import { ThemeToggle } from '@/components/ui/Navigation';
+import { getSettingsLogo } from '@/utils/logo';
 
 const EMAILJS_SERVICE_ID  = 'service_mgnjpll';
 const EMAILJS_TEMPLATE_ID = 'template_od1a97s';
@@ -631,6 +632,7 @@ const PinModal = ({ user, onClose }: { user: StaffUser; onClose: () => void }) =
 const PinLoginScreen = () => {
   const users    = useStaffStore((state) => state.users);
   const settings = usePOSStore((s) => s.settings);
+  const logo = getSettingsLogo(settings);
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
 
   const activeUsers = users.filter((u) => u.active);
@@ -650,8 +652,8 @@ const PinLoginScreen = () => {
         <div className="flex flex-col items-center mb-2">
           {/* Logo — clean glass container, no amber border */}
           <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-white/[0.04] border border-white/15 p-2 shadow-2xl mb-4 mx-auto flex items-center justify-center overflow-hidden">
-            {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="logo" className="w-full h-full object-contain rounded-2xl drop-shadow-md" />
+            {logo ? (
+              <img src={logo} alt="logo" className="w-full h-full object-contain rounded-2xl drop-shadow-md" />
             ) : (
               <span className="text-2xl font-black text-amber-400">
                 {(settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner').charAt(0).toUpperCase()}

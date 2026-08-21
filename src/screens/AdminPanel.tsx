@@ -107,7 +107,7 @@ const RatioBar = ({
 const AdminCustomerAnalytics = () => {
   const customers = useCustomerStore((s) => s.customers);
   const repayments = useCustomerStore((s) => s.repayments);
-  const orders = usePOSStore((s) => s.orders);
+  const payments = usePOSStore((s) => s.payments);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerTab, setDrawerTab] = useState<'financials' | 'visits' | 'consumption' | 'audit'>('financials');
@@ -122,16 +122,16 @@ const AdminCustomerAnalytics = () => {
   const selectedRepayments = selected
     ? repayments.filter((r) => r.customerId === selected.id).sort((a, b) => b.createdAt - a.createdAt)
     : [];
-  const selectedOrders = selected
-    ? orders
-        .filter((o) => o.attachedCustomer?.id === selected.id && o.status === 'paid')
+  const selectedPayments = selected
+    ? payments
+        .filter((payment) => payment.customerId === selected.id)
         .sort((a, b) => b.createdAt - a.createdAt)
     : [];
   const selectedPaidOff = selectedRepayments.reduce((s, r) => s + r.amount, 0);
 
   const visitFrequency = (() => {
-    if (!selected || selected.visits < 2 || selectedOrders.length < 2) return null;
-    const times = selectedOrders.map((o) => o.createdAt);
+    if (!selected || selected.visits < 2 || selectedPayments.length < 2) return null;
+    const times = selectedPayments.map((payment) => payment.createdAt);
     const spanDays = (Math.max(...times) - Math.min(...times)) / 86400000;
     if (spanDays <= 0) return null;
     const perWeek = (selected.visits / spanDays) * 7;
@@ -309,15 +309,15 @@ const AdminCustomerAnalytics = () => {
 
                 {drawerTab === 'audit' && (
                   <div className="space-y-2">
-                    {selectedOrders.length === 0 && selectedRepayments.length === 0 && (
+                    {selectedPayments.length === 0 && selectedRepayments.length === 0 && (
                       <p className="py-6 text-center text-sm text-slate-500">No history recorded yet.</p>
                     )}
                     {[
-                      ...selectedOrders.map((o) => ({
-                        key: `o-${o.id}`, at: o.createdAt, kind: 'order' as const,
-                        title: `Order — Table ${o.tableNumber}`,
-                        amount: o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-                        lines: o.items.map((i) => `${i.name} ×${i.quantity} — Rs. ${fmt(i.price * i.quantity)}`),
+                      ...selectedPayments.map((payment) => ({
+                        key: `p-${payment.id}`, at: payment.createdAt, kind: 'order' as const,
+                        title: `Payment — Table ${payment.tableNumber}`,
+                        amount: payment.total,
+                        lines: payment.items.map((i) => `${i.name} ×${i.quantity} — Rs. ${fmt(i.price * i.quantity)}`),
                       })),
                       ...selectedRepayments.map((r) => ({
                         key: `r-${r.id}`, at: r.createdAt, kind: 'repayment' as const,
@@ -2267,7 +2267,7 @@ const BillingReceiptsSection = () => {
         <p className="text-xs font-bold text-zinc-300">Preview of how your receipt will look</p>
         <ReceiptPreview
           cafeName={settings.cafeName}
-          cafeLogo={settings.cafeLogo}
+          cafeLogo={getSettingsLogo(settings) ?? undefined}
           cafeAddress={settings.cafeAddress || ''}
           cafePhone={settings.cafePhone || ''}
           cafePan={settings.cafePan || ''}

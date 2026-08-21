@@ -16,6 +16,7 @@ import { playBillSettled } from '@/utils/sounds';
 import { tableDisplayName } from '@/utils/tableName';
 import { toast } from 'sonner';
 import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
+import { getSettingsLogo } from '@/utils/logo';
 
 const PaymentScreen = () => {
   const { tableId } = useParams<{ tableId: string }>();
@@ -263,7 +264,7 @@ const PaymentScreen = () => {
         cashierName:    resolvedProcessedBy?.name,
         takenBy:        resolvedTakenBy,
         processedBy:    resolvedProcessedBy,
-        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        logo:           getSettingsLogo(settings) ?? undefined,
         showLogoOnBill: settings.showLogoOnBill,
       },
     };

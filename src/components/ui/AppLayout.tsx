@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/ui/Navigation';
 import { subscribeToLogo, subscribeToConnectivity, replayOfflineMutations } from '@/utils/firebaseSync';
 import { getPendingQueueCount } from '@/utils/offlineQueue';
 import { useToast } from '@/hooks/use-toast';
+import { getSettingsLogo } from '@/utils/logo';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
@@ -56,7 +57,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   const logoSrc = hasLoadedRemoteLogo
     ? remoteLogo
-    : settings?.cafeLogo || settings?.logoUrl || (settings as any)?.logo || null;
+    : getSettingsLogo(settings);
 
   // Filter nav to only the tabs this user has permission for
   const navItems = currentUser

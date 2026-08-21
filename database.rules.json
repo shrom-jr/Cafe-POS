@@ -1,4 +1,5 @@
 {
+  "deploymentBlocked": "INDEX TEMPLATE ONLY — Firebase Authentication is not configured for this project. This extra top-level field intentionally makes the file invalid for Firebase rules deployment. Remove it and replace the public root rules with authenticated, path-specific rules only after a Firebase Auth rollout.",
   "rules": {
     ".read": true,
     ".write": true,

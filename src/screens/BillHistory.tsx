@@ -10,6 +10,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { triggerPrint, setLogoForPrint } from '@/utils/print';
 import type { Payment } from '@/types/pos';
 import { tableDisplayName } from '@/utils/tableName';
+import { getSettingsLogo } from '@/utils/logo';
 
 type DateFilter = 'today' | 'yesterday' | 'custom';
 
@@ -54,7 +55,7 @@ const BillHistory = () => {
   }, [baseList, search, methodFilter]);
 
   const handlePrint = () => {
-    setLogoForPrint(settings.cafeLogo ?? settings.logoUrl ?? settings.logo ?? null, settings.showLogoOnBill ?? true);
+    setLogoForPrint(getSettingsLogo(settings), settings.showLogoOnBill ?? true);
     triggerPrint('receipt');
   };
 
@@ -309,7 +310,7 @@ const BillHistory = () => {
         >
           <ThermalReceiptLayout
             cafeName={selectedBill.cafeName || settings.cafeName}
-            cafeLogo={settings.cafeLogo}
+            cafeLogo={getSettingsLogo(settings) ?? undefined}
             cafeAddress={settings.cafeAddress}
             cafePan={settings.cafePan}
             billFooter={settings.billFooter}

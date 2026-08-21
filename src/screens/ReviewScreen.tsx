@@ -22,6 +22,7 @@ import {
 import AdminPinGate from '@/components/ui/AdminPinGate';
 import { OrderItem, TablePayment } from '@/types/pos';
 import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
+import { getSettingsLogo } from '@/utils/logo';
 
 const PRESETS = [0, 5, 10, 15];
 
@@ -311,7 +312,7 @@ const ReviewScreen = () => {
         vatAmount:      bill.vatAmount,
         vatRate:        bill.vatRate,
         total:          bill.total,
-        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        logo:           getSettingsLogo(settings) ?? undefined,
         showLogoOnBill: settings.showLogoOnBill,
       },
     });
@@ -531,7 +532,7 @@ const ReviewScreen = () => {
           creditSettlement: { customerName: attachedCustomer.name, amount: amountAddedToCredit },
           takenBy: order?.takenBy,
           processedBy,
-          logo: settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+          logo: getSettingsLogo(settings) ?? undefined,
           showLogoOnBill: settings.showLogoOnBill,
         },
       };
@@ -729,7 +730,7 @@ const ReviewScreen = () => {
           : {}),
         takenBy,
         processedBy,
-        logo:           settings.cafeLogo ?? settings.logoUrl ?? settings.logo,
+        logo:           getSettingsLogo(settings) ?? undefined,
         showLogoOnBill: settings.showLogoOnBill,
       },
     };

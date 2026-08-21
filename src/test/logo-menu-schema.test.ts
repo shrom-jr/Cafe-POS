@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { normalizeMenuItemsSnapshot } from "@/utils/menuSchema";
 import { getSettingsLogo, normalizeSettingsLogos, sanitizeLogoSource } from "@/utils/logo";
 
@@ -38,5 +39,15 @@ describe("menu snapshot compatibility", () => {
     });
     expect(result.isSafe).toBe(false);
     expect(result.issues.some((issue) => issue.kind === "duplicate-id")).toBe(true);
+  });
+});
+
+describe("Firebase rules baseline", () => {
+  it("is an explicitly non-deployable index template until Firebase Auth is configured", () => {
+    const rules = JSON.parse(readFileSync("database.rules.json", "utf8"));
+    expect(rules.deploymentBlocked).toContain("INDEX TEMPLATE ONLY");
+    expect(rules.rules[".read"]).toBe(true);
+    expect(rules.rules[".write"]).toBe(true);
+    expect(rules.rules.orders[".indexOn"]).toContain("status");
   });
 });

@@ -46,7 +46,7 @@ const CustomersPortal = () => {
     customers, repayments,
     addCustomer, updateCustomer, deleteCustomer, receiveRepayment,
   } = useCustomerStore();
-  const orders = usePOSStore((s) => s.orders);
+  const payments = usePOSStore((s) => s.payments);
   const currentUser = useStaffStore((s) => s.currentUser);
 
   // ── stat cards ──────────────────────────────────────────────────────────────
@@ -141,14 +141,14 @@ const CustomersPortal = () => {
   // ── ledger data ─────────────────────────────────────────────────────────────
   const ledgerEntries = useMemo(() => {
     if (!ledgerTarget) return [];
-    const custOrders = orders
-      .filter((o) => o.attachedCustomer?.id === ledgerTarget.id && o.status === 'paid')
-      .map((o) => ({
+    const customerPayments = payments
+      .filter((payment) => payment.customerId === ledgerTarget.id)
+      .map((payment) => ({
         kind: 'order' as const,
-        at: o.createdAt,
-        label: `Order — Table ${o.tableNumber}`,
-        amount: o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-        detail: o.items.map((i) => `${i.name} ×${i.quantity}`).join(', '),
+        at: payment.createdAt,
+        label: `Payment — Table ${payment.tableNumber}`,
+        amount: payment.total,
+        detail: payment.items.map((item) => `${item.name} ×${item.quantity}`).join(', '),
       }));
     const custRepayments = repayments
       .filter((r) => r.customerId === ledgerTarget.id)
@@ -159,8 +159,8 @@ const CustomersPortal = () => {
         amount: r.amount,
         detail: r.notes ?? '',
       }));
-    return [...custOrders, ...custRepayments].sort((a, b) => b.at - a.at);
-  }, [ledgerTarget, orders, repayments]);
+    return [...customerPayments, ...custRepayments].sort((a, b) => b.at - a.at);
+  }, [ledgerTarget, payments, repayments]);
 
   return (
     <AppLayout title="Customers">
