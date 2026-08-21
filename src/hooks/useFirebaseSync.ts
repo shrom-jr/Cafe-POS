@@ -229,7 +229,7 @@ function releaseTablesWithoutActiveOrders(
   });
 }
 
-export function useFirebaseSync() {
+export function useFirebaseSync(enabled = true) {
   const settings = usePOSStore((s) => s.settings);
   const menuItems = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
@@ -292,6 +292,8 @@ export function useFirebaseSync() {
 
   // 1. Subscribe to Cloud Updates
   useEffect(() => {
+    if (!enabled) return;
+
     // Hard-reset menu state before subscriptions so stale browser data cannot
     // be pushed back after the Firebase menu nodes are intentionally wiped.
     db.clearMenuCache();
@@ -651,90 +653,91 @@ export function useFirebaseSync() {
     setKitchenPurchases,
     setMeatEntries,
     setMaintenanceExpenses,
+    enabled,
   ]);
 
   // 2. Push Local Settings Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedSettings.current) return;
+    if (!enabled || !hasLoadedSettings.current) return;
     if (isRemoteSettingsUpdate.current) {
       isRemoteSettingsUpdate.current = false;
       return;
     }
     pushSettingsToFirebase(settings);
-  }, [settings]);
+  }, [settings, enabled]);
 
   // Firebase is the authority for product catalogs. Remote hydration is marked
   // so this tab never echoes a legacy array snapshot back into the database.
   useEffect(() => {
-    if (!hasLoadedAlcoholProducts.current) return;
+    if (!enabled || !hasLoadedAlcoholProducts.current) return;
     if (isRemoteAlcoholProductsUpdate.current) {
       isRemoteAlcoholProductsUpdate.current = false;
       return;
     }
     pushAlcoholProductsToFirebase(alcoholProducts);
-  }, [alcoholProducts]);
+  }, [alcoholProducts, enabled]);
 
   useEffect(() => {
-    if (!hasLoadedBeverageProducts.current) return;
+    if (!enabled || !hasLoadedBeverageProducts.current) return;
     if (isRemoteBeverageProductsUpdate.current) {
       isRemoteBeverageProductsUpdate.current = false;
       return;
     }
     pushBeverageProductsToFirebase(beverageProducts);
-  }, [beverageProducts]);
+  }, [beverageProducts, enabled]);
 
   useEffect(() => {
-    if (!hasLoadedCigaretteProducts.current) return;
+    if (!enabled || !hasLoadedCigaretteProducts.current) return;
     if (isRemoteCigaretteProductsUpdate.current) {
       isRemoteCigaretteProductsUpdate.current = false;
       return;
     }
     pushCigaretteProductsToFirebase(cigaretteProducts);
-  }, [cigaretteProducts]);
+  }, [cigaretteProducts, enabled]);
 
   // 6. Push Local Area Order Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedAreaOrder.current) return;
+    if (!enabled || !hasLoadedAreaOrder.current) return;
     if (isRemoteAreaOrderUpdate.current) {
       isRemoteAreaOrderUpdate.current = false;
       return;
     }
     pushAreaOrderToFirebase(areaOrder);
-  }, [areaOrder]);
+  }, [areaOrder, enabled]);
 
   // 7. Push Local Grocery Purchase Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedGroceryPurchases.current) return;
+    if (!enabled || !hasLoadedGroceryPurchases.current) return;
     if (isRemoteGroceryPurchasesUpdate.current) {
       isRemoteGroceryPurchasesUpdate.current = false;
       return;
     }
     pushGroceryPurchasesToFirebase(groceryPurchases);
-  }, [groceryPurchases]);
+  }, [groceryPurchases, enabled]);
 
   // 14. Push Local Inventory Movement Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedInvMovements.current) return;
+    if (!enabled || !hasLoadedInvMovements.current) return;
     if (isRemoteInvMovementsUpdate.current) {
       isRemoteInvMovementsUpdate.current = false;
       return;
     }
     pushInvMovementsToFirebase(invMovements);
-  }, [invMovements]);
+  }, [invMovements, enabled]);
 
   // 15. Push Local Inventory Mapping Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedInvMappings.current) return;
+    if (!enabled || !hasLoadedInvMappings.current) return;
     if (isRemoteInvMappingsUpdate.current) {
       isRemoteInvMappingsUpdate.current = false;
       return;
     }
     pushInvMappingsToFirebase(invMappings);
-  }, [invMappings]);
+  }, [invMappings, enabled]);
 
   // 16. Push Local Staff Changes to Cloud
   useEffect(() => {
-    if (!hasLoadedStaff.current) return;
+    if (!enabled || !hasLoadedStaff.current) return;
     const currentIds = new Set(users.map((user) => user.id));
     if (isRemoteStaffUpdate.current) {
       isRemoteStaffUpdate.current = false;
@@ -751,37 +754,37 @@ export function useFirebaseSync() {
       if (!currentIds.has(previousId)) void deleteStaffUserFromFirebase(previousId);
     }
     previousStaffIds.current = currentIds;
-  }, [users]);
+  }, [users, enabled]);
 
   // 17. Push Local Kitchen Purchases to Cloud
   useEffect(() => {
-    if (!hasLoadedKitchenPurchases.current) return;
+    if (!enabled || !hasLoadedKitchenPurchases.current) return;
     if (isRemoteKitchenPurchasesUpdate.current) {
       isRemoteKitchenPurchasesUpdate.current = false;
       return;
     }
     pushKitchenPurchasesToFirebase(kitchenPurchases);
-  }, [kitchenPurchases]);
+  }, [kitchenPurchases, enabled]);
 
   // 18. Push Local Meat Entries to Cloud
   useEffect(() => {
-    if (!hasLoadedMeatEntries.current) return;
+    if (!enabled || !hasLoadedMeatEntries.current) return;
     if (isRemoteMeatEntriesUpdate.current) {
       isRemoteMeatEntriesUpdate.current = false;
       return;
     }
     pushMeatEntriesToFirebase(meatEntries);
-  }, [meatEntries]);
+  }, [meatEntries, enabled]);
 
   // 19. Push Local Maintenance Expenses to Cloud
   useEffect(() => {
-    if (!hasLoadedMaintenanceExpenses.current) return;
+    if (!enabled || !hasLoadedMaintenanceExpenses.current) return;
     if (isRemoteMaintenanceExpensesUpdate.current) {
       isRemoteMaintenanceExpensesUpdate.current = false;
       return;
     }
     pushMaintenanceExpensesToFirebase(maintenanceExpenses);
-  }, [maintenanceExpenses]);
+  }, [maintenanceExpenses, enabled]);
 
   // 20. Offline mutation queue — drain on reconnect
   //
@@ -793,6 +796,8 @@ export function useFirebaseSync() {
   // A module-level singleton lock inside replayOfflineMutations prevents
   // concurrent drain loops when both signals fire in quick succession.
   useEffect(() => {
+    if (!enabled) return;
+
     async function drainQueue() {
       await replayOfflineMutations();
     }
@@ -812,5 +817,5 @@ export function useFirebaseSync() {
       window.removeEventListener('online', handleOnline);
       unsubConn();
     };
-  }, []);
+  }, [enabled]);
 }

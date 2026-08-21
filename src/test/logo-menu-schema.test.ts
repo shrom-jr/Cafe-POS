@@ -43,11 +43,16 @@ describe("menu snapshot compatibility", () => {
 });
 
 describe("Firebase rules baseline", () => {
-  it("is an explicitly non-deployable index template until Firebase Auth is configured", () => {
+  it("requires authenticated access and preserves production query indexes", () => {
     const rules = JSON.parse(readFileSync("database.rules.json", "utf8"));
-    expect(rules.deploymentBlocked).toContain("INDEX TEMPLATE ONLY");
-    expect(rules.rules[".read"]).toBe(true);
-    expect(rules.rules[".write"]).toBe(true);
-    expect(rules.rules.orders[".indexOn"]).toContain("status");
+    expect(rules.deploymentBlocked).toBeUndefined();
+    expect(rules.rules[".read"]).toBe("auth != null");
+    expect(rules.rules[".write"]).toBe("auth != null");
+    expect(rules.rules.orders[".indexOn"]).toEqual(["tableId", "status", "createdAt"]);
+    expect(rules.rules.payments[".indexOn"]).toEqual(["createdAt", "billNumber", "customerId", "orderId", "method"]);
+    expect(rules.rules.kitchenPurchases[".indexOn"]).toEqual(["date", "category"]);
+    expect(rules.rules.invMappings[".indexOn"]).toEqual(["menuItemId", "productId"]);
+    expect(rules.rules.customers[".indexOn"]).toEqual(["phone"]);
+    expect(rules.rules.tables[".indexOn"]).toEqual(["status"]);
   });
 });

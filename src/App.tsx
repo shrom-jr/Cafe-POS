@@ -25,6 +25,7 @@ import { usePOSStore } from '@/store/usePOSStore';
 import OfflineBanner from '@/components/OfflineBanner';
 import { StaffPermissions } from '@/types/staff';
 import { getFirstPermittedRoute } from '@/utils/permissions';
+import { ensureFirebaseAuth } from '@/firebase';
 
 /**
  * Permission-based route guard.
@@ -49,11 +50,32 @@ const RequirePermission = ({
 
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
+  const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
+  const [firebaseAuthError, setFirebaseAuthError] = useState<string | null>(null);
   const currentUser = useStaffStore((s) => s.currentUser);
   const orders = usePOSStore((s) => s.orders);
 
   // Sync orders bidirectionally with Firebase Realtime Database
-  useFirebaseSync();
+  useFirebaseSync(firebaseAuthReady);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void ensureFirebaseAuth()
+      .then(() => {
+        if (!cancelled) setFirebaseAuthReady(true);
+      })
+      .catch((error) => {
+        console.error('[Firebase Authentication] Unable to establish an anonymous database session.', error);
+        if (!cancelled) {
+          setFirebaseAuthError('Unable to connect this terminal to the secure database.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Background auto-print listener — only dispatches when this device has
   // "Enable Auto-Print Listener" turned on in Admin → Settings → Printers.
@@ -63,17 +85,19 @@ const App = () => {
   // This runs in its own isolated effect with [] so it is never torn down and
   // re-registered by dependency changes in useFirebaseSync.
   useEffect(() => {
+    if (!firebaseAuthReady) return;
     const unsubscribe = subscribeToStaff({
       setUsers: (users) => useStaffStore.getState().setUsers(users),
     });
     return unsubscribe;
-  }, []);
+  }, [firebaseAuthReady]);
 
   // Customer attachment is stored on the order snapshot, not on the customer
   // itself. Persist the referenced customer when a new order/customer pairing
   // appears so the Firebase customer node remains present across devices.
   const attachedCustomerByOrder = useRef(new Map<string, string>());
   useEffect(() => {
+    if (!firebaseAuthReady) return;
     const customerState = useCustomerStore.getState();
     for (const order of orders) {
       const customerId = order.attachedCustomer?.id;
@@ -88,12 +112,13 @@ const App = () => {
         });
       }
     }
-  }, [orders]);
+  }, [orders, firebaseAuthReady]);
 
   // Customer balances and repayment ledgers are shared across all POS devices.
   // Keep localStorage as the offline fallback, and seed Firebase once when the
   // new node is empty so existing local customer history is not discarded.
   useEffect(() => {
+    if (!firebaseAuthReady) return;
     let seedingLocalCustomers = false;
     let hasReceivedRemoteSnapshot = false;
 
@@ -122,10 +147,11 @@ const App = () => {
     );
 
     return unsubscribe;
-  }, []);
+  }, [firebaseAuthReady]);
 
   // Seed the 19 venue tables into Firebase on the very first snapshot (idempotent).
   useEffect(() => {
+    if (!firebaseAuthReady) return;
     let done = false;
     let unsub: (() => void) | undefined;
     unsub = subscribeToTables((tables) => {
@@ -135,13 +161,26 @@ const App = () => {
       void ensureVenueSeed(tables);
     });
     return () => unsub?.();
-  }, []);
+  }, [firebaseAuthReady]);
 
   useEffect(() => {
     const handler = () => setPrintBlocked(true);
     window.addEventListener('print-blocked', handler);
     return () => window.removeEventListener('print-blocked', handler);
   }, []);
+
+  if (!firebaseAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#0A0B0E] text-white flex items-center justify-center p-6">
+        <div className="max-w-md rounded-2xl border border-white/10 bg-[#10121A] p-6 text-center shadow-2xl">
+          <h1 className="text-lg font-bold">Connecting POS terminal</h1>
+          <p className="mt-2 text-sm text-zinc-300">
+            {firebaseAuthError ?? 'Establishing a secure database session…'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (

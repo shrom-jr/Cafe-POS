@@ -1,25 +1,24 @@
 {
-  "deploymentBlocked": "INDEX TEMPLATE ONLY — Firebase Authentication is not configured for this project. This extra top-level field intentionally makes the file invalid for Firebase rules deployment. Remove it and replace the public root rules with authenticated, path-specific rules only after a Firebase Auth rollout.",
   "rules": {
-    ".read": true,
-    ".write": true,
+    ".read": "auth != null",
+    ".write": "auth != null",
     "orders": {
-      ".indexOn": ["status", "tableId", "createdAt"]
+      ".indexOn": ["tableId", "status", "createdAt"]
     },
     "payments": {
-      ".indexOn": ["createdAt", "customerId", "method"]
+      ".indexOn": ["createdAt", "billNumber", "customerId", "orderId", "method"]
     },
     "kitchenPurchases": {
-      ".indexOn": ["createdAt", "supplierId"]
+      ".indexOn": ["date", "category"]
     },
     "invMappings": {
-      ".indexOn": ["menuItemId", "productId", "inventoryType"]
+      ".indexOn": ["menuItemId", "productId"]
     },
     "customers": {
-      ".indexOn": ["phone", "lastVisit", "currentDue"]
+      ".indexOn": ["phone"]
     },
     "tables": {
-      ".indexOn": ["status", "area", "orderId"]
+      ".indexOn": ["status"]
     }
   }
 }
