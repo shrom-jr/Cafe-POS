@@ -22,6 +22,7 @@ import {
 } from '../utils/firebaseSync';
 import { enqueueMutation } from '../utils/offlineQueue';
 import { verifyPin } from '@/utils/cryptoPin';
+import { normalizeSettingsLogos } from '@/utils/logo';
 
 type DynamicPillar = string;
 type SettlementPayment = Omit<Payment, 'id'> & { idempotencyKey: string; finalizeOrder?: boolean };
@@ -174,7 +175,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   settlingOrderIds: {},
   settings: db.getSettings(),
   setSettings: (settings) => set((state) => {
-    const mergedSettings = {
+    const mergedSettings = normalizeSettingsLogos({
       ...state.settings,
       ...settings,
       wallets: {
@@ -183,7 +184,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       },
       customWallets: settings.customWallets ?? state.settings.customWallets ?? [],
       stockEnforcementMode: settings.stockEnforcementMode === 'strict' ? 'strict' : state.settings.stockEnforcementMode ?? 'flexible',
-    };
+    });
     db.saveSettings(mergedSettings);
     return { settings: mergedSettings };
   }),
@@ -1211,7 +1212,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   updateSettings: (updates) => {
     set((state) => {
-      const settings = { ...state.settings, ...updates };
+      const settings = normalizeSettingsLogos({ ...state.settings, ...updates });
       db.saveSettings(settings);
       return { settings };
     });

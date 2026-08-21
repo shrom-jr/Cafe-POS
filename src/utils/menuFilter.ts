@@ -16,12 +16,15 @@ export const filterMenuItems = (
   const query = text(searchQuery.trim());
 
   if (!query) {
-    return menuItems.filter((item) => item.categoryId === activeSubCategoryId);
+    return menuItems.filter(
+      (item) => item.categoryId === activeSubCategoryId && item.available !== false,
+    );
   }
 
   const categoryById = new Map(categories.map((category) => [category.id, category]));
 
   return menuItems.filter((item) => {
+    if (item.available === false) return false;
     const category = categoryById.get(item.categoryId);
     const searchableText = [
       item.name,

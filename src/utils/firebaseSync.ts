@@ -1,4 +1,4 @@
-import { get, ref, onValue, runTransaction, set, update } from "firebase/database";
+import { get, ref, onValue, query, orderByChild, equalTo, runTransaction, set, update } from "firebase/database";
 import { db } from "../firebase";
 import type {
   Order,
@@ -35,6 +35,8 @@ import {
   readFirebaseIdRecords,
   toFirebaseIdRecordMap,
 } from "./firebaseSchema";
+import { normalizeSettingsLogos, sanitizeLogoSource } from "./logo";
+import { normalizeMenuCategoriesSnapshot, normalizeMenuItemsSnapshot } from "./menuSchema";
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[], exists?: boolean) => void;
@@ -960,7 +962,10 @@ export async function writePaymentRecord(payment: Payment): Promise<{ success: b
 // Push Settings
 export async function pushSettingsToFirebase(settings: Settings) {
   try {
-    await set(ref(db, "settings"), JSON.parse(JSON.stringify(settings || {})));
+    await set(
+      ref(db, "settings"),
+      JSON.parse(JSON.stringify(normalizeSettingsLogos(settings || {}))),
+    );
   } catch (error) {
     logStructuredFirebaseError("Firebase Settings Push", error);
   }
@@ -969,7 +974,7 @@ export async function pushSettingsToFirebase(settings: Settings) {
 /** Keep the shared header logo available as a small, independently subscribable setting. */
 export async function pushLogoToFirebase(logo: string | null) {
   try {
-    await set(ref(db, "settings/logo"), logo || null);
+    await set(ref(db, "settings/logo"), sanitizeLogoSource(logo));
   } catch (error) {
     logStructuredFirebaseError("Firebase Logo Push", error);
   }
@@ -1077,7 +1082,7 @@ export async function pushStaffToFirebase(users: StaffUser[]) {
 export function subscribeToOrders(
   callback: (orders: Order[], tombstones: OrderTombstone[]) => void,
 ) {
-  let remoteOrderEntries: Array<{ firebaseKey: string; order: Order }> = [];
+  const ordersByStatus = new Map<"active" | "billed", Array<{ firebaseKey: string; order: Order }>>();
   let tombstones: OrderTombstone[] = [];
   let ordersReady = false;
   let tombstonesReady = false;
@@ -1090,6 +1095,7 @@ export function subscribeToOrders(
   const emit = () => {
     if (!ordersReady || !tombstonesReady || !resetMarkersReady) return;
 
+    const remoteOrderEntries = [...(ordersByStatus.get("active") ?? []), ...(ordersByStatus.get("billed") ?? [])];
     for (const { order } of remoteOrderEntries) {
       acknowledgePendingWrite(pendingOrderWrites, order.id, order);
     }
@@ -1155,17 +1161,26 @@ export function subscribeToOrders(
     }
   };
 
-  const unsubscribeOrders = onValue(ref(db, "orders"), (snapshot) => {
-    remoteOrderEntries = toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawOrder]) => ({
-      firebaseKey,
-      order: sanitizeOrder({
-        ...rawOrder,
-        id: typeof rawOrder.id === "string" ? rawOrder.id : firebaseKey,
-      }),
-    }));
-    ordersReady = true;
-    emit();
-  });
+  const subscribeToRunningStatus = (status: "active" | "billed") => onValue(
+    query(ref(db, "orders"), orderByChild("status"), equalTo(status)),
+    (snapshot) => {
+      ordersByStatus.set(
+        status,
+        toFirebaseEntries(snapshot.val()).map(([firebaseKey, rawOrder]) => ({
+          firebaseKey,
+          order: sanitizeOrder({
+            ...rawOrder,
+            id: typeof rawOrder.id === "string" ? rawOrder.id : firebaseKey,
+          }),
+        })),
+      );
+      ordersReady = ordersByStatus.has("active") && ordersByStatus.has("billed");
+      emit();
+    },
+    (error) => logStructuredFirebaseError(`Firebase ${status} Orders Listener`, error),
+  );
+  const unsubscribeActiveOrders = subscribeToRunningStatus("active");
+  const unsubscribeBilledOrders = subscribeToRunningStatus("billed");
 
   const unsubscribeTombstones = onValue(ref(db, "orderTombstones"), (snapshot) => {
     tombstones = Object.entries(snapshot.val() ?? {})
@@ -1184,7 +1199,8 @@ export function subscribeToOrders(
   });
 
   return () => {
-    unsubscribeOrders();
+    unsubscribeActiveOrders();
+    unsubscribeBilledOrders();
     unsubscribeTombstones();
     unsubscribeResetMarkers();
   };
@@ -1257,7 +1273,9 @@ export function subscribeToPayments(store: FirebaseSyncStore) {
 export function subscribeToSettings(store: FirebaseSyncStore) {
   return onValue(ref(db, "settings"), (snapshot) => {
     const rawData = snapshot.val();
-    if (rawData) store.setSettings(rawData as Settings);
+    if (rawData && typeof rawData === "object") {
+      store.setSettings(normalizeSettingsLogos(rawData as Settings));
+    }
   });
 }
 
@@ -1265,39 +1283,106 @@ export function subscribeToSettings(store: FirebaseSyncStore) {
 export function subscribeToLogo(callback: (logo: string | null) => void) {
   return onValue(ref(db, "settings/logo"), (snapshot) => {
     const value = snapshot.val();
-    callback(typeof value === "string" && value.length > 0 ? value : null);
+    callback(sanitizeLogoSource(value));
   });
 }
 
 // Subscribe to Live Menu Items
 export function subscribeToMenuItems(store: FirebaseSyncStore) {
   return onValue(ref(db, "menu/items"), (snapshot) => {
-    store.setMenuItems(toArray(snapshot.val()) as MenuItem[]);
+    const normalized = normalizeMenuItemsSnapshot(snapshot.val());
+    setFirebaseCollectionSchemaSafety("menu/items", normalized.isSafe);
+    if (!normalized.isSafe) {
+      console.error("[Firebase Menu Items] Migration required before malformed records can be written.", normalized.issues);
+      return;
+    }
+    store.setMenuItems(normalized.records);
   });
 }
 
-// Push Menu Items to Firebase
+/** Legacy bulk helper retained for seed tooling; UI mutations must use child writers below. */
 export async function pushMenuItemsToFirebase(items: MenuItem[]) {
   try {
-    await set(ref(db, "menu/items"), JSON.parse(JSON.stringify(items || [])));
+    assertFirebaseCollectionIsSafeToWrite("menu/items");
+    const keyed = toFirebaseIdRecordMap(items || [], "menu/items");
+    await Promise.all(Object.values(keyed).map((item) => writeMenuItemToFirebase(item)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Menu Items Push", error);
   }
 }
 
-// Subscribe to Live Categories
+export async function writeMenuItemToFirebase(item: MenuItem): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("menu/items");
+    toFirebaseIdRecordMap([item], "menu/items");
+    await set(ref(db, `menu/items/${item.id}`), JSON.parse(JSON.stringify(item)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Menu Item Write", error);
+    throw error;
+  }
+}
+
+export async function setMenuItemAvailabilityInFirebase(id: string, available: boolean): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("menu/items");
+    await set(ref(db, `menu/items/${id}/available`), available);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Menu Item Availability", error);
+    throw error;
+  }
+}
+
+export async function deleteMenuItemFromFirebase(id: string): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("menu/items");
+    await set(ref(db, `menu/items/${id}`), null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Menu Item Delete", error);
+    throw error;
+  }
+}
+
 export function subscribeToCategories(store: FirebaseSyncStore) {
   return onValue(ref(db, "menu/categories"), (snapshot) => {
-    store.setCategories(toArray(snapshot.val()) as Category[]);
+    const normalized = normalizeMenuCategoriesSnapshot(snapshot.val());
+    setFirebaseCollectionSchemaSafety("menu/categories", normalized.isSafe);
+    if (!normalized.isSafe) {
+      console.error("[Firebase Categories] Migration required before malformed records can be written.", normalized.issues);
+      return;
+    }
+    store.setCategories(normalized.records);
   });
 }
 
-// Push Categories to Firebase
+/** Legacy bulk helper retained for seed tooling; UI mutations must use child writers below. */
 export async function pushCategoriesToFirebase(categories: Category[]) {
   try {
-    await set(ref(db, "menu/categories"), JSON.parse(JSON.stringify(categories || [])));
+    assertFirebaseCollectionIsSafeToWrite("menu/categories");
+    const keyed = toFirebaseIdRecordMap(categories || [], "menu/categories");
+    await Promise.all(Object.values(keyed).map((category) => writeCategoryToFirebase(category)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Categories Push", error);
+  }
+}
+
+export async function writeCategoryToFirebase(category: Category): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("menu/categories");
+    toFirebaseIdRecordMap([category], "menu/categories");
+    await set(ref(db, `menu/categories/${category.id}`), JSON.parse(JSON.stringify(category)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Category Write", error);
+    throw error;
+  }
+}
+
+export async function deleteCategoryFromFirebase(id: string): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("menu/categories");
+    await set(ref(db, `menu/categories/${id}`), null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Category Delete", error);
+    throw error;
   }
 }
 

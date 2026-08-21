@@ -1,6 +1,12 @@
 import { useState, useMemo, useRef } from 'react';
 import { usePOSStore } from '@/store/usePOSStore';
-import { pushMenuItemsToFirebase, pushCategoriesToFirebase } from '@/utils/firebaseSync';
+import {
+  deleteCategoryFromFirebase,
+  deleteMenuItemFromFirebase,
+  setMenuItemAvailabilityInFirebase,
+  writeCategoryToFirebase,
+  writeMenuItemToFirebase,
+} from '@/utils/firebaseSync';
 import { toast } from 'sonner';
 import type { MenuItem, MenuItemVariant, Category, PrintRoute, CategoryPillar } from '@/types/pos';
 import {
@@ -130,14 +136,14 @@ export default function MenuManagement() {
       m.id === item.id ? { ...m, available: !(m.available !== false) } : m
     );
     setMenuItems(updated);
-    await pushMenuItemsToFirebase(updated);
+    await setMenuItemAvailabilityInFirebase(item.id, !(item.available !== false));
   }
 
   // ── Delete item ──
   async function handleDeleteItem(id: string) {
     const updated = menuItems.filter((m) => m.id !== id);
     setMenuItems(updated);
-    await pushMenuItemsToFirebase(updated);
+    await deleteMenuItemFromFirebase(id);
     toast.success('Item deleted');
     setDeleteDialog((d) => ({ ...d, open: false }));
   }
@@ -152,7 +158,7 @@ export default function MenuManagement() {
     }
     const updated = categories.filter((c) => c.id !== id);
     setCategories(updated);
-    await pushCategoriesToFirebase(updated);
+    await deleteCategoryFromFirebase(id);
     toast.success('Category deleted');
     setDeleteDialog((d) => ({ ...d, open: false }));
   }
@@ -200,6 +206,7 @@ export default function MenuManagement() {
           printRoute: it.printRoute ?? 'KOT',
           available: it.available !== false,
           variants: validVariants,
+          displayOrder: existing?.displayOrder ?? menuItems.length,
         };
       } else {
         if (!it.price || it.price <= 0) { toast.error('Price must be greater than 0'); setSaving(false); return; }
@@ -212,6 +219,7 @@ export default function MenuManagement() {
           printRoute: it.printRoute ?? 'KOT',
           available: it.available !== false,
           variants: undefined,
+          displayOrder: existing?.displayOrder ?? menuItems.length,
         };
       }
       let updated: MenuItem[];
@@ -221,7 +229,7 @@ export default function MenuManagement() {
         updated = menuItems.map((m) => (m.id === final.id ? final : m));
       }
       setMenuItems(updated);
-      await pushMenuItemsToFirebase(updated);
+      await writeMenuItemToFirebase(final);
       toast.success(itemModal.mode === 'add' ? 'Item added' : 'Item updated');
       setItemModal((s) => ({ ...s, open: false }));
     } finally {
@@ -253,6 +261,7 @@ export default function MenuManagement() {
           parentCategory: c.parentCategory ?? 'Food',
           printRoute: c.printRoute ?? 'KOT',
           sendToKitchen: isKOT,
+          displayOrder: categories.length,
         };
         updated = [...categories, newCat];
       } else {
@@ -263,7 +272,7 @@ export default function MenuManagement() {
         );
       }
       setCategories(updated);
-      await pushCategoriesToFirebase(updated);
+      await writeCategoryToFirebase(updated.find((category) => category.id === c.id) ?? updated.at(-1)!);
       toast.success(catModal.mode === 'add' ? 'Category added' : 'Category updated');
       setCatModal((s) => ({ ...s, open: false }));
     } finally {

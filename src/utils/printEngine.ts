@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { numberToWords } from './printer';
 import { useStaffStore } from '@/store/useStaffStore';
 import { tableDisplayName } from '@/utils/tableName';
+import { sanitizeLogoSource } from '@/utils/logo';
 
 // ── Typed job interfaces ──────────────────────────────────────────────────────
 
@@ -382,8 +383,9 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
 // does not skip the print command on invisible frames.
 
 function openPrintIframe(bodyContent: string, logo?: string): void {
-  const logoHtml = logo
-    ? `<img src="${logo}" class="receipt-logo" />`
+  const safeLogo = sanitizeLogoSource(logo);
+  const logoHtml = safeLogo
+    ? `<img src="${safeLogo.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}" class="receipt-logo" />`
     : '';
 
   const html = `<!DOCTYPE html>

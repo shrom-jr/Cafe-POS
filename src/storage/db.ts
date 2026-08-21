@@ -1,4 +1,5 @@
 import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, Settings, StockMovement } from '@/types/pos';
+import { normalizeSettingsLogos } from '@/utils/logo';
 
 // ── Immutable day-end financial snapshot ───────────────────────────────────────
 export interface ClosedShift {
@@ -208,7 +209,7 @@ export const db = {
       },
     };
   },
-  saveSettings: (s: Settings) => set(KEYS.settings, s),
+  saveSettings: (s: Settings) => set(KEYS.settings, normalizeSettingsLogos(s)),
 
   exportAll: () => {
     const data: Record<string, string | null> = {};

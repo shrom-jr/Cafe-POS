@@ -54,6 +54,7 @@ npm run build     # Production build
 npm test          # Full Vitest suite
 npm run lint      # ESLint
 npm run preview   # Preview the production build
+npm run migrate:firebase-pos # Dry-run settings/logo + ID-keyed menu optimization
 ```
 
 The configured Replit workflow is `Start application` and runs `npm run dev`.

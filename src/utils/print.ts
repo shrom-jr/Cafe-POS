@@ -3,6 +3,7 @@ import { numberToWords } from './printer';
 import { useStaffStore } from '@/store/useStaffStore';
 import { tableDisplayName } from '@/utils/tableName';
 import type { ReceiptData } from './buildReceiptText';
+import { sanitizeLogoSource } from './logo';
 
 // ── Module-level store ────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export function setReceiptText(_text: string) {
 }
 
 export function setLogoForPrint(logo: string | null, showLogo: boolean) {
-  _logo = logo;
+  _logo = sanitizeLogoSource(logo);
   _showLogo = showLogo;
 }
 
@@ -119,8 +120,9 @@ function buildReceiptHtml(data: ReceiptData, logo: string | null, showLogo: bool
   const servedBy = data.takenBy?.name || data.takenBy?.fullName || data.processedBy?.name || '';
   const cashier  = data.processedBy?.name || data.processedBy?.fullName || data.cashierName || liveStaff;
 
-  const logoHtml = showLogo && logo
-    ? `<img src="${logo}" class="receipt-logo" style="display: block !important; margin: 0 auto 4px auto; max-width: 45mm; max-height: 20mm; visibility: visible !important;" />`
+  const safeLogo = sanitizeLogoSource(logo);
+  const logoHtml = showLogo && safeLogo
+    ? `<img src="${safeLogo.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}" class="receipt-logo" style="display: block !important; margin: 0 auto 4px auto; max-width: 45mm; max-height: 20mm; visibility: visible !important;" />`
     : '';
 
   const itemRows = data.items.map((item, idx) => `

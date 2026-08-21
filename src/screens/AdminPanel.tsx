@@ -42,7 +42,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { fmt, resolvePaymentLabel } from '@/utils/format';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { compareTableNames, tableDisplayName, tableNameKey } from '@/utils/tableName';
-import { pushLogoToFirebase } from '@/utils/firebaseSync';
+import { getSettingsLogo, sanitizeLogoSource } from '@/utils/logo';
 import {
   EMPTY_SELECTIVE_RESET_SELECTION,
   SELECTIVE_RESET_MODULES,
@@ -61,33 +61,6 @@ const ACTIVE_STYLE = {
   border: '1px solid rgba(59,130,246,0.28)',
   boxShadow: '0 0 18px -4px rgba(59,130,246,0.3)',
 };
-
-const compressLogoToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Unable to read the logo file.'));
-    reader.onload = () => {
-      const image = document.createElement('img');
-      image.onerror = () => reject(new Error('Unable to decode the logo image.'));
-      image.onload = () => {
-        const maxDimension = 512;
-        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const context = canvas.getContext('2d');
-        if (!context) {
-          reject(new Error('Unable to process the logo image.'));
-          return;
-        }
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/webp', 0.82));
-      };
-      image.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-
 
 const PageHeader = ({
   title,
@@ -1603,25 +1576,18 @@ const CompanyProfileSection = () => {
   const [cafePhone, setCafePhone] = useState(settings.cafePhone || '');
   const [cafePan, setCafePan] = useState(settings.cafePan || '');
   const [vatEnabled, setVatEnabled] = useState(settings.vatEnabled ?? true);
+  const [logoUrl, setLogoUrl] = useState(getSettingsLogo(settings) ?? '');
+  const currentLogo = getSettingsLogo(settings);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Please choose an image under 2MB.');
-      e.target.value = '';
+  const saveLogo = () => {
+    const safeLogo = sanitizeLogoSource(logoUrl);
+    if (!safeLogo) {
+      toast.error('Use a local path (for example /logo.webp) or an http(s) image URL.');
       return;
     }
-    try {
-      const base64 = await compressLogoToBase64(file);
-      updateSettings({ cafeLogo: base64, logo: base64, logoUrl: base64 });
-      await pushLogoToFirebase(base64);
-    } catch (error) {
-      console.error('[Logo Upload] Failed:', error);
-      toast.error('Unable to process the logo image.');
-    } finally {
-      e.target.value = '';
-    }
+    updateSettings({ logo: safeLogo });
+    setLogoUrl(safeLogo);
+    toast.success('Logo saved');
   };
 
   const saveAll = () => {
@@ -1662,13 +1628,13 @@ const CompanyProfileSection = () => {
         <div>
           <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Logo</label>
           <div className="flex items-center gap-4">
-            {settings.cafeLogo ? (
+            {currentLogo ? (
                 <div className="relative w-24 h-24 rounded-2xl bg-[#181B26] border-2 border-white/20 p-2 flex items-center justify-center overflow-hidden">
-                <img src={settings.cafeLogo} alt="Logo" className="w-full h-full object-contain rounded-xl bg-white p-1" />
+                <img src={currentLogo} alt="Logo" className="w-full h-full object-contain rounded-xl bg-white p-1" />
                 <button
                   onClick={() => {
-                    updateSettings({ cafeLogo: undefined, logo: undefined, logoUrl: undefined });
-                    void pushLogoToFirebase(null);
+                    updateSettings({ logo: undefined });
+                    setLogoUrl('');
                   }}
                   className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
                 >
@@ -1680,12 +1646,20 @@ const CompanyProfileSection = () => {
                 <ImagePlus size={22} />
               </div>
             )}
-            <div className="flex flex-col gap-1.5">
-              <label className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer">
-                <Upload size={14} /> {settings.cafeLogo ? 'Replace' : 'Upload'} Logo
-                <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
-              </label>
-              <p className="text-xs font-bold text-zinc-300 ml-4 leading-tight">PNG or JPG · Max 2MB · High contrast works best</p>
+            <div className="flex flex-1 flex-col gap-2">
+              <input
+                value={logoUrl}
+                onChange={(event) => setLogoUrl(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && saveLogo()}
+                placeholder="/logo.webp or https://example.com/logo.webp"
+                className={inputCls}
+              />
+              <div className="flex items-center gap-3">
+                <button onClick={saveLogo} className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider">
+                  Save logo URL
+                </button>
+                <p className="text-xs font-bold text-zinc-300 leading-tight">Image uploads are not stored in Firebase. Use a static path or HTTPS URL.</p>
+              </div>
             </div>
           </div>
         </div>

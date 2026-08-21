@@ -22,6 +22,8 @@ export interface Category {
   id: string;
   name: string;
   order: number;
+  /** Stable UI sequence retained when Firebase records are key-addressed. */
+  displayOrder?: number;
   /** When true, items in this category are included on KOT tickets to the kitchen printer */
   sendToKitchen?: boolean;
   /** One of the 4 super-category pillars */
@@ -44,6 +46,8 @@ export interface MenuItem {
   categoryId: string;
   name: string;
   price: number;
+  /** Stable UI sequence retained when Firebase records are key-addressed. */
+  displayOrder?: number;
   /** Printer routing: KOT → kitchen printer, BOT → bar/bottle printer */
   printRoute?: PrintRoute;
   image?: string;
