@@ -660,6 +660,8 @@ these paths and for the deprecated menu roots:
 1. Store a short-lived Firebase database auth token in Replit Secrets as
    `FIREBASE_DATABASE_AUTH_TOKEN`; never place it in source, docs, or shell
    history.
+   For staff-only cleanup, add `--staff-only` to both the dry-run and confirmed
+   commands. This scope evaluates and writes only `/users`.
 2. Run `npm run migrate:firebase-schema` (the default is read-only dry-run).
    It authenticates, exports only the affected records into an ignored backup
    directory, and writes a detailed comparison report.

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 export const ID_KEYED_PATHS = [
+  "users",
   "payments",
   "alcoholProducts",
   "beverageProducts",
@@ -23,6 +24,7 @@ function entries(data) {
 export function normalizeIdKeyedCollection(path, data, generateId = () => randomUUID()) {
   const records = {};
   const generatedIds = [];
+  const deduplicated = [];
   const issues = [];
   const seen = new Map();
   if (data !== null && (typeof data !== "object" || data === undefined)) {
@@ -78,6 +80,14 @@ export function normalizeIdKeyedCollection(path, data, generateId = () => random
     }
 
     if (seen.has(id)) {
+      if (stableStringify(records[id]) === stableStringify(record)) {
+        deduplicated.push({
+          firebaseKey,
+          id,
+          canonicalKey: seen.get(id),
+        });
+        continue;
+      }
       issues.push({
         kind: "duplicate-id",
         path,
@@ -96,6 +106,7 @@ export function normalizeIdKeyedCollection(path, data, generateId = () => random
     records,
     sourceCount,
     generatedIds,
+    deduplicated,
     issues,
     changed: JSON.stringify(data ?? null) !== JSON.stringify(Object.keys(records).length ? records : null),
   };

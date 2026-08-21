@@ -20,14 +20,76 @@ describe("Firebase schema migration analysis", () => {
     expect(result.generatedIds).toEqual([{ firebaseKey: "1", id: "generated-payment" }]);
   });
 
+  it("preserves every staff field while converting numeric user keys", () => {
+    const result = normalizeIdKeyedCollection("users", {
+      0: {
+        id: "staff-admin",
+        name: "Admin",
+        role: "ADMIN",
+        permissions: { pos: true, admin: true },
+        pinHash: "hash",
+        salt: "salt",
+        pinLength: 6,
+        mustChangePin: false,
+        active: true,
+      },
+      1: {
+        id: "staff-kitchen",
+        name: "Kitchen",
+        role: "KITCHEN",
+        permissions: { kitchen: true },
+        pin: "1234",
+        active: false,
+      },
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.records).toEqual({
+      "staff-admin": {
+        id: "staff-admin",
+        name: "Admin",
+        role: "ADMIN",
+        permissions: { pos: true, admin: true },
+        pinHash: "hash",
+        salt: "salt",
+        pinLength: 6,
+        mustChangePin: false,
+        active: true,
+      },
+      "staff-kitchen": {
+        id: "staff-kitchen",
+        name: "Kitchen",
+        role: "KITCHEN",
+        permissions: { kitchen: true },
+        pin: "1234",
+        active: false,
+      },
+    });
+  });
+
   it("reports duplicate IDs and never treats the collection as safely migratable", () => {
     const result = normalizeIdKeyedCollection("invMappings", {
-      first: { id: "map-1" },
-      second: { id: "map-1" },
+      first: { id: "map-1", quantity: 1 },
+      second: { id: "map-1", quantity: 2 },
     });
 
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]).toMatchObject({ kind: "duplicate-id", id: "map-1" });
+  });
+
+  it("deduplicates identical legacy copies while preserving the canonical record", () => {
+    const result = normalizeIdKeyedCollection("users", {
+      0: { id: "staff-1", role: "ADMIN", permissions: { admin: true }, pinHash: "hash", salt: "salt" },
+      "staff-1": { id: "staff-1", role: "ADMIN", permissions: { admin: true }, pinHash: "hash", salt: "salt" },
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.deduplicated).toEqual([
+      { firebaseKey: "staff-1", id: "staff-1", canonicalKey: "0" },
+    ]);
+    expect(result.records).toEqual({
+      "staff-1": { id: "staff-1", role: "ADMIN", permissions: { admin: true }, pinHash: "hash", salt: "salt" },
+    });
   });
 
   it("blocks malformed collection values and present-but-invalid IDs", () => {

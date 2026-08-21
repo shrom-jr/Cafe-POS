@@ -1044,10 +1044,30 @@ export async function pushCigaretteProductsToFirebase(products: CigaretteProduct
   }
 }
 
-// Push Staff Users
+export async function writeStaffUserToFirebase(user: StaffUser): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("users");
+    toFirebaseIdRecordMap([user], "users");
+    await set(ref(db, `users/${user.id}`), JSON.parse(JSON.stringify(user)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Staff User Write", error);
+  }
+}
+
+export async function deleteStaffUserFromFirebase(userId: string): Promise<void> {
+  try {
+    await set(ref(db, `users/${userId}`), null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Staff User Delete", error);
+  }
+}
+
+// Upsert Staff Users without ever replacing the /users collection.
 export async function pushStaffToFirebase(users: StaffUser[]) {
   try {
-    await set(ref(db, "users"), JSON.parse(JSON.stringify(users || [])));
+    assertFirebaseCollectionIsSafeToWrite("users");
+    toFirebaseIdRecordMap(users || [], "users");
+    await Promise.all((users || []).map((user) => writeStaffUserToFirebase(user)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Staff Push", error);
   }
@@ -1367,20 +1387,18 @@ export function subscribeToStaff(store: StaffSyncStore) {
       return;
     }
 
-    // Firebase stores arrays as keyed objects ({0: {...}, 1: {...}}) when pushed
-    // as a JS array. Always normalise to a plain array before mapping.
-    const userList: unknown[] = Array.isArray(rawData)
-      ? rawData
-      : Object.values(rawData);
+    const normalized = readFirebaseIdRecords<StaffUser>(rawData, "users");
+    setFirebaseCollectionSchemaSafety("users", normalized.isSafe);
+    if (!normalized.isSafe) {
+      console.error("[Firebase Staff Sync] Staff migration required.", normalized.issues);
+    }
 
     // Normalize each record:
     //  • spread the Firebase object first so any explicit `active` value wins
     //  • default `active` to true when the field is absent (legacy records)
-    const parsedUsers: StaffUser[] = userList
-      .filter(Boolean)
-      .map((u: any) => ({
+    const parsedUsers: StaffUser[] = normalized.entries.map(({ record }) => ({
         active: true,
-        ...u,
+        ...record,
       })) as StaffUser[];
 
     // ── Plaintext-PIN migration ──────────────────────────────────────────────
@@ -1412,7 +1430,7 @@ export function subscribeToStaff(store: StaffSyncStore) {
             return u;
           }),
         );
-        if (didMigrate) {
+        if (didMigrate && normalized.isSafe) {
           // Push sanitised records — zero plaintext pins remain in Firebase.
           await pushStaffToFirebase(migratedUsers);
         }

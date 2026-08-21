@@ -50,6 +50,7 @@ import {
   pushInvMovementsToFirebase,
   pushInvMappingsToFirebase,
   pushStaffToFirebase,
+  deleteStaffUserFromFirebase,
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
@@ -278,6 +279,7 @@ export function useFirebaseSync() {
   const hasLoadedSettings = useRef(false);
   const hasLoadedAreaOrder = useRef(false);
   const hasLoadedStaff = useRef(false);
+  const previousStaffIds = useRef<Set<string> | null>(null);
   const hasLoadedGroceryPurchases = useRef(false);
   const hasLoadedInvMovements = useRef(false);
   const hasLoadedInvMappings = useRef(false);
@@ -596,6 +598,7 @@ export function useFirebaseSync() {
         if (remoteUsers.length === 0 && currentUsers.length > 0) {
           firewallPush("staff", () => pushStaffToFirebase(currentUsers));
           hasLoadedStaff.current = true;
+           previousStaffIds.current = new Set(currentUsers.map((user) => user.id));
           return;
         }
 
@@ -604,6 +607,7 @@ export function useFirebaseSync() {
           setUsers(remoteUsers);
         }
         hasLoadedStaff.current = true;
+         previousStaffIds.current = new Set(remoteUsers.map((user) => user.id));
       },
     });
 
@@ -731,13 +735,22 @@ export function useFirebaseSync() {
   // 16. Push Local Staff Changes to Cloud
   useEffect(() => {
     if (!hasLoadedStaff.current) return;
+    const currentIds = new Set(users.map((user) => user.id));
     if (isRemoteStaffUpdate.current) {
       isRemoteStaffUpdate.current = false;
+      previousStaffIds.current = currentIds;
       return;
     }
     // Never push empty staff list — protects login capability
-    if (users.length === 0) return;
+    if (users.length === 0) {
+      previousStaffIds.current = currentIds;
+      return;
+    }
     pushStaffToFirebase(users);
+    for (const previousId of previousStaffIds.current ?? []) {
+      if (!currentIds.has(previousId)) void deleteStaffUserFromFirebase(previousId);
+    }
+    previousStaffIds.current = currentIds;
   }, [users]);
 
   // 17. Push Local Kitchen Purchases to Cloud
