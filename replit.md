@@ -664,13 +664,20 @@ these paths and for the deprecated menu roots:
    It authenticates, exports only the affected records into an ignored backup
    directory, and writes a detailed comparison report.
 3. Resolve every malformed/duplicate ID and any menu mismatch from the report.
-   The script will not write data when either condition exists.
+   The script will not write data when either condition exists. If the
+   canonical `/menu/*` tree is intentionally authoritative despite differences,
+   use the explicit `--canonical-menu-authoritative` policy only after reviewing
+   the report and backup.
 4. Review the backup and report. Only then run
-   `node scripts/fixDatabaseSchema.mjs --confirm`.
+   `node scripts/fixDatabaseSchema.mjs --confirm` (or add
+   `--canonical-menu-authoritative` for the reviewed policy above).
 5. The confirmed run first creates a backup, atomically writes the normalized
    ID-keyed collections, removes legacy menu roots only when they match the
-   complete canonical `/menu/*` data, and rereads the database to verify every
-   affected path.
+   complete canonical `/menu/*` data (unless the explicit authoritative policy
+   was selected), and rereads the database to verify every affected path.
+   Firebase ETag protection aborts the write if any database change occurs
+   between the report snapshot and the migration PATCH; rerun the dry run after
+   resolving that conflict.
 
 The retired `scripts/wipeMenu.mjs` deliberately performs no deletion. Do not
 use it to reset menu or inventory data. The migration script never touches
