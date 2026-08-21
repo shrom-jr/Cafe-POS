@@ -1,0 +1,55 @@
+Act as a Principal Full-Stack Engineer and Firebase Database Architect.
+
+We need to implement the final 4 enterprise-grade optimizations to future-proof our restaurant POS (React 18 + Vite + Zustand + Firebase Realtime Database). All changes must be fully backward-compatible, pass dry-runs, preserve active restaurant data, and maintain 100% test coverage.
+
+Note on Firebase Security Rules: Keep `.read: true, .write: true` at the root for now so active staff PIN logins continue working seamlessly, but configure all matching `.indexOn` query paths and write constraints in a root `database.rules.json` file.
+
+---
+
+### 1. OPTIMIZE `/settings` & REMOVE BASE64 IMAGE BLOAT
+- Issue: `/settings` stores large base64 image strings (`cafeLogo`, `logo`, `logoUrl`) directly in the database, causing payload bloat whenever bill counters or general settings are modified.
+- Implementation:
+  a) Ensure static/default logos are referenced by static asset paths (e.g. `/logo.webp` in `/public`) or clean URL strings rather than storing multi-kilobyte base64 payloads inside `/settings`.
+  b) Update `src/store/usePOSStore.ts`, `src/utils/firebaseSync.ts`, and receipt print components (`src/utils/printEngine.ts`) to handle static URLs and clean string paths seamlessly.
+  c) Sanitize `/settings` in Firebase during migration to replace heavy base64 strings with lightweight paths.
+
+---
+
+### 2. CONVERT `/menu` TO ID-KEYED OBJECTS (INSTANT 86-ING & TARGETED WRITES)
+- Issue: `/menu/categories` and `/menu/items` are stored as numeric arrays (`0`, `1`, `2`...). Toggling item availability (`available: false`) during service currently rewrites array segments.
+- Implementation:
+  a) Update schema and sync layer so `/menu/categories` is keyed by category ID (`/menu/categories/{categoryId}`) and `/menu/items` is keyed by item ID (`/menu/items/{itemId}`).
+  b) Update `src/utils/firebaseSync.ts` and store normalization so menu readers normalize incoming ID-keyed objects into sorted arrays (preserving category order and item display sequence) for UI consumption.
+  c) Update item availability toggles (86-ing) in Admin/POS to execute targeted atomic updates (`update(ref(db, "menu/items/" + itemId), { available })`).
+  d) Extend our migration script (`scripts/fixDatabaseSchema.mjs` or dedicated menu migration command) to safely convert live numeric menu arrays to ID-keyed objects while preserving all 352 items, 18 categories, and 4 pillars.
+
+---
+
+### 3. SCOPE ACTIVE FLOOR ORDER SUBSCRIPTIONS & QUERY OPTIMIZATION
+- Issue: Subscribing to the root `/orders` node loads all historical orders into memory on startup instead of focusing on active floor tables.
+- Implementation:
+  a) Review `src/hooks/useFirebaseSync.ts` and `src/utils/firebaseSync.ts`.
+  b) Ensure POS table overview subscriptions prioritize active floor orders (e.g., querying open/placed/billing orders so historical paid orders do not bloat startup bandwidth).
+  c) Ensure bill and sales history flows continue using `/payments` as the authoritative sales ledger without breaking reporting.
+
+---
+
+### 4. CREATE DATABASE RULES & INDEXING (`database.rules.json`)
+- Implementation:
+  a) Create `database.rules.json` in the project root.
+  b) Define `.indexOn` rules for high-frequency lookup paths:
+     - `/orders`: `["tableId", "status", "createdAt"]`
+     - `/payments`: `["createdAt", "billNumber", "customerId", "orderId", "method"]`
+     - `/kitchenPurchases`: `["date", "category"]`
+     - `/invMappings`: `["menuItemId", "productId"]`
+     - `/customers`: `["phone"]`
+     - `/tables`: `["status"]`
+  c) Keep `.read: true, .write: true` for the root while specifying the index rules above so current staff logins operate without disruption.
+
+---
+
+### 5. SAFETY & VERIFICATION PLAN
+1. Run dry-run migration checks before modifying any live Firebase data.
+2. Run `npm test` to ensure all existing test suites (70+ tests) pass.
+3. Run `npm run build` to verify zero TypeScript compilation errors.
+4. Verify the Vite dev server and preview restart cleanly with zero runtime console errors.
