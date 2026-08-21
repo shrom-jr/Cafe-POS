@@ -18,7 +18,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { useFirebaseSync } from '@/hooks/useFirebaseSync';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { subscribeToStaff } from '@/utils/firebaseSync';
-import { subscribeToCustomers, writeCustomer, writeCustomersToFirebase, type FirebaseCustomerRecord, subscribeToTables } from '@/utils/firebaseSync';
+import { subscribeToCustomers, writeCustomer, subscribeToTables } from '@/utils/firebaseSync';
 import { ensureVenueSeed } from '@/utils/venueSeed';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { usePOSStore } from '@/store/usePOSStore';
@@ -115,30 +115,15 @@ const App = () => {
   }, [orders, firebaseAuthReady]);
 
   // Customer balances and repayment ledgers are shared across all POS devices.
-  // Keep localStorage as the offline fallback, and seed Firebase once when the
-  // new node is empty so existing local customer history is not discarded.
+  // Firebase is authoritative: an empty remote collection, including one just
+  // cleared by a factory reset, must never be repopulated from a stale browser
+  // cache.
   useEffect(() => {
     if (!firebaseAuthReady) return;
-    let seedingLocalCustomers = false;
-    let hasReceivedRemoteSnapshot = false;
 
     const unsubscribe = subscribeToCustomers(
       (remoteCustomers) => {
         const localState = useCustomerStore.getState();
-        if (!hasReceivedRemoteSnapshot && remoteCustomers.length === 0 && localState.customers.length > 0) {
-          if (seedingLocalCustomers) return;
-          seedingLocalCustomers = true;
-          const records: FirebaseCustomerRecord[] = localState.customers.map((customer) => ({
-            ...customer,
-            repayments: localState.repayments.filter((repayment) => repayment.customerId === customer.id),
-          }));
-          void writeCustomersToFirebase(records).finally(() => {
-            seedingLocalCustomers = false;
-          });
-          return;
-        }
-
-        hasReceivedRemoteSnapshot = true;
         localState.hydrateFromFirebase(remoteCustomers);
       },
       (error) => {

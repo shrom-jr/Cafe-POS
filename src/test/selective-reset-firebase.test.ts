@@ -30,7 +30,10 @@ const firebaseMocks = vi.hoisted(() => {
     ref: vi.fn((_database: unknown, path?: string) => path ?? '__root__'),
     update: vi.fn(() => Promise.resolve()),
     set: vi.fn(() => Promise.resolve()),
-    onValue: vi.fn(() => () => undefined),
+    onValue: vi.fn((path: string, callback: (snapshot: { val: () => unknown }) => void) => {
+      callback({ val: () => data[path] });
+      return () => undefined;
+    }),
     runTransaction: vi.fn(async (path: string, updater: (root: unknown) => unknown) => {
       const currentValue = path === '__root__' ? buildRoot() : structuredClone(data[path] ?? null);
       const result = updater(currentValue) as Record<string, unknown>;
@@ -57,6 +60,7 @@ import {
   canWriteFirebaseCollection,
   pushInvMappingsToFirebase,
   setFirebaseCollectionSchemaSafety,
+  subscribeToSelectiveResetMarkers,
   writeCustomer,
   writeOrderTableMutation,
   writePaymentRecord,
@@ -142,6 +146,7 @@ describe('Firebase selective reset allowlist', () => {
     expect(root.settings.kotLastResetDate).toBeUndefined();
     expect(root.resetMarkers.salesHistory).toMatchObject({ syncRevision: expect.any(Number) });
     expect(root.resetMarkers.activeFloor).toMatchObject({ syncRevision: expect.any(Number) });
+    expect(root.resetMarkers.customerCredit).toMatchObject({ syncRevision: expect.any(Number) });
     expect(root.tables.tableKey).toMatchObject({
       id: 'table-1',
       number: 'Garden 1',
@@ -428,7 +433,8 @@ describe('Firebase selective reset allowlist', () => {
   });
 
   it('sanitizes a stale customer-credit write against its durable reset marker', async () => {
-    firebaseMocks.data['customerCreditResetTombstones/customer-1'] = {
+    subscribeToSelectiveResetMarkers();
+    firebaseMocks.data['resetMarkers/customerCredit'] = {
       syncRevision: 2000,
       syncMutationId: 'reset',
     };
@@ -452,6 +458,7 @@ describe('Firebase selective reset allowlist', () => {
     });
 
     expect(firebaseMocks.update).not.toHaveBeenCalled();
+    expect(firebaseMocks.runTransaction).not.toHaveBeenCalled();
   });
 
   it('refuses a full collection write after a malformed snapshot is detected', async () => {

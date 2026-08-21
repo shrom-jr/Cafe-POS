@@ -60,6 +60,8 @@ type StaffSyncStore = {
 /** Customer records are stored with their repayment ledger under one Firebase key. */
 export type FirebaseCustomerRecord = Customer & {
   repayments: CustomerRepayment[];
+  /** Reset generation that authorized this record to be written. */
+  customerCreditResetGeneration?: string;
 };
 
 // Safely converts Firebase keyed objects/arrays/nulls into clean JavaScript arrays
@@ -165,38 +167,57 @@ function customerAfterCreditResetMarker(
  */
 export async function writeCustomer(customerData: FirebaseCustomerRecord) {
   try {
-    await runTransaction(ref(db), (currentData) => {
-      const root = cloneFirebaseRoot(currentData);
-      const marker = root.customerCreditResetTombstones?.[customerData.id] as
-        | SyncMutation
-        | undefined;
-      const safeCustomer = customerAfterCreditResetMarker(customerData, marker);
-      const customers = toFirebaseRecordMap(root.customers);
-      customers[recordKeyForId(customers, customerData.id)] = recordData(safeCustomer);
-      assignFirebaseCollection(root, "customers", customers);
-      return root;
-    }, { applyLocally: false });
+    const markersWereHydrated = isSelectiveResetMarkersHydrated();
+    await ensureResetMarkersHydrated();
+    // Fail closed while this client is still learning the current generation.
+    // Otherwise, a stale cached customer could be written during startup after
+    // another terminal has already reset the customer directory.
+    if (!markersWereHydrated) return;
+
+    const expectedGeneration =
+      getObservedResetGeneration("customerCredit") ?? BASELINE_RESET_GENERATION;
+    const latestMarker = (await get(ref(db, "resetMarkers/customerCredit"))).val() as
+      | SyncMutation
+      | undefined;
+    if (expectedGeneration !== resetGeneration(latestMarker)) return;
+
+    await update(ref(db), {
+      [`customers/${customerData.id}`]: recordData({
+        ...customerAfterCreditResetMarker(customerData, undefined),
+        customerCreditResetGeneration: expectedGeneration,
+      }),
+    });
   } catch (error) {
     logStructuredFirebaseError("Firebase Customer Write", error);
   }
 }
 
-/** Seed or replace the complete customer collection during initial sync. */
+/** Write customer records only when this terminal has the current reset generation. */
 export async function writeCustomersToFirebase(customers: FirebaseCustomerRecord[]) {
   try {
-    await runTransaction(ref(db), (currentData) => {
-      const root = cloneFirebaseRoot(currentData);
-      const markers = (root.customerCreditResetTombstones ?? {}) as Record<string, SyncMutation>;
-      const records = customers.reduce<Record<string, FirebaseCustomerRecord>>((result, customer) => {
-        result[customer.id] = customerAfterCreditResetMarker(
-          customer,
-          markers[customer.id],
-        );
-        return result;
-      }, {});
-      assignFirebaseCollection(root, "customers", records);
-      return root;
-    }, { applyLocally: false });
+    const markersWereHydrated = isSelectiveResetMarkersHydrated();
+    await ensureResetMarkersHydrated();
+    if (!markersWereHydrated) return;
+
+    const expectedGeneration =
+      getObservedResetGeneration("customerCredit") ?? BASELINE_RESET_GENERATION;
+    const latestMarker = (await get(ref(db, "resetMarkers/customerCredit"))).val() as
+      | SyncMutation
+      | undefined;
+    if (expectedGeneration !== resetGeneration(latestMarker)) return;
+
+    const updates = Object.fromEntries(
+      customers.map((customer) => [
+        `customers/${customer.id}`,
+        recordData({
+          ...customerAfterCreditResetMarker(customer, undefined),
+          customerCreditResetGeneration: expectedGeneration,
+        }),
+      ]),
+    );
+    if (Object.keys(updates).length > 0) {
+      await update(ref(db), updates);
+    }
   } catch (error) {
     logStructuredFirebaseError("Firebase Customers Write", error);
   }
@@ -220,12 +241,14 @@ export function subscribeToCustomers(
 ) {
   try {
     let rawCustomers: unknown = null;
-    let resetMarkers: Record<string, SyncMutation> = {};
+    let legacyResetMarkers: Record<string, SyncMutation> = {};
+    let customerCreditReset: SyncMutation | undefined;
     let customersReady = false;
-    let markersReady = false;
+    let legacyMarkersReady = false;
+    let customerCreditResetReady = false;
 
     const emit = () => {
-      if (!customersReady || !markersReady) return;
+      if (!customersReady || !legacyMarkersReady || !customerCreditResetReady) return;
       const records = toFirebaseEntries(rawCustomers).map(([firebaseKey, record]) => {
         const id = typeof record.id === "string" ? record.id : firebaseKey;
         return {
@@ -239,8 +262,15 @@ export function subscribeToCustomers(
       });
 
       const repairs: Record<string, unknown> = {};
-      const safeRecords = records.map(({ firebaseKey, record }) => {
-        const marker = resetMarkers[record.id];
+      const safeRecords = records.flatMap(({ firebaseKey, record }) => {
+        const recordGeneration =
+          record.customerCreditResetGeneration ?? BASELINE_RESET_GENERATION;
+        if (recordGeneration !== resetGeneration(customerCreditReset)) {
+          repairs[`customers/${firebaseKey}`] = null;
+          return [];
+        }
+
+        const marker = legacyResetMarkers[record.id];
         const safeRecord = customerAfterCreditResetMarker(record, marker);
         if (safeRecord !== record && marker) {
           repairs[`customers/${firebaseKey}/currentDue`] = 0;
@@ -248,7 +278,7 @@ export function subscribeToCustomers(
           repairs[`customers/${firebaseKey}/creditResetRevision`] = marker.syncRevision;
           repairs[`customers/${firebaseKey}/creditResetMutationId`] = marker.syncMutationId;
         }
-        return safeRecord;
+        return [safeRecord];
       });
 
       callback(safeRecords);
@@ -279,8 +309,8 @@ export function subscribeToCustomers(
     const unsubscribeMarkers = onValue(
       ref(db, "customerCreditResetTombstones"),
       (snapshot) => {
-        resetMarkers = snapshot.val() ?? {};
-        markersReady = true;
+        legacyResetMarkers = snapshot.val() ?? {};
+        legacyMarkersReady = true;
         emit();
       },
       (error) => {
@@ -288,9 +318,22 @@ export function subscribeToCustomers(
         onError?.(error);
       },
     );
+    const unsubscribeCustomerCreditReset = onValue(
+      ref(db, "resetMarkers/customerCredit"),
+      (snapshot) => {
+        customerCreditReset = snapshot.val() ?? undefined;
+        customerCreditResetReady = true;
+        emit();
+      },
+      (error) => {
+        logStructuredFirebaseError("Firebase Customer Credit Reset Listener", error);
+        onError?.(error);
+      },
+    );
     return () => {
       unsubscribeCustomers();
       unsubscribeMarkers();
+      unsubscribeCustomerCreditReset();
     };
   } catch (error) {
     logStructuredFirebaseError("Firebase Customer Subscription", error);
