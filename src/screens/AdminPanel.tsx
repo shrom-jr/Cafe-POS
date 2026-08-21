@@ -17,6 +17,7 @@ import { useInventoryStore } from '@/store/useInventoryStore';
 import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
 import { db } from '@/storage/db';
 import type { ClosedShift } from '@/storage/db';
+import type { StaffUser } from '@/types/staff';
 import { toast } from 'sonner';
 import {
   BarChart3, CreditCard, Table2, TrendingUp,
@@ -54,6 +55,32 @@ import { executeSelectiveReset } from '@/utils/selectiveReset';
 
 type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'stock' | 'printers' | 'staff' | 'data-management';
+
+export async function validateAdminPin(
+  pin: string,
+  staffUsers: StaffUser[],
+): Promise<boolean> {
+  const activeAdmins = staffUsers.filter((user) => user.active && user.role === 'ADMIN');
+  for (const user of activeAdmins) {
+    if (user.pinHash && user.salt) {
+      if (await verifyPin(pin, user.pinHash, user.salt)) return true;
+    } else if (user.pin !== undefined && user.pin === pin) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function authorizeAndExecuteSelectiveReset(
+  pin: string,
+  staffUsers: StaffUser[],
+  selection: SelectiveResetSelection,
+  reset = executeSelectiveReset,
+): Promise<boolean> {
+  if (!(await validateAdminPin(pin, staffUsers))) return false;
+  await reset(selection);
+  return true;
+}
 
 const SIDEBAR_BG = 'linear-gradient(180deg, #080f1e 0%, #040a14 100%)';
 const ACTIVE_STYLE = {
@@ -1701,6 +1728,7 @@ const CompanyProfileSection = () => {
 // ── DATA MANAGEMENT ────────────────────────────────────────────────────────
 const DataManagementSection = () => {
   const settings = usePOSStore((s) => s.settings);
+  const staffUsers = useStaffStore((s) => s.users);
 
   // Live Zustand state injected into the backup payload
   const maintenanceExpenses = useMaintenanceStore((s) => s.expenses);
@@ -1765,15 +1793,7 @@ const DataManagementSection = () => {
 
   const handleDMPinNext = async () => {
     // Verify against any active admin staff account (hashed + legacy plaintext fallback)
-    const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN' && u.active);
-    let valid = false;
-    for (const u of adminUsers) {
-      if (u.pinHash && u.salt) {
-        if (await verifyPin(dmPin, u.pinHash, u.salt)) { valid = true; break; }
-      } else if (u.pin !== undefined) {
-        if (u.pin === dmPin) { valid = true; break; }
-      }
-    }
+    const valid = await validateAdminPin(dmPin, staffUsers);
     if (valid) { setDmPinError(false); setDmStep('confirm'); }
     else setDmPinError(true);
   };
@@ -1803,15 +1823,12 @@ const DataManagementSection = () => {
     }
 
     if (dmAction === 'reset') {
-      const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN' && u.active);
-      let pinValid = false;
-      for (const u of adminUsers) {
-        if (u.pinHash && u.salt) {
-          if (await verifyPin(dmPin, u.pinHash, u.salt)) { pinValid = true; break; }
-        } else if (u.pin !== undefined) {
-          if (u.pin === dmPin) { pinValid = true; break; }
-        }
-      }
+      const pinValid = await authorizeAndExecuteSelectiveReset(
+        dmPin,
+        staffUsers,
+        dmSelection,
+        async () => undefined,
+      );
       if (!pinValid) { setDmPinError(true); return; }
     }
     setDmWorking(true);
@@ -1825,7 +1842,14 @@ const DataManagementSection = () => {
         if (!result.success) { toast.error(`Restore failed: ${result.error ?? 'Unknown error'}`); setDmWorking(false); return; }
         toast.success(`Backup restored (Schema v${result.version}). Reloading…`);
       } else {
-        await executeSelectiveReset(dmSelection);
+        // PIN authorization is repeated immediately before the destructive
+        // operation, protecting against a stale modal state.
+        const authorized = await authorizeAndExecuteSelectiveReset(dmPin, staffUsers, dmSelection);
+        if (!authorized) {
+          setDmPinError(true);
+          setDmWorking(false);
+          return;
+        }
         toast.success('Selected transaction data cleared. Reloading…');
       }
       setTimeout(() => window.location.reload(), 1400);
@@ -2088,7 +2112,7 @@ const DataManagementSection = () => {
              {dmAction === 'restore' && dmStep === 'pin' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Enter Master Admin PIN</label>
+                   <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-2 block">Enter Admin PIN</label>
                   <input
                     type="password" inputMode="numeric" maxLength={8} autoFocus
                     value={dmPin}
@@ -2130,7 +2154,7 @@ const DataManagementSection = () => {
                 )}
                  {dmAction === 'reset' && (
                    <div>
-                     <label className="mb-2 block text-xs font-black uppercase tracking-wider text-amber-400">Master Admin PIN</label>
+                      <label className="mb-2 block text-xs font-black uppercase tracking-wider text-amber-400">Admin PIN</label>
                      <input
                        type="password" inputMode="numeric" maxLength={8} value={dmPin}
                        onChange={(e) => { setDmPin(e.target.value); setDmPinError(false); }}
