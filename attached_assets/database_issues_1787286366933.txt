@@ -17,3 +17,11 @@ Please fix the following database structure issues found in our Firebase Realtim
 - Update `src/utils/firebaseSync.ts` and all store files so they normalize data properly, avoid array writes to Firebase, and strictly follow the UUID-keyed structure.
 - Run `npm test` and `npm run build` to verify that all tests pass with zero errors.
 
+5. Bounded Testing and Execution Rules:
+- Do not repeatedly rerun tests, builds, migrations, or workspace scans without a new failure or a code change that requires verification.
+- Run each required validation command once after implementation: `npm test`, `npm run build`, and `git diff --check`.
+- If a command fails, investigate and make one targeted fix, then rerun only the failed command once. If it fails again, stop and report the exact error instead of continuing retries.
+- Do not run the live Firebase migration automatically. First create a dry-run report and backup/export, then stop and ask for explicit approval before any destructive live-database write or deletion.
+- Do not use broad repeated polling, stress tests, or unnecessary browser checks. Keep verification focused on the listed requirements.
+- At the end, report exactly which commands were run, how many times each was run, and any unresolved issue. Do not claim success for checks that were not executed.
+
