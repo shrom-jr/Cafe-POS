@@ -1,0 +1,108 @@
+Please audit and correct the Firebase Realtime Database schema issues described below. Do not delete or overwrite live data until the migration has produced a dry-run report, validated all records, and created a backup/export.
+
+## 1. Normalize payment records
+
+Current issue:
+- `/payments` contains legacy numeric keys such as `0`, `1`, `2`, while newer records use UUID keys.
+- Some legacy code still writes the entire payment collection as an array.
+
+Requirements:
+- Inspect every record under `/payments`.
+- Use the existing internal `payment.id` as the canonical Firebase key whenever it is valid.
+- Generate and assign a UUID only for records with no valid ID.
+- Detect duplicate IDs and stop with a report instead of silently overwriting data.
+- Preserve all payment fields and records.
+- Write canonical records to `/payments/{payment.id}`.
+- Verify the canonical records before deleting legacy numeric keys.
+- Remove or refactor all application writers that write `/payments` as an array.
+- Keep the payment reader backward-compatible with legacy records during migration.
+- Add tests for numeric keys, duplicate IDs, missing IDs, retry behavior, and mixed legacy/canonical data.
+
+## 2. Remove deprecated root menu collections
+
+Canonical paths are:
+
+- `/menu/pillars`
+- `/menu/categories`
+- `/menu/items`
+
+Deprecated paths are:
+
+- `/pillars`
+- `/categories`
+- `/menuItems`
+
+Requirements:
+- Search the entire codebase and scripts for reads or writes to the deprecated paths.
+- Confirm that the canonical `/menu` data is complete before deleting anything.
+- Compare records by ID and report differences.
+- Create a backup/export of all deprecated data.
+- Delete the deprecated root paths only after validation succeeds.
+- Ensure all menu writes use the canonical `/menu/*` paths.
+- Do not modify orders, tables, payments, customers, staff, inventory, or settings during this menu migration.
+
+## 3. Normalize inventory collections
+
+Target paths:
+
+- `/alcoholProducts`
+- `/beverageProducts`
+- `/cigaretteProducts`
+- `/invMappings`
+
+Canonical format:
+
+- `/alcoholProducts/{productId}`
+- `/beverageProducts/{productId}`
+- `/cigaretteProducts/{productId}`
+- `/invMappings/{mappingId}`
+
+Requirements:
+- Convert existing arrays and numeric-keyed records into ID-keyed objects.
+- Use each record's internal `id` as the Firebase key.
+- Generate IDs only for records that do not have valid IDs.
+- Detect duplicate IDs and stop safely with a report.
+- Preserve all record fields and inventory quantities exactly.
+- Update all inventory readers, writers, subscriptions, reset logic, seed scripts, and stores so they write objects and read both objects and legacy arrays during the transition.
+- Ensure Firebase remains the inventory source of truth.
+- Ensure inventory is never restored from localStorage as a master copy.
+- Ensure stock deductions, void restoration, mappings, and negative-stock behavior continue to work.
+- Add migration and synchronization tests for array input, object input, duplicate IDs, resets, stock deduction, and void restoration.
+
+## 4. Migration tooling and safety
+
+Create a Node-compatible migration script, for example:
+
+`scripts/fixDatabaseSchema.mjs`
+
+The script must:
+
+- Use the project's existing Firebase database configuration through a secure Node-compatible method.
+- Never print secrets or credentials.
+- Support `--dry-run`.
+- Produce a detailed migration report.
+- Create or require a backup before destructive changes.
+- Use atomic multi-location updates where safe.
+- Be idempotent and safe to retry.
+- Refuse to overwrite conflicting records.
+- Require explicit confirmation before deleting legacy paths or keys.
+- Verify the final structure after migration.
+
+Do not execute destructive live-database changes without confirming the dry-run report first.
+
+## Bounded Testing and Execution Rules
+
+- Do not repeatedly rerun tests, builds, migrations, or workspace scans without a new failure or a code change that requires verification.
+- Run each required validation command once after implementation:
+  - npm test
+  - npm run build
+  - git diff --check
+
+- If a command fails, make one targeted fix and rerun only that failed command once.
+- If it fails again, stop and report the exact error instead of continuing retries.
+- Do not run the live Firebase migration automatically.
+- First create a dry-run report and backup/export, then stop and ask for explicit approval before destructive live-database changes.
+- Do not use broad repeated polling, stress tests, or unnecessary browser checks.
+- Report exactly which commands were run, how many times, and any unresolved issues.
+
+Update the project documentation with the final schema and migration result.
