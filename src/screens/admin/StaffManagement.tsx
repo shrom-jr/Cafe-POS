@@ -42,7 +42,17 @@ const MANAGEMENT_PERMISSIONS: PermissionConfig[] = [
 ];
 const ALL_PERMISSIONS = [...OPERATIONAL_PERMISSIONS, ...MANAGEMENT_PERMISSIONS];
 
-const inputCls = 'w-full bg-slate-900/90 border border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors';
+const inputCls = 'w-full bg-[#1E293B] border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors';
+const labelCls = 'text-xs font-bold uppercase tracking-wider text-slate-200 mb-1.5 block';
+
+const ACTIVE_ROLE_CLS: Record<Role, string> = {
+  WAITER:  'bg-emerald-600 border border-emerald-400 text-white font-bold shadow-lg shadow-emerald-600/30',
+  CASHIER: 'bg-blue-600 border border-blue-400 text-white font-bold shadow-lg shadow-blue-600/30',
+  KITCHEN: 'bg-orange-600 border border-orange-400 text-white font-bold shadow-lg shadow-orange-600/30',
+  MANAGER: 'bg-cyan-600 border border-cyan-400 text-white font-bold shadow-lg shadow-cyan-600/30',
+  ADMIN:   'bg-purple-600 border border-purple-400 text-white font-bold shadow-lg shadow-purple-600/30',
+};
+const INACTIVE_ROLE_CLS = 'w-full py-2.5 px-3 rounded-xl bg-slate-800/90 border border-slate-600 text-slate-200 font-semibold text-xs text-center hover:bg-slate-700 hover:text-white transition-all shadow-sm';
 
 // ── Add / Edit Modal ─────────────────────────────────────────────────────────
 const StaffModal = ({
@@ -101,199 +111,224 @@ const StaffModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-       <div className="max-w-4xl w-full p-7 rounded-2xl bg-[#0F172A] border border-slate-800 shadow-2xl text-white relative flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-           <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
-           <button onClick={onClose} className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all">
+    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl bg-[#0F172A] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 text-white">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-white tracking-wide">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
             <X size={16} />
           </button>
         </div>
 
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         <div className="space-y-3.5">
-          {/* Name */}
-          <div>
-             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">Full Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sita Thapa" className={inputCls} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* Email */}
-          <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
-              Email <span className="text-red-400">*</span>
-            </label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              placeholder="e.g. sita@example.com"
-              className={inputCls}
-              autoComplete="off"
-            />
-          </div>
+          {/* ── Left column ── */}
+          <div className="space-y-4">
 
-          {/* Role — quick presets */}
-          <div>
-             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
-              Role <span className="text-[#CBD5E1] font-normal">(sets default permissions)</span>
-            </label>
-            <div className="grid grid-cols-6 gap-2">
-              {ROLES.map((r, index) => {
-                const c = ROLE_COLORS[r];
-                const isActive = role === r;
-                return (
+            {/* Name */}
+            <div>
+              <label className={labelCls}>Full Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Sita Thapa"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className={labelCls}>
+                Email <span className="text-red-400 normal-case font-normal">*</span>
+              </label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="e.g. sita@example.com"
+                className={inputCls}
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className={labelCls}>
+                Role{' '}
+                <span className="normal-case font-normal text-slate-400">(sets default permissions)</span>
+              </label>
+              {/* Row 1: Waiter · Cashier · Kitchen */}
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {(['WAITER', 'CASHIER', 'KITCHEN'] as Role[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => handleRoleSelect(r)}
-                     className={`py-2 rounded-xl text-sm font-medium transition-colors active:scale-95 ${
-                      index < 3 ? 'col-span-2' : 'col-span-3'
-                    }`}
-                    style={isActive
-                      ? { background: c.bg, border: `1px solid ${c.border}`, color: c.text }
-                       : undefined
-                    }
+                    className={role === r
+                      ? `w-full py-2.5 px-3 rounded-xl text-xs transition-all ${ACTIVE_ROLE_CLS[r]}`
+                      : INACTIVE_ROLE_CLS}
                   >
                     {ROLE_LABEL[r]}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              {/* Row 2: Manager · Admin */}
+              <div className="grid grid-cols-2 gap-2">
+                {(['MANAGER', 'ADMIN'] as Role[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => handleRoleSelect(r)}
+                    className={role === r
+                      ? `w-full py-2.5 px-3 rounded-xl text-xs transition-all ${ACTIVE_ROLE_CLS[r]}`
+                      : INACTIVE_ROLE_CLS}
+                  >
+                    {ROLE_LABEL[r]}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* PIN */}
+            <div>
+              <label className={labelCls}>
+                6-Digit PIN
+                {isEdit && <span className="normal-case font-normal text-slate-400 ml-1">(leave blank to keep)</span>}
+              </label>
+              <div className="relative">
+                <input
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  type={showPin ? 'text' : 'password'}
+                  inputMode="numeric"
+                  placeholder="••••••"
+                  maxLength={6}
+                  className={`${inputCls} pr-10 tracking-[0.4em] text-center`}
+                />
+                <button
+                  onClick={() => setShowPin((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  {showPin ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Active toggle (edit only) */}
+            {isEdit && (
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#1E293B] border border-slate-600">
+                <p className="text-sm font-semibold text-slate-200">Active</p>
+                <button
+                  onClick={() => { if (canDeactivate) setActive((v) => !v); }}
+                  title={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
+                  aria-label={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
+                  disabled={!canDeactivate}
+                  className={`w-10 h-6 rounded-full transition-all relative border-2 ${active ? 'bg-amber-500 border-amber-400 shadow-md shadow-amber-500/30' : 'bg-slate-700 border-slate-600'} disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  <span
+                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                    style={{ left: active ? '18px' : '2px' }}
+                  />
+                </button>
+              </div>
+            )}
           </div>
 
-           </div>
-
-            {/* Feature Permissions */}
+          {/* ── Right column: permissions / preset / admin ── */}
           <div>
-             <div className="flex items-center justify-between mb-2">
-               <label className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
-                 Feature Permissions
-               </label>
-               <span className="text-[11px] text-[#CBD5E1]">Choose access</span>
-             </div>
-              {role === 'MANAGER' ? (
-                <div className="space-y-4">
-                  {[
-                    { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
-                    { title: 'Management & Hardware', items: MANAGEMENT_PERMISSIONS },
-                  ].map(({ title, items }) => (
-                    <div key={title} className="space-y-2">
-                       <h4 className="text-amber-400/90 font-bold text-xs tracking-wider uppercase mb-2 block">{title}</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {items.map(({ key, label }) => {
-                          const checked = perms[key] === true;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => togglePerm(key)}
-                               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                                checked
-                                   ? 'bg-amber-500/10 border-amber-500/50 text-white font-medium'
-                                   : 'bg-slate-900/60 border-slate-700/80 text-slate-300 hover:border-slate-500 hover:text-white font-normal'
-                              } active:scale-[0.98]`}
-                            >
-                              <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
-                                 checked ? 'bg-amber-500/20 border border-amber-400' : 'bg-transparent border border-slate-500'
-                              }`}>
-                                {checked && (
-                                   <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                                     <path d="M1 3.5L3.5 6L8 1" stroke="#FBBF24" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                )}
-                              </span>
-                              <span className="text-[13px] text-left">{label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Feature Permissions</span>
+              <span className="text-[11px] text-slate-400">Choose access</span>
+            </div>
+
+            {role === 'MANAGER' ? (
+              <div className="space-y-4">
+                {[
+                  { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
+                  { title: 'Management & Hardware', items: MANAGEMENT_PERMISSIONS },
+                ].map(({ title, items }) => (
+                  <div key={title}>
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2 block">{title}</span>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {items.map(({ key, label }) => {
+                        const checked = perms[key] === true;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => togglePerm(key)}
+                            className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                              checked
+                                ? 'bg-cyan-950/40 border-cyan-400 text-white text-xs font-semibold shadow-sm'
+                                : 'bg-slate-800/60 border-slate-600/80 text-slate-200 hover:border-slate-400 hover:text-white text-xs font-medium'
+                            }`}
+                          >
+                            <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border ${
+                              checked ? 'bg-cyan-500/30 border-cyan-400' : 'bg-transparent border-slate-500'
+                            }`}>
+                              {checked && (
+                                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                  <path d="M1 3.5L3.5 6L8 1" stroke="#22D3EE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </span>
+                            <span className="text-left leading-tight">{label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+                ))}
+              </div>
+
+            ) : role === 'ADMIN' ? (
+              <div className="bg-purple-950/40 border border-purple-500/50 rounded-xl p-5 mt-2">
+                <p className="text-sm font-bold text-purple-200 uppercase tracking-wider mb-1">Master Administrator</p>
+                <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                  Full unrestricted master access: complete control over all floor portals, management views,
+                  hardware/printers, company tax &amp; VAT settings, staff management, and system data resets.
+                </p>
+                <span className="px-2.5 py-1 rounded-lg bg-purple-900 border border-purple-400 text-purple-200 font-bold text-xs">
+                  Locked Full Access
+                </span>
+              </div>
+
+            ) : (
+              <div className="bg-[#1E293B] border border-slate-600 rounded-xl p-5 mt-2">
+                <p className="text-sm font-bold text-white uppercase tracking-wider mb-1">Role Access Preset</p>
+                <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                  {role === 'WAITER'  && 'POS & Floor Tables access for taking orders and managing assigned tables.'}
+                  {role === 'CASHIER' && 'POS & Table Billing plus Customer Directory access for payments and khata.'}
+                  {role === 'KITCHEN' && 'Kitchen Portal access for preparing and completing kitchen orders.'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {OPERATIONAL_PERMISSIONS.filter(({ key }) => perms[key] === true).map(({ badge }) => (
+                    <span key={badge} className="px-2.5 py-1 rounded-lg bg-slate-700 border border-slate-500 text-slate-100 font-bold text-xs">
+                      {badge}
+                    </span>
                   ))}
                 </div>
-              ) : role === 'ADMIN' ? (
-                 <div className="rounded-xl bg-purple-950/30 border border-purple-500/40 text-purple-100 p-4">
-                   <p className="text-purple-300 font-bold text-sm uppercase tracking-wide">Master Administrator</p>
-                   <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                    Full Unrestricted Master Access: Complete control over all floor portals, management views,
-                    hardware/printers, company tax &amp; VAT settings, staff management, and system data resets.
-                  </p>
-                   <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Locked full access</p>
-                </div>
-              ) : (
-                 <div className="bg-slate-900/80 border border-slate-700 text-slate-200 rounded-xl p-4">
-                   <p className="text-slate-100 font-bold text-sm uppercase tracking-wide">Role Access Preset</p>
-                   <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                    {role === 'WAITER' && 'POS & Floor Tables access for taking orders and managing assigned tables.'}
-                    {role === 'CASHIER' && 'POS & Table Billing plus Customer Directory access for payments and khata.'}
-                    {role === 'KITCHEN' && 'Kitchen Portal access for preparing and completing kitchen orders.'}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {OPERATIONAL_PERMISSIONS.filter(({ key }) => perms[key] === true).map(({ badge }) => (
-                      <span key={badge} className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-200">{badge}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
           </div>
+        </div>
 
-           {/* PIN */}
-          <div>
-             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
-               6-Digit PIN{isEdit && <span className="text-[#CBD5E1] font-normal ml-1">(leave blank to keep)</span>}
-             </label>
-            <div className="relative">
-              <input
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                type={showPin ? 'text' : 'password'}
-                inputMode="numeric"
-                placeholder="••••••"
-                maxLength={6}
-                className={`${inputCls} pr-10 tracking-[0.4em] text-center`}
-              />
-              <button
-                onClick={() => setShowPin((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
-              >
-                {showPin ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
-
-           {/* Active toggle (edit only) */}
-          {isEdit && (
-             <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
-               <p className="text-sm font-black text-white">Active</p>
-              <button
-                 onClick={() => { if (canDeactivate) setActive((v) => !v); }}
-                 title={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
-                 aria-label={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
-                 disabled={!canDeactivate}
-                  className={`w-10 h-6 rounded-full transition-all relative border-2 ${active ? 'bg-amber-500 border-amber-400 shadow-md shadow-amber-500/30' : 'bg-white/10 border-white/20'} disabled:cursor-not-allowed disabled:opacity-30`}
-              >
-                <span
-                  className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
-                  style={{ left: active ? '18px' : '2px' }}
-                />
-              </button>
-          </div>
-           )}
-         </div>
-
-        <div className="flex gap-2.5 pt-1">
+        {/* Action buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-5 mt-1 border-t border-slate-700/60">
           <button
             onClick={onClose}
-             className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-6 py-2.5 rounded-xl transition-colors"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-sm transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-              className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition-colors shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
           >
             <Save size={14} /> {isEdit ? 'Save Changes' : 'Add Staff'}
           </button>
         </div>
+
       </div>
     </div>
   );

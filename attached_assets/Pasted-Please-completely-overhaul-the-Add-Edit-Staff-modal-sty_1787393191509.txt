@@ -1,0 +1,56 @@
+Please completely overhaul the Add/Edit Staff modal styling with high-contrast, polished UI components and proper button containers:
+
+### 1. Modal Overlay & Dialog Card
+* Overlay: `fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto`
+* Dialog Card: `w-full max-w-4xl bg-[#0F172A] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 text-white`
+* Dialog Header:
+  - Title "Add Staff" / "Edit Staff": `text-lg font-bold text-white tracking-wide`
+  - Close 'X' button: `text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors`
+
+### 2. Left Column (Profile & Roles)
+* Section & Form Labels ("FULL NAME", "EMAIL *", "ROLE (SETS DEFAULT PERMISSIONS)", "6-DIGIT PIN"):
+  - MUST use: `text-xs font-bold uppercase tracking-wider text-slate-200 mb-1.5 block`
+* Input Fields (Name, Email, 6-Digit PIN):
+  - MUST use: `w-full bg-[#1E293B] border border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-400 text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors`
+* Role Selector Grid (Fix Floating Invisible Buttons):
+  - Container: 
+    * Row 1: `grid grid-cols-3 gap-2 mb-2` -> [ Waiter ] [ Cashier ] [ Kitchen ]
+    * Row 2: `grid grid-cols-2 gap-2` -> [ Manager ] [ Admin ]
+  - Inactive Role Button Style:
+    `w-full py-2.5 px-3 rounded-xl bg-slate-800/90 border border-slate-600 text-slate-200 font-semibold text-xs text-center hover:bg-slate-700 hover:text-white transition-all shadow-sm`
+  - Active Role Button Style:
+    * Waiter: `bg-emerald-600 border border-emerald-400 text-white font-bold shadow-lg shadow-emerald-600/30`
+    * Cashier: `bg-blue-600 border border-blue-400 text-white font-bold shadow-lg shadow-blue-600/30`
+    * Kitchen: `bg-orange-600 border border-orange-400 text-white font-bold shadow-lg shadow-orange-600/30`
+    * Manager: `bg-cyan-600 border border-cyan-400 text-white font-bold shadow-lg shadow-cyan-600/30`
+    * Admin: `bg-purple-600 border border-purple-400 text-white font-bold shadow-lg shadow-purple-600/30`
+
+### 3. Right Column (Permissions & Presets)
+* Section Headers ("FEATURE PERMISSIONS", "OPERATIONAL PORTALS", "MANAGEMENT & HARDWARE"):
+  - MUST use: `text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2 block`
+* Manager Permissions Grid (When Manager is selected):
+  - Use a 2-column grid (`grid grid-cols-2 gap-2 mb-4`)
+  - Unchecked Card:
+    `flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-600/80 text-slate-200 hover:border-slate-400 hover:text-white text-xs font-medium cursor-pointer transition-all`
+  - Checked Card (Tone down harsh orange, use clean Manager Cyan theme):
+    `flex items-center gap-2.5 p-3 rounded-xl bg-cyan-950/40 border border-cyan-400 text-white text-xs font-semibold cursor-pointer shadow-sm transition-all`
+  - Checkbox Icon: `w-4 h-4 rounded text-cyan-400 accent-cyan-500`
+
+### 4. Presets & Summary Cards (When non-Manager selected)
+* Preset Cards (Waiter, Cashier, Kitchen):
+  - Container: `bg-[#1E293B] border border-slate-600 rounded-xl p-5 mt-2`
+  - Title: `text-sm font-bold text-white uppercase tracking-wider mb-1`
+  - Description: `text-xs text-slate-300 leading-relaxed mb-3`
+  - Active Tag Pills: `px-2.5 py-1 rounded-lg bg-slate-700 border border-slate-500 text-slate-100 font-bold text-xs`
+* Master Administrator Card (Admin selected):
+  - Container: `bg-purple-950/40 border border-purple-500/50 rounded-xl p-5 mt-2`
+  - Title: `text-sm font-bold text-purple-200 uppercase tracking-wider mb-1`
+  - Description: `text-xs text-slate-300 leading-relaxed mb-3`
+  - Status Tag: `px-2.5 py-1 rounded-lg bg-purple-900 border border-purple-400 text-purple-200 font-bold text-xs`
+
+### 5. Bottom Action Buttons
+* Cancel Button: `w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-sm transition-all`
+* Add / Save Staff Button: `w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 transition-all`
+
+### 6. Validation
+* Run `npm test` and `npm run build` to verify clean compilation.
