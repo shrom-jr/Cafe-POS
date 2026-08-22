@@ -1367,7 +1367,7 @@ const StockModeSection = () => {
 
   return (
     <div className="space-y-5">
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0">
         <div className="mb-5">
           <h3 className="text-base font-black text-white tracking-wide">Stock Enforcement Mode</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">
@@ -1484,7 +1484,7 @@ const PaymentsSection = () => {
 
   return (
     <div className="space-y-5">
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-4">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-4">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Digital Wallets</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">Enable and configure payment wallets</p>
@@ -1492,7 +1492,7 @@ const PaymentsSection = () => {
 
         <div className="space-y-3">
           {(['esewa', 'khalti', 'fonepay'] as const).map((key) => (
-            <div key={key} className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl space-y-4">
+            <div key={key} className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-lg font-black text-white">{walletLabels[key]}</span>
                 <button onClick={() => toggleWallet(key)} className="text-amber-400" data-testid={`toggle-wallet-${key}`}>
@@ -1543,7 +1543,7 @@ const PaymentsSection = () => {
          <div className="border-t border-white/15 pt-5 space-y-3">
            <p className="text-xs font-black text-amber-400 uppercase tracking-widest">Custom Wallets</p>
           {(settings.customWallets || []).map((wallet) => (
-             <div key={wallet.id} className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl space-y-4">
+             <div key={wallet.id} className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 space-y-4">
               <div className="flex items-center justify-between">
                  <span className="text-lg font-black text-white">{wallet.name}</span>
                 <div className="flex items-center gap-2">
@@ -1893,7 +1893,7 @@ const DataManagementSection = () => {
     <div className="space-y-5">
 
       {/* ── Info & coverage panel ─────────────────────────────────────────── */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-4">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-4">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Backup Coverage</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">Schema v2 exports capture all 25 data domains in a single JSON file.</p>
@@ -1947,7 +1947,7 @@ const DataManagementSection = () => {
       </div>
 
       {/* ── Action cards ─────────────────────────────────────────────────── */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl flex flex-col gap-3">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-3">
         <h3 className="text-base font-black text-white tracking-wide">Actions</h3>
 
         {/* Download */}
