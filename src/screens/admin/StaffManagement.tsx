@@ -138,15 +138,17 @@ const StaffModal = ({
              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
               Role <span className="text-white/25 font-normal">(sets default permissions)</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLES.map((r) => {
+            <div className="grid grid-cols-6 gap-2">
+              {ROLES.map((r, index) => {
                 const c = ROLE_COLORS[r];
                 const isActive = role === r;
                 return (
                   <button
                     key={r}
                     onClick={() => handleRoleSelect(r)}
-                    className="py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                    className={`py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                      index < 3 ? 'col-span-2' : 'col-span-3'
+                    }`}
                     style={isActive
                       ? { background: c.bg, border: `1px solid ${c.border}`, color: c.text }
                       : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
@@ -169,14 +171,15 @@ const StaffModal = ({
                </label>
                <span className="text-[11px] text-slate-400">Choose access</span>
              </div>
-             <div className="space-y-4">
+              <div className="space-y-4">
                {[
                  { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
                  { title: 'Management Views', items: MANAGEMENT_PERMISSIONS },
                ].map(({ title, items }) => (
-                 <div key={title} className="space-y-2">
+                  <div key={title} className="space-y-2">
                    <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-[#CBD5E1]">{title}</h4>
-                   {items.map(({ key, label }) => {
+                    <div className="grid grid-cols-2 gap-2">
+                    {items.map(({ key, label }) => {
                 const checked = perms[key];
                  const locked = role === 'ADMIN';
                 return (
@@ -185,10 +188,10 @@ const StaffModal = ({
                     type="button"
                      onClick={() => { if (!locked) togglePerm(key); }}
                      disabled={locked}
-                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${
+                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                        checked
-                         ? 'bg-amber-500/10 border-amber-500/50 text-amber-300 font-medium'
-                         : 'bg-slate-900/60 border-slate-700/60 text-slate-200 hover:border-slate-500'
+                         ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-medium'
+                         : 'bg-slate-900/80 border-slate-700 text-slate-200 font-medium hover:border-slate-500'
                      } ${locked ? 'cursor-not-allowed opacity-90' : 'active:scale-[0.98]'}`}
                   >
                     {/* Checkbox indicator */}
@@ -211,6 +214,7 @@ const StaffModal = ({
                   </button>
                 );
                    })}
+                    </div>
                  </div>
                ))}
             </div>
@@ -403,11 +407,17 @@ const PermissionBadges = ({ user }: { user: StaffUser }) => {
   const perms = user.permissions ?? DEFAULT_PERMISSIONS[user.role];
   const active = ALL_PERMISSIONS.filter((p) => perms[p.key]);
   if (active.length === 0) return null;
+  const hasFullAccess = (user.role === 'ADMIN' || user.role === 'MANAGER')
+    && ALL_PERMISSIONS.every((p) => perms[p.key] === true);
   return (
     <div className="flex flex-wrap gap-1 mt-1.5">
-      {active.map(({ key, badge }) => (
+      {hasFullAccess ? (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/50 text-[10px] font-black uppercase text-amber-300 leading-tight">
+          FULL ACCESS
+        </span>
+      ) : active.map(({ badge }) => (
         <span
-          key={key}
+          key={badge}
            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-600/70 text-[10px] font-black uppercase text-slate-200 leading-tight"
         >
           {badge}
@@ -480,14 +490,14 @@ const StaffRow = ({
           <button
             onClick={() => setModal('reset')}
             title="Reset PIN"
-             className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+              className="p-2 rounded-lg bg-slate-800/80 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors"
           >
             <KeyRound size={14} />
           </button>
           <button
             onClick={() => setModal('edit')}
             title="Edit"
-             className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+              className="p-2 rounded-lg bg-slate-800/80 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors"
           >
             <Edit3 size={14} />
           </button>
@@ -496,7 +506,7 @@ const StaffRow = ({
             title={protectedReason ?? 'Remove'}
             aria-label={protectedReason ?? `Remove ${user.name}`}
             disabled={!!protectedReason}
-             className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all disabled:cursor-not-allowed disabled:opacity-30"
+              className="p-2 rounded-lg bg-slate-800/80 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
           >
             <Trash2 size={14} />
           </button>
