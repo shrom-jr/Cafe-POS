@@ -10,6 +10,7 @@ import {
 } from './styles';
 import { DeficitBadge, LowBadge, StatusBadge } from './components';
 import { toast } from 'sonner';
+import AppModal from '@/components/ui/AppModal';
 import {
   Plus, Save, X, ShoppingCart, SlidersHorizontal, Edit3, Trash2,
   Wine, Beer, GlassWater, Cigarette, Martini,
@@ -266,18 +267,22 @@ export const PackagedStockTab = () => {
         : 'px-4 py-2 rounded-xl bg-[#13151F] border border-white/15 text-zinc-200 hover:text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2'}><Icon size={14} /><span>{label}</span><span className="text-[10px] opacity-70">({id === 'spirits' ? alcohol.filter((p) => categoryForAlcohol(p) === id).length : id === 'wine' ? alcohol.filter((p) => categoryForAlcohol(p) === id).length : id === 'beer' ? beverages.filter((p) => categoryForBeverage(p) === id).length : id === 'soft-drinks' ? beverages.filter((p) => categoryForBeverage(p) === id).length : cigarettes.length})</span></button>)}
     </div>
     <div className="flex items-center justify-between mt-6 mb-3 gap-3"><div><h2 className="text-lg font-black text-white tracking-wide">{CATEGORY_LABEL[activeTab]}</h2><p className="text-xs font-bold text-amber-400 ml-2 inline">{activeTab === 'spirits' || activeTab === 'wine' ? 'Stock tracked in ml' : activeTab === 'cigarettes' ? 'Stock tracked in sticks · 20 sticks per packet' : 'Stock tracked as individual units'}</p></div><button className={BTN_SM_PRIMARY} onClick={openAdd}><Plus size={14} />Add Product</button></div>
-    {form && form.kind === 'add' && (form.category === 'spirits' || form.category === 'wine') && <AlcoholForm category={form.category} onClose={close} />}
-    {form && form.kind === 'add' && (form.category === 'beer' || form.category === 'soft-drinks') && <BeverageForm category={form.category} onClose={close} />}
-    {form && form.kind === 'add' && form.category === 'cigarettes' && <CigaretteForm onClose={close} />}
-    {form?.kind === 'edit-alcohol' && <AlcoholForm edit={form.p} category={categoryForAlcohol(form.p)} onClose={close} />}
-    {form?.kind === 'edit-beverage' && <BeverageForm edit={form.p} category={categoryForBeverage(form.p)} onClose={close} />}
-    {form?.kind === 'edit-cigarette' && <CigaretteForm edit={form.p} onClose={close} />}
-    {form?.kind === 'buy-alcohol' && <AlcoholPurchase p={form.p} onClose={close} />}
-    {form?.kind === 'buy-beverage' && <BeveragePurchase p={form.p} onClose={close} />}
-    {form?.kind === 'buy-cigarette' && <CigarettePurchase p={form.p} onClose={close} />}
-    {form?.kind === 'adjust-alcohol' && <Adjustment p={form.p} kind="alcohol" onClose={close} />}
-    {form?.kind === 'adjust-beverage' && <Adjustment p={form.p} kind="beverage" onClose={close} />}
-    {form?.kind === 'adjust-cigarette' && <Adjustment p={form.p} kind="cigarette" onClose={close} />}
+     {form && (
+       <AppModal onClose={close} size="max-w-4xl" showHeader={false}>
+         {form.kind === 'add' && (form.category === 'spirits' || form.category === 'wine') && <AlcoholForm category={form.category} onClose={close} />}
+         {form.kind === 'add' && (form.category === 'beer' || form.category === 'soft-drinks') && <BeverageForm category={form.category} onClose={close} />}
+         {form.kind === 'add' && form.category === 'cigarettes' && <CigaretteForm onClose={close} />}
+         {form.kind === 'edit-alcohol' && <AlcoholForm edit={form.p} category={categoryForAlcohol(form.p)} onClose={close} />}
+         {form.kind === 'edit-beverage' && <BeverageForm edit={form.p} category={categoryForBeverage(form.p)} onClose={close} />}
+         {form.kind === 'edit-cigarette' && <CigaretteForm edit={form.p} onClose={close} />}
+         {form.kind === 'buy-alcohol' && <AlcoholPurchase p={form.p} onClose={close} />}
+         {form.kind === 'buy-beverage' && <BeveragePurchase p={form.p} onClose={close} />}
+         {form.kind === 'buy-cigarette' && <CigarettePurchase p={form.p} onClose={close} />}
+         {form.kind === 'adjust-alcohol' && <Adjustment p={form.p} kind="alcohol" onClose={close} />}
+         {form.kind === 'adjust-beverage' && <Adjustment p={form.p} kind="beverage" onClose={close} />}
+         {form.kind === 'adjust-cigarette' && <Adjustment p={form.p} kind="cigarette" onClose={close} />}
+       </AppModal>
+     )}
      <div className="bg-[#13151F] border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black/50">
        {products.length === 0 ? (
          <div className="py-14 text-center text-sm font-bold text-zinc-300">No {CATEGORY_LABEL[activeTab].toLowerCase()} products yet.</div>
