@@ -653,30 +653,36 @@ const AdminPanel = () => {
             {resolvedActiveTab === 'expenses'  && <ExpensesSection />}
             {resolvedActiveTab === 'settings'  && (
               <div className="space-y-6">
-                {/* Sub-tab pills */}
-                <div className="flex gap-2 flex-wrap">
-                  {availableSettings.map((sub) => (
-                    <button
-                      key={sub.id}
-                      onClick={() => setSettingsSubTab(sub.id)}
-                      className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-                        resolvedSettingsSubTab === sub.id
-                          ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/25'
-                          : 'bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 font-black'
-                      }`}
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-                {/* Sub-tab content */}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'bill'            && <CompanyProfileSection />}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'billing'         && <BillingReceiptsSection />}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'payments'        && <PaymentsSection />}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'stock'           && <StockModeSection />}
-                 {currentUser.permissions.printers && resolvedSettingsSubTab === 'printers'    && <PrinterSettingsSection />}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'staff'           && <StaffManagement />}
-                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'data-management' && <DataManagementSection />}
+                 <div className="flex flex-col md:flex-row gap-6 items-start w-full">
+                   <nav className="w-full md:w-64 shrink-0 bg-[#0e131f] border border-slate-800 rounded-2xl p-3 space-y-1.5">
+                     {availableSettings.map((sub) => (
+                       <button
+                         key={sub.id}
+                         onClick={() => setSettingsSubTab(sub.id)}
+                         className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all text-left ${
+                           sub.id === 'data-management'
+                             ? resolvedSettingsSubTab === sub.id
+                               ? 'bg-rose-500/15 border border-rose-500/60 text-rose-300 font-bold shadow-sm'
+                               : 'text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 font-semibold'
+                             : resolvedSettingsSubTab === sub.id
+                               ? 'bg-amber-500/15 border border-amber-500/60 text-amber-300 font-bold shadow-sm'
+                               : 'text-slate-300 hover:bg-[#161d2d] hover:text-white font-semibold'
+                         }`}
+                       >
+                         {sub.label}
+                       </button>
+                     ))}
+                   </nav>
+                   <div className="flex-1 min-w-0 w-full bg-[#0e131f] border border-slate-800 rounded-2xl p-6">
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'bill'            && <CompanyProfileSection />}
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'billing'         && <BillingReceiptsSection />}
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'payments'        && <PaymentsSection />}
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'stock'           && <StockModeSection />}
+                     {currentUser.permissions.printers && resolvedSettingsSubTab === 'printers'    && <PrinterSettingsSection />}
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'staff'           && <StaffManagement />}
+                     {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'data-management' && <DataManagementSection />}
+                   </div>
+                 </div>
               </div>
             )}
           </div>
