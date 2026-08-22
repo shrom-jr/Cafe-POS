@@ -38,10 +38,11 @@ const MANAGEMENT_PERMISSIONS: PermissionConfig[] = [
   { key: 'menu', label: 'Menu Management', badge: 'Menu' },
   { key: 'inventory', label: 'Inventory Tracking', badge: 'Inventory' },
   { key: 'expenses', label: 'Expense Logging', badge: 'Expenses' },
+  { key: 'printers', label: 'Printer Settings & Hardware', badge: 'Printers' },
 ];
 const ALL_PERMISSIONS = [...OPERATIONAL_PERMISSIONS, ...MANAGEMENT_PERMISSIONS];
 
-const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
+const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-[#94A3B8] outline-none transition-all shadow-inner';
 const MODAL_BG = { background: '#0E1017', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 24px 64px -8px rgba(0,0,0,0.85)' };
 
 // ── Add / Edit Modal ─────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ const StaffModal = ({
   const [showPin, setShowPin] = useState(false);
   const [active, setActive]   = useState(existing?.active ?? true);
   const [perms, setPerms]     = useState<StaffPermissions>(
-    existing?.permissions ?? DEFAULT_PERMISSIONS['WAITER']
+    existing?.permissions ?? DEFAULT_PERMISSIONS[existing?.role ?? 'WAITER']
   );
 
   const isEdit = !!existing;
@@ -101,7 +102,7 @@ const StaffModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
        <div className="max-w-4xl w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
         <div className="flex items-center justify-between">
            <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
@@ -114,13 +115,13 @@ const StaffModal = ({
          <div className="space-y-3.5">
           {/* Name */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Full Name</label>
+             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">Full Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sita Thapa" className={inputCls} />
           </div>
 
           {/* Email */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
               Email <span className="text-red-400">*</span>
             </label>
             <input
@@ -135,8 +136,8 @@ const StaffModal = ({
 
           {/* Role — quick presets */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
-              Role <span className="text-white/25 font-normal">(sets default permissions)</span>
+             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
+              Role <span className="text-[#CBD5E1] font-normal">(sets default permissions)</span>
             </label>
             <div className="grid grid-cols-6 gap-2">
               {ROLES.map((r, index) => {
@@ -166,64 +167,80 @@ const StaffModal = ({
             {/* Feature Permissions */}
           <div>
              <div className="flex items-center justify-between mb-2">
-               <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+               <label className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
                  Feature Permissions
                </label>
-               <span className="text-[11px] text-slate-400">Choose access</span>
+               <span className="text-[11px] text-[#CBD5E1]">Choose access</span>
              </div>
-              <div className="space-y-4">
-               {[
-                 { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
-                 { title: 'Management Views', items: MANAGEMENT_PERMISSIONS },
-               ].map(({ title, items }) => (
-                  <div key={title} className="space-y-2">
-                   <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-[#CBD5E1]">{title}</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                    {items.map(({ key, label }) => {
-                const checked = perms[key];
-                 const locked = role === 'ADMIN';
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                     onClick={() => { if (!locked) togglePerm(key); }}
-                     disabled={locked}
-                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                       checked
-                         ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-medium'
-                         : 'bg-slate-900/80 border-slate-700 text-slate-200 font-medium hover:border-slate-500'
-                     } ${locked ? 'cursor-not-allowed opacity-90' : 'active:scale-[0.98]'}`}
-                  >
-                    {/* Checkbox indicator */}
-                    <span
-                        className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all ${
-                         checked ? 'bg-amber-500 border border-amber-400' : 'bg-transparent border border-slate-500'
-                       }`}
-                    >
-                      {checked && (
-                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                          <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </span>
-                    <span
-                        className="text-[13px] text-left text-[#F8FAFC]"
-                    >
-                      {label}
-                    </span>
-                  </button>
-                );
-                   })}
+              {role === 'MANAGER' ? (
+                <div className="space-y-4">
+                  {[
+                    { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
+                    { title: 'Management & Hardware', items: MANAGEMENT_PERMISSIONS },
+                  ].map(({ title, items }) => (
+                    <div key={title} className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">{title}</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {items.map(({ key, label }) => {
+                          const checked = perms[key] === true;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => togglePerm(key)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                                checked
+                                  ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-semibold'
+                                  : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-slate-500 font-medium'
+                              } active:scale-[0.98]`}
+                            >
+                              <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
+                                checked ? 'bg-amber-500 border border-amber-400' : 'bg-transparent border border-slate-500'
+                              }`}>
+                                {checked && (
+                                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                    <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="text-[13px] text-left">{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                 </div>
-               ))}
-            </div>
+                  ))}
+                </div>
+              ) : role === 'ADMIN' ? (
+                <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Master Administrator</p>
+                  <p className="mt-2 text-sm leading-6 text-[#CBD5E1]">
+                    Full Unrestricted Master Access: Complete control over all floor portals, management views,
+                    hardware/printers, company tax &amp; VAT settings, staff management, and system data resets.
+                  </p>
+                  <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Locked full access</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">Role Access Preset</p>
+                  <p className="mt-2 text-sm leading-6 text-[#CBD5E1]">
+                    {role === 'WAITER' && 'POS & Floor Tables access for taking orders and managing assigned tables.'}
+                    {role === 'CASHIER' && 'POS & Table Billing plus Customer Directory access for payments and khata.'}
+                    {role === 'KITCHEN' && 'Kitchen Portal access for preparing and completing kitchen orders.'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {OPERATIONAL_PERMISSIONS.filter(({ key }) => perms[key] === true).map(({ badge }) => (
+                      <span key={badge} className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-200">{badge}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
 
            {/* PIN */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
-               6-Digit PIN{isEdit && <span className="text-white/30 font-normal ml-1">(leave blank to keep)</span>}
+             <label className="text-xs font-semibold uppercase tracking-wider text-[#FFFFFF] mb-1.5 block">
+               6-Digit PIN{isEdit && <span className="text-[#CBD5E1] font-normal ml-1">(leave blank to keep)</span>}
              </label>
             <div className="relative">
               <input

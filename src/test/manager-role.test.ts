@@ -32,7 +32,15 @@ describe('Manager role permissions and navigation', () => {
     expect(canAccessManagement('ADMIN', DEFAULT_PERMISSIONS.ADMIN)).toBe(true);
     expect(canAccessManagement('MANAGER', { ...DEFAULT_PERMISSIONS.MANAGER, dashboard: false })).toBe(true);
     expect(canAccessManagement('CASHIER', DEFAULT_PERMISSIONS.CASHIER)).toBe(false);
-    expect(canAccessManagement('MANAGER', { ...DEFAULT_PERMISSIONS.MANAGER, dashboard: false, reports: false, menu: false, inventory: false, expenses: false })).toBe(false);
+    expect(canAccessManagement('MANAGER', {
+      ...DEFAULT_PERMISSIONS.MANAGER,
+      dashboard: false,
+      reports: false,
+      menu: false,
+      inventory: false,
+      expenses: false,
+      printers: false,
+    })).toBe(false);
   });
 
   it('uses customers as the canonical permission and only falls back for legacy records', () => {

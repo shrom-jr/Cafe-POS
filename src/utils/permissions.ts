@@ -1,7 +1,7 @@
 import { StaffPermissions } from '@/types/staff';
 
 export const MANAGER_MANAGEMENT_PERMISSIONS: (keyof StaffPermissions)[] = [
-  'dashboard', 'reports', 'menu', 'inventory', 'expenses',
+  'dashboard', 'reports', 'menu', 'inventory', 'expenses', 'printers',
 ];
 
 /** Canonical customer-directory permission with a one-way legacy fallback. */
@@ -29,6 +29,7 @@ export function getFirstPermittedManagementRoute(permissions: StaffPermissions):
   if (permissions.menu) return '/admin';
   if (permissions.inventory) return '/admin';
   if (permissions.expenses) return '/admin';
+  if (permissions.printers) return '/admin';
   return '/';
 }
 
@@ -40,7 +41,8 @@ export function getFirstPermittedRoute(permissions: StaffPermissions): string {
   if (permissions.menu) return '/admin?tab=menu';
   if (permissions.inventory) return '/admin?tab=inventory';
   if (permissions.expenses) return '/admin?tab=expenses';
-  if (permissions.customers || permissions.canViewCustomers) return '/customers';
+  if (permissions.printers) return '/admin?tab=settings';
+  if (canAccessCustomers(permissions)) return '/customers';
   if (permissions.kitchen) return '/kitchen';
   if (permissions.bar)     return '/bar';
   if (permissions.admin)   return '/admin';

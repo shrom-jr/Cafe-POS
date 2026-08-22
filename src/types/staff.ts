@@ -11,6 +11,7 @@ export interface StaffPermissions {
   menu?: boolean; // Menu Management
   inventory?: boolean; // Stock & Restock
   expenses?: boolean; // Expense Logging
+  printers?: boolean; // Printer Settings & Hardware
   /** Khatta: can attach a customer to an order */
   canAttachCustomer?: boolean;
   /** Khatta: can settle or view outstanding customer dues */
@@ -21,11 +22,11 @@ export interface StaffPermissions {
 
 /** Default permissions automatically assigned when a role preset is chosen. */
 export const DEFAULT_PERMISSIONS: Record<Role, StaffPermissions> = {
-  WAITER:  { pos: true, customers: false, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: true, canSettleDues: false, canViewCustomers: false },
-  CASHIER: { pos: true, customers: true, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
-  KITCHEN: { pos: false, customers: false, kitchen: true, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: false, canSettleDues: false, canViewCustomers: false },
-  MANAGER: { pos: true, customers: true, kitchen: true, bar: true, admin: false, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
-  ADMIN:   { pos: true, customers: true, kitchen: true, bar: true, admin: true, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
+  WAITER:  { pos: true, customers: false, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, printers: false, canAttachCustomer: true, canSettleDues: false, canViewCustomers: false },
+  CASHIER: { pos: true, customers: true, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, printers: false, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
+  KITCHEN: { pos: false, customers: false, kitchen: true, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, printers: false, canAttachCustomer: false, canSettleDues: false, canViewCustomers: false },
+  MANAGER: { pos: true, customers: true, kitchen: true, bar: true, admin: false, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, printers: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
+  ADMIN:   { pos: true, customers: true, kitchen: true, bar: true, admin: true, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, printers: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
 };
 
 export interface StaffUser {

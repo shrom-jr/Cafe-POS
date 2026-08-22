@@ -1,0 +1,34 @@
+Please refactor the Add/Edit Staff modal and Manager role permissions with the following critical UI and architecture fixes:
+
+### 1. Fix Modal Backdrop / Cutoff Bug
+* Ensure the modal dialog overlay uses a true full-screen root portal/fixed position: `fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto`.
+* The backdrop MUST cover the entire viewport smoothly, dimming and blurring the top navigation header completely without any top cutoffs or background leakage.
+
+### 2. Role-Specific Right Column Layout (Stop Showing Full Checklist for All Roles)
+* When ROLE === 'WAITER', 'CASHIER', or 'KITCHEN':
+  - Hide the complex management checklist.
+  - Show a clean, dedicated "Role Access Preset" card explaining the role's default assigned portal (e.g., Cashier = POS & Table Billing + Customer Directory).
+* When ROLE === 'ADMIN':
+  - Do NOT show the 10 checkboxes (which makes Admin look identical to Manager).
+  - Display a sleek, locked "Master Administrator" banner:
+    "Full Unrestricted Master Access: Complete control over all floor portals, management views, hardware/printers, company tax & VAT settings, staff management, and system data resets."
+* When ROLE === 'MANAGER':
+  - Display the interactive Granular Permissions Checklist with 2 clear sections:
+    1. Operational Portals: [ POS & Floor Tables ], [ Customer Directory ], [ Kitchen Portal ], [ Bar Portal ]
+    2. Management & Hardware: [ Dashboard Overview ], [ Sales Reports ], [ Menu Management ], [ Inventory Tracking ], [ Expense Logging ], [ Printer Settings & Hardware ]
+
+### 3. Add Printer Access for Manager
+* Add `printers` permission flag to the staff permissions schema.
+* Grant `permissions.printers` access to Manager when toggled, allowing them to access the "PRINTERS" settings tab without granting access to Company Profile, Staff Management, or Data Management.
+
+### 4. Text Contrast & Typography Polish
+* Eliminate all washed-out dark gray text:
+  - Form field labels ("FULL NAME", "EMAIL", "ROLE", "6-DIGIT PIN"): Use crisp pure white `#FFFFFF` (font-semibold, text-xs uppercase tracking-wider).
+  - Section headers ("FEATURE PERMISSIONS", "OPERATIONAL PORTALS", "MANAGEMENT & HARDWARE"): Use bright amber `#F59E0B` font-bold text-xs uppercase tracking-wider.
+  - Subtext/Helper text: Use bright slate `#CBD5E1` (no text darker than slate-400).
+  - Input placeholders: Use legible `#94A3B8`.
+  - Unchecked permission cards: `bg-slate-900 border border-slate-700 text-slate-200 hover:border-slate-500 font-medium`.
+  - Checked permission cards: `bg-amber-500/15 border-2 border-amber-500 text-amber-300 font-semibold`.
+
+### 5. Validation & Tests
+* Run `npm test` and `npm run build` to ensure all permission hydration, role guards, and component builds pass cleanly.

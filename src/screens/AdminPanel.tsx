@@ -473,12 +473,24 @@ const AdminPanel = () => {
     menu: 'menu',
     inventory: 'inventory',
     expenses: 'expenses',
+    settings: 'printers',
     customers: 'customers',
     tables: 'pos',
   };
   const availableTabs = currentUser.role === 'ADMIN'
     ? tabs
     : tabs.filter((tab) => tabPermission[tab.id] && currentUser.permissions[tabPermission[tab.id]!]);
+  const availableSettings = currentUser.role === 'ADMIN'
+    ? ([
+        { id: 'bill', label: 'Company Profile' }, { id: 'billing', label: 'Billing & Receipts' },
+        { id: 'payments', label: 'Payments' }, { id: 'stock', label: 'Stock Mode' },
+        { id: 'printers', label: 'Printers' }, { id: 'staff', label: 'Staff & Users' },
+        { id: 'data-management', label: 'Data Management' },
+      ] as { id: SettingsSubTab; label: string }[])
+    : [{ id: 'printers', label: 'Printers' } as { id: SettingsSubTab; label: string }];
+  const resolvedSettingsSubTab = availableSettings.some((sub) => sub.id === settingsSubTab)
+    ? settingsSubTab
+    : availableSettings[0].id;
 
   // Fall back to Dashboard if hot reload or a stale session retains a removed tab.
   const resolvedActiveTab: AdminTab = availableTabs.some((tab) => tab.id === activeTab)
@@ -643,20 +655,12 @@ const AdminPanel = () => {
               <div className="space-y-6">
                 {/* Sub-tab pills */}
                 <div className="flex gap-2 flex-wrap">
-                  {([
-                    { id: 'bill',            label: 'Company Profile' },
-                    { id: 'billing',         label: 'Billing & Receipts' },
-                    { id: 'payments',        label: 'Payments' },
-                    { id: 'stock',           label: 'Stock Mode' },
-                    { id: 'printers',        label: 'Printers' },
-                    { id: 'staff',           label: 'Staff & Users' },
-                    { id: 'data-management', label: 'Data Management' },
-                  ] as { id: SettingsSubTab; label: string }[]).map((sub) => (
+                  {availableSettings.map((sub) => (
                     <button
                       key={sub.id}
                       onClick={() => setSettingsSubTab(sub.id)}
                       className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-                        settingsSubTab === sub.id
+                        resolvedSettingsSubTab === sub.id
                           ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/25'
                           : 'bg-[#13151F] text-zinc-300 hover:text-white border border-white/15 hover:border-white/30 font-black'
                       }`}
@@ -666,13 +670,13 @@ const AdminPanel = () => {
                   ))}
                 </div>
                 {/* Sub-tab content */}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'bill'            && <CompanyProfileSection />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'billing'         && <BillingReceiptsSection />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'payments'        && <PaymentsSection />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'stock'           && <StockModeSection />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'printers'        && <PrinterSettingsSection />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'staff'           && <StaffManagement />}
-                 {currentUser.role === 'ADMIN' && settingsSubTab === 'data-management' && <DataManagementSection />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'bill'            && <CompanyProfileSection />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'billing'         && <BillingReceiptsSection />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'payments'        && <PaymentsSection />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'stock'           && <StockModeSection />}
+                 {currentUser.permissions.printers && resolvedSettingsSubTab === 'printers'    && <PrinterSettingsSection />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'staff'           && <StaffManagement />}
+                 {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'data-management' && <DataManagementSection />}
               </div>
             )}
           </div>
