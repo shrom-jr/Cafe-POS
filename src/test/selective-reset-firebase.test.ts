@@ -62,6 +62,8 @@ import {
   setFirebaseCollectionSchemaSafety,
   subscribeToSelectiveResetMarkers,
   writeCustomer,
+  writeAlcoholProductToFirebase,
+  deleteAlcoholProductFromFirebase,
   writeOrderTableMutation,
   writePaymentRecord,
 } from '@/utils/firebaseSync';
@@ -471,5 +473,34 @@ describe('Firebase selective reset allowlist', () => {
     expect(canWriteFirebaseCollection('invMappings')).toBe(false);
     expect(firebaseMocks.runTransaction).not.toHaveBeenCalled();
     expect(firebaseMocks.data.invMappings).toEqual({ map1: { id: 'map1', productId: 'a1' } });
+  });
+
+  it('keeps a reset from racing a product child write or delete', async () => {
+    firebaseMocks.data.resetMarkers = {
+      barInventory: { syncMutationId: 'before-reset', syncRevision: 1 },
+    };
+    firebaseMocks.data.alcoholProducts = {
+      alcoholKey: { id: 'a1', name: 'Wine', currentStockMl: 3000 },
+      __barInventoryReset: { generation: 'after-reset' },
+    };
+    subscribeToSelectiveResetMarkers();
+    firebaseMocks.data.resetMarkers = {
+      barInventory: { syncMutationId: 'after-reset', syncRevision: 2 },
+    };
+
+    await writeAlcoholProductToFirebase({
+      id: 'a1',
+      name: 'Stale Wine',
+      category: 'wine',
+      bottleSizeMl: 750,
+      currentStockMl: 0,
+      minStockMl: 0,
+      status: 'active',
+    });
+    await deleteAlcoholProductFromFirebase('a1');
+
+    expect(firebaseMocks.runTransaction).toHaveBeenCalledTimes(2);
+    expect(firebaseMocks.transactionRoots[0]).toEqual(firebaseMocks.data.alcoholProducts);
+    expect(firebaseMocks.transactionRoots[1]).toEqual(firebaseMocks.data.alcoholProducts);
   });
 });

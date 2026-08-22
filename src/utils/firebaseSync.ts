@@ -569,33 +569,30 @@ function currentBarInventoryGeneration(value: unknown): string {
   return typeof generation === "string" ? generation : BASELINE_RESET_GENERATION;
 }
 
-/**
- * Product catalogs and menu mappings are reset-sensitive. The reset writes its
- * generation into every surviving record, so this transaction can compare that
- * generation atomically at the collection path without requiring root write
- * permission. A stale client cannot restore pre-reset stock or mappings.
- */
-async function pushBarCatalogCollection(
+async function mutateBarCatalogChild(
   path: "alcoholProducts" | "beverageProducts" | "cigaretteProducts" | "invMappings",
-  value: Array<{ id?: unknown }>,
+  id: string,
+  value: unknown,
 ): Promise<void> {
   await ensureResetMarkersHydrated();
   assertFirebaseCollectionIsSafeToWrite(path);
   const expectedGeneration = getObservedResetGeneration("barInventory") ?? BASELINE_RESET_GENERATION;
-  const records = toFirebaseIdRecordMap(value, path);
-  const canonical = Object.fromEntries(
-    [
-      ...Object.entries(records),
-      [BAR_INVENTORY_RESET_META_KEY, { generation: expectedGeneration }],
-    ],
-  );
-
   await runTransaction(ref(db, path), (currentValue) => {
-    const currentGeneration = currentBarInventoryGeneration(currentValue);
-    if (currentGeneration !== expectedGeneration) {
+    const current = currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
+      ? { ...(currentValue as Record<string, unknown>) }
+      : {};
+    if (currentBarInventoryGeneration(current) !== expectedGeneration) {
       return currentValue;
     }
-    return recordData(canonical);
+    if (value === null) {
+      delete current[id];
+    } else {
+      current[id] = JSON.parse(JSON.stringify(value));
+    }
+    if (!current[BAR_INVENTORY_RESET_META_KEY] && expectedGeneration !== BASELINE_RESET_GENERATION) {
+      current[BAR_INVENTORY_RESET_META_KEY] = { generation: expectedGeneration };
+    }
+    return current;
   }, { applyLocally: false });
 }
 
@@ -1126,7 +1123,7 @@ export async function pushInvMovementsToFirebase(movements: InventoryMovement[])
 // Push Inventory Mappings
 export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
   try {
-    await pushBarCatalogCollection("invMappings", mappings || []);
+    await Promise.all((mappings || []).map((mapping) => writeInvMappingToFirebase(mapping)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Inventory Mappings Push", error);
   }
@@ -1134,8 +1131,7 @@ export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
 
 export async function writeInvMappingToFirebase(mapping: InvMenuMapping): Promise<void> {
   try {
-    assertFirebaseCollectionIsSafeToWrite("invMappings");
-    await firebaseSet(ref(db, `invMappings/${mapping.id}`), JSON.parse(JSON.stringify(mapping)));
+    await mutateBarCatalogChild("invMappings", mapping.id, mapping);
   } catch (error) {
     logStructuredFirebaseError("Firebase Inventory Mapping Write", error);
     throw error;
@@ -1144,38 +1140,61 @@ export async function writeInvMappingToFirebase(mapping: InvMenuMapping): Promis
 
 export async function deleteInvMappingFromFirebase(id: string): Promise<void> {
   try {
-    assertFirebaseCollectionIsSafeToWrite("invMappings");
-    await firebaseSet(ref(db, `invMappings/${id}`), null);
+    await mutateBarCatalogChild("invMappings", id, null);
   } catch (error) {
     logStructuredFirebaseError("Firebase Inventory Mapping Delete", error);
     throw error;
   }
 }
 
+export async function deleteAlcoholProductFromFirebase(id: string): Promise<void> {
+  try {
+    await mutateBarCatalogChild("alcoholProducts", id, null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Alcohol Product Delete", error);
+    throw error;
+  }
+}
+
 export async function writeAlcoholProductToFirebase(product: AlcoholProduct): Promise<void> {
   try {
-    assertFirebaseCollectionIsSafeToWrite("alcoholProducts");
-    await firebaseSet(ref(db, `alcoholProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+    await mutateBarCatalogChild("alcoholProducts", product.id, product);
   } catch (error) {
     logStructuredFirebaseError("Firebase Alcohol Product Write", error);
     throw error;
   }
 }
 
+export async function deleteBeverageProductFromFirebase(id: string): Promise<void> {
+  try {
+    await mutateBarCatalogChild("beverageProducts", id, null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Beverage Product Delete", error);
+    throw error;
+  }
+}
+
 export async function writeBeverageProductToFirebase(product: BeverageProduct): Promise<void> {
   try {
-    assertFirebaseCollectionIsSafeToWrite("beverageProducts");
-    await firebaseSet(ref(db, `beverageProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+    await mutateBarCatalogChild("beverageProducts", product.id, product);
   } catch (error) {
     logStructuredFirebaseError("Firebase Beverage Product Write", error);
     throw error;
   }
 }
 
+export async function deleteCigaretteProductFromFirebase(id: string): Promise<void> {
+  try {
+    await mutateBarCatalogChild("cigaretteProducts", id, null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Cigarette Product Delete", error);
+    throw error;
+  }
+}
+
 export async function writeCigaretteProductToFirebase(product: CigaretteProduct): Promise<void> {
   try {
-    assertFirebaseCollectionIsSafeToWrite("cigaretteProducts");
-    await firebaseSet(ref(db, `cigaretteProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+    await mutateBarCatalogChild("cigaretteProducts", product.id, product);
   } catch (error) {
     logStructuredFirebaseError("Firebase Cigarette Product Write", error);
     throw error;
@@ -1184,7 +1203,7 @@ export async function writeCigaretteProductToFirebase(product: CigaretteProduct)
 
 export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
   try {
-    await pushBarCatalogCollection("alcoholProducts", products || []);
+    await Promise.all((products || []).map((product) => writeAlcoholProductToFirebase(product)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Alcohol Products Push", error);
   }
@@ -1192,7 +1211,7 @@ export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) 
 
 export async function pushBeverageProductsToFirebase(products: BeverageProduct[]) {
   try {
-    await pushBarCatalogCollection("beverageProducts", products || []);
+    await Promise.all((products || []).map((product) => writeBeverageProductToFirebase(product)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Beverage Products Push", error);
   }
@@ -1200,7 +1219,7 @@ export async function pushBeverageProductsToFirebase(products: BeverageProduct[]
 
 export async function pushCigaretteProductsToFirebase(products: CigaretteProduct[]) {
   try {
-    await pushBarCatalogCollection("cigaretteProducts", products || []);
+    await Promise.all((products || []).map((product) => writeCigaretteProductToFirebase(product)));
   } catch (error) {
     logStructuredFirebaseError("Firebase Cigarette Products Push", error);
   }

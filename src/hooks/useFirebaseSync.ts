@@ -55,9 +55,14 @@ import {
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
-  pushAlcoholProductsToFirebase,
-  pushBeverageProductsToFirebase,
-  pushCigaretteProductsToFirebase,
+  deleteAlcoholProductFromFirebase,
+  deleteBeverageProductFromFirebase,
+  deleteCigaretteProductFromFirebase,
+  deleteInvMappingFromFirebase,
+  writeAlcoholProductToFirebase,
+  writeBeverageProductToFirebase,
+  writeCigaretteProductToFirebase,
+  writeInvMappingToFirebase,
   getPendingOrderWrite,
   getPendingTableWrite,
   subscribeToSelectiveResetMarkers,
@@ -287,6 +292,10 @@ export function useFirebaseSync(enabled = true) {
   const hasLoadedAlcoholProducts = useRef(false);
   const hasLoadedBeverageProducts = useRef(false);
   const hasLoadedCigaretteProducts = useRef(false);
+  const previousAlcoholProducts = useRef<typeof alcoholProducts | null>(null);
+  const previousBeverageProducts = useRef<typeof beverageProducts | null>(null);
+  const previousCigaretteProducts = useRef<typeof cigaretteProducts | null>(null);
+  const previousInvMappings = useRef<typeof invMappings | null>(null);
   const hasLoadedKitchenPurchases = useRef(false);
   const hasLoadedMeatEntries = useRef(false);
   const hasLoadedMaintenanceExpenses = useRef(false);
@@ -422,6 +431,7 @@ export function useFirebaseSync(enabled = true) {
 
       setAlcoholProducts: (remoteProducts: typeof alcoholProducts) => {
         hasLoadedAlcoholProducts.current = true;
+        previousAlcoholProducts.current = remoteProducts;
         const currentProducts = useInventoryStore.getState().alcoholProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteAlcoholProductsUpdate.current = true;
@@ -431,6 +441,7 @@ export function useFirebaseSync(enabled = true) {
 
       setBeverageProducts: (remoteProducts: typeof beverageProducts) => {
         hasLoadedBeverageProducts.current = true;
+        previousBeverageProducts.current = remoteProducts;
         const currentProducts = useInventoryStore.getState().beverageProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteBeverageProductsUpdate.current = true;
@@ -440,6 +451,7 @@ export function useFirebaseSync(enabled = true) {
 
       setCigaretteProducts: (remoteProducts: typeof cigaretteProducts) => {
         hasLoadedCigaretteProducts.current = true;
+        previousCigaretteProducts.current = remoteProducts;
         const currentProducts = useInventoryStore.getState().cigaretteProducts;
         if (JSON.stringify(currentProducts) !== JSON.stringify(remoteProducts)) {
           isRemoteCigaretteProductsUpdate.current = true;
@@ -504,6 +516,7 @@ export function useFirebaseSync(enabled = true) {
 
       setInvMappings: (remoteMappings: typeof invMappings, remoteExists = true) => {
         hasLoadedInvMappings.current = true;
+        previousInvMappings.current = remoteMappings;
         const currentMappings = useInventoryStore.getState().invMappings;
 
         // Firebase owns mappings during migration. An absent or intentionally
@@ -675,33 +688,66 @@ export function useFirebaseSync(enabled = true) {
     pushSettingsToFirebase(settings);
   }, [settings, enabled]);
 
-  // Firebase is the authority for product catalogs. Remote hydration is marked
-  // so this tab never echoes a legacy array snapshot back into the database.
+  // Firebase is the authority for product catalogs. Local changes are persisted
+  // per child so a stale or empty client can never replace a whole collection.
   useEffect(() => {
-    if (!enabled || !hasLoadedAlcoholProducts.current) return;
+    if (!enabled || !hasLoadedAlcoholProducts.current || !previousAlcoholProducts.current) return;
     if (isRemoteAlcoholProductsUpdate.current) {
       isRemoteAlcoholProductsUpdate.current = false;
+      previousAlcoholProducts.current = alcoholProducts;
       return;
     }
-    pushAlcoholProductsToFirebase(alcoholProducts);
+    const previous = new Map(previousAlcoholProducts.current.map((product) => [product.id, product]));
+    const current = new Map(alcoholProducts.map((product) => [product.id, product]));
+    void Promise.all([
+      ...alcoholProducts
+        .filter((product) => JSON.stringify(previous.get(product.id)) !== JSON.stringify(product))
+        .map((product) => writeAlcoholProductToFirebase(product)),
+      ...[...previous.keys()]
+        .filter((id) => !current.has(id))
+        .map((id) => deleteAlcoholProductFromFirebase(id)),
+    ]);
+    previousAlcoholProducts.current = alcoholProducts;
   }, [alcoholProducts, enabled]);
 
   useEffect(() => {
-    if (!enabled || !hasLoadedBeverageProducts.current) return;
+    if (!enabled || !hasLoadedBeverageProducts.current || !previousBeverageProducts.current) return;
     if (isRemoteBeverageProductsUpdate.current) {
       isRemoteBeverageProductsUpdate.current = false;
+      previousBeverageProducts.current = beverageProducts;
       return;
     }
-    pushBeverageProductsToFirebase(beverageProducts);
+    const previous = new Map(previousBeverageProducts.current.map((product) => [product.id, product]));
+    const current = new Map(beverageProducts.map((product) => [product.id, product]));
+    void Promise.all([
+      ...beverageProducts
+        .filter((product) => JSON.stringify(previous.get(product.id)) !== JSON.stringify(product))
+        .map((product) => writeBeverageProductToFirebase(product)),
+      ...[...previous.keys()]
+        .filter((id) => !current.has(id))
+        .map((id) => deleteBeverageProductFromFirebase(id)),
+    ]);
+    previousBeverageProducts.current = beverageProducts;
   }, [beverageProducts, enabled]);
 
   useEffect(() => {
-    if (!enabled || !hasLoadedCigaretteProducts.current) return;
+    if (!enabled || !hasLoadedCigaretteProducts.current || !previousCigaretteProducts.current) return;
     if (isRemoteCigaretteProductsUpdate.current) {
       isRemoteCigaretteProductsUpdate.current = false;
+      previousCigaretteProducts.current = cigaretteProducts;
       return;
     }
-    pushCigaretteProductsToFirebase(cigaretteProducts);
+    const previous = new Map(previousCigaretteProducts.current.map((product) => [product.id, product]));
+    const current = new Map(cigaretteProducts.map((product) => [product.id, product]));
+    void Promise.all([
+      ...cigaretteProducts
+        .filter((product) => JSON.stringify(previous.get(product.id)) !== JSON.stringify(product))
+        .map((product) => writeCigaretteProductToFirebase(product)),
+      ...[...previous.keys()]
+        .filter((id) => !current.has(id))
+        .map((id) => deleteCigaretteProductFromFirebase(id)),
+    ]);
+    previousCigaretteProducts.current = cigaretteProducts;
   }, [cigaretteProducts, enabled]);
 
   // 6. Push Local Area Order Changes to Cloud
@@ -734,14 +780,25 @@ export function useFirebaseSync(enabled = true) {
     pushInvMovementsToFirebase(invMovements);
   }, [invMovements, enabled]);
 
-  // 15. Push Local Inventory Mapping Changes to Cloud
+  // 15. Persist local inventory mapping changes per child.
   useEffect(() => {
-    if (!enabled || !hasLoadedInvMappings.current) return;
+    if (!enabled || !hasLoadedInvMappings.current || !previousInvMappings.current) return;
     if (isRemoteInvMappingsUpdate.current) {
       isRemoteInvMappingsUpdate.current = false;
+      previousInvMappings.current = invMappings;
       return;
     }
-    pushInvMappingsToFirebase(invMappings);
+    const previous = new Map(previousInvMappings.current.map((mapping) => [mapping.id, mapping]));
+    const current = new Map(invMappings.map((mapping) => [mapping.id, mapping]));
+    void Promise.all([
+      ...invMappings
+        .filter((mapping) => JSON.stringify(previous.get(mapping.id)) !== JSON.stringify(mapping))
+        .map((mapping) => writeInvMappingToFirebase(mapping)),
+      ...[...previous.keys()]
+        .filter((id) => !current.has(id))
+        .map((id) => deleteInvMappingFromFirebase(id)),
+    ]);
+    previousInvMappings.current = invMappings;
   }, [invMappings, enabled]);
 
   // 16. Push Local Staff Changes to Cloud
