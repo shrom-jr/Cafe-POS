@@ -14,6 +14,7 @@
     "migrate:firebase-schema": "node scripts/fixDatabaseSchema.mjs --dry-run",
     "migrate:firebase-staff": "node scripts/fixDatabaseSchema.mjs --staff-only",
     "migrate:firebase-pos": "node scripts/optimizeFirebasePos.mjs --dry-run",
+    "restore:firebase-inventory": "node scripts/restoreInventoryFromMappings.mjs",
     "build:electron": "cd electron && npm install && npm run build",
     "electron:start": "cd electron && npm install && npm start"
   },
