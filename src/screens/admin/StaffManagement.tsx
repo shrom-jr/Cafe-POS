@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useStaffStore,
   canRemoveOrDeactivateStaffUser,
@@ -110,7 +111,7 @@ const StaffModal = ({
     onClose();
   };
 
-  return (
+  return createPortal((
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-4xl p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-5">
 
@@ -331,7 +332,7 @@ const StaffModal = ({
 
       </div>
     </div>
-  );
+  ), document.body);
 };
 
 // ── Reset PIN Modal ──────────────────────────────────────────────────────────
