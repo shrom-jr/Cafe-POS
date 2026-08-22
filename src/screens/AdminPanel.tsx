@@ -558,7 +558,7 @@ const AdminPanel = () => {
             </div>
           </div>
 
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+          <div className={resolvedActiveTab === 'settings' ? 'p-4 md:p-6 w-full max-w-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-6'}>
             <div className="hidden sm:block">
               {resolvedActiveTab === 'dashboard' ? (
                 <div className="mb-6">
@@ -653,7 +653,7 @@ const AdminPanel = () => {
             {resolvedActiveTab === 'expenses'  && <ExpensesSection />}
             {resolvedActiveTab === 'settings'  && (
               <div className="space-y-6">
-                 <div className="flex flex-col md:flex-row gap-6 items-start w-full">
+                 <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-start w-full">
                    <nav className="w-full md:w-64 shrink-0 bg-[#0e131f] border border-slate-800 rounded-2xl p-3 flex flex-col gap-1.5">
                      {availableSettings.map((sub) => (
                        <div key={sub.id}>
@@ -664,13 +664,17 @@ const AdminPanel = () => {
                              sub.id === 'data-management'
                                ? resolvedSettingsSubTab === sub.id
                                  ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-600/20'
-                                 : 'text-rose-400/80 font-semibold hover:bg-rose-950/30 hover:text-rose-300'
+                                 : 'text-rose-400 font-semibold hover:bg-rose-950/40 hover:text-rose-300'
                                : resolvedSettingsSubTab === sub.id
                                  ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
-                                 : 'text-slate-400 font-semibold hover:bg-[#161d2d] hover:text-slate-100'
+                                  : 'text-slate-100 font-semibold hover:bg-[#161d2d] hover:text-white'
                            }`}
                          >
-                           <span className="shrink-0">
+                           <span className={`shrink-0 ${
+                             resolvedSettingsSubTab === sub.id
+                               ? sub.id === 'data-management' ? 'text-white' : 'text-slate-950'
+                               : sub.id === 'data-management' ? 'text-rose-400' : 'text-slate-300'
+                           }`}>
                              {sub.id === 'bill' && <Store size={16} />}
                              {sub.id === 'billing' && <Receipt size={16} />}
                              {sub.id === 'payments' && <CreditCard size={16} />}
