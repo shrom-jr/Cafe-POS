@@ -71,9 +71,9 @@ function cigaretteDisplay(sticks: number, perPacket: number) {
 }
 
 const FormActions = ({ onClose, children }: { onClose: () => void; children: React.ReactNode }) => (
-  <div className="flex gap-2 mt-4">
-    {children}
+  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-5 mt-5 border-t border-white/10">
     <button className={BTN_GHOST} onClick={onClose}><X size={14} />Cancel</button>
+    {children}
   </div>
 );
 
@@ -97,9 +97,9 @@ const AlcoholForm = ({ edit, category, onClose }: { edit?: AlcoholProduct; categ
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-amber-500/15`}>
-     <h3 className="text-lg font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+     <div className="border-b border-white/10 pb-4"><h3 className="text-base font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3><p className="text-xs text-zinc-400 mt-1">Define the product and its opening stock details.</p></div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
       <div><label className={LABEL}>Bottle Size (ml) *</label><input className={INPUT} type="number" min="1" value={f.bottleSizeMl} onChange={set('bottleSizeMl')} /></div>
       <div><label className={LABEL}>Current (btl) *</label><input className={INPUT} type="number" min="0" step="0.01" value={f.stockBottles} onChange={set('stockBottles')} /></div>
       <div><label className={LABEL}>Min Alert (btl)</label><input className={INPUT} type="number" min="0" step="0.01" value={f.minBottles} onChange={set('minBottles')} /></div>
@@ -127,9 +127,9 @@ const BeverageForm = ({ edit, category, onClose }: { edit?: BeverageProduct; cat
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-sky-500/15`}>
-     <h3 className="text-lg font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+     <div className="border-b border-white/10 pb-4"><h3 className="text-base font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3><p className="text-xs text-zinc-400 mt-1">Set packaging, stock levels, and unit pricing.</p></div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
       <div><label className={LABEL}>Packaging *</label><select className={SELECT} value={f.packagingType} onChange={set('packagingType')}><option value="btl">Bottle (btl)</option><option value="can">Can</option><option value="pcs">Pieces</option></select></div>
       <div><label className={LABEL}>Size Label</label><input className={INPUT} placeholder="650ml" value={f.sizeLabel} onChange={set('sizeLabel')} /></div>
       <div><label className={LABEL}>Current (units) *</label><input className={INPUT} type="number" min="0" step="1" value={f.stock} onChange={set('stock')} /></div>
@@ -158,9 +158,9 @@ const CigaretteForm = ({ edit, onClose }: { edit?: CigaretteProduct; onClose: ()
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-orange-500/15`}>
-     <h3 className="text-lg font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : 'Add Cigarette Product'}</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <div className="col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
+     <div className="border-b border-white/10 pb-4"><h3 className="text-base font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : 'Add Cigarette Product'}</h3><p className="text-xs text-zinc-400 mt-1">Set packet sizing, stock levels, and cost information.</p></div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
       <div><label className={LABEL}>Sticks/Packet</label><input className={INPUT} type="number" min="1" step="1" value={f.packetSize} onChange={set('packetSize')} /></div>
       <div><label className={LABEL}>Current (packets)</label><input className={INPUT} type="number" min="0" step="1" value={f.stockPackets} onChange={set('stockPackets')} /></div>
       <div><label className={LABEL}>Min Alert (packets)</label><input className={INPUT} type="number" min="0" step="1" value={f.minPackets} onChange={set('minPackets')} /></div>

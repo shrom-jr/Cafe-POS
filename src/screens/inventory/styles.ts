@@ -1,18 +1,18 @@
 // Shared style constants for the Inventory module
-export const CARD    = 'max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4';
+export const CARD    = 'w-full text-white relative flex flex-col gap-5';
 export const CARD_SM = 'bg-[#13151F] border border-white/15 p-5 rounded-2xl shadow-xl';
 
-export const BTN_PRIMARY = 'w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all inline-flex items-center justify-center gap-2';
+export const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all';
 export const BTN_SM_PRIMARY = 'px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all inline-flex items-center gap-2';
-export const BTN_GHOST   = 'inline-flex items-center gap-2 px-4 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all';
+export const BTN_GHOST   = 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#181B26] hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider transition-all';
 export const BTN_DANGER  = 'p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all inline-flex items-center gap-1.5';
 export const BTN_EDIT    = 'p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all inline-flex items-center gap-1.5';
 export const BTN_BUY     = 'p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all inline-flex items-center gap-1.5';
 export const BTN_ADJUST  = 'p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/15 transition-all inline-flex items-center gap-1.5';
 
-export const INPUT  = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm placeholder:text-zinc-500 outline-none';
-export const SELECT = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3 text-sm outline-none';
-export const LABEL  = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block';
+export const INPUT  = 'w-full bg-[#181B26] border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-white font-semibold rounded-xl px-3.5 py-2.5 text-sm placeholder:text-zinc-500 outline-none transition-all';
+export const SELECT = 'w-full bg-[#181B26] border border-slate-700 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-white font-semibold rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all';
+export const LABEL  = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block';
 
 export const TH = 'py-4 px-6 text-xs font-black uppercase tracking-widest text-zinc-200 text-left whitespace-nowrap';
 export const TD = 'py-4 px-6 text-sm align-middle';
