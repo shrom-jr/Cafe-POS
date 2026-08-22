@@ -5,6 +5,7 @@ import { useStaffStore } from '@/store/useStaffStore';
 import { Customer, CustomerRepayment } from '@/types/pos';
 import { fmt } from '@/utils/format';
 import AppLayout from '@/components/ui/AppLayout';
+import AppModal from '@/components/ui/AppModal';
 import { UserCircle, Plus, X, BookOpen, Edit2, Trash2, DollarSign, AlertTriangle } from 'lucide-react';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -14,26 +15,6 @@ const formatDate = (ts: number | string) =>
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
-
-// ── Modal shell ────────────────────────────────────────────────────────────────
-
-interface ModalProps { onClose: () => void; children: React.ReactNode; title: string }
-const Modal = ({ onClose, children, title }: ModalProps) => (
-  <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div className="w-full max-w-md p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <p className="text-lg font-black text-white tracking-tight flex items-center gap-2">{title}</p>
-        <button
-          onClick={onClose}
-          className="text-zinc-400 hover:text-white transition-colors p-1"
-        >
-          <X size={18} />
-        </button>
-      </div>
-      {children}
-    </div>
-  </div>
-);
 
 // ── shared input class ─────────────────────────────────────────────────────────
 const inputClass = "w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl px-4 py-3.5 text-sm font-bold text-white placeholder:text-zinc-400 outline-none transition-all shadow-inner";
@@ -287,7 +268,7 @@ const CustomersPortal = () => {
 
       {/* ── Register modal ── */}
       {showRegister && (
-        <Modal title="Register New Customer" onClose={() => { setShowRegister(false); setRegisterError(''); }}>
+        <AppModal title="Register New Customer" onClose={() => { setShowRegister(false); setRegisterError(''); }}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Full Name *</label>
@@ -320,12 +301,12 @@ const CustomersPortal = () => {
               Register Customer
             </button>
           </div>
-        </Modal>
+        </AppModal>
       )}
 
       {/* ── Edit modal ── */}
       {editTarget && (
-        <Modal title="Edit Customer" onClose={() => setEditTarget(null)}>
+        <AppModal title="Edit Customer" onClose={() => setEditTarget(null)}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-black uppercase tracking-wider text-amber-400 dark:text-amber-400 mb-1.5 block">Full Name</label>
@@ -352,7 +333,7 @@ const CustomersPortal = () => {
               Save Changes
             </button>
           </div>
-        </Modal>
+        </AppModal>
       )}
 
       {/* ── Collect Payment modal ── */}

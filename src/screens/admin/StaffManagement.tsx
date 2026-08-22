@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   useStaffStore,
   canRemoveOrDeactivateStaffUser,
@@ -8,6 +7,7 @@ import {
 import { StaffUser, Role, StaffPermissions, DEFAULT_PERMISSIONS } from '@/types/staff';
 import { Plus, Trash2, Edit3, X, Save, Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import AppModal from '@/components/ui/AppModal';
 
 const ROLES: Role[] = ['WAITER', 'CASHIER', 'KITCHEN', 'MANAGER', 'ADMIN'];
 
@@ -111,18 +111,8 @@ const StaffModal = ({
     onClose();
   };
 
-  return createPortal((
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-5">
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors p-1">
-            <X size={16} />
-          </button>
-        </div>
-
+  return (
+    <AppModal title={isEdit ? 'Edit Staff' : 'Add Staff'} onClose={onClose} size="max-w-4xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* ── Left column ── */}
@@ -330,9 +320,8 @@ const StaffModal = ({
           </button>
         </div>
 
-      </div>
-    </div>
-  ), document.body);
+    </AppModal>
+  );
 };
 
 // ── Reset PIN Modal ──────────────────────────────────────────────────────────
@@ -355,8 +344,7 @@ const ResetPinModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+    <AppModal onClose={onClose} size="max-w-md" showHeader={false}>
         <div className="flex items-center justify-between">
           <div>
              <h3 className="text-lg font-black text-white tracking-tight">Reset PIN</h3>
@@ -397,8 +385,7 @@ const ResetPinModal = ({
             <KeyRound size={14} /> Reset PIN
           </button>
         </div>
-      </div>
-    </div>
+    </AppModal>
   );
 };
 
@@ -430,8 +417,7 @@ const DeleteConfirm = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+    <AppModal onClose={onClose} size="max-w-md" showHeader={false}>
         <div className="text-center">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
             <Trash2 size={20} className="text-red-400" />
@@ -449,8 +435,7 @@ const DeleteConfirm = ({
             <Trash2 size={13} /> Remove
           </button>
         </div>
-      </div>
-    </div>
+    </AppModal>
   );
 };
 
