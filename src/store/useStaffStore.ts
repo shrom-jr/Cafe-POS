@@ -7,13 +7,20 @@ const SESSION_KEY      = 'pos_current_user_id';
 const SESSION_USER_KEY = 'pos_current_user';   // full object — survives HMR & refresh
 
 /** Backfill `permissions` for accounts created before this field existed. */
-function migrateUser(u: StaffUser): StaffUser {
+export function migrateUser(u: StaffUser): StaffUser {
+  const defaults = DEFAULT_PERMISSIONS[u.role] ?? DEFAULT_PERMISSIONS.WAITER;
+  const legacyCustomers = u.permissions?.canViewCustomers;
   return {
     ...u,
     // Preserve explicit permissions while filling capabilities added in later releases.
     permissions: {
-      ...(DEFAULT_PERMISSIONS[u.role] ?? DEFAULT_PERMISSIONS.WAITER),
+      ...defaults,
       ...(u.permissions ?? {}),
+      // Legacy records used canViewCustomers. Preserve an explicit legacy
+      // decision instead of allowing the newer role default to override it.
+      ...(u.permissions?.customers === undefined && legacyCustomers !== undefined
+        ? { customers: legacyCustomers }
+        : {}),
     },
   };
 }

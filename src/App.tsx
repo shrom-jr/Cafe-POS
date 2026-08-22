@@ -24,6 +24,7 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { usePOSStore } from '@/store/usePOSStore';
 import OfflineBanner from '@/components/OfflineBanner';
 import { StaffPermissions } from '@/types/staff';
+import { canAccessCustomers, canAccessManagement } from '@/utils/permissions';
 import { getFirstPermittedRoute } from '@/utils/permissions';
 import { ensureFirebaseAuth } from '@/firebase';
 
@@ -40,13 +41,27 @@ const RequirePermission = ({
   children: React.ReactNode;
 }) => {
   const currentUser = useStaffStore((s) => s.currentUser);
-  if (!currentUser || !currentUser.permissions[perm]) {
+  const allowed = currentUser && (
+    perm === 'customers'
+      ? canAccessCustomers(currentUser.permissions)
+      : currentUser.permissions[perm]
+  );
+  if (!allowed) {
     const fallback = currentUser ? getFirstPermittedRoute(currentUser.permissions) : '/';
     return <Navigate to={fallback} replace />;
   }
   return <>{children}</>;
 };
 
+const RequireManagement = ({ children }: { children: React.ReactNode }) => {
+  const currentUser = useStaffStore((s) => s.currentUser);
+  const hasManagementPermission = canAccessManagement(currentUser?.role, currentUser?.permissions);
+  if (!hasManagementPermission) {
+    const fallback = currentUser ? getFirstPermittedRoute(currentUser.permissions) : '/';
+    return <Navigate to={fallback} replace />;
+  }
+  return <>{children}</>;
+};
 
 const App = () => {
   const [printBlocked, setPrintBlocked] = useState(false);
@@ -213,19 +228,19 @@ const App = () => {
                 <Route
                   path="/customers"
                   element={
-                    <RequirePermission perm="canViewCustomers">
+                    <RequirePermission perm="customers">
                       <CustomersPortal />
                     </RequirePermission>
                   }
                 />
 
-                {/* Admin — requires admin permission */}
+                {/* Management — Admin or granular Manager permission */}
                 <Route
                   path="/admin"
                   element={
-                    <RequirePermission perm="admin">
+                    <RequireManagement>
                       <AdminPanel />
-                    </RequirePermission>
+                    </RequireManagement>
                   }
                 />
 

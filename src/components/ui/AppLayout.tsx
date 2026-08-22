@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStaffStore } from '@/store/useStaffStore';
+import { canAccessCustomers, canAccessManagement, getFirstPermittedManagementRoute } from '@/utils/permissions';
 import { usePOSStore } from '@/store/usePOSStore';
 import { Role } from '@/types/staff';
 import { StaffPermissions } from '@/types/staff';
@@ -15,14 +16,14 @@ import { getSettingsLogo } from '@/utils/logo';
  *  Each item maps to a specific permission key. */
 const PERM_NAV: { path: string; label: string; perm: keyof StaffPermissions; icon: ReactNode }[] = [
   { path: '/',        label: 'Tables',         perm: 'pos',     icon: <LayoutGrid  size={13} /> },
-  { path: '/customers', label: 'Customers',    perm: 'canViewCustomers', icon: <Users size={13} /> },
+  { path: '/customers', label: 'Customers',    perm: 'customers', icon: <Users size={13} /> },
   { path: '/kitchen', label: 'Kitchen Portal', perm: 'kitchen', icon: <ChefHat     size={13} /> },
   { path: '/bar',     label: 'Bar Portal',     perm: 'bar',     icon: <GlassWater  size={13} /> },
-  { path: '/admin',   label: 'Admin',          perm: 'admin',   icon: <ShieldCheck size={13} /> },
+  { path: '/admin',   label: 'Admin',          perm: 'dashboard',   icon: <ShieldCheck size={13} /> },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
+  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen', MANAGER: 'Manager',
 };
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
@@ -30,6 +31,7 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
   CASHIER: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399' },
   KITCHEN: { bg: 'rgba(249,115,22,0.15)',  border: 'rgba(249,115,22,0.3)',  text: '#fb923c' },
+  MANAGER: { bg: 'rgba(6,182,212,0.18)', border: 'rgba(6,182,212,0.35)', text: '#67e8f9' },
 };
 
 interface AppLayoutProps {
@@ -61,7 +63,15 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
 
   // Filter nav to only the tabs this user has permission for
   const navItems = currentUser
-    ? PERM_NAV.filter((n) => currentUser.permissions[n.perm])
+    ? PERM_NAV.filter((n) =>
+        n.path === '/admin'
+          ? canAccessManagement(currentUser.role, currentUser.permissions)
+          : n.perm === 'customers'
+            ? canAccessCustomers(currentUser.permissions)
+            : currentUser.permissions[n.perm],
+      ).map((item) => item.path === '/admin' && currentUser.role === 'MANAGER'
+        ? { ...item, label: 'Manager' }
+        : item)
     : [];
 
   const handleSwitchUser = () => {
@@ -235,11 +245,13 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         return (
           <button
             key={path}
-            onClick={() => navigate(path)}
+               onClick={() => navigate(path === '/admin' && currentUser?.role === 'MANAGER' ? getFirstPermittedManagementRoute(currentUser.permissions) : path)}
             data-testid={`nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
              className={`group relative flex items-center gap-2 rounded-xl text-sm whitespace-nowrap select-none ${
-               active
-                 ? 'px-5 py-2.5 bg-emerald-500 text-slate-950 font-black tracking-wide shadow-lg shadow-emerald-500/35 border border-emerald-400 active:scale-95 transition-all flex items-center gap-2'
+                 active
+                  ? currentUser?.role === 'MANAGER' && path === '/admin'
+                    ? 'px-5 py-2.5 bg-cyan-500 text-slate-950 font-black tracking-wide shadow-lg shadow-cyan-500/35 border border-cyan-400 active:scale-95 transition-all flex items-center gap-2'
+                    : 'px-5 py-2.5 bg-emerald-500 text-slate-950 font-black tracking-wide shadow-lg shadow-emerald-500/35 border border-emerald-400 active:scale-95 transition-all flex items-center gap-2'
                  : 'px-4 py-2.5 text-zinc-200 hover:text-white hover:bg-white/10 font-bold tracking-wide border border-transparent hover:border-white/10 active:scale-95 transition-all flex items-center gap-2'
              }`}
           >

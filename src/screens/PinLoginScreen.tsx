@@ -39,6 +39,11 @@ const ROLE_CARD_STYLES: Record<Role, { card: string; name: string; badge: string
     name: 'group-hover:text-amber-200',
     badge: 'bg-amber-500/20 text-amber-200 border-amber-500/50',
   },
+  MANAGER: {
+    card: 'bg-gradient-to-b from-cyan-950/40 via-cyan-900/15 to-[#10121A] border-2 border-cyan-500/40 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.25)]',
+    name: 'group-hover:text-cyan-200',
+    badge: 'bg-cyan-500/20 text-cyan-200 border-cyan-500/50',
+  },
 };
 
 // ── Role colours for modal ────────────────────────────────────────────────────
@@ -47,10 +52,11 @@ const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = 
   CASHIER: { bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.40)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.40)', text: '#34d399' },
   KITCHEN: { bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.40)',  text: '#fbbf24' },
+  MANAGER: { bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.40)', text: '#67e8f9' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
+  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen', MANAGER: 'Manager',
 };
 
 const OTP_DURATION = 300;

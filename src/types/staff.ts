@@ -1,10 +1,16 @@
-export type Role = 'WAITER' | 'CASHIER' | 'ADMIN' | 'KITCHEN';
+export type Role = 'WAITER' | 'CASHIER' | 'KITCHEN' | 'MANAGER' | 'ADMIN';
 
 export interface StaffPermissions {
   pos:     boolean; // POS & Table Management
+  customers?: boolean; // Customer Directory & Ledgers
   kitchen: boolean; // Kitchen Portal
   bar:     boolean; // Bar Portal
   admin:   boolean; // Admin Panel
+  dashboard?: boolean; // Live Dashboard
+  reports?: boolean; // Sales Reports
+  menu?: boolean; // Menu Management
+  inventory?: boolean; // Stock & Restock
+  expenses?: boolean; // Expense Logging
   /** Khatta: can attach a customer to an order */
   canAttachCustomer?: boolean;
   /** Khatta: can settle or view outstanding customer dues */
@@ -15,10 +21,11 @@ export interface StaffPermissions {
 
 /** Default permissions automatically assigned when a role preset is chosen. */
 export const DEFAULT_PERMISSIONS: Record<Role, StaffPermissions> = {
-  WAITER:  { pos: true,  kitchen: false, bar: false, admin: false, canAttachCustomer: true,  canSettleDues: false, canViewCustomers: false },
-  CASHIER: { pos: true,  kitchen: false, bar: false, admin: false, canAttachCustomer: true,  canSettleDues: true,  canViewCustomers: true  },
-  KITCHEN: { pos: false, kitchen: true,  bar: false, admin: false, canAttachCustomer: false, canSettleDues: false, canViewCustomers: false },
-  ADMIN:   { pos: true,  kitchen: true,  bar: true,  admin: true,  canAttachCustomer: true,  canSettleDues: true,  canViewCustomers: true  },
+  WAITER:  { pos: true, customers: false, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: true, canSettleDues: false, canViewCustomers: false },
+  CASHIER: { pos: true, customers: true, kitchen: false, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
+  KITCHEN: { pos: false, customers: false, kitchen: true, bar: false, admin: false, dashboard: false, reports: false, menu: false, inventory: false, expenses: false, canAttachCustomer: false, canSettleDues: false, canViewCustomers: false },
+  MANAGER: { pos: true, customers: true, kitchen: true, bar: true, admin: false, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
+  ADMIN:   { pos: true, customers: true, kitchen: true, bar: true, admin: true, dashboard: true, reports: true, menu: true, inventory: true, expenses: true, canAttachCustomer: true, canSettleDues: true, canViewCustomers: true },
 };
 
 export interface StaffUser {

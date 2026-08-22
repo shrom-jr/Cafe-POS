@@ -8,30 +8,40 @@ import { StaffUser, Role, StaffPermissions, DEFAULT_PERMISSIONS } from '@/types/
 import { Plus, Trash2, Edit3, X, Save, Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ROLES: Role[] = ['WAITER', 'CASHIER', 'ADMIN', 'KITCHEN'];
+const ROLES: Role[] = ['WAITER', 'CASHIER', 'KITCHEN', 'MANAGER', 'ADMIN'];
 
 const ROLE_COLORS: Record<Role, { bg: string; border: string; text: string }> = {
   ADMIN:   { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)', text: '#c084fc' },
   CASHIER: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
   WAITER:  { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399' },
   KITCHEN: { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.3)',  text: '#fb923c' },
+  MANAGER: { bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.3)', text: '#67e8f9' },
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen',
+  ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen', MANAGER: 'Manager',
 };
 
 // Permission display config
 type PermKey = keyof StaffPermissions;
 const PERM_CONFIG: { key: PermKey; label: string; badge: string; color: string; border: string }[] = [
-  { key: 'pos',     label: 'POS & Tables',    badge: 'POS',     color: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
-  { key: 'kitchen', label: 'Kitchen Portal',  badge: 'Kitchen', color: 'rgba(249,115,22,0.18)',  border: 'rgba(249,115,22,0.35)'  },
-  { key: 'bar',     label: 'Bar Portal',      badge: 'Bar',     color: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
-  { key: 'admin',   label: 'Admin Panel',     badge: 'Admin',   color: 'rgba(168,85,247,0.18)', border: 'rgba(168,85,247,0.35)' },
+  { key: 'pos', label: 'POS & Floor Tables', badge: 'POS', color: 'rgba(59,130,246,0.18)', border: 'rgba(59,130,246,0.35)' },
+  { key: 'customers', label: 'Customer Directory', badge: 'Customers', color: 'rgba(14,165,233,0.18)', border: 'rgba(14,165,233,0.35)' },
+  { key: 'kitchen', label: 'Kitchen Portal', badge: 'Kitchen', color: 'rgba(249,115,22,0.18)', border: 'rgba(249,115,22,0.35)' },
+  { key: 'bar', label: 'Bar Portal', badge: 'Bar', color: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.35)' },
+  { key: 'dashboard', label: 'Dashboard Overview', badge: 'Dashboard', color: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.35)' },
+  { key: 'reports', label: 'Sales Reports', badge: 'Reports', color: 'rgba(139,92,246,0.18)', border: 'rgba(139,92,246,0.35)' },
+  { key: 'menu', label: 'Menu Management', badge: 'Menu', color: 'rgba(236,72,153,0.18)', border: 'rgba(236,72,153,0.35)' },
+  { key: 'inventory', label: 'Inventory Tracking', badge: 'Inventory', color: 'rgba(234,179,8,0.18)', border: 'rgba(234,179,8,0.35)' },
+  { key: 'expenses', label: 'Expense Logging', badge: 'Expenses', color: 'rgba(244,63,94,0.18)', border: 'rgba(244,63,94,0.35)' },
+  { key: 'admin', label: 'Admin Panel', badge: 'Admin', color: 'rgba(168,85,247,0.18)', border: 'rgba(168,85,247,0.35)' },
 ];
 const PERM_TEXT: Record<PermKey, string> = {
-  pos: '#60a5fa', kitchen: '#fb923c', bar: '#34d399', admin: '#c084fc',
+  pos: '#60a5fa', customers: '#38bdf8', kitchen: '#fb923c', bar: '#34d399',
+  dashboard: '#818cf8', reports: '#a78bfa', menu: '#f472b6', inventory: '#facc15',
+  expenses: '#fb7185', admin: '#c084fc',
 };
+const MANAGER_ONLY_PERMISSIONS = new Set<PermKey>(['dashboard', 'reports', 'menu', 'inventory', 'expenses']);
 
 const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
 const MODAL_BG = { background: '#0E1017', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 24px 64px -8px rgba(0,0,0,0.85)' };
@@ -94,7 +104,7 @@ const StaffModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+       <div className="max-w-4xl w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
         <div className="flex items-center justify-between">
            <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
            <button onClick={onClose} className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all">
@@ -102,7 +112,8 @@ const StaffModal = ({
           </button>
         </div>
 
-        <div className="space-y-3.5">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <div className="space-y-3.5">
           {/* Name */}
           <div>
              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">Full Name</label>
@@ -150,13 +161,15 @@ const StaffModal = ({
             </div>
           </div>
 
-          {/* Feature Permissions */}
+           </div>
+
+           {/* Feature Permissions */}
           <div>
              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
               Feature Permissions <span className="text-white/25 font-normal">(override individually)</span>
             </label>
             <div className="space-y-2">
-              {PERM_CONFIG.map(({ key, label, color, border }) => {
+               {PERM_CONFIG.filter(({ key }) => role === 'ADMIN' || role === 'MANAGER' || !MANAGER_ONLY_PERMISSIONS.has(key)).map(({ key, label, color, border }) => {
                 const checked = perms[key];
                 return (
                   <button
@@ -195,7 +208,7 @@ const StaffModal = ({
             </div>
           </div>
 
-          {/* PIN */}
+           {/* PIN */}
           <div>
              <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
                6-Digit PIN{isEdit && <span className="text-white/30 font-normal ml-1">(leave blank to keep)</span>}
@@ -219,7 +232,7 @@ const StaffModal = ({
             </div>
           </div>
 
-          {/* Active toggle (edit only) */}
+           {/* Active toggle (edit only) */}
           {isEdit && (
              <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
                <p className="text-sm font-black text-white">Active</p>
@@ -235,9 +248,9 @@ const StaffModal = ({
                   style={{ left: active ? '18px' : '2px' }}
                 />
               </button>
-            </div>
-          )}
-        </div>
+          </div>
+           )}
+         </div>
 
         <div className="flex gap-2.5 pt-1">
           <button
@@ -496,7 +509,7 @@ const StaffManagement = () => {
   const [showAdd, setShowAdd] = useState(false);
   const activeAdminCount = users.filter((user) => user.active && user.role === 'ADMIN').length;
 
-  const byRole: Record<Role, StaffUser[]> = { ADMIN: [], CASHIER: [], WAITER: [], KITCHEN: [] };
+  const byRole: Record<Role, StaffUser[]> = { ADMIN: [], CASHIER: [], WAITER: [], KITCHEN: [], MANAGER: [] };
   users.forEach((u) => { if (byRole[u.role]) byRole[u.role].push(u); });
 
   return (

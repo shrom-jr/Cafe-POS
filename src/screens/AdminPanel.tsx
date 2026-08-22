@@ -17,7 +17,7 @@ import { useInventoryStore } from '@/store/useInventoryStore';
 import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
 import { db } from '@/storage/db';
 import type { ClosedShift } from '@/storage/db';
-import type { StaffUser } from '@/types/staff';
+import type { StaffUser, StaffPermissions } from '@/types/staff';
 import { toast } from 'sonner';
 import {
   BarChart3, CreditCard, Table2, TrendingUp,
@@ -386,7 +386,9 @@ const AdminPanel = () => {
   const staffUsers  = useStaffStore((s) => s.users);
 
   // All hooks must be declared before any conditional return (Rules of Hooks)
-  const [authenticated, setAuthenticated] = useState(currentUser?.role === 'ADMIN');
+  const [authenticated, setAuthenticated] = useState(
+    currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER',
+  );
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -397,7 +399,7 @@ const AdminPanel = () => {
 
   // Hard RBAC guard — belt-and-suspenders on top of the route-level RequireAdmin.
   // Placed after all hooks so Rules of Hooks is satisfied.
-  if (!currentUser || currentUser.role !== 'ADMIN') {
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'MANAGER')) {
     return null;
   }
 
@@ -465,10 +467,24 @@ const AdminPanel = () => {
     { id: 'expenses',  label: 'Expenses',  icon: <Wrench size={15} />,            subtitle: 'Log and track maintenance expenses' },
     { id: 'settings',  label: 'Settings',  icon: <Settings size={15} />,          subtitle: 'Company profile, payments, and staff management' },
   ];
+  const tabPermission: Partial<Record<AdminTab, keyof StaffPermissions>> = {
+    dashboard: 'dashboard',
+    reports: 'reports',
+    menu: 'menu',
+    inventory: 'inventory',
+    expenses: 'expenses',
+    customers: 'customers',
+    tables: 'pos',
+  };
+  const availableTabs = currentUser.role === 'ADMIN'
+    ? tabs
+    : tabs.filter((tab) => tabPermission[tab.id] && currentUser.permissions[tabPermission[tab.id]!]);
 
   // Fall back to Dashboard if hot reload or a stale session retains a removed tab.
-  const resolvedActiveTab: AdminTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : 'dashboard';
-  const active = tabs.find((t) => t.id === resolvedActiveTab)!;
+  const resolvedActiveTab: AdminTab = availableTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : availableTabs[0]?.id ?? 'dashboard';
+  const active = availableTabs.find((t) => t.id === resolvedActiveTab)!;
 
   return (
     <AppLayout title="Admin Panel">
@@ -492,7 +508,7 @@ const AdminPanel = () => {
           `}
         >
           <nav className="flex-1 space-y-1 overflow-y-auto">
-            {tabs.map((tab) => {
+            {availableTabs.map((tab) => {
               const isActive = resolvedActiveTab === tab.id;
               return (
                 <button
@@ -650,13 +666,13 @@ const AdminPanel = () => {
                   ))}
                 </div>
                 {/* Sub-tab content */}
-                {settingsSubTab === 'bill'            && <CompanyProfileSection />}
-                {settingsSubTab === 'billing'         && <BillingReceiptsSection />}
-                {settingsSubTab === 'payments'        && <PaymentsSection />}
-                {settingsSubTab === 'stock'           && <StockModeSection />}
-                {settingsSubTab === 'printers'        && <PrinterSettingsSection />}
-                {settingsSubTab === 'staff'           && <StaffManagement />}
-                {settingsSubTab === 'data-management' && <DataManagementSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'bill'            && <CompanyProfileSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'billing'         && <BillingReceiptsSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'payments'        && <PaymentsSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'stock'           && <StockModeSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'printers'        && <PrinterSettingsSection />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'staff'           && <StaffManagement />}
+                 {currentUser.role === 'ADMIN' && settingsSubTab === 'data-management' && <DataManagementSection />}
               </div>
             )}
           </div>
