@@ -420,17 +420,14 @@ export function sanitizeOrder(rawOrder: any): Order {
   };
 }
 
-// Push Orders
+// Legacy compatibility helper. Orders are persisted one child at a time.
 export async function pushOrdersToFirebase(orders: Order[]) {
   try {
-    const uuidKeyedOrders = Object.fromEntries(
+    await Promise.all(
       (orders || [])
         .filter((order) => order && order.id)
-        .map((order) => [order.id, order]),
+        .map((order) => writeOrderRecord(order)),
     );
-    await update(ref(db), {
-      orders: JSON.parse(JSON.stringify(uuidKeyedOrders)),
-    });
   } catch (error) {
     logStructuredFirebaseError("Firebase Orders Push", error);
   }
@@ -439,12 +436,13 @@ export async function pushOrdersToFirebase(orders: Order[]) {
 // Push Tables Status
 export async function pushTablesToFirebase(tables: CafeTable[]) {
   try {
-    // Write as a UUID-keyed object, not an array. Using an array causes Firebase
-    // to store records under integer keys (0, 1, 2…) which then coexist with the
-    // UUID-keyed records written by writeOrderTableMutation, creating duplicate
-    // entries per table that drive infinite repair loops in subscribeToTables.
-    const uuidKeyedMap = Object.fromEntries((tables || []).map((t) => [t.id, t]));
-    await set(ref(db, "tables"), JSON.parse(JSON.stringify(uuidKeyedMap)));
+    // Compatibility helper only: never replace the tables collection.
+    // Empty input intentionally performs no writes.
+    await Promise.all(
+      (tables || [])
+        .filter((table) => table && table.id)
+        .map((table) => writeTableRecord(table)),
+    );
   } catch (error) {
     logStructuredFirebaseError("Firebase Tables Push", error);
   }
@@ -1060,16 +1058,26 @@ export async function writePaymentRecord(payment: Payment): Promise<{ success: b
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Push Settings
-export async function pushSettingsToFirebase(settings: Settings) {
+// Push only changed settings keys; never replace the settings collection.
+export async function pushSettingsToFirebase(
+  settings: Settings,
+  previousSettings?: Settings,
+) {
   try {
     const { adminPin: _legacyAdminPin, ...settingsWithoutLegacyPin } =
       settings as Settings & { adminPin?: unknown };
-    void _legacyAdminPin;
-    await set(
-      ref(db, "settings"),
-      JSON.parse(JSON.stringify(normalizeSettingsLogos(settingsWithoutLegacyPin || {}))),
+    const normalized = normalizeSettingsLogos(settingsWithoutLegacyPin || {});
+    const previous = previousSettings
+      ? normalizeSettingsLogos(previousSettings)
+      : {};
+    const changedKeys = Object.fromEntries(
+      Object.entries(normalized).filter(([key, value]) =>
+        JSON.stringify((previous as Record<string, unknown>)[key]) !== JSON.stringify(value),
+      ).map(([key, value]) => [key, value === undefined ? null : JSON.parse(JSON.stringify(value))]),
     );
+    if (Object.keys(changedKeys).length === 0) return;
+    void _legacyAdminPin;
+    await update(ref(db, "settings"), changedKeys);
   } catch (error) {
     logStructuredFirebaseError("Firebase Settings Push", error);
   }
@@ -1881,13 +1889,49 @@ export function subscribeToMeatEntries(
 // Push Maintenance Expenses
 export async function pushMaintenanceExpensesToFirebase(expenses: MaintenanceExpense[]) {
   try {
-    await pushCollectionWithResetGuard(
-      "maintenanceExpenses",
-      expenses || [],
-      "maintenanceExpenses",
+    await Promise.all(
+      (expenses || [])
+        .filter((expense) => expense && expense.id)
+        .map((expense) => writeMaintenanceExpenseToFirebase(expense)),
     );
   } catch (error) {
     logStructuredFirebaseError("Firebase Maintenance Expenses Push", error);
+  }
+}
+
+export async function writeMaintenanceExpenseToFirebase(
+  expense: MaintenanceExpense,
+): Promise<void> {
+  try {
+    await ensureResetMarkersHydrated();
+    assertFirebaseCollectionIsSafeToWrite("maintenanceExpenses");
+    const expectedMarker = observedResetMarkers?.maintenanceExpenses;
+    const latestMarker = (await get(ref(db, "resetMarkers/maintenanceExpenses"))).val() as
+      | SyncMutation
+      | undefined;
+    if (resetGeneration(expectedMarker) !== resetGeneration(latestMarker)) return;
+    await update(ref(db), {
+      [`maintenanceExpenses/${expense.id}`]: JSON.parse(JSON.stringify(expense)),
+    });
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Maintenance Expense Write", error);
+    throw error;
+  }
+}
+
+export async function deleteMaintenanceExpenseFromFirebase(id: string): Promise<void> {
+  try {
+    await ensureResetMarkersHydrated();
+    assertFirebaseCollectionIsSafeToWrite("maintenanceExpenses");
+    const expectedMarker = observedResetMarkers?.maintenanceExpenses;
+    const latestMarker = (await get(ref(db, "resetMarkers/maintenanceExpenses"))).val() as
+      | SyncMutation
+      | undefined;
+    if (resetGeneration(expectedMarker) !== resetGeneration(latestMarker)) return;
+    await update(ref(db), { [`maintenanceExpenses/${id}`]: null });
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Maintenance Expense Delete", error);
+    throw error;
   }
 }
 

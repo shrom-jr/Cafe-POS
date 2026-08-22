@@ -55,6 +55,8 @@ import {
   pushKitchenPurchasesToFirebase,
   pushMeatEntriesToFirebase,
   pushMaintenanceExpensesToFirebase,
+  writeMaintenanceExpenseToFirebase,
+  deleteMaintenanceExpenseFromFirebase,
   deleteAlcoholProductFromFirebase,
   deleteBeverageProductFromFirebase,
   deleteCigaretteProductFromFirebase,
@@ -283,6 +285,7 @@ export function useFirebaseSync(enabled = true) {
   const isRemoteMeatEntriesUpdate = useRef(false);
   const isRemoteMaintenanceExpensesUpdate = useRef(false);
   const hasLoadedSettings = useRef(false);
+  const previousSettings = useRef<typeof settings | null>(null);
   const hasLoadedAreaOrder = useRef(false);
   const hasLoadedStaff = useRef(false);
   const previousStaffIds = useRef<Set<string> | null>(null);
@@ -299,6 +302,7 @@ export function useFirebaseSync(enabled = true) {
   const hasLoadedKitchenPurchases = useRef(false);
   const hasLoadedMeatEntries = useRef(false);
   const hasLoadedMaintenanceExpenses = useRef(false);
+  const previousMaintenanceExpenses = useRef<typeof maintenanceExpenses | null>(null);
 
   // 1. Subscribe to Cloud Updates
   useEffect(() => {
@@ -384,6 +388,7 @@ export function useFirebaseSync(enabled = true) {
       setSettings: (remoteSettings: typeof settings) => {
         const currentSettings = usePOSStore.getState().settings;
         hasLoadedSettings.current = true;
+        previousSettings.current = remoteSettings;
 
         if (JSON.stringify(currentSettings) !== JSON.stringify(remoteSettings)) {
           isRemoteSettingsUpdate.current = true;
@@ -581,6 +586,7 @@ export function useFirebaseSync(enabled = true) {
     const unsubscribeMaintenanceExpenses = subscribeToMaintenanceExpenses((remote, remoteExists) => {
       hasLoadedMaintenanceExpenses.current = true;
       const current = useMaintenanceStore.getState().expenses;
+      previousMaintenanceExpenses.current = remote;
 
       if (!remoteExists) {
         isRemoteMaintenanceExpensesUpdate.current = true;
@@ -680,12 +686,14 @@ export function useFirebaseSync(enabled = true) {
 
   // 2. Push Local Settings Changes to Cloud
   useEffect(() => {
-    if (!enabled || !hasLoadedSettings.current) return;
+    if (!enabled || !hasLoadedSettings.current || !previousSettings.current) return;
     if (isRemoteSettingsUpdate.current) {
       isRemoteSettingsUpdate.current = false;
+      previousSettings.current = settings;
       return;
     }
-    pushSettingsToFirebase(settings);
+    void pushSettingsToFirebase(settings, previousSettings.current);
+    previousSettings.current = settings;
   }, [settings, enabled]);
 
   // Firebase is the authority for product catalogs. Local changes are persisted
@@ -847,9 +855,21 @@ export function useFirebaseSync(enabled = true) {
     if (!enabled || !hasLoadedMaintenanceExpenses.current) return;
     if (isRemoteMaintenanceExpensesUpdate.current) {
       isRemoteMaintenanceExpensesUpdate.current = false;
+      previousMaintenanceExpenses.current = maintenanceExpenses;
       return;
     }
-    pushMaintenanceExpensesToFirebase(maintenanceExpenses);
+    if (!previousMaintenanceExpenses.current) return;
+    const previous = new Map(previousMaintenanceExpenses.current.map((expense) => [expense.id, expense]));
+    const current = new Map(maintenanceExpenses.map((expense) => [expense.id, expense]));
+    void Promise.all([
+      ...maintenanceExpenses
+        .filter((expense) => JSON.stringify(previous.get(expense.id)) !== JSON.stringify(expense))
+        .map((expense) => writeMaintenanceExpenseToFirebase(expense)),
+      ...[...previous.keys()]
+        .filter((id) => !current.has(id))
+        .map((id) => deleteMaintenanceExpenseFromFirebase(id)),
+    ]);
+    previousMaintenanceExpenses.current = maintenanceExpenses;
   }, [maintenanceExpenses, enabled]);
 
   // 20. Offline mutation queue — drain on reconnect
