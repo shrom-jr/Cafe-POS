@@ -42,8 +42,7 @@ const MANAGEMENT_PERMISSIONS: PermissionConfig[] = [
 ];
 const ALL_PERMISSIONS = [...OPERATIONAL_PERMISSIONS, ...MANAGEMENT_PERMISSIONS];
 
-const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-[#94A3B8] outline-none transition-all shadow-inner';
-const MODAL_BG = { background: '#0E1017', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 24px 64px -8px rgba(0,0,0,0.85)' };
+const inputCls = 'w-full bg-slate-900/90 border border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors';
 
 // ── Add / Edit Modal ─────────────────────────────────────────────────────────
 const StaffModal = ({
@@ -102,8 +101,8 @@ const StaffModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-       <div className="max-w-4xl w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+       <div className="max-w-4xl w-full p-7 rounded-2xl bg-[#0F172A] border border-slate-800 shadow-2xl text-white relative flex flex-col gap-4">
         <div className="flex items-center justify-between">
            <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
            <button onClick={onClose} className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all">
@@ -147,12 +146,12 @@ const StaffModal = ({
                   <button
                     key={r}
                     onClick={() => handleRoleSelect(r)}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                     className={`py-2 rounded-xl text-sm font-medium transition-colors active:scale-95 ${
                       index < 3 ? 'col-span-2' : 'col-span-3'
                     }`}
                     style={isActive
                       ? { background: c.bg, border: `1px solid ${c.border}`, color: c.text }
-                      : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }
+                       : undefined
                     }
                   >
                     {ROLE_LABEL[r]}
@@ -179,7 +178,7 @@ const StaffModal = ({
                     { title: 'Management & Hardware', items: MANAGEMENT_PERMISSIONS },
                   ].map(({ title, items }) => (
                     <div key={title} className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">{title}</h4>
+                       <h4 className="text-amber-400/90 font-bold text-xs tracking-wider uppercase mb-2 block">{title}</h4>
                       <div className="grid grid-cols-2 gap-2">
                         {items.map(({ key, label }) => {
                           const checked = perms[key] === true;
@@ -188,18 +187,18 @@ const StaffModal = ({
                               key={key}
                               type="button"
                               onClick={() => togglePerm(key)}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
                                 checked
-                                  ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-semibold'
-                                  : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-slate-500 font-medium'
+                                   ? 'bg-amber-500/10 border-amber-500/50 text-white font-medium'
+                                   : 'bg-slate-900/60 border-slate-700/80 text-slate-300 hover:border-slate-500 hover:text-white font-normal'
                               } active:scale-[0.98]`}
                             >
                               <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${
-                                checked ? 'bg-amber-500 border border-amber-400' : 'bg-transparent border border-slate-500'
+                                 checked ? 'bg-amber-500/20 border border-amber-400' : 'bg-transparent border border-slate-500'
                               }`}>
                                 {checked && (
-                                  <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                                    <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                   <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                     <path d="M1 3.5L3.5 6L8 1" stroke="#FBBF24" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                                   </svg>
                                 )}
                               </span>
@@ -212,18 +211,18 @@ const StaffModal = ({
                   ))}
                 </div>
               ) : role === 'ADMIN' ? (
-                <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Master Administrator</p>
-                  <p className="mt-2 text-sm leading-6 text-[#CBD5E1]">
+                 <div className="rounded-xl bg-purple-950/30 border border-purple-500/40 text-purple-100 p-4">
+                   <p className="text-purple-300 font-bold text-sm uppercase tracking-wide">Master Administrator</p>
+                   <p className="text-slate-300 text-xs mt-1 leading-relaxed">
                     Full Unrestricted Master Access: Complete control over all floor portals, management views,
                     hardware/printers, company tax &amp; VAT settings, staff management, and system data resets.
                   </p>
-                  <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Locked full access</p>
+                   <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Locked full access</p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">Role Access Preset</p>
-                  <p className="mt-2 text-sm leading-6 text-[#CBD5E1]">
+                 <div className="bg-slate-900/80 border border-slate-700 text-slate-200 rounded-xl p-4">
+                   <p className="text-slate-100 font-bold text-sm uppercase tracking-wide">Role Access Preset</p>
+                   <p className="text-slate-300 text-xs mt-1 leading-relaxed">
                     {role === 'WAITER' && 'POS & Floor Tables access for taking orders and managing assigned tables.'}
                     {role === 'CASHIER' && 'POS & Table Billing plus Customer Directory access for payments and khata.'}
                     {role === 'KITCHEN' && 'Kitchen Portal access for preparing and completing kitchen orders.'}
@@ -284,13 +283,13 @@ const StaffModal = ({
         <div className="flex gap-2.5 pt-1">
           <button
             onClick={onClose}
-             className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all"
+             className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-6 py-2.5 rounded-xl transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-             className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition-colors shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
           >
             <Save size={14} /> {isEdit ? 'Save Changes' : 'Add Staff'}
           </button>

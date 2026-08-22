@@ -1,0 +1,46 @@
+Please refine the visual styling and typography of the Add/Edit Staff modal to eliminate dull gray text, fix the harsh neon-orange permission glow, and clean up the backdrop:
+
+### 1. Fix Modal Backdrop & Scrim
+* Replace the current muddy backdrop with a clean, smooth dark overlay:
+  `fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto`
+* Ensure the modal card itself uses: `bg-[#0F172A] border border-slate-800 shadow-2xl rounded-2xl`
+
+### 2. Brighten Left Column (No More Dull/Washed-Out Gray)
+* Form Labels ("FULL NAME", "EMAIL *", "ROLE (SETS DEFAULT PERMISSIONS)", "6-DIGIT PIN"):
+  - Use `text-white font-bold text-xs tracking-wider uppercase mb-1.5 block`
+* Input Fields (Name, Email, PIN):
+  - Use `bg-slate-900/90 border border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors`
+* Inactive Role Selector Buttons:
+  - Use `bg-slate-800/80 border border-slate-700/90 text-slate-200 hover:bg-slate-700 hover:text-white font-medium text-sm rounded-xl transition-colors`
+* Active Role Selector Buttons:
+  - Retain their clear role accents with bright text (e.g., Manager: `bg-cyan-950/60 border-2 border-cyan-500 text-cyan-200 font-semibold`).
+
+### 3. Tone Down Manager Permissions Checklist (Remove Harsh Neon Orange)
+* Checked Permission Cards:
+  - Replace the thick bright orange box with a subtle, premium look:
+    `bg-amber-500/10 border border-amber-500/50 text-white font-medium rounded-xl p-3 flex items-center gap-3 transition-all`
+  - The checkmark icon should be `text-amber-400 font-bold`.
+* Unchecked Permission Cards:
+  - Replace dark/washed-out styling with clearly legible cards:
+    `bg-slate-900/60 border border-slate-700/80 text-slate-300 hover:border-slate-500 hover:text-white font-normal rounded-xl p-3 flex items-center gap-3 transition-all`
+* Group Subheaders ("OPERATIONAL PORTALS", "MANAGEMENT & HARDWARE"):
+  - Use `text-amber-400/90 font-bold text-xs tracking-wider uppercase mb-2 block`
+
+### 4. Refine Role Preset & Admin Summary Cards
+* Master Administrator Summary Card (Admin Selected):
+  - Style with a distinct royal purple theme instead of orange:
+    `bg-purple-950/30 border border-purple-500/40 text-purple-100 rounded-xl p-4`
+    Badge/Header: `text-purple-300 font-bold text-sm uppercase tracking-wide`
+    Description: `text-slate-300 text-xs mt-1 leading-relaxed`
+* Role Access Preset Card (Waiter/Cashier/Kitchen Selected):
+  - Style cleanly with:
+    `bg-slate-900/80 border border-slate-700 text-slate-200 rounded-xl p-4`
+    Header: `text-slate-100 font-bold text-sm uppercase tracking-wide`
+    Description: `text-slate-300 text-xs mt-1 leading-relaxed`
+
+### 5. Dialog Actions
+* "Cancel" Button: `bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-6 py-2.5 rounded-xl transition-colors`
+* "Add / Save Staff" Button: `bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition-colors shadow-lg shadow-amber-500/20`
+
+### 6. Validation
+* Run `npm test` and `npm run build` to verify all components compile cleanly.
