@@ -111,13 +111,13 @@ const StaffModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl bg-[#111622] border border-slate-800 rounded-2xl shadow-2xl p-6 text-white">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-5">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold text-white uppercase tracking-wider">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors">
+          <h3 className="text-lg font-black text-white tracking-tight">{isEdit ? 'Edit Staff' : 'Add Staff'}</h3>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors p-1">
             <X size={16} />
           </button>
         </div>
