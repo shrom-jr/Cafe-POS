@@ -1,0 +1,65 @@
+FIREBASE SYNCHRONIZATION DIAGNOSTIC AUDIT
+===========================================
+
+Scope: src/hooks/useFirebaseSync.ts, src/utils/firebaseSync.ts, and src/store/*
+Audit type: Read-only diagnostic review
+
+COLLECTION / ENTITY: menu / menuItems
+CURRENT WRITE PATTERN: Granular child-level writes to menu/items/{id}. Legacy bulk helper loops over child writers.
+STALE-CLIENT RISK: SAFE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:1466-1518; src/hooks/useFirebaseSync.ts:307-312, 394-399, 606-607
+
+COLLECTION / ENTITY: categories
+CURRENT WRITE PATTERN: Granular child-level writes to menu/categories/{id}. Legacy bulk helper loops over child writers.
+STALE-CLIENT RISK: SAFE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:1521-1562; src/hooks/useFirebaseSync.ts:401-406, 607
+
+COLLECTION / ENTITY: tables / tableLayout
+CURRENT WRITE PATTERN: Mixed. Normal order/table mutations use targeted multi-location updates, but pushTablesToFirebase uses set(ref(db, "tables"), fullObject). The empty-startup path can call it.
+STALE-CLIENT RISK: VULNERABLE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:826-940, 964-975, 440-448; src/hooks/useFirebaseSync.ts:337-360
+
+COLLECTION / ENTITY: orders / activeOrders / orderHistory
+CURRENT WRITE PATTERN: Normal writes use targeted orders/{id} updates and tombstones. Legacy pushOrdersToFirebase still writes the complete orders object through a root update.
+STALE-CLIENT RISK: VULNERABLE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:423-436, 826-961, 1340-1382; src/store/usePOSStore.ts:418-420, 515-517, 918-920
+
+COLLECTION / ENTITY: customers / customerLedger
+CURRENT WRITE PATTERN: Child-level customer writes via customers/{id}. Ledger and repayments are contained within each customer record. Batch helper updates individual customer paths.
+STALE-CLIENT RISK: SAFE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:229-289, 299-404; src/store/useCustomerStore.ts:127-148, 184-248
+
+COLLECTION / ENTITY: payments
+CURRENT WRITE PATTERN: Granular writes to payments/{id} with reset-generation validation. Compatibility helper loops over individual payment writers.
+STALE-CLIENT RISK: SAFE for stale-empty overwrite risk
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:453-465, 1027-1059, 1385-1446; src/hooks/useFirebaseSync.ts:364-382
+
+COLLECTION / ENTITY: settlements
+CURRENT WRITE PATTERN: No separate settlement collection writer found. Settlement flow writes payment and order/table records using granular paths.
+STALE-CLIENT RISK: SAFE
+FILE & LINE REFERENCE: src/store/usePOSStore.ts:1133-1137; src/utils/firebaseSync.ts:826-940, 1027-1059
+
+COLLECTION / ENTITY: expenses
+CURRENT WRITE PATTERN: Full-collection transaction through pushCollectionWithResetGuard. The local hook pushes the complete expense array.
+STALE-CLIENT RISK: VULNERABLE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:549-562, 1881-1900; src/hooks/useFirebaseSync.ts:581-600, 845-853; src/store/useMaintenanceStore.ts:15-23
+
+COLLECTION / ENTITY: staff / roles
+CURRENT WRITE PATTERN: Granular writes and deletes to users/{id}. pushStaffToFirebase loops over child writers and the hook explicitly skips empty local staff. Roles are embedded in user permissions; no separate /roles writer was found.
+STALE-CLIENT RISK: SAFE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:1228-1255, 1639-1704; src/hooks/useFirebaseSync.ts:616-635, 804-823; src/store/useStaffStore.ts
+
+COLLECTION / ENTITY: settings / printerConfigs
+CURRENT WRITE PATTERN: Full-object write to settings via set(ref(db, "settings"), normalizedSettings). Printer configuration is nested within settings.
+STALE-CLIENT RISK: VULNERABLE
+FILE & LINE REFERENCE: src/utils/firebaseSync.ts:1063-1075, 1448-1463; src/hooks/useFirebaseSync.ts:384-392, 681-689; src/store/usePOSStore.ts:179-192
+
+SUMMARY
+-------
+Potential whole-collection overwrite risks remain in:
+1. tables / tableLayout
+2. orders / activeOrders / orderHistory (legacy helper)
+3. expenses
+4. settings / printerConfigs
+
+The menu, categories, customers, payments, settlements, and staff paths use granular writes or otherwise avoid stale-empty collection replacement.

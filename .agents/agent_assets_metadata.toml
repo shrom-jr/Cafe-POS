@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "LmUefUVoTPWZaWbARuZTL"
+uri = "file://audit-summary.txt"
+type = "text"
+title = "Firebase Synchronization Audit"
+description = "Plain-text diagnostic audit formatted for easy download and copying into Word."
+logical_id = "af78bc87-b0fb-4a4f-ba75-7a1023ae9f32"
+content_hash = "sha256:24ddd4802ec021ef6f1c08181745393e6456a6e80fe97fa7f9d99af3b45bcfb1"
+size = 4112
+mtime_ms = 1787431232621
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a3011aa5-3858-4741-90b9-1832a1d8e12c/af78bc87-b0fb-4a4f-ba75-7a1023ae9f32/cabb8cdb-5993-4ef7-8a64-9dad89860a59"
+storage_version_token = "1787431234375846"
+content_type = "text/plain"
