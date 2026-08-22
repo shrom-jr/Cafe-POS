@@ -7,7 +7,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { normalizeIdKeyedCollection } from "./lib/schemaMigration.mjs";
 
-const DEFAULT_DATABASE_URL = "https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app";
+const DEFAULT_DATABASE_URL = "https://sanjibcottage-default-rtdb.asia-southeast1.firebasedatabase.app";
 const args = new Set(process.argv.slice(2));
 const confirm = args.has("--confirm");
 const dryRun = !confirm || args.has("--dry-run");

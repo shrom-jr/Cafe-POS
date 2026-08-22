@@ -18,7 +18,7 @@
  */
 
 const DB_URL =
-  'https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app';
+  'https://sanjibcottage-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function put(path, data) {

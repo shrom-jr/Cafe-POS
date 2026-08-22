@@ -23,7 +23,7 @@ import {
 } from "./lib/schemaMigration.mjs";
 
 const DEFAULT_DATABASE_URL =
-  "https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app";
+  "https://sanjibcottage-default-rtdb.asia-southeast1.firebasedatabase.app";
 const args = new Set(process.argv.slice(2));
 const confirm = args.has("--confirm");
 const canonicalMenuAuthoritative = args.has("--canonical-menu-authoritative");

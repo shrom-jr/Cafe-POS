@@ -14,7 +14,7 @@
  */
 
 const DB_URL =
-  'https://sbamboosekuwa-default-rtdb.asia-southeast1.firebasedatabase.app';
+  'https://sanjibcottage-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 // ── Pillars ───────────────────────────────────────────────────────────────────
 const pillars = ['Food', 'Beverages', 'Alcohol', 'Others'];
