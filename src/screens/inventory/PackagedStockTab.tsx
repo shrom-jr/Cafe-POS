@@ -2,8 +2,16 @@ import { useMemo, useState } from 'react';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import {
   AlcoholProduct, BeverageProduct, CigaretteProduct, InventoryCategory,
-  InvMovementType,
+  InvMovementType, InvMenuMapping, InvProductType, MenuItem,
 } from '@/types/pos';
+import { usePOSStore } from '@/store/usePOSStore';
+import {
+  writeAlcoholProductToFirebase,
+  writeBeverageProductToFirebase,
+  writeCigaretteProductToFirebase,
+  writeInvMappingToFirebase,
+  writeMenuItemToFirebase,
+} from '@/utils/firebaseSync';
 import {
   CARD, BTN_PRIMARY, BTN_SM_PRIMARY, BTN_GHOST, BTN_DANGER, BTN_EDIT, BTN_BUY, BTN_ADJUST,
   INPUT, SELECT, LABEL, TH, TD,
@@ -77,15 +85,86 @@ const FormActions = ({ onClose, children }: { onClose: () => void; children: Rea
   </div>
 );
 
+type AutoPrice = { variant: string; deductQty: number; price: string };
+
+async function createAutoMenuEntries({
+  productName, productId, productType, prices, categoryId, menuItems, setMenuItems, mappings, setMappings,
+}: {
+  productName: string;
+  productId: string;
+  productType: InvProductType;
+  prices: AutoPrice[];
+  categoryId: string;
+  menuItems: MenuItem[];
+  setMenuItems: (items: MenuItem[]) => void;
+  mappings: InvMenuMapping[];
+  setMappings: (items: InvMenuMapping[]) => void;
+}) {
+  const supplied = prices.filter((entry) => entry.price.trim() !== '');
+  const invalid = supplied.find((entry) => !Number.isFinite(Number(entry.price)) || Number(entry.price) <= 0);
+  if (invalid) {
+    toast.error(`Enter a valid price for ${invalid.variant}`);
+    return false;
+  }
+  if (supplied.length === 0) return true;
+
+  const timestamp = Date.now();
+  const generated = supplied.map((entry, index) => {
+    const menuItemId = crypto.randomUUID();
+    const menuItem: MenuItem = {
+      id: menuItemId,
+      name: `${productName} (${entry.variant})`,
+      categoryId,
+      price: Number(entry.price),
+      printRoute: 'BOT',
+      available: true,
+    };
+    const mapping: InvMenuMapping = {
+      id: `map-${timestamp}-${entry.variant.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${index}`,
+      menuItemId,
+      productId,
+      deductQty: entry.deductQty,
+      productType,
+    };
+    return { menuItem, mapping };
+  });
+
+  setMenuItems([...menuItems, ...generated.map((entry) => entry.menuItem)]);
+  setMappings([...mappings, ...generated.map((entry) => entry.mapping)]);
+  await Promise.all([
+    ...generated.map((entry) => writeMenuItemToFirebase(entry.menuItem)),
+    ...generated.map((entry) => writeInvMappingToFirebase(entry.mapping)),
+  ]);
+  toast.success(`${generated.length} menu price${generated.length === 1 ? '' : 's'} generated`);
+  return true;
+}
+
 const AlcoholForm = ({ edit, category, onClose }: { edit?: AlcoholProduct; category: 'spirits' | 'wine'; onClose: () => void }) => {
   const add = useInventoryStore((s) => s.addAlcohol);
   const update = useInventoryStore((s) => s.updateAlcohol);
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const setMenuItems = usePOSStore((s) => s.setMenuItems);
+  const mappings = useInventoryStore((s) => s.invMappings);
+  const setMappings = useInventoryStore((s) => s.setInvMappings);
   const initial = edit
     ? { name: edit.name, bottleSizeMl: String(edit.bottleSizeMl), stockBottles: String(edit.currentStockMl / edit.bottleSizeMl), minBottles: String(edit.minStockMl / edit.bottleSizeMl), cost: edit.costPerBottle === undefined ? '' : String(edit.costPerBottle), status: edit.status }
     : { name: '', bottleSizeMl: category === 'wine' ? '750' : '750', stockBottles: '0', minBottles: '', cost: '', status: 'active' as const };
-  const [f, setF] = useState(initial);
+   const [f, setF] = useState(initial);
+  const [domestic, setDomestic] = useState('c_domestic_spirits');
+  const [prices, setPrices] = useState<AutoPrice[]>(
+    category === 'wine'
+      ? [{ variant: 'Per Glass', deductQty: 150, price: '' }, { variant: 'Full Bottle', deductQty: 750, price: '' }]
+      : [
+        { variant: '30 ml (Single)', deductQty: 30, price: '' },
+        { variant: '60 ml (Double)', deductQty: 60, price: '' },
+        { variant: '90 ml (Triple)', deductQty: 90, price: '' },
+        { variant: 'Quarter (180 ml)', deductQty: 180, price: '' },
+        { variant: 'Half (375 ml)', deductQty: 375, price: '' },
+        { variant: 'Full Bottle (750 ml)', deductQty: 750, price: '' },
+      ],
+  );
   const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
-  const save = () => {
+  const save = async () => {
     const size = Number(f.bottleSizeMl), stock = Number(f.stockBottles), min = f.minBottles === '' ? 0 : Number(f.minBottles);
     if (!f.name.trim()) return toast.error('Name is required');
     if (!Number.isFinite(size) || size <= 0) return toast.error('Bottle size must be greater than 0');
@@ -93,18 +172,43 @@ const AlcoholForm = ({ edit, category, onClose }: { edit?: AlcoholProduct; categ
     const cost = f.cost === '' ? undefined : Number(f.cost);
     if (cost !== undefined && (!Number.isFinite(cost) || cost < 0)) return toast.error('Invalid cost');
     const data = { name: f.name.trim(), category, bottleSizeMl: Math.round(size), currentStockMl: stock * size, minStockMl: min * size, costPerBottle: cost, status: f.status as 'active' | 'inactive' };
-    if (edit) update(edit.id, data); else add(data);
+    if (edit) update(edit.id, data); else {
+      const productId = crypto.randomUUID();
+      const product = { id: productId, ...data };
+      add(product);
+      await writeAlcoholProductToFirebase(product);
+      await createAutoMenuEntries({
+        productName: data.name, productId, productType: 'alcohol',
+        prices, categoryId: category === 'wine' ? 'c_beers_wines' : domestic,
+        menuItems, setMenuItems, mappings, setMappings,
+      });
+    }
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-amber-500/15`}>
      <div className="border-b border-white/10 pb-4"><h3 className="text-base font-black text-white tracking-tight">{edit ? `Edit — ${edit.name}` : `Add ${CATEGORY_LABEL[category]} Product`}</h3><p className="text-xs text-zinc-400 mt-1">Define the product and its opening stock details.</p></div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div className="sm:col-span-2"><label className={LABEL}>Product Name *</label><input className={INPUT} value={f.name} onChange={set('name')} autoFocus /></div>
       <div><label className={LABEL}>Bottle Size (ml) *</label><input className={INPUT} type="number" min="1" value={f.bottleSizeMl} onChange={set('bottleSizeMl')} /></div>
       <div><label className={LABEL}>Current (btl) *</label><input className={INPUT} type="number" min="0" step="0.01" value={f.stockBottles} onChange={set('stockBottles')} /></div>
       <div><label className={LABEL}>Min Alert (btl)</label><input className={INPUT} type="number" min="0" step="0.01" value={f.minBottles} onChange={set('minBottles')} /></div>
       <div><label className={LABEL}>Cost/Bottle</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
     </div>
+     {!edit && <div className="mt-5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-4">
+       <h4 className="text-sm font-black text-amber-300">⚡ Menu Selling Prices (Auto-Generate)</h4>
+       <p className="text-xs text-zinc-400 mt-1 mb-3">Leave prices empty to skip menu item generation.</p>
+       {category === 'spirits' && <select className={`${SELECT} mb-3`} value={domestic} onChange={(e) => setDomestic(e.target.value)}>
+         <option value="c_domestic_spirits">Domestic Spirits</option>
+         <option value="c_imported_spirits">Imported Spirits</option>
+       </select>}
+       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+         {prices.map((entry, index) => <div key={entry.variant}>
+           <label className={LABEL}>{entry.variant} (Rs.)</label>
+           <input className={INPUT} type="number" min="0" step="any" placeholder="Optional" value={entry.price}
+             onChange={(e) => setPrices((current) => current.map((item, i) => i === index ? { ...item, price: e.target.value } : item))} />
+         </div>)}
+       </div>
+     </div>}
     <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
   </div>;
 };
@@ -112,18 +216,34 @@ const AlcoholForm = ({ edit, category, onClose }: { edit?: AlcoholProduct; categ
 const BeverageForm = ({ edit, category, onClose }: { edit?: BeverageProduct; category: 'beer' | 'soft-drinks'; onClose: () => void }) => {
   const add = useInventoryStore((s) => s.addBeverage);
   const update = useInventoryStore((s) => s.updateBeverage);
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const setMenuItems = usePOSStore((s) => s.setMenuItems);
+  const mappings = useInventoryStore((s) => s.invMappings);
+  const setMappings = useInventoryStore((s) => s.setInvMappings);
   const initial = edit
     ? { name: edit.name, packagingType: edit.packagingType, sizeLabel: edit.sizeLabel ?? '', stock: String(edit.currentStock), min: String(edit.minStock), cost: edit.costPerUnit === undefined ? '' : String(edit.costPerUnit), status: edit.status }
     : { name: '', packagingType: category === 'beer' ? 'btl' as const : 'btl' as const, sizeLabel: category === 'beer' ? '650ml' : '250ml', stock: '0', min: '', cost: '', status: 'active' as const };
   const [f, setF] = useState(initial);
+  const [menuPrice, setMenuPrice] = useState('');
   const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
-  const save = () => {
+  const save = async () => {
     const stock = Number(f.stock), min = f.min === '' ? 0 : Number(f.min), cost = f.cost === '' ? undefined : Number(f.cost);
     if (!f.name.trim()) return toast.error('Name is required');
     if (!Number.isInteger(stock) || stock < 0 || !Number.isInteger(min) || min < 0) return toast.error('Unit stock values must be whole numbers');
     if (cost !== undefined && (!Number.isFinite(cost) || cost < 0)) return toast.error('Invalid cost');
     const data = { name: f.name.trim(), category, packagingType: f.packagingType as 'btl' | 'can' | 'pcs', sizeLabel: f.sizeLabel.trim() || undefined, currentStock: stock, minStock: min, costPerUnit: cost, status: f.status as 'active' | 'inactive' };
-    if (edit) update(edit.id, data); else add(data);
+    if (edit) update(edit.id, data); else {
+      const productId = crypto.randomUUID();
+      const product = { id: productId, ...data };
+      add(product);
+      await writeBeverageProductToFirebase(product);
+      await createAutoMenuEntries({
+        productName: data.name, productId, productType: 'beverage',
+        prices: [{ variant: 'Selling Price', deductQty: 1, price: menuPrice }],
+        categoryId: category === 'beer' ? 'c_beers_wines' : 'c_soft_drinks',
+        menuItems, setMenuItems, mappings, setMappings,
+      });
+    }
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-sky-500/15`}>
@@ -137,6 +257,11 @@ const BeverageForm = ({ edit, category, onClose }: { edit?: BeverageProduct; cat
       <div><label className={LABEL}>Cost/Unit</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
     </div>
      <p className="text-xs font-bold text-zinc-300 mt-2">Restocking is entered directly as individual bottles, cans, or pieces — no case multiplier.</p>
+     {!edit && <div className="mt-5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-4">
+       <h4 className="text-sm font-black text-amber-300">⚡ Menu Selling Prices (Auto-Generate)</h4>
+       <p className="text-xs text-zinc-400 mt-1 mb-3">Leave the price empty to skip menu item generation.</p>
+       <div><label className={LABEL}>Selling Price (Rs.)</label><input className={INPUT} type="number" min="0" step="any" placeholder="Optional" value={menuPrice} onChange={(e) => setMenuPrice(e.target.value)} /></div>
+     </div>}
     <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
   </div>;
 };
@@ -144,17 +269,37 @@ const BeverageForm = ({ edit, category, onClose }: { edit?: BeverageProduct; cat
 const CigaretteForm = ({ edit, onClose }: { edit?: CigaretteProduct; onClose: () => void }) => {
   const add = useInventoryStore((s) => s.addCigarette);
   const update = useInventoryStore((s) => s.updateCigarette);
+  const menuItems = usePOSStore((s) => s.menuItems);
+  const setMenuItems = usePOSStore((s) => s.setMenuItems);
+  const mappings = useInventoryStore((s) => s.invMappings);
+  const setMappings = useInventoryStore((s) => s.setInvMappings);
   const initial = edit
     ? { name: edit.name, packetSize: String(edit.sticksPerPacket), stockPackets: String(edit.currentSticks / edit.sticksPerPacket), minPackets: String(edit.minSticks / edit.sticksPerPacket), cost: edit.costPerPacket === undefined ? '' : String(edit.costPerPacket), status: edit.status }
     : { name: '', packetSize: '20', stockPackets: '0', minPackets: '', cost: '', status: 'active' as const };
   const [f, setF] = useState(initial);
+  const [stickPrice, setStickPrice] = useState('');
+  const [packetPrice, setPacketPrice] = useState('');
   const set = (key: keyof typeof initial) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((v) => ({ ...v, [key]: e.target.value }));
-  const save = () => {
+  const save = async () => {
     const perPacket = Number(f.packetSize), stock = Number(f.stockPackets), min = f.minPackets === '' ? 0 : Number(f.minPackets), cost = f.cost === '' ? undefined : Number(f.cost);
     if (!f.name.trim()) return toast.error('Name is required');
     if (!Number.isInteger(perPacket) || perPacket <= 0 || stock < 0 || min < 0) return toast.error('Enter valid packet and stock values');
     const data = { name: f.name.trim(), sticksPerPacket: perPacket, currentSticks: stock * perPacket, minSticks: min * perPacket, costPerPacket: cost, status: f.status as 'active' | 'inactive' };
-    if (edit) update(edit.id, data); else add(data);
+    if (edit) update(edit.id, data); else {
+      const productId = crypto.randomUUID();
+      const product = { id: productId, ...data };
+      add(product);
+      await writeCigaretteProductToFirebase(product);
+      await createAutoMenuEntries({
+        productName: data.name, productId, productType: 'cigarette',
+        prices: [
+          { variant: 'Stick', deductQty: 1, price: stickPrice },
+          { variant: 'Packet', deductQty: perPacket, price: packetPrice },
+        ],
+        categoryId: 'c_hookah_cigs',
+        menuItems, setMenuItems, mappings, setMappings,
+      });
+    }
     toast.success(edit ? 'Product updated' : 'Product added'); onClose();
   };
   return <div className={`${CARD} border-orange-500/15`}>
@@ -167,6 +312,14 @@ const CigaretteForm = ({ edit, onClose }: { edit?: CigaretteProduct; onClose: ()
       <div><label className={LABEL}>Cost/Packet</label><input className={INPUT} type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
     </div>
      <p className="text-xs font-bold text-zinc-300 mt-2">Stock is stored in sticks. One packet converts to {f.packetSize || 20} sticks.</p>
+     {!edit && <div className="mt-5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] p-4">
+       <h4 className="text-sm font-black text-amber-300">⚡ Menu Selling Prices (Auto-Generate)</h4>
+       <p className="text-xs text-zinc-400 mt-1 mb-3">Leave either price empty to skip that menu item.</p>
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+         <div><label className={LABEL}>Per Stick (Rs.)</label><input className={INPUT} type="number" min="0" step="any" placeholder="Optional" value={stickPrice} onChange={(e) => setStickPrice(e.target.value)} /></div>
+         <div><label className={LABEL}>Per Packet (Rs.)</label><input className={INPUT} type="number" min="0" step="any" placeholder={`Optional · ${f.packetSize || 20} sticks`} value={packetPrice} onChange={(e) => setPacketPrice(e.target.value)} /></div>
+       </div>
+     </div>}
     <FormActions onClose={onClose}><button className={BTN_PRIMARY} onClick={save}><Save size={14} />{edit ? 'Save Changes' : 'Add Product'}</button></FormActions>
   </div>;
 };

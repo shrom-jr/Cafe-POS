@@ -54,7 +54,7 @@ interface InventoryState {
   setInvMappings:    (mappings: InvMenuMapping[]) => void;
 
   // ── Alcohol ──
-  addAlcohol:     (p: Omit<AlcoholProduct, 'id'>) => void;
+  addAlcohol:     (p: Omit<AlcoholProduct, 'id'> & { id?: string }) => void;
   updateAlcohol:  (id: string, u: Partial<AlcoholProduct>) => void;
   deleteAlcohol:  (id: string) => void;
   purchaseAlcohol: (args: {
@@ -66,7 +66,7 @@ interface InventoryState {
   }) => void;
 
   // ── Beverage ──
-  addBeverage:     (p: Omit<BeverageProduct, 'id'>) => void;
+  addBeverage:     (p: Omit<BeverageProduct, 'id'> & { id?: string }) => void;
   updateBeverage:  (id: string, u: Partial<BeverageProduct>) => void;
   deleteBeverage:  (id: string) => void;
   purchaseBeverage: (args: {
@@ -79,7 +79,7 @@ interface InventoryState {
   }) => void;
 
   // ── Cigarette ──
-  addCigarette:     (p: Omit<CigaretteProduct, 'id'>) => void;
+  addCigarette:     (p: Omit<CigaretteProduct, 'id'> & { id?: string }) => void;
   updateCigarette:  (id: string, u: Partial<CigaretteProduct>) => void;
   deleteCigarette:  (id: string) => void;
   purchaseCigarette: (args: {
@@ -167,7 +167,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   // for product state. The push effects in useFirebaseSync push Zustand state
   // changes to Firebase, which then fans back to all connected clients.
   addAlcohol: (p) => set((s) => {
-    const products = [...s.alcoholProducts, { ...p, id: crypto.randomUUID() }];
+    const products = [...s.alcoholProducts, { ...p, id: p.id ?? crypto.randomUUID() }];
     return { alcoholProducts: products };
   }),
 
@@ -241,7 +241,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   // ── BEVERAGE ─────────────────────────────────────────────────────────────
   addBeverage: (p) => set((s) => {
-    const products = [...s.beverageProducts, { ...p, id: crypto.randomUUID() }];
+    const products = [...s.beverageProducts, { ...p, id: p.id ?? crypto.randomUUID() }];
     return { beverageProducts: products };
   }),
 
@@ -317,7 +317,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   // ── CIGARETTE ────────────────────────────────────────────────────────────
   addCigarette: (p) => set((s) => {
-    const products = [...s.cigaretteProducts, { ...p, id: crypto.randomUUID() }];
+    const products = [...s.cigaretteProducts, { ...p, id: p.id ?? crypto.randomUUID() }];
     return { cigaretteProducts: products };
   }),
 

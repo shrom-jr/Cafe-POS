@@ -1152,6 +1152,36 @@ export async function deleteInvMappingFromFirebase(id: string): Promise<void> {
   }
 }
 
+export async function writeAlcoholProductToFirebase(product: AlcoholProduct): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("alcoholProducts");
+    await firebaseSet(ref(db, `alcoholProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Alcohol Product Write", error);
+    throw error;
+  }
+}
+
+export async function writeBeverageProductToFirebase(product: BeverageProduct): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("beverageProducts");
+    await firebaseSet(ref(db, `beverageProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Beverage Product Write", error);
+    throw error;
+  }
+}
+
+export async function writeCigaretteProductToFirebase(product: CigaretteProduct): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("cigaretteProducts");
+    await firebaseSet(ref(db, `cigaretteProducts/${product.id}`), JSON.parse(JSON.stringify(product)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Cigarette Product Write", error);
+    throw error;
+  }
+}
+
 export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
   try {
     await pushBarCatalogCollection("alcoholProducts", products || []);

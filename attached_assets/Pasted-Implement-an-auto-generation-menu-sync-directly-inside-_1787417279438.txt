@@ -1,0 +1,48 @@
+Implement an auto-generation menu sync directly inside the Inventory "Add Product" modals for Spirits, Wine, Beer/Beverage, and Cigarettes. Keep this task strictly focused on the inventory modal UI and its submission handler.
+
+### 1. UI Extensions in "Add Product" Modals:
+Add a dedicated "⚡ Menu Selling Prices (Auto-Generate)" section at the bottom of each category's modal:
+
+* Spirits Modal:
+  - Add price input fields:
+    * 30 ml (Single) -> deductQty: 30
+    * 60 ml (Double) -> deductQty: 60
+    * 90 ml (Triple) -> deductQty: 90
+    * Quarter (180 ml) -> deductQty: 180
+    * Half (375 ml) -> deductQty: 375
+    * Full Bottle (750 ml) -> deductQty: 750
+  - Sub-category selector: "Domestic Spirits" (`c_domestic_spirits`) or "Imported Spirits" (`c_imported_spirits`).
+
+* Wine Modal:
+  - Add price input fields:
+    * Per Glass (150 ml) -> deductQty: 150
+    * Full Bottle (750 ml) -> deductQty: 750
+  - Target category: "Beers & Wines" (`c_beers_wines`).
+
+* Cigarettes Modal:
+  - Add price input fields:
+    * Per Stick (1 stick) -> deductQty: 1
+    * Per Packet -> deductQty: dynamic value from "STICKS/PACKET" field (default 20)
+  - Target category: "Hookah & Cigarettes" (`c_hookah_cigs`).
+
+* Beer & Soft Drinks Modal:
+  - Add single price input field:
+    * Selling Price (Rs.) -> deductQty: 1
+  - Target category: "Beers & Wines" (`c_beers_wines`) or "Soft Drinks & Energy" (`c_soft_drinks`).
+
+### 2. Save & Multi-Entity Creation Logic:
+When submitting the "Add Product" modal:
+1. Create the inventory product record in Firebase (`alcoholProducts`, `beverageProducts`, or `cigaretteProducts`).
+2. For each priced field (ignore empty fields):
+   - Create a corresponding Menu Item in `menu/items`:
+     * `name`: `${productName} (${variantName})` (e.g., "Mustang (60 ml)", "Surya Red (Stick)")
+     * `price`: Number(enteredPrice)
+     * `categoryId`: targetCategory
+     * `printRoute`: "BOT"
+     * `available`: true
+   - Create a corresponding mapping entry in `invMappings`:
+     * `{ id: `map-${Date.now()}-${variant}`, menuItemId, productId, deductQty, productType }`
+
+### 3. Constraints & Safety:
+- Use atomic/child-level Firebase writes so existing menu items, inventory products, and the 130 existing `invMappings` are never overwritten.
+- Run `npm run build` once to verify clean compilation and finish immediately.
