@@ -1,0 +1,36 @@
+Please polish the Settings page UI with modern navigation pills, icons, and clean card containers (STRICTLY visual/Tailwind changes only; do NOT modify state or logic):
+
+### 1. Left Navigation Rail (`w-full md:w-64 shrink-0`)
+* Container: `bg-[#0e131f] border border-slate-800 rounded-2xl p-3 flex flex-col gap-1.5`
+* Tab Items (Include Lucide Icons & Proper Pill Shapes):
+  - Company Profile (`Store` or `Building`)
+  - Billing & Receipts (`Receipt`)
+  - Payments (`CreditCard`)
+  - Stock Mode (`Boxes` or `Package`)
+  - Printers (`Printer`)
+  - Staff & Users (`Users`)
+  - [Divider `border-t border-slate-800/80 my-1`]
+  - Data Management (`Database` or `ShieldAlert`)
+
+* Inactive Tab Styling:
+  `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 font-semibold text-xs uppercase tracking-wider hover:bg-[#161d2d] hover:text-slate-100 transition-all text-left`
+
+* Active Tab Styling:
+  `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 text-left transition-all`
+
+* Data Management Tab:
+  - Inactive: `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-rose-400/80 font-semibold text-xs uppercase tracking-wider hover:bg-rose-950/30 hover:text-rose-300 transition-all text-left`
+  - Active: `w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-rose-600/20 text-left`
+
+### 2. Right Workspace Panels (`flex-1 min-w-0`)
+* Section Containers (e.g., Business Information, Tax Settings):
+  - Remove redundant outer wrappers. Use clean, consistent cards:
+    `bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0`
+* Section Headings:
+  - Title: `text-base font-bold text-white tracking-wide mb-1`
+  - Subtitle: `text-xs text-slate-400 mb-5 block`
+* Input Fields:
+  - `bg-[#161d2d] border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition-all`
+
+### 3. Verification
+* Run `npm test` and `npm run build` to verify clean compilation.

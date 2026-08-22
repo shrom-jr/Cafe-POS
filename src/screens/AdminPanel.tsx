@@ -23,7 +23,7 @@ import {
   BarChart3, CreditCard, Table2, TrendingUp,
   Plus, Trash2, Edit3, Save, X, Lock, DollarSign, ShoppingCart,
   Download, Upload, Smartphone, ToggleLeft, ToggleRight,
-  Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package,
+  Receipt, ImagePlus, Image, Menu as MenuIcon, Users, Package, Store, Boxes, Database,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings,
   Search, Printer, ArrowUp, ArrowDown, Wrench, UtensilsCrossed,
   AlertTriangle, RotateCcw, ShieldAlert, FileJson,
@@ -654,26 +654,37 @@ const AdminPanel = () => {
             {resolvedActiveTab === 'settings'  && (
               <div className="space-y-6">
                  <div className="flex flex-col md:flex-row gap-6 items-start w-full">
-                   <nav className="w-full md:w-64 shrink-0 bg-[#0e131f] border border-slate-800 rounded-2xl p-3 space-y-1.5">
+                   <nav className="w-full md:w-64 shrink-0 bg-[#0e131f] border border-slate-800 rounded-2xl p-3 flex flex-col gap-1.5">
                      {availableSettings.map((sub) => (
-                       <button
-                         key={sub.id}
-                         onClick={() => setSettingsSubTab(sub.id)}
-                         className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all text-left ${
-                           sub.id === 'data-management'
-                             ? resolvedSettingsSubTab === sub.id
-                               ? 'bg-rose-500/15 border border-rose-500/60 text-rose-300 font-bold shadow-sm'
-                               : 'text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 font-semibold'
-                             : resolvedSettingsSubTab === sub.id
-                               ? 'bg-amber-500/15 border border-amber-500/60 text-amber-300 font-bold shadow-sm'
-                               : 'text-slate-300 hover:bg-[#161d2d] hover:text-white font-semibold'
-                         }`}
-                       >
-                         {sub.label}
-                       </button>
+                       <div key={sub.id}>
+                         {sub.id === 'data-management' && <div className="border-t border-slate-800/80 my-1" />}
+                         <button
+                           onClick={() => setSettingsSubTab(sub.id)}
+                           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all text-left ${
+                             sub.id === 'data-management'
+                               ? resolvedSettingsSubTab === sub.id
+                                 ? 'bg-rose-600 text-white font-bold shadow-md shadow-rose-600/20'
+                                 : 'text-rose-400/80 font-semibold hover:bg-rose-950/30 hover:text-rose-300'
+                               : resolvedSettingsSubTab === sub.id
+                                 ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                                 : 'text-slate-400 font-semibold hover:bg-[#161d2d] hover:text-slate-100'
+                           }`}
+                         >
+                           <span className="shrink-0">
+                             {sub.id === 'bill' && <Store size={16} />}
+                             {sub.id === 'billing' && <Receipt size={16} />}
+                             {sub.id === 'payments' && <CreditCard size={16} />}
+                             {sub.id === 'stock' && <Boxes size={16} />}
+                             {sub.id === 'printers' && <Printer size={16} />}
+                             {sub.id === 'staff' && <Users size={16} />}
+                             {sub.id === 'data-management' && <Database size={16} />}
+                           </span>
+                           {sub.label}
+                         </button>
+                       </div>
                      ))}
                    </nav>
-                   <div className="flex-1 min-w-0 w-full bg-[#0e131f] border border-slate-800 rounded-2xl p-6">
+                   <div className="flex-1 min-w-0 w-full">
                      {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'bill'            && <CompanyProfileSection />}
                      {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'billing'         && <BillingReceiptsSection />}
                      {currentUser.role === 'ADMIN' && resolvedSettingsSubTab === 'payments'        && <PaymentsSection />}
@@ -1645,11 +1656,11 @@ const CompanyProfileSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
+  const inputCls = 'w-full bg-[#161d2d] border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-slate-500 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition-all';
 
   return (
     <div className="space-y-5">
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-5">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Business Information</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">Appears on printed receipts</p>
@@ -1709,7 +1720,7 @@ const CompanyProfileSection = () => {
         </div>
       </div>
 
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-5">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Tax Settings</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">VAT and PAN configuration</p>
@@ -2239,7 +2250,7 @@ const BillingReceiptsSection = () => {
     toast.success('Changes saved successfully');
   };
 
-  const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
+  const inputCls = 'w-full bg-[#161d2d] border border-slate-700/80 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-slate-500 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none transition-all';
   const nextBill = parseInt(billCounter || '1000', 10) + 1;
   const nextKot = parseInt(kotCounter || '100', 10) + 1;
 
@@ -2255,7 +2266,7 @@ const BillingReceiptsSection = () => {
     <div className="space-y-5">
 
       {/* Logo Display */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-5">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Logo Display</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">Control logo visibility on printed bills</p>
@@ -2274,7 +2285,7 @@ const BillingReceiptsSection = () => {
       </div>
 
       {/* Receipt Settings */}
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-5">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-5">
         <div>
           <h3 className="text-base font-black text-white tracking-wide">Receipt Settings</h3>
           <p className="text-xs font-bold text-zinc-300 mt-1">Customize receipt appearance</p>
@@ -2313,7 +2324,7 @@ const BillingReceiptsSection = () => {
         <Save size={16} /> Save Changes
       </button>
 
-      <div className="bg-[#13151F] border border-white/15 p-6 rounded-3xl shadow-xl mb-6 flex flex-col gap-3">
+      <div className="bg-[#0e131f] border border-slate-800 rounded-2xl p-6 mb-6 last:mb-0 flex flex-col gap-3">
         <h3 className="text-base font-black text-white tracking-wide">Bill Preview</h3>
         <p className="text-xs font-bold text-zinc-300">Preview of how your receipt will look</p>
         <ReceiptPreview
