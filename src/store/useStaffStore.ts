@@ -86,9 +86,37 @@ interface StaffState {
    * If `updates` contains a plaintext `pin`, it is hashed before storage and
    * `mustChangePin` is cleared automatically.
    */
-  updateUser: (id: string, updates: Partial<Omit<StaffUser, 'id'>>) => Promise<void>;
+  updateUser: (id: string, updates: Partial<Omit<StaffUser, 'id'>>) => Promise<boolean>;
 
-  deleteUser: (id: string) => void;
+  deleteUser: (id: string) => boolean;
+}
+
+export const ONLY_ADMIN_PROTECTION_MESSAGE =
+  'Cannot delete or deactivate the only Administrator account. Add another Admin first.';
+
+export function isActiveAdmin(user: StaffUser): boolean {
+  return user.active === true && user.role === 'ADMIN';
+}
+
+export function canRemoveOrDeactivateStaffUser(
+  users: StaffUser[],
+  targetId: string,
+  currentUserId?: string,
+): { allowed: boolean; reason?: string } {
+  const target = users.find((user) => user.id === targetId);
+  if (!target) return { allowed: false, reason: 'Staff account not found.' };
+  if (targetId === currentUserId) {
+    return { allowed: false, reason: 'You cannot delete or deactivate your own account.' };
+  }
+
+  if (isActiveAdmin(target)) {
+    const activeAdminCount = users.filter(isActiveAdmin).length;
+    if (activeAdminCount <= 1) {
+      return { allowed: false, reason: ONLY_ADMIN_PROTECTION_MESSAGE };
+    }
+  }
+
+  return { allowed: true };
 }
 
 export const useStaffStore = create<StaffState>((set, get) => {
@@ -170,6 +198,22 @@ export const useStaffStore = create<StaffState>((set, get) => {
     },
 
     updateUser: async (id, updates) => {
+      const existing = get().users.find((user) => user.id === id);
+      if (!existing) return false;
+
+      const nextUser = { ...existing, ...updates };
+      const isDeactivating = existing.active && updates.active === false;
+      const isRemovingAdminRole =
+        isActiveAdmin(existing) && (nextUser.active !== true || nextUser.role !== 'ADMIN');
+      if (isDeactivating || isRemovingAdminRole) {
+        const guard = canRemoveOrDeactivateStaffUser(
+          get().users,
+          id,
+          get().currentUser?.id,
+        );
+        if (!guard.allowed) return false;
+      }
+
       let processed = { ...updates };
       if (processed.pin !== undefined) {
         // Hash the new PIN and clear the mustChangePin flag
@@ -191,14 +235,19 @@ export const useStaffStore = create<StaffState>((set, get) => {
       // Keep session storage in sync if the logged-in user was edited
       if (nextCu && nextCu.id === id) saveCurrentUser(nextCu);
       set({ users, currentUser: nextCu });
+      return true;
     },
 
     deleteUser: (id) => {
+      const guard = canRemoveOrDeactivateStaffUser(get().users, id, get().currentUser?.id);
+      if (!guard.allowed) return false;
+
       const users = get().users.filter((u) => u.id !== id);
       saveUsers(users);
       const wasLoggedIn = get().currentUser?.id === id;
       if (wasLoggedIn) saveCurrentUser(null);
       set({ users, currentUser: wasLoggedIn ? null : get().currentUser });
+      return true;
     },
   };
 });

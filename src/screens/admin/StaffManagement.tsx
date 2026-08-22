@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { useStaffStore } from '@/store/useStaffStore';
+import {
+  useStaffStore,
+  canRemoveOrDeactivateStaffUser,
+  ONLY_ADMIN_PROTECTION_MESSAGE,
+} from '@/store/useStaffStore';
 import { StaffUser, Role, StaffPermissions, DEFAULT_PERMISSIONS } from '@/types/staff';
 import { Plus, Trash2, Edit3, X, Save, Eye, EyeOff, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,9 +40,11 @@ const MODAL_BG = { background: '#0E1017', border: '1px solid rgba(255,255,255,0.
 const StaffModal = ({
   existing,
   onClose,
+  canDeactivate = true,
 }: {
   existing: StaffUser | null; // null = create new
   onClose: () => void;
+  canDeactivate?: boolean;
 }) => {
   const { addUser, updateUser } = useStaffStore();
   const [name, setName]       = useState(existing?.name ?? '');
@@ -73,7 +79,11 @@ const StaffModal = ({
     if (isEdit) {
       const updates: Partial<Omit<typeof existing & object, 'id'>> = { name: name.trim(), email: trimmedEmail, role, active, permissions: perms } as any;
       if (pin) (updates as any).pin = pin;
-      await updateUser(existing!.id, updates as any);
+      const updated = await updateUser(existing!.id, updates as any);
+      if (!updated) {
+        toast.error(ONLY_ADMIN_PROTECTION_MESSAGE);
+        return;
+      }
       toast.success('Staff member updated');
     } else {
       await addUser({ name: name.trim(), email: trimmedEmail, role, pin: pin!, active: true, permissions: perms } as any);
@@ -214,8 +224,11 @@ const StaffModal = ({
              <div className="flex items-center justify-between p-4 rounded-2xl bg-[#181B26] border border-white/15">
                <p className="text-sm font-black text-white">Active</p>
               <button
-                onClick={() => setActive((v) => !v)}
-                 className={`w-10 h-6 rounded-full transition-all relative border-2 ${active ? 'bg-amber-500 border-amber-400 shadow-md shadow-amber-500/30' : 'bg-white/10 border-white/20'}`}
+                 onClick={() => { if (canDeactivate) setActive((v) => !v); }}
+                 title={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
+                 aria-label={canDeactivate ? 'Toggle active status' : ONLY_ADMIN_PROTECTION_MESSAGE}
+                 disabled={!canDeactivate}
+                  className={`w-10 h-6 rounded-full transition-all relative border-2 ${active ? 'bg-amber-500 border-amber-400 shadow-md shadow-amber-500/30' : 'bg-white/10 border-white/20'} disabled:cursor-not-allowed disabled:opacity-30`}
               >
                 <span
                   className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
@@ -315,15 +328,26 @@ const ResetPinModal = ({
 // ── Delete Confirm ───────────────────────────────────────────────────────────
 const DeleteConfirm = ({
   user,
+  currentUserId,
   onClose,
 }: {
   user: StaffUser;
+  currentUserId?: string;
   onClose: () => void;
 }) => {
   const { deleteUser } = useStaffStore();
 
   const handleDelete = () => {
-    deleteUser(user.id);
+    const deleted = deleteUser(user.id);
+    if (!deleted) {
+      const reason = canRemoveOrDeactivateStaffUser(
+        useStaffStore.getState().users,
+        user.id,
+        currentUserId,
+      ).reason ?? ONLY_ADMIN_PROTECTION_MESSAGE;
+      toast.error(reason);
+      return;
+    }
     toast.success(`${user.name} removed`);
     onClose();
   };
@@ -374,9 +398,24 @@ const PermissionBadges = ({ user }: { user: StaffUser }) => {
 };
 
 // ── Staff Row ────────────────────────────────────────────────────────────────
-const StaffRow = ({ user }: { user: StaffUser }) => {
+const StaffRow = ({
+  user,
+  activeAdminCount,
+  currentUserId,
+}: {
+  user: StaffUser;
+  activeAdminCount: number;
+  currentUserId?: string;
+}) => {
   const [modal, setModal] = useState<'edit' | 'reset' | 'delete' | null>(null);
   const colors = ROLE_COLORS[user.role];
+  const isSoleActiveAdmin = user.active && user.role === 'ADMIN' && activeAdminCount <= 1;
+  const isCurrentUser = user.id === currentUserId;
+  const protectedReason = isCurrentUser
+    ? 'You cannot delete or deactivate your own account.'
+    : isSoleActiveAdmin
+      ? ONLY_ADMIN_PROTECTION_MESSAGE
+      : undefined;
 
   return (
     <>
@@ -433,26 +472,29 @@ const StaffRow = ({ user }: { user: StaffUser }) => {
             <Edit3 size={14} />
           </button>
           <button
-            onClick={() => setModal('delete')}
-            title="Remove"
-             className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+            onClick={() => { if (!protectedReason) setModal('delete'); }}
+            title={protectedReason ?? 'Remove'}
+            aria-label={protectedReason ?? `Remove ${user.name}`}
+            disabled={!!protectedReason}
+             className="p-2 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all disabled:cursor-not-allowed disabled:opacity-30"
           >
             <Trash2 size={14} />
           </button>
         </div>
       </div>
 
-      {modal === 'edit'   && <StaffModal    existing={user} onClose={() => setModal(null)} />}
+      {modal === 'edit'   && <StaffModal    existing={user} onClose={() => setModal(null)} canDeactivate={!protectedReason} />}
       {modal === 'reset'  && <ResetPinModal user={user}     onClose={() => setModal(null)} />}
-      {modal === 'delete' && <DeleteConfirm user={user}     onClose={() => setModal(null)} />}
+      {modal === 'delete' && <DeleteConfirm user={user} currentUserId={currentUserId} onClose={() => setModal(null)} />}
     </>
   );
 };
 
 // ── Main Component ───────────────────────────────────────────────────────────
 const StaffManagement = () => {
-  const { users } = useStaffStore();
+  const { users, currentUser } = useStaffStore();
   const [showAdd, setShowAdd] = useState(false);
+  const activeAdminCount = users.filter((user) => user.active && user.role === 'ADMIN').length;
 
   const byRole: Record<Role, StaffUser[]> = { ADMIN: [], CASHIER: [], WAITER: [], KITCHEN: [] };
   users.forEach((u) => { if (byRole[u.role]) byRole[u.role].push(u); });
@@ -502,7 +544,14 @@ const StaffManagement = () => {
             <p className="text-sm font-semibold">No staff accounts yet.</p>
           </div>
         ) : (
-          users.map((u) => <StaffRow key={u.id} user={u} />)
+          users.map((u) => (
+            <StaffRow
+              key={u.id}
+              user={u}
+              activeAdminCount={activeAdminCount}
+              currentUserId={currentUser?.id}
+            />
+          ))
         )}
       </div>
 
