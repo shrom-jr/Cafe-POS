@@ -3,12 +3,18 @@ import { usePOSStore } from '@/store/usePOSStore';
 import {
   deleteCategoryFromFirebase,
   deleteMenuItemFromFirebase,
+  deleteInvMappingFromFirebase,
   setMenuItemAvailabilityInFirebase,
   writeCategoryToFirebase,
+  writeInvMappingToFirebase,
   writeMenuItemToFirebase,
 } from '@/utils/firebaseSync';
 import { toast } from 'sonner';
-import type { MenuItem, MenuItemVariant, Category, PrintRoute, CategoryPillar } from '@/types/pos';
+import type {
+  MenuItem, MenuItemVariant, Category, PrintRoute, CategoryPillar,
+  InvMenuMapping, InvProductType,
+} from '@/types/pos';
+import { useInventoryStore } from '@/store/useInventoryStore';
 import {
   Search, Plus, Edit3, Trash2, UtensilsCrossed, ChevronRight,
   ToggleLeft, ToggleRight, X, AlertTriangle, BookOpen,
@@ -62,12 +68,23 @@ function routeForCategory(category?: Category): PrintRoute {
   return category?.sendToKitchen ? 'KOT' : 'BOT';
 }
 
+function defaultTracksInventory(pillar: CategoryPillar | '', categoryName = '') {
+  return pillar === 'Alcohol'
+    || categoryName === 'Soft Drinks & Energy'
+    || categoryName === 'Hookah & Cigarettes';
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function MenuManagement() {
   const menuItems  = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
   const setMenuItems  = usePOSStore((s) => s.setMenuItems);
   const setCategories = usePOSStore((s) => s.setCategories);
+  const alcoholProducts = useInventoryStore((s) => s.alcoholProducts);
+  const beverageProducts = useInventoryStore((s) => s.beverageProducts);
+  const cigaretteProducts = useInventoryStore((s) => s.cigaretteProducts);
+  const invMappings = useInventoryStore((s) => s.invMappings);
+  const setInvMappings = useInventoryStore((s) => s.setInvMappings);
 
   // ── Filter state ──
   const [pillarFilter, setPillarFilter]     = useState<'All' | CategoryPillar>('All');
@@ -89,6 +106,29 @@ export default function MenuManagement() {
   const [pricingMode, setPricingMode] = useState<'single' | 'variants'>('single');
   const [variantRows, setVariantRows] = useState<MenuItemVariant[]>([{ label: '', price: 0 }]);
   const [saving, setSaving] = useState(false);
+  const [trackInventory, setTrackInventory] = useState(false);
+  const [linkedProductId, setLinkedProductId] = useState('');
+  const [deductQty, setDeductQty] = useState('');
+
+  const inventoryOptions = useMemo(() => [
+    ...alcoholProducts.filter((p) => p.status === 'active').map((p) => ({
+      id: p.id, name: p.name, type: 'alcohol' as InvProductType,
+      group: p.category === 'wine' ? 'Wine' : 'Spirits',
+      unit: 'ml',
+    })),
+    ...beverageProducts.filter((p) => p.status === 'active').map((p) => ({
+      id: p.id, name: p.name, type: 'beverage' as InvProductType,
+      group: p.category === 'beer' ? 'Beer' : 'Soft Drinks',
+      unit: p.packagingType,
+    })),
+    ...cigaretteProducts.filter((p) => p.status === 'active').map((p) => ({
+      id: p.id, name: p.name, type: 'cigarette' as InvProductType,
+      group: 'Cigarettes',
+      unit: 'stick',
+    })),
+  ], [alcoholProducts, beverageProducts, cigaretteProducts]);
+  const selectedInventoryProduct = inventoryOptions.find((p) => p.id === linkedProductId);
+  const inventoryGroups = ['Spirits', 'Wine', 'Beer', 'Soft Drinks', 'Cigarettes'];
 
   // ── Derived telemetry ──
   const telemetry = useMemo(() => {
@@ -144,6 +184,9 @@ export default function MenuManagement() {
     const updated = menuItems.filter((m) => m.id !== id);
     setMenuItems(updated);
     await deleteMenuItemFromFirebase(id);
+    const removedMappings = invMappings.filter((mapping) => mapping.menuItemId === id);
+    setInvMappings(invMappings.filter((mapping) => mapping.menuItemId !== id));
+    await Promise.all(removedMappings.map((mapping) => deleteInvMappingFromFirebase(mapping.id)));
     toast.success('Item deleted');
     setDeleteDialog((d) => ({ ...d, open: false }));
   }
@@ -168,6 +211,9 @@ export default function MenuManagement() {
     setPricingMode('single');
     setVariantRows([{ label: '', price: 0 }]);
     setItemPillar('');
+    setTrackInventory(false);
+    setLinkedProductId('');
+    setDeductQty('');
     setItemModal({ open: true, mode: 'add', item: { ...EMPTY_ITEM } });
   }
   function openEditItem(item: MenuItem) {
@@ -180,6 +226,10 @@ export default function MenuManagement() {
       setVariantRows([{ label: '', price: 0 }]);
     }
     setItemPillar(category?.parentCategory ?? '');
+    const existingMapping = invMappings.find((mapping) => mapping.menuItemId === item.id);
+    setTrackInventory(existingMapping ? true : defaultTracksInventory(category?.parentCategory ?? '', category?.name));
+    setLinkedProductId(existingMapping?.productId ?? '');
+    setDeductQty(existingMapping ? String(existingMapping.deductQty) : '');
     setItemModal({ open: true, mode: 'edit', item: { ...item } });
   }
 
@@ -222,6 +272,12 @@ export default function MenuManagement() {
           displayOrder: existing?.displayOrder ?? menuItems.length,
         };
       }
+      const quantity = Number(deductQty);
+      if (trackInventory && (!selectedInventoryProduct || !Number.isFinite(quantity) || quantity <= 0)) {
+        toast.error('Select an inventory product and enter a deduction amount');
+        setSaving(false);
+        return;
+      }
       let updated: MenuItem[];
       if (itemModal.mode === 'add') {
         updated = [...menuItems, final];
@@ -230,6 +286,31 @@ export default function MenuManagement() {
       }
       setMenuItems(updated);
       await writeMenuItemToFirebase(final);
+      const currentItemMappings = invMappings.filter((mapping) => mapping.menuItemId === final.id);
+      const retainedMapping = currentItemMappings[0];
+      const nextMappings = invMappings.filter((mapping) => mapping.menuItemId !== final.id);
+      if (trackInventory) {
+        const mapping: InvMenuMapping = {
+          id: retainedMapping?.id ?? `map-${String(
+            invMappings.reduce((max, current) => {
+              const match = current.id.match(/^map-(\d+)$/);
+              return Math.max(max, match ? Number(match[1]) : 0);
+            }, 0) + 1,
+          ).padStart(4, '0')}`,
+          menuItemId: final.id,
+          productId: selectedInventoryProduct.id,
+          deductQty: quantity,
+          productType: selectedInventoryProduct.type,
+        };
+        setInvMappings([...nextMappings, mapping]);
+        await Promise.all([
+          ...currentItemMappings.slice(1).map((oldMapping) => deleteInvMappingFromFirebase(oldMapping.id)),
+          writeInvMappingToFirebase(mapping),
+        ]);
+      } else {
+        setInvMappings(nextMappings);
+        await Promise.all(currentItemMappings.map((mapping) => deleteInvMappingFromFirebase(mapping.id)));
+      }
       toast.success(itemModal.mode === 'add' ? 'Item added' : 'Item updated');
       setItemModal((s) => ({ ...s, open: false }));
     } finally {
@@ -619,6 +700,7 @@ export default function MenuManagement() {
                   value={itemPillar || undefined}
                   onValueChange={(value) => {
                     setItemPillar(value);
+                    setTrackInventory(defaultTracksInventory(value));
                     setItemModal((s) => ({
                       ...s,
                       item: { ...s.item, categoryId: '' },
@@ -651,6 +733,7 @@ export default function MenuManagement() {
                         printRoute: routeForCategory(selectedCategory),
                       },
                     }));
+                    setTrackInventory(defaultTracksInventory(itemPillar, selectedCategory?.name));
                   }}
                 >
                   <SelectTrigger className={selectCls}>
@@ -795,6 +878,79 @@ export default function MenuManagement() {
                 {itemModal.item.available !== false ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
               </button>
             </div>
+
+             {/* Inventory Stock Link */}
+             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+               <div className="flex items-center justify-between gap-3">
+                 <div>
+                   <p className="text-sm font-bold text-white">📦 Track in Bar Inventory</p>
+                   <p className="text-slate-300 text-xs mt-0.5">Automatically deduct stock when this item is sold</p>
+                 </div>
+                 <button
+                   type="button"
+                   role="switch"
+                   aria-checked={trackInventory}
+                   onClick={() => {
+                     const next = !trackInventory;
+                     setTrackInventory(next);
+                     if (next && !deductQty) {
+                       setDeductQty(selectedInventoryProduct?.type === 'alcohol' ? '60' : '1');
+                     }
+                   }}
+                   className={trackInventory ? 'text-amber-400' : 'text-zinc-600'}
+                 >
+                   {trackInventory ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                 </button>
+               </div>
+               {trackInventory && (
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                   <Field label="Linked Inventory Product" required>
+                     <select
+                       value={linkedProductId}
+                       onChange={(e) => {
+                         const productId = e.target.value;
+                         const product = inventoryOptions.find((option) => option.id === productId);
+                         setLinkedProductId(productId);
+                         setDeductQty(product?.type === 'alcohol' ? '60' : '1');
+                       }}
+                       className={selectCls}
+                     >
+                       <option value="">-- Select Product --</option>
+                       {inventoryGroups.map((group) => {
+                         const products = inventoryOptions.filter((product) => product.group === group);
+                         return products.length > 0 ? (
+                           <optgroup key={group} label={group}>
+                             {products.map((product) => (
+                               <option key={product.id} value={product.id}>
+                                 {product.name}
+                               </option>
+                             ))}
+                           </optgroup>
+                         ) : null;
+                       })}
+                     </select>
+                   </Field>
+                   <Field label={`Deduction Amount${selectedInventoryProduct ? ` (${selectedInventoryProduct.unit})` : ''}`} required>
+                     <div className="relative">
+                       <input
+                         type="number"
+                         min={0.01}
+                         step="any"
+                         value={deductQty}
+                         onChange={(e) => setDeductQty(e.target.value)}
+                         placeholder={selectedInventoryProduct?.type === 'alcohol' ? '60' : '1'}
+                         className={inputCls}
+                       />
+                       {selectedInventoryProduct && (
+                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-300">
+                           {selectedInventoryProduct.unit}
+                         </span>
+                       )}
+                     </div>
+                   </Field>
+                 </div>
+               )}
+             </div>
           </div>
 
           <DialogFooter className="mt-4 gap-2">

@@ -1132,6 +1132,26 @@ export async function pushInvMappingsToFirebase(mappings: InvMenuMapping[]) {
   }
 }
 
+export async function writeInvMappingToFirebase(mapping: InvMenuMapping): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("invMappings");
+    await firebaseSet(ref(db, `invMappings/${mapping.id}`), JSON.parse(JSON.stringify(mapping)));
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Inventory Mapping Write", error);
+    throw error;
+  }
+}
+
+export async function deleteInvMappingFromFirebase(id: string): Promise<void> {
+  try {
+    assertFirebaseCollectionIsSafeToWrite("invMappings");
+    await firebaseSet(ref(db, `invMappings/${id}`), null);
+  } catch (error) {
+    logStructuredFirebaseError("Firebase Inventory Mapping Delete", error);
+    throw error;
+  }
+}
+
 export async function pushAlcoholProductsToFirebase(products: AlcoholProduct[]) {
   try {
     await pushBarCatalogCollection("alcoholProducts", products || []);
