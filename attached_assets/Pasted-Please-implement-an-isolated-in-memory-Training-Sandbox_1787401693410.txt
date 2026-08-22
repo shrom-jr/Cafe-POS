@@ -1,0 +1,34 @@
+Please implement an isolated in-memory Training / Sandbox Mode with a dedicated profile on the Staff Sign-In screen:
+
+### 1. Safety Guardrails & Zero-Bandwidth Architecture
+* ZERO FIRESTORE WRITES: When an active session is in Sandbox mode, all database write functions (`addDoc`, `updateDoc`, `setDoc`, `deleteDoc`, batch writes) MUST be intercepted and bypassed. No data leaves the device.
+* ZERO RE-FETCHING / ZERO PAGE RELOADS: Do NOT use `window.location.reload()`. When entering or exiting Sandbox mode, do not call Firebase `getDocs`/`fetch`.
+* DUAL-LAYER IN-MEMORY STATE:
+  - On sandbox login, create a local memory snapshot: `sandboxState = structuredClone(liveState)`.
+  - All POS floor operations, table orders, simulated split-billing, fake customer khata, and settings edits run exclusively against `sandboxState` in memory.
+  - On "Switch User" or logout, discard `sandboxState` and point the view back to `liveState`.
+
+### 2. Sign-In Screen Profile & Modal Flow
+* Live Staff Cards (Sanjib, Samrat, etc.):
+  - Keep the existing 6-digit numeric PIN keypad popup completely UNCHANGED.
+* Dedicated Training Profile Card:
+  - Add a distinct card to the profile grid:
+    * Title: "Staff Practice"
+    * Badge: "TRAINING" (styled in amber with a subtle dashed border: `border border-dashed border-amber-500/60 bg-amber-500/10`)
+  - Clicking "Staff Practice" opens a dedicated Training Access Modal (NOT the numeric numpad):
+    * Header: "Enter Staff Training Sandbox"
+    * Instruction: "Type 'test' below to enter simulated mode (zero database changes)"
+    * Text Input: `placeholder="Type 'test'..."`, auto-focused, case-insensitive check (`input.toLowerCase() === 'test'`).
+    * Action Button: "Start Practice Session" (disabled until 'test' is entered).
+
+### 3. Active Session UI & Receipt Watermark
+* Header Warning Pill:
+  - Show a prominent badge in the top bar:
+    `bg-amber-500/20 border border-amber-500 text-amber-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5` -> "🧪 Training Sandbox (Simulated)"
+* POS Checkout & Receipt Modifications:
+  - POS Checkout Button: "Complete Simulated Order"
+  - Order Settlement Receipt: Add a clear watermark/header line:
+    `*** TRAINING RECEIPT — NOT A TAX INVOICE ***`
+
+### 4. Validation
+* Run `npm test` and `npm run build` to ensure all existing calculations, staff auth guards, and components build with 100% success.
