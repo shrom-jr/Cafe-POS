@@ -14,7 +14,7 @@
  * Run: node scripts/restoreInventoryFromMappings.mjs
  */
 
-import { initializeApp } from 'firebase/app';
+import { deleteApp, initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getDatabase, get, ref, update } from 'firebase/database';
 
@@ -113,76 +113,82 @@ function baselineFor(productType, productId) {
 
 async function main() {
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  await signInAnonymously(auth);
-  const db = getDatabase(app, firebaseConfig.databaseURL);
+  try {
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+    const db = getDatabase(app, firebaseConfig.databaseURL);
 
-  const mappingsSnapshot = await get(ref(db, 'invMappings'));
-  const mappings = Object.values(asRecord(mappingsSnapshot.val()))
-    .filter((mapping) => mapping && typeof mapping === 'object' && mapping.id !== RESET_META_KEY);
+    const mappingsSnapshot = await get(ref(db, 'invMappings'));
+    const mappings = Object.values(asRecord(mappingsSnapshot.val()))
+      .filter((mapping) => mapping && typeof mapping === 'object' && mapping.id !== RESET_META_KEY);
 
-  const idsByType = {
-    alcohol: new Set(),
-    beverage: new Set(),
-    cigarette: new Set(),
-  };
-  for (const mapping of mappings) {
-    if (idsByType[mapping.productType] && typeof mapping.productId === 'string') {
-      idsByType[mapping.productType].add(mapping.productId);
-    }
-  }
-
-  const collectionPaths = {
-    alcohol: 'alcoholProducts',
-    beverage: 'beverageProducts',
-    cigarette: 'cigaretteProducts',
-  };
-  const currentSnapshots = await Promise.all(
-    Object.values(collectionPaths).map((path) => get(ref(db, path))),
-  );
-  const currentByPath = Object.fromEntries(
-    Object.keys(collectionPaths).map((type, index) => [
-      collectionPaths[type], asRecord(currentSnapshots[index].val()),
-    ]),
-  );
-
-  const updates = {};
-  const restored = { alcohol: [], beverage: [], cigarette: [] };
-  const unknown = [];
-  for (const [type, ids] of Object.entries(idsByType)) {
-    const path = collectionPaths[type];
-    for (const productId of [...ids].sort()) {
-      if (currentByPath[path][productId]) continue;
-      const baseline = baselineFor(type, productId);
-      if (!baseline) {
-        unknown.push(`${type}:${productId}`);
-        continue;
+    const idsByType = {
+      alcohol: new Set(),
+      beverage: new Set(),
+      cigarette: new Set(),
+    };
+    for (const mapping of mappings) {
+      if (idsByType[mapping.productType] && typeof mapping.productId === 'string') {
+        idsByType[mapping.productType].add(mapping.productId);
       }
-      updates[`${path}/${productId}`] = baseline;
-      restored[type].push(productId);
     }
-  }
 
-  if (unknown.length > 0) {
-    throw new Error(`No safe baseline definition for mapped product IDs: ${unknown.join(', ')}`);
-  }
-  if (Object.keys(updates).length === 0) {
-    console.log('No missing mapped inventory products found; nothing was changed.');
-    return;
-  }
+    const collectionPaths = {
+      alcohol: 'alcoholProducts',
+      beverage: 'beverageProducts',
+      cigarette: 'cigaretteProducts',
+    };
+    const currentSnapshots = await Promise.all(
+      Object.values(collectionPaths).map((path) => get(ref(db, path))),
+    );
+    const currentByPath = Object.fromEntries(
+      Object.keys(collectionPaths).map((type, index) => [
+        collectionPaths[type], asRecord(currentSnapshots[index].val()),
+      ]),
+    );
 
-  await update(ref(db), updates);
-  console.log(JSON.stringify({
-    mappingRecords: mappings.length,
-    mappedIds: Object.fromEntries(Object.entries(idsByType).map(([type, ids]) => [type, ids.size])),
-    restored: Object.fromEntries(Object.entries(restored).map(([type, ids]) => [type, ids.length])),
-    totalRestored: Object.keys(updates).length,
-    preservedResetMarker: Boolean(currentByPath.alcoholProducts[RESET_META_KEY]),
-    touchedPaths: ['alcoholProducts', 'beverageProducts', 'cigaretteProducts'],
-  }, null, 2));
+    const updates = {};
+    const restored = { alcohol: [], beverage: [], cigarette: [] };
+    const unknown = [];
+    for (const [type, ids] of Object.entries(idsByType)) {
+      const path = collectionPaths[type];
+      for (const productId of [...ids].sort()) {
+        if (currentByPath[path][productId]) continue;
+        const baseline = baselineFor(type, productId);
+        if (!baseline) {
+          unknown.push(`${type}:${productId}`);
+          continue;
+        }
+        updates[`${path}/${productId}`] = baseline;
+        restored[type].push(productId);
+      }
+    }
+
+    if (unknown.length > 0) {
+      throw new Error(`No safe baseline definition for mapped product IDs: ${unknown.join(', ')}`);
+    }
+    if (Object.keys(updates).length === 0) {
+      console.log('No missing mapped inventory products found; nothing was changed.');
+      return;
+    }
+
+    await update(ref(db), updates);
+    console.log(JSON.stringify({
+      mappingRecords: mappings.length,
+      mappedIds: Object.fromEntries(Object.entries(idsByType).map(([type, ids]) => [type, ids.size])),
+      restored: Object.fromEntries(Object.entries(restored).map(([type, ids]) => [type, ids.length])),
+      totalRestored: Object.keys(updates).length,
+      preservedResetMarker: Boolean(currentByPath.alcoholProducts[RESET_META_KEY]),
+      touchedPaths: ['alcoholProducts', 'beverageProducts', 'cigaretteProducts'],
+    }, null, 2));
+  } finally {
+    await deleteApp(app);
+  }
 }
 
-main().catch((error) => {
-  console.error(`Inventory recovery failed: ${error.message}`);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(`Inventory recovery failed: ${error.message}`);
+    process.exit(1);
+  });
