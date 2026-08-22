@@ -3,9 +3,6 @@ import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useStaffStore } from '@/store/useStaffStore';
 import { toast } from 'sonner';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
@@ -16,6 +13,7 @@ import { Wrench, Edit3, Trash2, Plus, Download } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth } from 'date-fns';
 import { fmt } from '@/utils/format';
 import type { MaintenanceExpense, MaintenanceCategory, MaintenancePaymentMethod } from '@/types/pos';
+import AppModal from '@/components/ui/AppModal';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -330,11 +328,11 @@ export const ExpensesSection = () => {
       </div>
 
       {/* ── Log / Edit modal ── */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md w-full p-7 rounded-[28px] bg-[#0E1017] border border-white/20 shadow-2xl shadow-black text-white relative flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-white tracking-tight">{editingId ? 'Edit Expense' : 'Log Maintenance Expense'}</DialogTitle>
-          </DialogHeader>
+      {modalOpen && (
+        <AppModal
+          title={editingId ? 'Edit Expense' : 'Log Maintenance Expense'}
+          onClose={() => setModalOpen(false)}
+        >
           <div className="space-y-3 py-2">
             <div>
               <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1 block">Expense Title</label>
@@ -395,7 +393,7 @@ export const ExpensesSection = () => {
               />
             </div>
           </div>
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button onClick={() => setModalOpen(false)}
               className="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-black text-xs uppercase tracking-wider transition-all">
               Cancel
@@ -404,9 +402,9 @@ export const ExpensesSection = () => {
               className="flex-1 w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all">
               {editingId ? 'Save Changes' : 'Log Expense'}
             </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </AppModal>
+      )}
 
       {/* ── Delete confirmation ── */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
