@@ -22,26 +22,24 @@ const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Admin', CASHIER: 'Cashier', WAITER: 'Waiter', KITCHEN: 'Kitchen', MANAGER: 'Manager',
 };
 
-// Permission display config
+// Permission display config. Keep this list stable so the modal never changes
+// height when a role preset changes.
 type PermKey = keyof StaffPermissions;
-const PERM_CONFIG: { key: PermKey; label: string; badge: string; color: string; border: string }[] = [
-  { key: 'pos', label: 'POS & Floor Tables', badge: 'POS', color: 'rgba(59,130,246,0.18)', border: 'rgba(59,130,246,0.35)' },
-  { key: 'customers', label: 'Customer Directory', badge: 'Customers', color: 'rgba(14,165,233,0.18)', border: 'rgba(14,165,233,0.35)' },
-  { key: 'kitchen', label: 'Kitchen Portal', badge: 'Kitchen', color: 'rgba(249,115,22,0.18)', border: 'rgba(249,115,22,0.35)' },
-  { key: 'bar', label: 'Bar Portal', badge: 'Bar', color: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.35)' },
-  { key: 'dashboard', label: 'Dashboard Overview', badge: 'Dashboard', color: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.35)' },
-  { key: 'reports', label: 'Sales Reports', badge: 'Reports', color: 'rgba(139,92,246,0.18)', border: 'rgba(139,92,246,0.35)' },
-  { key: 'menu', label: 'Menu Management', badge: 'Menu', color: 'rgba(236,72,153,0.18)', border: 'rgba(236,72,153,0.35)' },
-  { key: 'inventory', label: 'Inventory Tracking', badge: 'Inventory', color: 'rgba(234,179,8,0.18)', border: 'rgba(234,179,8,0.35)' },
-  { key: 'expenses', label: 'Expense Logging', badge: 'Expenses', color: 'rgba(244,63,94,0.18)', border: 'rgba(244,63,94,0.35)' },
-  { key: 'admin', label: 'Admin Panel', badge: 'Admin', color: 'rgba(168,85,247,0.18)', border: 'rgba(168,85,247,0.35)' },
+type PermissionConfig = { key: PermKey; label: string; badge: string };
+const OPERATIONAL_PERMISSIONS: PermissionConfig[] = [
+  { key: 'pos', label: 'POS & Tables', badge: 'POS' },
+  { key: 'customers', label: 'Customer Directory', badge: 'Customers' },
+  { key: 'kitchen', label: 'Kitchen Portal', badge: 'Kitchen' },
+  { key: 'bar', label: 'Bar Portal', badge: 'Bar' },
 ];
-const PERM_TEXT: Record<PermKey, string> = {
-  pos: '#60a5fa', customers: '#38bdf8', kitchen: '#fb923c', bar: '#34d399',
-  dashboard: '#818cf8', reports: '#a78bfa', menu: '#f472b6', inventory: '#facc15',
-  expenses: '#fb7185', admin: '#c084fc',
-};
-const MANAGER_ONLY_PERMISSIONS = new Set<PermKey>(['dashboard', 'reports', 'menu', 'inventory', 'expenses']);
+const MANAGEMENT_PERMISSIONS: PermissionConfig[] = [
+  { key: 'dashboard', label: 'Dashboard Overview', badge: 'Dashboard' },
+  { key: 'reports', label: 'Sales Reports', badge: 'Reports' },
+  { key: 'menu', label: 'Menu Management', badge: 'Menu' },
+  { key: 'inventory', label: 'Inventory Tracking', badge: 'Inventory' },
+  { key: 'expenses', label: 'Expense Logging', badge: 'Expenses' },
+];
+const ALL_PERMISSIONS = [...OPERATIONAL_PERMISSIONS, ...MANAGEMENT_PERMISSIONS];
 
 const inputCls = 'w-full bg-[#181B26] border-2 border-white/20 focus:border-amber-400 text-white font-bold rounded-xl px-4 py-3.5 text-sm placeholder:text-zinc-500 outline-none transition-all shadow-inner';
 const MODAL_BG = { background: '#0E1017', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 24px 64px -8px rgba(0,0,0,0.85)' };
@@ -163,32 +161,41 @@ const StaffModal = ({
 
            </div>
 
-           {/* Feature Permissions */}
+            {/* Feature Permissions */}
           <div>
-             <label className="text-xs font-black uppercase tracking-wider text-amber-400 mb-1.5 block">
-              Feature Permissions <span className="text-white/25 font-normal">(override individually)</span>
-            </label>
-            <div className="space-y-2">
-               {PERM_CONFIG.filter(({ key }) => role === 'ADMIN' || role === 'MANAGER' || !MANAGER_ONLY_PERMISSIONS.has(key)).map(({ key, label, color, border }) => {
+             <div className="flex items-center justify-between mb-2">
+               <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+                 Feature Permissions
+               </label>
+               <span className="text-[11px] text-slate-400">Choose access</span>
+             </div>
+             <div className="space-y-4">
+               {[
+                 { title: 'Operational Portals', items: OPERATIONAL_PERMISSIONS },
+                 { title: 'Management Views', items: MANAGEMENT_PERMISSIONS },
+               ].map(({ title, items }) => (
+                 <div key={title} className="space-y-2">
+                   <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-[#CBD5E1]">{title}</h4>
+                   {items.map(({ key, label }) => {
                 const checked = perms[key];
+                 const locked = role === 'ADMIN';
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => togglePerm(key)}
-                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-                    style={checked
-                      ? { background: color, border: `1px solid ${border}` }
-                      : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }
-                    }
+                     onClick={() => { if (!locked) togglePerm(key); }}
+                     disabled={locked}
+                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all ${
+                       checked
+                         ? 'bg-amber-500/10 border-amber-500/50 text-amber-300 font-medium'
+                         : 'bg-slate-900/60 border-slate-700/60 text-slate-200 hover:border-slate-500'
+                     } ${locked ? 'cursor-not-allowed opacity-90' : 'active:scale-[0.98]'}`}
                   >
                     {/* Checkbox indicator */}
                     <span
-                      className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
-                      style={checked
-                        ? { background: border, border: `1px solid ${border}` }
-                        : { background: 'transparent', border: '1px solid rgba(255,255,255,0.18)' }
-                      }
+                        className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all ${
+                         checked ? 'bg-amber-500 border border-amber-400' : 'bg-transparent border border-slate-500'
+                       }`}
                     >
                       {checked && (
                         <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
@@ -197,14 +204,15 @@ const StaffModal = ({
                       )}
                     </span>
                     <span
-                      className="text-xs font-semibold"
-                      style={{ color: checked ? PERM_TEXT[key] : 'rgba(255,255,255,0.4)' }}
+                        className="text-[13px] text-left text-[#F8FAFC]"
                     >
                       {label}
                     </span>
                   </button>
                 );
-              })}
+                   })}
+                 </div>
+               ))}
             </div>
           </div>
 
@@ -393,15 +401,14 @@ const DeleteConfirm = ({
 // ── Permission Badges ─────────────────────────────────────────────────────────
 const PermissionBadges = ({ user }: { user: StaffUser }) => {
   const perms = user.permissions ?? DEFAULT_PERMISSIONS[user.role];
-  const active = PERM_CONFIG.filter((p) => perms[p.key]);
+  const active = ALL_PERMISSIONS.filter((p) => perms[p.key]);
   if (active.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1.5">
-      {active.map(({ key, badge, color, border }) => (
+      {active.map(({ key, badge }) => (
         <span
           key={key}
-           className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-black uppercase text-zinc-200 leading-tight"
-          style={{ background: color, border: `1px solid ${border}`, color: PERM_TEXT[key] }}
+           className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-600/70 text-[10px] font-black uppercase text-slate-200 leading-tight"
         >
           {badge}
         </span>
@@ -515,7 +522,7 @@ const StaffManagement = () => {
   return (
     <div className="space-y-5">
       {/* Summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {ROLES.map((r) => {
           const c = ROLE_COLORS[r];
           const count = byRole[r].filter((u) => u.active).length;
