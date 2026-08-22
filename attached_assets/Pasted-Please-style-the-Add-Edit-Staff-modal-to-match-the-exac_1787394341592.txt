@@ -1,0 +1,36 @@
+Please style the Add/Edit Staff modal to match the exact design tokens, dark palette, and components of the "Register New Customer" modal:
+
+1. Backdrop & Dialog Container (Match Customer Modal Exactly):
+   - Overlay: `fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 overflow-y-auto`
+   - Dialog Shell: `w-full max-w-4xl bg-[#111622] border border-slate-800 rounded-2xl shadow-2xl p-6 text-white` (use the app's charcoal/black-slate base, NOT light navy)
+   - Title: `text-base font-bold text-white uppercase tracking-wider`
+   - Close Button: `text-slate-400 hover:text-white`
+
+2. Form Labels & Input Fields (Identical to Customer Modal):
+   - Labels: `text-xs font-bold uppercase tracking-wider text-amber-400 mb-1.5 block`
+   - Inputs (Name, Email, PIN): `w-full bg-[#182030] border border-slate-700 text-white placeholder-slate-500 text-sm rounded-xl px-4 py-2.5 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors`
+
+3. Role Selection Grid (Left Column):
+   - Inactive Buttons: `py-2.5 px-3 rounded-xl bg-[#182030] border border-slate-700 text-slate-200 font-semibold text-xs text-center hover:bg-slate-700 hover:text-white transition-all`
+   - Active Roles (Clean solid accent fills, not faint outlines):
+     * Waiter: `bg-emerald-600 border border-emerald-400 text-white font-bold`
+     * Cashier: `bg-blue-600 border border-blue-400 text-white font-bold`
+     * Kitchen: `bg-orange-600 border border-orange-400 text-white font-bold`
+     * Manager: `bg-cyan-600 border border-cyan-400 text-white font-bold`
+     * Admin: `bg-purple-600 border border-purple-400 text-white font-bold`
+
+4. Manager Permission Tiles (Right Column - Remove Harsh Glowing Yellow Boxes):
+   - Group Headers: `text-xs font-bold uppercase tracking-wider text-slate-300 mb-2 block`
+   - Unchecked Card: `flex items-center gap-2.5 p-2.5 rounded-xl bg-[#182030]/70 border border-slate-700/80 text-slate-200 text-xs font-medium hover:border-slate-500 cursor-pointer transition-colors`
+   - Checked Card: `flex items-center gap-2.5 p-2.5 rounded-xl bg-[#182030] border border-cyan-500/70 text-white text-xs font-semibold cursor-pointer transition-colors`
+   - Checkbox: `accent-cyan-500 w-4 h-4 rounded`
+
+5. Summary Cards (Non-Managers):
+   - Preset Card (Waiter/Cashier/Kitchen): `bg-[#182030] border border-slate-700 rounded-xl p-4 text-slate-300 text-xs leading-relaxed`
+   - Master Admin Banner: `bg-purple-950/30 border border-purple-700/50 rounded-xl p-4 text-purple-200 text-xs leading-relaxed`
+
+6. Action Buttons (Footer):
+   - Cancel: `px-6 py-2.5 rounded-xl bg-[#182030] hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider`
+   - Add/Save Staff: `px-8 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20`
+
+7. Run `npm test` and `npm run build` to verify clean compilation.
