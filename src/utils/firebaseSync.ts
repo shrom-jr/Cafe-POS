@@ -1005,9 +1005,12 @@ export async function writePaymentRecord(payment: Payment): Promise<{ success: b
 // Push Settings
 export async function pushSettingsToFirebase(settings: Settings) {
   try {
+    const { adminPin: _legacyAdminPin, ...settingsWithoutLegacyPin } =
+      settings as Settings & { adminPin?: unknown };
+    void _legacyAdminPin;
     await set(
       ref(db, "settings"),
-      JSON.parse(JSON.stringify(normalizeSettingsLogos(settings || {}))),
+      JSON.parse(JSON.stringify(normalizeSettingsLogos(settingsWithoutLegacyPin || {}))),
     );
   } catch (error) {
     logStructuredFirebaseError("Firebase Settings Push", error);

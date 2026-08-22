@@ -64,7 +64,6 @@ describe('selective reset boundaries', () => {
   it('resets only billing counters inside settings', () => {
     const settings = {
       cafeName: 'Bamboo',
-      adminPin: '9876',
       wallets: {},
       billCounter: 1422,
       kotCounter: 888,
@@ -74,7 +73,6 @@ describe('selective reset boundaries', () => {
 
     expect(settingsAfterSalesReset(settings)).toMatchObject({
       cafeName: 'Bamboo',
-      adminPin: '9876',
       billCounter: 1000,
       kotCounter: 100,
       vatEnabled: true,

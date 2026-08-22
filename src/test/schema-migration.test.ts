@@ -38,7 +38,7 @@ describe("Firebase schema migration analysis", () => {
         name: "Kitchen",
         role: "KITCHEN",
         permissions: { kitchen: true },
-        pin: "1234",
+        pin: "2468",
         active: false,
       },
     });
@@ -61,7 +61,7 @@ describe("Firebase schema migration analysis", () => {
         name: "Kitchen",
         role: "KITCHEN",
         permissions: { kitchen: true },
-        pin: "1234",
+        pin: "2468",
         active: false,
       },
     });

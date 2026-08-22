@@ -411,7 +411,6 @@ export interface Settings {
   cafePhone?: string;
   cafePan?: string;
   billFooter?: string;
-  adminPin: string;
   esewaId: string;
   esewaPhone: string;
   wallets: {

@@ -671,7 +671,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     const order = get().orders.find((entry) => entry.id === orderId);
     if (!order || !pin) return false;
     const eligibleUsers = useStaffStore.getState().users.filter(
-      (user) => user.active && (user.role === 'ADMIN' || user.permissions?.admin === true),
+      (user) => user.active && user.role === 'ADMIN',
     );
     for (const user of eligibleUsers) {
       if (user.pinHash && user.salt) {

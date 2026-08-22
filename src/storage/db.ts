@@ -51,7 +51,6 @@ function set(key: string, val: unknown) {
 
 const defaultSettings: Settings = {
   cafeName: 'S Bamboo Cottage & Sekuwa Corner',
-  adminPin: '1234',
   esewaId: '',
   esewaPhone: '',
   wallets: {
@@ -200,16 +199,24 @@ export const db = {
 
   getSettings: (): Settings => {
     const stored = get<Partial<Settings>>(KEYS.settings, defaultSettings);
+    const { adminPin: _legacyAdminPin, ...storedWithoutLegacyPin } =
+      stored as Partial<Settings> & { adminPin?: unknown };
+    void _legacyAdminPin;
     return {
       ...defaultSettings,
-      ...stored,
+      ...storedWithoutLegacyPin,
       wallets: {
         ...defaultSettings.wallets,
         ...stored?.wallets,
       },
     };
   },
-  saveSettings: (s: Settings) => set(KEYS.settings, normalizeSettingsLogos(s)),
+  saveSettings: (s: Settings) => {
+    const { adminPin: _legacyAdminPin, ...settingsWithoutLegacyPin } =
+      s as Settings & { adminPin?: unknown };
+    void _legacyAdminPin;
+    set(KEYS.settings, normalizeSettingsLogos(settingsWithoutLegacyPin));
+  },
 
   exportAll: () => {
     const data: Record<string, string | null> = {};

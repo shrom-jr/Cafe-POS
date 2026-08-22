@@ -265,11 +265,10 @@ Store actions such as order creation, payment, voiding, import, reset, and setti
 
 Current user data and staff data are persisted in localStorage. Migrated users use `pinHash` and `salt`, which is better than storing raw PINs, but the browser still receives and persists the complete credential verifier and permissions. Any XSS, browser extension, local profile access, or compromised terminal can read them.
 
-## High: legacy PIN and admin fallback
+## High: legacy PIN migration surface
 
-- Default settings contain `adminPin: '1234'`.
 - Legacy plaintext PIN fields remain supported for migration.
-- `AdminPinGate` accepts an active admin PIN and retains a plaintext fallback.
+- `AdminPinGate` accepts only the PIN of an active staff record with `role === 'ADMIN'`.
 - Privileged gate attempts do not share the main login lockout/rate-limit mechanism.
 
 ## Critical: PIN reset design

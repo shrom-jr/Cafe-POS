@@ -120,7 +120,7 @@ describe('Firebase selective reset allowlist', () => {
     firebaseMocks.data.orderTombstones = {};
     firebaseMocks.data.resetMarkers = {};
     firebaseMocks.data.menu = { items: { menu1: { id: 'menu1', name: 'Momo' } } };
-    firebaseMocks.data.users = { admin: { id: 'admin', pin: '1234' } };
+    firebaseMocks.data.users = { admin: { id: 'admin', pin: '2468' } };
     firebaseMocks.data.areaOrder = ['Garden'];
     firebaseMocks.data.invMappings = { map1: { id: 'map1', productId: 'a1' } };
     for (const path of ['payments', 'alcoholProducts', 'beverageProducts', 'cigaretteProducts', 'invMappings']) {

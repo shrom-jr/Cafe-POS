@@ -402,16 +402,7 @@ const AdminPanel = () => {
   }
 
   const handlePinSubmit = async () => {
-    const adminUsers = staffUsers.filter((u) => u.role === 'ADMIN');
-    let valid = false;
-    for (const u of adminUsers) {
-      if (u.pinHash && u.salt) {
-        if (await verifyPin(pin, u.pinHash, u.salt)) { valid = true; break; }
-      } else if (u.pin !== undefined) {
-        // Legacy plaintext fallback for accounts not yet migrated
-        if (u.pin === pin) { valid = true; break; }
-      }
-    }
+    const valid = await validateAdminPin(pin, staffUsers);
     if (valid) {
       setAuthenticated(true);
       setPinError(false);
@@ -2333,6 +2324,7 @@ const PERIOD_LABELS: Record<ReportPeriod, string> = {
 
 const ReportsSection = () => {
   const payments  = usePOSStore((s) => s.payments);
+  const staffUsers = useStaffStore((s) => s.users);
   const menuItems = usePOSStore((s) => s.menuItems);
   const categories = usePOSStore((s) => s.categories);
   const settings  = usePOSStore((s) => s.settings);
@@ -2463,8 +2455,8 @@ const ReportsSection = () => {
     setZPin(''); setZPinError(''); setZStep('pin'); setZSavedShift(null); setZModal(true);
   };
 
-  const handleZReportClose = () => {
-    if (zPin !== settings.adminPin) {
+  const handleZReportClose = async () => {
+    if (!(await validateAdminPin(zPin, staffUsers))) {
       setZPinError('Incorrect PIN. Try again.');
       return;
     }
@@ -2869,7 +2861,7 @@ const ReportsSection = () => {
                   type="password"
                   value={zPin}
                   onChange={(e) => { setZPin(e.target.value); setZPinError(''); }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleZReportClose()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleZReportClose(); }}
                   placeholder="Enter admin PIN to lock"
                   className="w-full px-4 py-2.5 rounded-xl bg-[#13151F] border-2 border-white/20 text-white font-bold text-sm placeholder:text-zinc-400 focus:outline-none focus:border-amber-400"
                   autoFocus
@@ -2908,7 +2900,7 @@ const ReportsSection = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleZReportClose}
+                  onClick={() => void handleZReportClose()}
                   className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95"
                 >
                   <Lock size={13} /> Lock & Archive
