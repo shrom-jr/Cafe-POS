@@ -1,0 +1,51 @@
+Please implement a comprehensive "Manager" role and modernize the Add/Edit Staff modal with a landscape layout, granular permissions, and dynamic top-navigation updates:
+
+### 1. Data Model & Role Types
+* Add `MANAGER` to the staff role enumeration (`WAITER`, `CASHIER`, `KITCHEN`, `MANAGER`, `ADMIN`).
+* Update the permissions schema to support granular page & portal flags:
+  - Portals: `pos` (POS & Tables), `customers` (Customer Directory & Ledgers), `kitchen` (Kitchen Portal), `bar` (Bar Portal)
+  - Management Pages: `dashboard` (Live Dashboard), `reports` (Sales Reports), `menu` (Menu Management), `inventory` (Stock & Restock), `expenses` (Expense Logging)
+* Default permission assignments on role selection:
+  - `WAITER`: `pos`
+  - `CASHIER`: `pos`, `customers`
+  - `KITCHEN`: `kitchen`
+  - `MANAGER`: All granular portals and management pages selected by default, but fully customizable via checkboxes
+  - `ADMIN`: Full access to everything
+
+### 2. Modal UI Overhaul (2-Column Landscape Layout & Contrast Fixes)
+* Redesign the Add/Edit Staff modal from the current narrow vertical card into a clean, 2-column landscape modal (`max-w-4xl` on tablet/desktop, stacked on mobile).
+* Fix Typography & Visual Contrast:
+  - Replace dull gray text (`#6b7280` / `#9ca3af`) with high-contrast text: `#F1F5F9` for headings/titles and `#CBD5E1` for labels and helper text.
+  - Set label font sizes to `13px-14px` with clear letter-spacing.
+  - Active/checked states should have distinct borders and badge highlights.
+* Left Column (Profile & Role):
+  - Full Name, Email, 6-Digit PIN (with show/hide toggle).
+  - Role selection pills: `Waiter`, `Cashier`, `Kitchen`, `Manager`, `Admin`.
+* Right Column (Granular Permissions Checklist):
+  - Section 1: Operational Portals (`POS & Floor Tables`, `Customers Directory`, `Kitchen Portal`, `Bar Portal`).
+  - Section 2: Management Views (`Dashboard Overview`, `Sales Reports`, `Menu Management`, `Inventory Tracking`, `Expense Logging`).
+  - Checkboxes should be active and toggleable.
+
+### 3. Top Navigation & Header Dynamic Behavior
+* When a user with `role === 'MANAGER'` is logged in:
+  - Change the top navigation capsule button (currently green "Admin" with shield) to display **"Manager"** with a distinct accent color (e.g., Cyan `#06B6D4` or Indigo `#6366F1`).
+  - The user badge next to the profile name must show `MANAGER`.
+  - Clicking the "Manager" button should route directly to the first permitted management page (e.g., `/admin/dashboard` or `/admin/reports`).
+
+### 4. Security & Hard Boundary Enforcement
+* Hard-lock critical administrative areas to `role === 'ADMIN'` only:
+  - **Settings & Hardware / VAT & Company Profile**: Inaccessible to Managers.
+  - **Staff & Users Management**: Inaccessible to Managers.
+  - **Data Management & Factory Reset**: Strictly blocked for Managers; unauthorized routes must redirect or display an "Access Denied" view.
+
+### 5. Staff Overview Stat Cards
+* Update the top stats counter bar in `Settings > Staff & Users` from 4 cards to 5 cards:
+  - `Waiter`, `Cashier`, `Kitchen`, `Manager`, `Admin`.
+
+### 6. Validation & Regression Testing
+* Ensure backward compatibility for existing staff records.
+* Add unit/regression tests covering:
+  - Manager role creation with custom subset of permissions.
+  - Top navigation label switching between Admin and Manager.
+  - Guarding Settings, Staff Management, and Factory Reset from non-Admin accounts.
+* Run `npm test` and `npm run build` to verify all tests pass cleanly.
