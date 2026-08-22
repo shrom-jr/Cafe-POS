@@ -23,6 +23,7 @@ import { useKitchenPurchasesStore } from "@/store/useKitchenPurchasesStore";
 import { useMeatTrackerStore } from "@/store/useMeatTrackerStore";
 import { useMaintenanceStore } from "@/store/useMaintenanceStore";
 import { db } from "@/storage/db";
+import { isTrainingSandboxReconciling } from "@/utils/trainingSandbox";
 import { CafeTable } from "@/types/pos";
 import {
   subscribeToOrders,
@@ -302,6 +303,10 @@ export function useFirebaseSync(enabled = true) {
     setPillars([]);
 
     const unsubscribeOrders = subscribeToOrders((remoteOrders, tombstones) => {
+      if (isTrainingSandboxReconciling()) {
+        setOrders(remoteOrders);
+        return;
+      }
       const currentOrders = usePOSStore.getState().orders;
 
       const merged = mergeRemoteOrders(currentOrders, remoteOrders, tombstones);
@@ -325,6 +330,10 @@ export function useFirebaseSync(enabled = true) {
       const currentOrders = usePOSStore.getState().orders;
 
       if (remoteTables.length === 0) {
+        if (isTrainingSandboxReconciling()) {
+          setTables([]);
+          return;
+        }
         if (currentTables.length > 0) {
           // Preserve the existing table catalog while Firebase is being
           // bootstrapped, but do not apply the old occupied-state guard.
@@ -356,7 +365,7 @@ export function useFirebaseSync(enabled = true) {
         }
 
         // Preserve a local offline cache for a present-but-empty legacy node.
-        if (remotePayments.length === 0 && currentPayments.length > 0) return;
+        if (remotePayments.length === 0 && currentPayments.length > 0 && !isTrainingSandboxReconciling()) return;
 
         if (JSON.stringify(currentPayments) !== JSON.stringify(remotePayments)) {
           setPayments(remotePayments);
@@ -400,7 +409,7 @@ export function useFirebaseSync(enabled = true) {
 
         // FIREWALL: preserve local area order if remote is empty.
         // No default seeding needed — area order derives from sections.
-        if (remoteAreaOrder.length === 0 && currentAreaOrder.length > 0) {
+        if (remoteAreaOrder.length === 0 && currentAreaOrder.length > 0 && !isTrainingSandboxReconciling()) {
           firewallPush("areaOrder", () => pushAreaOrderToFirebase(currentAreaOrder));
           return;
         }
@@ -454,7 +463,7 @@ export function useFirebaseSync(enabled = true) {
         }
 
         // FIREWALL: preserve local purchase history if remote is empty
-        if (remotePurchases.length === 0 && currentPurchases.length > 0) {
+        if (remotePurchases.length === 0 && currentPurchases.length > 0 && !isTrainingSandboxReconciling()) {
           firewallPush("groceryPurchases", () => pushGroceryPurchasesToFirebase(currentPurchases));
           return;
         }
@@ -482,7 +491,7 @@ export function useFirebaseSync(enabled = true) {
         }
 
         // FIREWALL: preserve local movement history if remote is empty
-        if (remoteMovements.length === 0 && currentMovements.length > 0) {
+        if (remoteMovements.length === 0 && currentMovements.length > 0 && !isTrainingSandboxReconciling()) {
           firewallPush("invMovements", () => pushInvMovementsToFirebase(currentMovements));
           return;
         }
@@ -523,7 +532,7 @@ export function useFirebaseSync(enabled = true) {
       }
 
       // FIREWALL: preserve local purchase history if remote is empty
-      if (remote.length === 0 && current.length > 0) {
+      if (remote.length === 0 && current.length > 0 && !isTrainingSandboxReconciling()) {
         firewallPush("kitchenPurchases", () => pushKitchenPurchasesToFirebase(current));
         return;
       }
@@ -545,7 +554,7 @@ export function useFirebaseSync(enabled = true) {
       }
 
       // FIREWALL: preserve local meat tracker history if remote is empty
-      if (remote.length === 0 && current.length > 0) {
+      if (remote.length === 0 && current.length > 0 && !isTrainingSandboxReconciling()) {
         firewallPush("meatEntries", () => pushMeatEntriesToFirebase(current));
         return;
       }
@@ -567,7 +576,7 @@ export function useFirebaseSync(enabled = true) {
       }
 
       // FIREWALL: preserve local expense records if remote is empty
-      if (remote.length === 0 && current.length > 0) {
+      if (remote.length === 0 && current.length > 0 && !isTrainingSandboxReconciling()) {
         firewallPush("maintenanceExpenses", () => pushMaintenanceExpensesToFirebase(current));
         return;
       }
@@ -597,7 +606,7 @@ export function useFirebaseSync(enabled = true) {
 
         // FIREWALL: never wipe non-empty local staff with empty remote.
         // Staff are critical for login — if Firebase loses them, keep local cache.
-        if (remoteUsers.length === 0 && currentUsers.length > 0) {
+        if (remoteUsers.length === 0 && currentUsers.length > 0 && !isTrainingSandboxReconciling()) {
           firewallPush("staff", () => pushStaffToFirebase(currentUsers));
           hasLoadedStaff.current = true;
            previousStaffIds.current = new Set(currentUsers.map((user) => user.id));

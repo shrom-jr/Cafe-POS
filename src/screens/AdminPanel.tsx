@@ -52,6 +52,7 @@ import {
   type SelectiveResetSelection,
 } from '@/types/selectiveReset';
 import { executeSelectiveReset } from '@/utils/selectiveReset';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 type AdminTab = 'dashboard' | 'tables' | 'settings' | 'reports' | 'customers' | 'inventory' | 'expenses' | 'menu';
 type SettingsSubTab = 'bill' | 'billing' | 'payments' | 'stock' | 'printers' | 'staff' | 'data-management';
@@ -2574,8 +2575,11 @@ const ReportsSection = () => {
             <Download size={14} /> CSV
           </button>
           <button
-            onClick={() => window.print()}
-            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
+            onClick={() => {
+              if (!isTrainingSandboxActive()) window.print();
+            }}
+            disabled={isTrainingSandboxActive()}
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Printer size={14} /> PDF
           </button>

@@ -4,6 +4,7 @@ import {
   GroceryPurchase, InvMenuMapping, InvMovementType,
   InventoryMovement, InvProductType,
 } from '@/types/pos';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 export interface InventoryDeficit {
   productType: InvProductType;
@@ -22,6 +23,7 @@ function getLS<T>(key: string, fallback: T): T {
   } catch { return fallback; }
 }
 function setLS(key: string, val: unknown) {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(key, JSON.stringify(val));
 }
 

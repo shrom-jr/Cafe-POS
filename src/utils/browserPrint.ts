@@ -18,6 +18,7 @@
 
 import type { EscKOTOptions, EscBOTOptions, EscPreBillOptions, EscTaxInvoiceOptions } from '@/utils/escpos';
 import type { Ticket } from '@/types/pos';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Shared CSS ────────────────────────────────────────────────────────────────
 
@@ -205,6 +206,7 @@ ${bodyHTML}
  *                      Omit to use the OS default printer.
  */
 async function fireBrowserPrint(html: string, printerName?: string): Promise<boolean> {
+  if (isTrainingSandboxActive()) return false;
   // ── Electron path ──────────────────────────────────────────────────────────
   if (typeof window !== 'undefined' && window.electronAPI?.printSilent) {
     try {

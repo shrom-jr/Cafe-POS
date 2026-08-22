@@ -16,6 +16,7 @@ import { numberToWords } from './printer';
 import { useStaffStore } from '@/store/useStaffStore';
 import { tableDisplayName } from '@/utils/tableName';
 import { sanitizeLogoSource } from '@/utils/logo';
+import { isTrainingSandboxActive, TRAINING_RECEIPT_NOTICE } from '@/utils/trainingSandbox';
 
 // ── Typed job interfaces ──────────────────────────────────────────────────────
 
@@ -85,6 +86,8 @@ export interface TaxInvoiceData {
   /** Logo base64/data-URI to embed at the top of the printed receipt */
   logo?:          string;
   showLogoOnBill?: boolean;
+  /** Marks a locally generated Staff Practice receipt. */
+  training?: boolean;
 }
 
 export type PrintJob =
@@ -329,7 +332,8 @@ function buildTaxInvoiceHtml(data: TaxInvoiceData): string {
       ${data.cafePan ? `<p>PAN: ${data.cafePan}</p>` : ''}
     </div>
     <div class="divider"></div>
-    <div class="text-center bold" style="font-size:12px;letter-spacing:1px;margin-bottom:4px">TAX INVOICE</div>
+    ${data.training ? `<div class="text-center bold" style="font-size:11px;letter-spacing:0.5px;margin-bottom:4px">${TRAINING_RECEIPT_NOTICE}</div>` : ''}
+    <div class="text-center bold" style="font-size:12px;letter-spacing:1px;margin-bottom:4px">${data.training ? 'TRAINING RECEIPT' : 'TAX INVOICE'}</div>
     <div class="divider"></div>
     <table class="meta-table">
       <tr>
@@ -451,6 +455,7 @@ function openPrintIframe(bodyContent: string, logo?: string): void {
  *   firePrintJob(job);
  */
 export function firePrintJob(job: PrintJob): void {
+  if (isTrainingSandboxActive()) return;
   switch (job.type) {
     case 'KITCHEN_KOT':
       openPrintIframe(buildKOTHtml(job.data));

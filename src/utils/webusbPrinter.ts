@@ -14,6 +14,8 @@
  * opens a dialog, alert, or window.print() fallback.
  */
 
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
+
 // ── Minimal WebUSB type declarations (lib.dom may not include them) ──────────
 
 interface USBEndpoint {
@@ -78,7 +80,6 @@ interface SlotState {
 }
 
 // ── Module state — one slot map per browser session ───────────────────────────
-
 const slots = new Map<PrinterSlot, SlotState>();
 
 /** localStorage keys that persist paired device identity across page loads. */
@@ -101,6 +102,7 @@ interface DeviceIdentity {
 }
 
 function saveDeviceIdentity(slot: PrinterSlot, device: USBDevice): void {
+  if (isTrainingSandboxActive()) return;
   try {
     const identity: DeviceIdentity = {
       vendorId: device.vendorId,
@@ -315,6 +317,7 @@ export function getUSBPrinterName(slot: PrinterSlot): string | null {
  * Safe to call multiple times; returns immediately if already connected.
  */
 export function autoReconnectUSB(slot: PrinterSlot): Promise<boolean> {
+  if (isTrainingSandboxActive()) return Promise.resolve(false);
   // Serialized: concurrent kitchen/reception reconnects run one at a time so
   // they can never race to claim the same physical device.
   return withReconnectLock(async () => {
@@ -355,6 +358,7 @@ export function autoReconnectUSB(slot: PrinterSlot): Promise<boolean> {
  * on success, null on cancel / failure.
  */
 export async function pairUSBPrinter(slot: PrinterSlot): Promise<string | null> {
+  if (isTrainingSandboxActive()) return null;
   const usb = getUSB();
   if (!usb) return null;
 
@@ -406,6 +410,7 @@ export async function pairUSBPrinter(slot: PrinterSlot): Promise<string | null> 
  * Silent on failure — resolves false, never throws or opens a dialog.
  */
 export async function sendRawToUSB(buffer: Uint8Array, slot: PrinterSlot): Promise<boolean> {
+  if (isTrainingSandboxActive()) return false;
   const s = slots.get(slot);
   if (!s || !s.device.opened) {
     console.warn(`[webusb:${slot}] No device connected — job skipped silently.`);

@@ -27,6 +27,20 @@ import { StaffPermissions } from '@/types/staff';
 import { canAccessCustomers, canAccessManagement } from '@/utils/permissions';
 import { getFirstPermittedRoute } from '@/utils/permissions';
 import { ensureFirebaseAuth } from '@/firebase';
+import { configureTrainingSandbox } from '@/utils/trainingSandbox';
+import { reconcileTrainingFirebaseSnapshots } from '@/utils/firebaseSync';
+import { useInventoryStore } from '@/store/useInventoryStore';
+import { useKitchenPurchasesStore } from '@/store/useKitchenPurchasesStore';
+import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
+import { useMaintenanceStore } from '@/store/useMaintenanceStore';
+import { useBarRestockStore } from '@/store/useBarRestockStore';
+
+type Snapshot = Record<string, unknown>;
+
+const cloneStoreState = (state: Record<string, unknown>): Snapshot =>
+  JSON.parse(JSON.stringify(
+    Object.fromEntries(Object.entries(state).filter(([, value]) => typeof value !== 'function')),
+  )) as Snapshot;
 
 /**
  * Permission-based route guard.
@@ -69,6 +83,36 @@ const App = () => {
   const [firebaseAuthError, setFirebaseAuthError] = useState<string | null>(null);
   const currentUser = useStaffStore((s) => s.currentUser);
   const orders = usePOSStore((s) => s.orders);
+  const trainingSnapshot = useRef<Record<string, Snapshot> | null>(null);
+
+  configureTrainingSandbox({
+    capture: () => {
+      trainingSnapshot.current = {
+        pos: cloneStoreState(usePOSStore.getState() as unknown as Record<string, unknown>),
+        customers: cloneStoreState(useCustomerStore.getState() as unknown as Record<string, unknown>),
+        inventory: cloneStoreState(useInventoryStore.getState() as unknown as Record<string, unknown>),
+        kitchenPurchases: cloneStoreState(useKitchenPurchasesStore.getState() as unknown as Record<string, unknown>),
+        meatTracker: cloneStoreState(useMeatTrackerStore.getState() as unknown as Record<string, unknown>),
+        maintenance: cloneStoreState(useMaintenanceStore.getState() as unknown as Record<string, unknown>),
+        barRestocks: cloneStoreState(useBarRestockStore.getState() as unknown as Record<string, unknown>),
+        staff: cloneStoreState(useStaffStore.getState() as unknown as Record<string, unknown>),
+      };
+    },
+    restore: () => {
+      const snapshot = trainingSnapshot.current;
+      if (!snapshot) return;
+      usePOSStore.setState(snapshot.pos);
+      useCustomerStore.setState(snapshot.customers);
+      useInventoryStore.setState(snapshot.inventory);
+      useKitchenPurchasesStore.setState(snapshot.kitchenPurchases);
+      useMeatTrackerStore.setState(snapshot.meatTracker);
+      useMaintenanceStore.setState(snapshot.maintenance);
+      useBarRestockStore.setState(snapshot.barRestocks);
+      useStaffStore.setState(snapshot.staff);
+      trainingSnapshot.current = null;
+    },
+    reconcile: reconcileTrainingFirebaseSnapshots,
+  });
 
   // Sync orders bidirectionally with Firebase Realtime Database
   useFirebaseSync(firebaseAuthReady);

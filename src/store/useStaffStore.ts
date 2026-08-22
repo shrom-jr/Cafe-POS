@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { StaffUser, DEFAULT_PERMISSIONS } from '@/types/staff';
 import { hashPin, verifyPin } from '@/utils/cryptoPin';
+import { beginTrainingSandbox, endTrainingSandbox, isTrainingSandboxActive, TRAINING_STAFF_ID } from '@/utils/trainingSandbox';
 
 const STAFF_KEY        = 'pos_staff_users';
 const SESSION_KEY      = 'pos_current_user_id';
@@ -35,6 +36,7 @@ function loadUsers(): StaffUser[] {
 }
 
 function saveUsers(users: StaffUser[]) {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(STAFF_KEY, JSON.stringify(users));
 }
 
@@ -80,6 +82,8 @@ interface StaffState {
    * subsequent logins (including offline ones) use the hashed credential.
    */
   login: (userId: string, pin: string) => Promise<boolean>;
+  /** Start a non-persisted, full-access Staff Practice session. */
+  enterTraining: () => void;
   logout: () => void;
 
   /**
@@ -184,7 +188,26 @@ export const useStaffStore = create<StaffState>((set, get) => {
       return true;
     },
 
+    enterTraining: () => {
+      beginTrainingSandbox();
+      set({
+        currentUser: {
+          id: TRAINING_STAFF_ID,
+          name: 'Staff Practice',
+          email: '',
+          role: 'ADMIN',
+          active: true,
+          permissions: { ...DEFAULT_PERMISSIONS.ADMIN },
+        },
+      });
+    },
+
     logout: () => {
+      if (isTrainingSandboxActive()) {
+        endTrainingSandbox();
+        set({ currentUser: null });
+        return;
+      }
       saveCurrentUser(null);
       set({ currentUser: null });
     },

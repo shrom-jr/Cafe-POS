@@ -23,12 +23,14 @@ import {
 import { enqueueMutation } from '../utils/offlineQueue';
 import { verifyPin } from '@/utils/cryptoPin';
 import { normalizeSettingsLogos } from '@/utils/logo';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 type DynamicPillar = string;
 type SettlementPayment = Omit<Payment, 'id'> & { idempotencyKey: string; finalizeOrder?: boolean };
 const pendingStockOverrideOrders = new Set<string>();
 
 async function claimSettlementInFirebase(orderId: string, idempotencyKey: string): Promise<boolean> {
+  if (isTrainingSandboxActive()) return true;
   if (!navigator.onLine) return true;
   try {
     const result = await runTransaction(

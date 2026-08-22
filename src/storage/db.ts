@@ -1,5 +1,6 @@
 import { CafeTable, Category, Ingredient, MenuItem, Order, Payment, Recipe, Settings, StockMovement } from '@/types/pos';
 import { normalizeSettingsLogos } from '@/utils/logo';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Immutable day-end financial snapshot ───────────────────────────────────────
 export interface ClosedShift {
@@ -46,6 +47,7 @@ function get<T>(key: string, fallback: T): T {
 }
 
 function set(key: string, val: unknown) {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(key, JSON.stringify(val));
 }
 
@@ -293,6 +295,7 @@ export const db = {
   },
 
   importAll: (json: string) => {
+    if (isTrainingSandboxActive()) return;
     const data = JSON.parse(json);
     Object.entries(KEYS).forEach(([k, v]) => {
       if (data[k]) localStorage.setItem(v, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]));
@@ -306,6 +309,9 @@ export const db = {
    * Returns { success, version, error? }.
    */
   importFullBackup: (jsonString: string): { success: boolean; version: number; error?: string } => {
+    if (isTrainingSandboxActive()) {
+      return { success: false, version: 0, error: 'Backup import is unavailable in Staff Practice.' };
+    }
     try {
       const parsed = JSON.parse(jsonString);
       if (typeof parsed !== 'object' || parsed === null) throw new Error('Not a valid JSON object');
@@ -388,6 +394,7 @@ export const db = {
    *   pos_is_print_hub, pos_theme.
    */
   completeFactoryReset: () => {
+    if (isTrainingSandboxActive()) return;
     const PRESERVE = new Set([
       'printer_kitchen_device_name',
       'printer_reception_device_name',
@@ -408,11 +415,13 @@ export const db = {
   seed: () => {},
 
   clearAll: () => {
+    if (isTrainingSandboxActive()) return;
     Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
     localStorage.removeItem('pos_initialized');
   },
 
   clearMenuCache: () => {
+    if (isTrainingSandboxActive()) return;
     localStorage.removeItem(KEYS.categories);
     localStorage.removeItem(KEYS.menuItems);
     localStorage.removeItem(KEYS.pillars);

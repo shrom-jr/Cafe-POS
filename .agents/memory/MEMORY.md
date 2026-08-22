@@ -19,3 +19,4 @@
 - [Settlement synchronization guard](settlement-sync-guard.md) — online production settlements claim the order in Firebase before payment mutation; local/offline paths stay synchronous
 - [Firebase schema migration safety](firebase-schema-migration-safety.md) — ID-keyed migration is opt-in/dry-run; malformed snapshots lock writes and bar resets use a scoped generation sentinel
 - [Firebase anonymous authentication](firebase-anonymous-auth.md) — database access requires a shared anonymous auth session before any listener, write, or offline replay starts
+- [Training sandbox isolation](training-sandbox.md) — Staff Practice is an in-memory session boundary; new persistence, sync, or print paths must opt out while active

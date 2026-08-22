@@ -36,6 +36,7 @@ import {
   browserPrintTaxInvoice,
 } from '@/utils/browserPrint';
 import type { Ticket } from '@/types/pos';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Electron detection ────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ function getDeviceName(slot: 'kitchen' | 'reception'): string | undefined {
 // ── Main dispatcher ───────────────────────────────────────────────────────────
 
 export async function fireSilentPrintJob(job: PrintJob): Promise<boolean> {
+  if (isTrainingSandboxActive()) return false;
   const settings = usePOSStore.getState().settings;
 
   switch (job.type) {

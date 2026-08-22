@@ -11,6 +11,7 @@ import { subscribeToLogo, subscribeToConnectivity, replayOfflineMutations } from
 import { getPendingQueueCount } from '@/utils/offlineQueue';
 import { useToast } from '@/hooks/use-toast';
 import { getSettingsLogo } from '@/utils/logo';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 /** Navigation items ordered by display priority.
  *  Each item maps to a specific permission key. */
@@ -45,6 +46,7 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
   const currentUser = useStaffStore((s) => s.currentUser);
   const logout      = useStaffStore((s) => s.logout);
   const settings    = usePOSStore((s) => s.settings);
+  const isTrainingSession = isTrainingSandboxActive();
   const [remoteLogo, setRemoteLogo] = useState<string | null>(null);
   const [hasLoadedRemoteLogo, setHasLoadedRemoteLogo] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -95,6 +97,11 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400 mt-0.5">
           POS Terminal
         </span>
+         {isTrainingSession && (
+           <span className="mt-1 inline-flex w-fit rounded-full border border-amber-300/50 bg-amber-400/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200">
+             Training Sandbox
+           </span>
+         )}
       </div>
     </div>
   );
@@ -277,6 +284,11 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
           {desktopNav}
            {/* Right: sync + theme + user */}
            <div className="flex min-w-0 items-center justify-end gap-3">
+            {isTrainingSession && (
+              <span className="rounded-xl border border-amber-300/50 bg-amber-400/15 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-amber-200">
+                Simulated Session
+              </span>
+            )}
             {syncButton}
             <ThemeToggle />
             {userBadge}
@@ -294,6 +306,9 @@ const AppLayout = ({ title, children }: AppLayoutProps) => {
                  {settings?.cafeName || settings?.restaurantName || 'S Bamboo Cottage & Sekuwa Corner'}
                </span>
                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-400 mt-0.5">POS Terminal</span>
+                {isTrainingSession && (
+                  <span className="mt-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Training Sandbox</span>
+                )}
              </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">

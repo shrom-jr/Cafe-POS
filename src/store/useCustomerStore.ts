@@ -7,6 +7,7 @@ import {
   BASELINE_RESET_GENERATION,
 } from '@/utils/firebaseSync';
 import { enqueueMutation } from '@/utils/offlineQueue';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 const CUSTOMERS_KEY = 'pos_customers';
 const REPAYMENTS_KEY = 'pos_customer_repayments';
@@ -23,6 +24,7 @@ function loadCustomers(): Customer[] {
 }
 
 function persist(customers: Customer[]) {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
 }
 
@@ -37,6 +39,7 @@ function loadRepayments(): CustomerRepayment[] {
 }
 
 function persistRepayments(repayments: CustomerRepayment[]) {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(REPAYMENTS_KEY, JSON.stringify(repayments));
 }
 

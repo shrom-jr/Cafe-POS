@@ -7,6 +7,7 @@
  */
 
 import { create } from 'zustand';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -31,8 +32,10 @@ const load = (): MeatEntry[] => {
   catch { return []; }
 };
 
-const persist = (data: MeatEntry[]) =>
+const persist = (data: MeatEntry[]) => {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(MEAT_TRACKER_KEY, JSON.stringify(data));
+};
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 

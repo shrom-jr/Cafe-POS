@@ -39,6 +39,7 @@ import {
   browserPrintVoidTicket,
 } from '@/utils/browserPrint';
 import { autoReconnectUSB } from '@/utils/webusbPrinter';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 const PRINT_HUB_KEY = 'pos_is_print_hub';
 
@@ -60,6 +61,7 @@ function isPrintHub(): boolean {
  * would leave the local listener stale until the next reload.
  */
 export function setPrintHubEnabled(enabled: boolean): void {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(PRINT_HUB_KEY, enabled ? 'true' : 'false');
   window.dispatchEvent(new CustomEvent(PRINT_HUB_EVENT, { detail: enabled }));
 }
@@ -119,6 +121,7 @@ export function usePrintQueue() {
   // printing works right after a page refresh (no prompt required).
   // Skipped in Electron mode — native Windows printing needs no WebUSB.
   useEffect(() => {
+    if (isTrainingSandboxActive()) return;
     if (!isHub) return;
     if (isElectron()) return;
     void Promise.all([
@@ -128,6 +131,7 @@ export function usePrintQueue() {
   }, [isHub]);
 
   useEffect(() => {
+    if (isTrainingSandboxActive()) return;
     const tables = usePOSStore.getState().tables;
     let cleanedHistoricalTickets = false;
 

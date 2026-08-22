@@ -14,6 +14,7 @@ import type {
   OfflineMutationDomain,
   OfflineMutationAction,
 } from '@/types/offlineQueue';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 export const OFFLINE_QUEUE_KEY = 'pos_offline_mutation_queue';
 
@@ -64,6 +65,7 @@ export function enqueueMutation(
   payload: Record<string, unknown>,
   resetGeneration: string,
 ): void {
+  if (isTrainingSandboxActive()) return;
   const mutation: OfflineMutation = {
     id: crypto.randomUUID(),
     domain,
@@ -86,12 +88,14 @@ export function peekQueue(): OfflineMutation | undefined {
 
 /** Permanently remove a successfully replayed mutation from the outbox. */
 export function dequeueMutation(id: string): void {
+  if (isTrainingSandboxActive()) return;
   writeQueue(readQueue().filter((m) => m.id !== id));
   dispatchQueueChanged();
 }
 
 /** Increment the retry counter for a mutation that failed to replay. */
 export function incrementRetry(id: string): void {
+  if (isTrainingSandboxActive()) return;
   writeQueue(
     readQueue().map((m) =>
       m.id === id ? { ...m, retryCount: m.retryCount + 1 } : m,
@@ -101,6 +105,7 @@ export function incrementRetry(id: string): void {
 
 /** Remove all mutations that have exceeded the maximum retry limit. */
 export function dropExhaustedMutations(): void {
+  if (isTrainingSandboxActive()) return;
   writeQueue(readQueue().filter((m) => m.retryCount < MAX_RETRY));
 }
 
@@ -114,6 +119,7 @@ export function getPendingQueueCount(): number {
  * stale mutations can be replayed afterwards.
  */
 export function clearQueue(): void {
+  if (isTrainingSandboxActive()) return;
   localStorage.removeItem(OFFLINE_QUEUE_KEY);
   dispatchQueueChanged();
 }
@@ -124,6 +130,7 @@ export function clearQueue(): void {
  * domains that were wiped, leaving unrelated queued writes intact.
  */
 export function clearQueueForDomains(domains: Set<OfflineMutationDomain>): void {
+  if (isTrainingSandboxActive()) return;
   const remaining = readQueue().filter((m) => !domains.has(m.domain));
   if (remaining.length === 0) {
     localStorage.removeItem(OFFLINE_QUEUE_KEY);

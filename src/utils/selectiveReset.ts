@@ -19,6 +19,7 @@ import { useMeatTrackerStore } from '@/store/useMeatTrackerStore';
 import { useMaintenanceStore } from '@/store/useMaintenanceStore';
 import { useInventoryStore } from '@/store/useInventoryStore';
 import { useBarRestockStore } from '@/store/useBarRestockStore';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 export const RESET_BILL_COUNTER = 1000;
 export const RESET_KOT_COUNTER = 100;
@@ -152,6 +153,7 @@ function applySelectiveResetLocally(selection: SelectiveResetSelection): void {
 }
 
 export async function executeSelectiveReset(selection: SelectiveResetSelection): Promise<void> {
+  if (isTrainingSandboxActive()) return;
   const pos = usePOSStore.getState();
 
   await applySelectiveResetToFirebase({

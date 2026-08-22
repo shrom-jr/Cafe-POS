@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { InvProductType } from '@/types/pos';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,8 +39,10 @@ const load = (): BarRestockEntry[] => {
   catch { return []; }
 };
 
-const persist = (data: BarRestockEntry[]) =>
+const persist = (data: BarRestockEntry[]) => {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(BAR_RESTOCK_STORAGE_KEY, JSON.stringify(data));
+};
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 

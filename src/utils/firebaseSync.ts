@@ -1,4 +1,14 @@
-import { get, ref, onValue, query, orderByChild, equalTo, runTransaction, set, update } from "firebase/database";
+import {
+  get as firebaseGet,
+  ref,
+  onValue as firebaseOnValue,
+  query,
+  orderByChild,
+  equalTo,
+  runTransaction as firebaseRunTransaction,
+  set as firebaseSet,
+  update as firebaseUpdate,
+} from "firebase/database";
 import { db } from "../firebase";
 import type {
   Order,
@@ -37,6 +47,57 @@ import {
 } from "./firebaseSchema";
 import { normalizeSettingsLogos, sanitizeLogoSource } from "./logo";
 import { normalizeMenuCategoriesSnapshot, normalizeMenuItemsSnapshot } from "./menuSchema";
+import { isTrainingSandboxActive, isTrainingSandboxReconciling } from "./trainingSandbox";
+
+// Keep Firebase listeners mounted during Staff Practice so ending a session does
+// not reconnect or refetch. Their latest snapshots are retained while the
+// sandbox owns Zustand, then replayed synchronously during exit reconciliation.
+const latestListenerSnapshots = new Map<(snapshot: unknown) => void, unknown>();
+
+const onValue = ((queryRef: unknown, callback: (snapshot: unknown) => void, ...rest: unknown[]) => {
+  const unsubscribe = firebaseOnValue(
+    queryRef as Parameters<typeof firebaseOnValue>[0],
+    ((snapshot: unknown) => {
+      latestListenerSnapshots.set(callback, snapshot);
+      if (!isTrainingSandboxActive() || isTrainingSandboxReconciling()) callback(snapshot);
+    }) as Parameters<typeof firebaseOnValue>[1],
+    ...(rest as []),
+  );
+
+  return () => {
+    latestListenerSnapshots.delete(callback);
+    unsubscribe();
+  };
+}) as typeof firebaseOnValue;
+
+/** Reconcile from existing listener snapshots without reconnecting Firebase. */
+export function reconcileTrainingFirebaseSnapshots(): void {
+  for (const [callback, snapshot] of latestListenerSnapshots) {
+    callback(snapshot);
+  }
+}
+
+const get = ((...args: unknown[]) => {
+  if (isTrainingSandboxActive()) {
+    return Promise.resolve({ val: () => null, exists: () => false });
+  }
+  return firebaseGet(...(args as Parameters<typeof firebaseGet>));
+}) as typeof firebaseGet;
+
+const set = ((...args: unknown[]) => {
+  if (isTrainingSandboxActive()) return Promise.resolve();
+  return firebaseSet(...(args as Parameters<typeof firebaseSet>));
+}) as typeof firebaseSet;
+
+const update = ((...args: unknown[]) => {
+  if (isTrainingSandboxActive()) return Promise.resolve();
+  return firebaseUpdate(...(args as Parameters<typeof firebaseUpdate>));
+}) as typeof firebaseUpdate;
+
+const runTransaction = ((...args: unknown[]) => {
+  if (isTrainingSandboxActive()) return Promise.resolve({ committed: false });
+  return firebaseRunTransaction(...(args as Parameters<typeof firebaseRunTransaction>));
+}) as typeof firebaseRunTransaction;
 
 type FirebaseSyncStore = {
   setPayments: (payments: Payment[], exists?: boolean) => void;
@@ -1811,6 +1872,7 @@ let isReplaying = false;
  * domains: orders, tables, payments, customers.
  */
 export async function replayOfflineMutations(): Promise<void> {
+  if (isTrainingSandboxActive()) return;
   if (isReplaying) return;
   const mutations = getAllPendingMutations();
   if (mutations.length === 0) return;

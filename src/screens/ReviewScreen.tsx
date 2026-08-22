@@ -23,12 +23,15 @@ import AdminPinGate from '@/components/ui/AdminPinGate';
 import { OrderItem, TablePayment } from '@/types/pos';
 import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 import { getSettingsLogo } from '@/utils/logo';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 const PRESETS = [0, 5, 10, 15];
 
 const ReviewScreen = () => {
   const { tableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
+  const isTrainingSession = isTrainingSandboxActive();
+  const confirmPaymentLabel = isTrainingSession ? 'Complete Simulated Order' : 'Confirm Payment';
 
   const { tables } = useTables();
   const { getActiveOrder, addPayment } = useOrders();
@@ -166,6 +169,11 @@ const ReviewScreen = () => {
   const localSettlementRef = useRef(false);
   const settlementKeyRef = useRef<string | null>(null);
   const getSettlementKey = () => {
+    if (isTrainingSession) {
+      const key = settlementKeyRef.current ?? crypto.randomUUID();
+      settlementKeyRef.current = key;
+      return key;
+    }
     const storageKey = `bamboo:settlement-key:${orderIdRef.current}`;
     const key = settlementKeyRef.current ?? localStorage.getItem(storageKey) ?? crypto.randomUUID();
     settlementKeyRef.current = key;
@@ -173,6 +181,10 @@ const ReviewScreen = () => {
     return key;
   };
   const clearSettlementKey = () => {
+    if (isTrainingSession) {
+      settlementKeyRef.current = null;
+      return;
+    }
     localStorage.removeItem(`bamboo:settlement-key:${orderIdRef.current}`);
     settlementKeyRef.current = null;
   };
@@ -534,6 +546,7 @@ const ReviewScreen = () => {
           processedBy,
           logo: getSettingsLogo(settings) ?? undefined,
           showLogoOnBill: settings.showLogoOnBill,
+          training: isTrainingSession,
         },
       };
       lastPrintJobRef.current = creditTaxJob;
@@ -732,6 +745,7 @@ const ReviewScreen = () => {
         processedBy,
         logo:           getSettingsLogo(settings) ?? undefined,
         showLogoOnBill: settings.showLogoOnBill,
+        training: isTrainingSession,
       },
     };
     lastPrintJobRef.current = taxJob;
@@ -2368,7 +2382,7 @@ const ReviewScreen = () => {
                   {confirming ? (
                     <><Loader2 size={16} className="animate-spin" /> Processing...</>
                   ) : (
-                    'Confirm Payment'
+                    confirmPaymentLabel
                   )}
                 </button>
               </div>
@@ -2429,7 +2443,7 @@ const ReviewScreen = () => {
                   {confirming ? (
                     <><Loader2 size={18} className="animate-spin" /> Processing...</>
                   ) : (
-                    'Confirm Payment'
+                    confirmPaymentLabel
                   )}
                 </button>
               </div>

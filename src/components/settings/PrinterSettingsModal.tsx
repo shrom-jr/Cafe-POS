@@ -45,6 +45,7 @@ import {
 import { browserPrintKOT, browserPrintBOT } from '@/utils/browserPrint';
 import { Ticket } from '@/types/pos';
 import type { ElectronPrinterInfo } from '@/types/electron';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function loadDeviceName(key: string): string {
 }
 
 function saveDeviceName(key: string, name: string): void {
+  if (isTrainingSandboxActive()) return;
   try { localStorage.setItem(key, name); } catch { /* ok */ }
 }
 

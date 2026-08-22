@@ -4,6 +4,7 @@ import { numberToWords } from '@/utils/printer';
 import { setReceiptData } from '@/utils/print';
 import { useStaffStore } from '@/store/useStaffStore';
 import { tableDisplayName } from '@/utils/tableName';
+import { isTrainingSandboxActive, TRAINING_RECEIPT_NOTICE } from '@/utils/trainingSandbox';
 
 interface ThermalReceiptLayoutProps {
   cafeName: string;
@@ -75,6 +76,7 @@ const ThermalReceiptLayout = ({
   const timeStr = format(createdAt, 'hh:mm aa');
   // Live staff fallback — reactive, used when attribution objects are absent.
   const liveStaff = useStaffStore((s) => s.currentUser?.name) || 'Cashier Desk';
+  const trainingReceipt = isTrainingSandboxActive();
 
   // Register structured receipt data so triggerPrint() can build HTML from it
   useEffect(() => {
@@ -160,7 +162,10 @@ const ThermalReceiptLayout = ({
       <HR />
 
       <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 12, letterSpacing: 1, marginBottom: 5 }}>
-        TAX INVOICE
+        {trainingReceipt && (
+          <div style={{ marginBottom: 4, color: '#B91C1C', fontSize: 10 }}>{TRAINING_RECEIPT_NOTICE}</div>
+        )}
+        {trainingReceipt ? 'TRAINING RECEIPT' : 'TAX INVOICE'}
       </div>
 
       <HR />

@@ -10,6 +10,7 @@
  */
 
 import { create } from 'zustand';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -35,8 +36,10 @@ const load = (): PurchaseEntry[] => {
   catch { return []; }
 };
 
-const persist = (data: PurchaseEntry[]) =>
+const persist = (data: PurchaseEntry[]) => {
+  if (isTrainingSandboxActive()) return;
   localStorage.setItem(KITCHEN_PURCHASES_KEY, JSON.stringify(data));
+};
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 

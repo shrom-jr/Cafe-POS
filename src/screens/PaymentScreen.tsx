@@ -17,6 +17,7 @@ import { tableDisplayName } from '@/utils/tableName';
 import { toast } from 'sonner';
 import { isSelectiveResetMarkersHydrated } from '@/utils/firebaseSync';
 import { getSettingsLogo } from '@/utils/logo';
+import { isTrainingSandboxActive } from '@/utils/trainingSandbox';
 
 const PaymentScreen = () => {
   const { tableId } = useParams<{ tableId: string }>();
@@ -71,6 +72,11 @@ const PaymentScreen = () => {
   const lastPrintJobRef = useRef<PrintJob | null>(null);
   const settlementKeyRef = useRef<string | null>(null);
   const getSettlementKey = () => {
+    if (isTrainingSandboxActive()) {
+      const key = settlementKeyRef.current ?? crypto.randomUUID();
+      settlementKeyRef.current = key;
+      return key;
+    }
     const storageKey = `bamboo:settlement-key:${snap?.id ?? order?.id ?? ''}`;
     const key = settlementKeyRef.current ?? localStorage.getItem(storageKey) ?? crypto.randomUUID();
     settlementKeyRef.current = key;
@@ -78,6 +84,10 @@ const PaymentScreen = () => {
     return key;
   };
   const clearSettlementKey = () => {
+    if (isTrainingSandboxActive()) {
+      settlementKeyRef.current = null;
+      return;
+    }
     localStorage.removeItem(`bamboo:settlement-key:${snap?.id ?? order?.id ?? ''}`);
     settlementKeyRef.current = null;
   };
